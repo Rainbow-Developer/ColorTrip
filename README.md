@@ -89,7 +89,7 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 ├── AGENTS.md       # Codex 등 에이전트 진입점 → docs/AGENT_GUIDE.md
 ├── CLAUDE.md       # Claude Code 진입점 → docs/AGENT_GUIDE.md
 ├── README.md       # 프로젝트 개요·구조·실행 (이 문서)
-├── backend/        # FastAPI API 서버 — 퀘스트·인증·지도 색칠 등 도메인, TourAPI 연동 (생성 예정)
+├── backend/        # FastAPI API 서버 — 퀘스트 등 도메인, TourAPI 연동 (실행: backend/README.md)
 ├── frontend/       # Flutter 모바일 앱 — 퀘스트 수행·지도 색칠·여행 DNA·공유 (생성 예정)
 └── docs/           # 문서
     ├── AGENT_GUIDE.md   # AI 에이전트 공통 가이드 (작업 워크플로우·문서 동기화 규칙)
@@ -115,11 +115,12 @@ flowchart TD
 
 ## 주요 기능과 위치
 
-기능을 수정할 때 **어느 폴더를 건드려야 하는지**를 정리합니다. `backend/`·`frontend/` 코드는 아직 생성 전이며, 기능이 구현되는 대로 위치를 갱신합니다.
+기능을 수정할 때 **어느 폴더를 건드려야 하는지**를 정리합니다. `frontend/`는 아직 생성 전이며, 기능이 구현되는 대로 위치를 갱신합니다.
 
 | 기능 | 설명 | 위치 |
 |------|------|------|
-| **퀘스트(Quest)** | 충북 11개 시·군 관광지를 지역·카테고리로 탐색/상세 조회 | `backend/` (생성 예정) · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
+| **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
+| **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
 
 > 위 표는 기능이 **어디 있는지**를 가리킵니다. 개별 기능의 **상세 설명**은 이 README에 중복해 적지 않고, 해당 기능 스펙의 `description.md`를 단일 출처(SOT)로 둡니다. 인증·지도 색칠·여행 DNA·공유 등은 별도 도메인으로 진행 예정이며, 스펙이 만들어지면 이 표에 추가합니다.
 

@@ -1,0 +1,32 @@
+# 로컬 개발 환경 (docs/conventions/infra-deploy.md: Docker Compose PostgreSQL + FastAPI)
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: colortrip
+      POSTGRES_PASSWORD: colortrip
+      POSTGRES_DB: colortrip
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U colortrip"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://colortrip:colortrip@db:5432/colortrip
+      TOUR_API_KEY: ${TOUR_API_KEY:-}
+      TOUR_API_BASE_URL: ${TOUR_API_BASE_URL:-https://apis.data.go.kr/B551011/KorService2}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
