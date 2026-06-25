@@ -1,0 +1,55 @@
+# git hooks — 사람·도구 무관 최종 방어선.
+# 검사 로직의 단일 출처는 .claude/hooks/ 이며, Claude Code hooks(.claude/settings.json)와 공유한다.
+#
+# 최초 1회 설치(팀원 각자):
+#   uv tool install pre-commit   # 또는 pipx install pre-commit
+#   pre-commit install --install-hooks
+#
+# 규약 출처: docs/conventions/scm-collaboration.md, docs/conventions/code-quality.md
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: protected-branch
+        name: 보호 브랜치(dev/main) 직접 커밋 차단
+        entry: python3 .claude/hooks/check_protected_branch.py --mode=git
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+        always_run: true
+
+      - id: branch-name
+        name: 브랜치 네이밍(type/이슈번호-설명) 검사
+        entry: python3 .claude/hooks/check_branch_name.py --mode=git
+        language: system
+        stages: [pre-commit]
+        pass_filenames: false
+        always_run: true
+
+      - id: protected-branch-push
+        name: 보호 브랜치(dev/main) 직접 푸시 차단
+        entry: python3 .claude/hooks/check_protected_branch.py --mode=git
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+
+      - id: commit-message
+        name: 커밋 메시지 Conventional Commits 검사
+        entry: python3 .claude/hooks/check_commit_message.py --mode=git
+        language: system
+        stages: [commit-msg]
+
+# 백엔드 코드(backend/)가 추가되면 아래 린트·타입체크를 활성화한다(code-quality.md).
+#   - id: ruff       (uv run ruff check / format)
+#   - id: pyright    (uv run pyright)
+# 프론트엔드(frontend/)는 husky·lint-staged로 dart analyze/format를 검사한다(code-quality.md).
