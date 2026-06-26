@@ -1,0 +1,44 @@
+[project]
+name = "colortrip-backend"
+version = "0.1.0"
+description = "ColorTrip 백엔드 (FastAPI)"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "pydantic-settings>=2.7",
+    "httpx>=0.28",
+    "uuid-utils>=0.10",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9",
+    "pyright>=1.1.390",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+# alembic/versions는 자동 생성 파일이라 린트 대상에서 제외한다.
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI 의존성 주입(Depends/Query)은 인자 기본값에서 호출하는 것이 정상 패턴이므로 B008 예외 처리한다.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
+
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+exclude = ["alembic/versions", "**/.venv", "**/__pycache__"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
