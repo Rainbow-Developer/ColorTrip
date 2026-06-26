@@ -19,7 +19,7 @@ docs/conventions/
 ├── auth-security.md         # 인증 & 보안 · 개인정보 — Kakao·JWT·Secret Manager·CORS
 ├── infra-deploy.md          # 인프라 & 배포 — Docker Compose·GCP·GitHub Actions
 ├── logging-monitoring.md    # 로깅 & 모니터링 — JSON 로깅·Cloud Logging·Slack 알림
-├── code-quality.md          # 코드 품질 & 컨벤션 — Ruff·Pyright·pre-commit·husky
+├── code-quality.md          # 코드 품질 & 컨벤션 — Ruff·Pyright·pre-commit(dart format/analyze)
 ├── docs-tools.md            # 문서화 & 협업 도구 — FigJam·Swagger·Figma·Slack
 ├── process-milestone.md     # 개발 순서 & 마일스톤 — 진행 순서·일정(8/21)·분담
 ├── external-apis.md         # 외부 API & 데이터 연동 — TourAPI·Naver·룰 기반 추천

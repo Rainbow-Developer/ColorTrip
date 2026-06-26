@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<template id="__bundler_thumbnail" data-bg-color="#2D6A4F">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#2D6A4F"/>
+    <path d="M600 250c-66 0-120 54-120 120 0 90 120 230 120 230s120-140 120-230c0-66-54-120-120-120z" fill="#97C459"/>
+    <circle cx="600" cy="370" r="48" fill="#ffffff"/>
+  </svg>
+</template>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif;background:#dcdbd4}
+  .scr::-webkit-scrollbar{width:0;height:0}
+  .scr{scrollbar-width:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes scanline{0%{top:0}100%{top:100%}}
+  @keyframes chkin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes popin{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+  @keyframes floatpin{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  @keyframes slidein{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .toast{animation:slidein .3s ease}
+  .scrn{animation:fadein .25s ease}
+</style>
+</helmet>
+
+<div style="min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 0%,#ecebe4,#d5d4cc);padding:24px;box-sizing:border-box">
+  <div style="position:relative;width:392px;height:812px;background:#000;border-radius:54px;padding:11px;box-shadow:0 40px 90px -30px rgba(20,40,30,.5),0 0 0 2px rgba(255,255,255,.06) inset;flex:none">
+    <div style="position:absolute;top:50%;left:-3px;transform:translateY(-90px);width:3px;height:58px;background:#1a1a1a;border-radius:3px 0 0 3px"></div>
+    <div style="position:absolute;top:50%;left:-3px;transform:translateY(10px);width:3px;height:90px;background:#1a1a1a;border-radius:3px 0 0 3px"></div>
+    <div style="position:absolute;top:50%;right:-3px;transform:translateY(-30px);width:3px;height:64px;background:#1a1a1a;border-radius:0 3px 3px 0"></div>
+    <div style="position:relative;width:100%;height:100%;background:#fafaf7;border-radius:44px;overflow:hidden;display:flex;flex-direction:column">
+
+      <div style="height:46px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 30px;position:relative;z-index:30">
+        <span style="font-size:14px;font-weight:600;color:{{ statusColor }}">9:41</span>
+        <div style="position:absolute;left:50%;top:9px;transform:translateX(-50%);width:96px;height:27px;background:#000;border-radius:16px"></div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="{{ statusColor }}"><rect x="0" y="6" width="3" height="5" rx="1"></rect><rect x="4.5" y="4" width="3" height="7" rx="1"></rect><rect x="9" y="2" width="3" height="9" rx="1"></rect><rect x="13.5" y="0" width="3" height="11" rx="1"></rect></svg>
+          <svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="19" height="10" rx="2.5" stroke="{{ statusColor }}" stroke-opacity="0.5"></rect><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="{{ statusColor }}"></rect><rect x="21" y="4" width="2" height="4" rx="1" fill="{{ statusColor }}" fill-opacity="0.5"></rect></svg>
+        </div>
+      </div>
+
+      <!-- SPLASH -->
+      <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ true }}">
+        <div class="scrn" data-screen-label="스플래시" style="flex:1;display:flex;flex-direction:column;min-height:0">
+          <div style="flex:1;margin:4px 18px 0;border-radius:28px;background:linear-gradient(165deg,#e9f3df,#dcebcf 58%,#cfe6c4);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;padding:30px 28px">
+            <div style="position:absolute;inset:0;background-image:radial-gradient(circle at 78% 20%,rgba(45,106,79,.10),transparent 42%),radial-gradient(circle at 18% 72%,rgba(151,196,89,.16),transparent 45%)"></div>
+            <div style="position:absolute;top:92px;left:50%;transform:translateX(-50%);font-size:78px;animation:floatpin 3.4s ease-in-out infinite;filter:drop-shadow(0 12px 18px rgba(45,106,79,.25))">📍</div>
+            <div style="position:relative">
+              <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.7);backdrop-filter:blur(4px);padding:6px 12px;border-radius:20px;margin-bottom:16px">
+                <span style="width:7px;height:7px;border-radius:50%;background:#2D6A4F"></span>
+                <span style="font-size:12px;font-weight:700;color:#1A5C35;letter-spacing:-.2px">충청북도 여행 퀘스트</span>
+              </div>
+              <h1 style="margin:0;font-size:31px;line-height:1.28;font-weight:800;color:#16331f;letter-spacing:-1px">여행은 퀘스트,<br>기록은 지도 위에.</h1>
+              <p style="margin:14px 0 0;font-size:15px;line-height:1.55;color:#3c5a45;font-weight:500">충북 11개 시·군을 탐험하고<br>나만의 색으로 지도를 채워보세요.</p>
+            </div>
+          </div>
+          <div style="flex:none;padding:28px 22px 34px">
+            <button onClick="{{ goSignup }}" style="width:100%;height:56px;border:none;border-radius:16px;background:#FEE500;color:#191600;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:9px">
+              <span style="width:21px;height:21px;border-radius:6px;background:#191600;color:#FEE500;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center">K</span>카카오로 시작하기</button>
+            <p style="text-align:center;font-size:12px;color:#9aa89e;margin:16px 0 0;font-weight:500;line-height:1.5">시작하면 이용약관 및 개인정보 처리방침에<br>동의하는 것으로 간주됩니다.</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- SIGNUP -->
+      <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn scr" data-screen-label="회원가입" style="flex:1;overflow-y:auto;padding:6px 26px 26px">
+          <div style="display:flex;align-items:center;gap:10px;margin:2px 0 18px">
+            <div onClick="{{ backToSplash }}" style="font-size:24px;color:#888;cursor:pointer;width:22px">‹</div>
+          </div>
+          <h1 style="margin:0;font-size:25px;font-weight:800;color:#16331f;letter-spacing:-.5px">회원가입</h1>
+          <p style="margin:7px 0 18px;font-size:14px;color:#8a8a82;font-weight:500">기본 정보를 입력해주세요</p>
+          <div style="display:flex;gap:6px;margin-bottom:26px">
+            <span style="flex:1;height:5px;border-radius:3px;background:#2D6A4F"></span>
+            <span style="flex:1;height:5px;border-radius:3px;background:#2D6A4F"></span>
+            <span style="flex:1;height:5px;border-radius:3px;background:#e6e6df"></span>
+          </div>
+          <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:7px">닉네임</label>
+          <input value="천은백고구마" style="width:100%;height:50px;border:1.5px solid #2D6A4F;border-radius:13px;padding:0 15px;font-size:15px;font-family:inherit;color:#222;background:#fff;outline:none;margin-bottom:16px">
+          <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:7px">이름</label>
+          <input value="티즈김" style="width:100%;height:50px;border:1.5px solid #e6e6df;border-radius:13px;padding:0 15px;font-size:15px;font-family:inherit;color:#222;background:#fff;outline:none;margin-bottom:16px">
+          <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:7px">생년월일</label>
+          <input value="1900.01.01" style="width:100%;height:50px;border:1.5px solid #e6e6df;border-radius:13px;padding:0 15px;font-size:15px;font-family:inherit;color:#999;background:#fff;outline:none;margin-bottom:16px">
+          <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:7px">이메일</label>
+          <input value="example@email.com" style="width:100%;height:50px;border:1.5px solid #e6e6df;border-radius:13px;padding:0 15px;font-size:15px;font-family:inherit;color:#999;background:#fff;outline:none;margin-bottom:22px">
+          <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:30px">
+            <div style="display:flex;align-items:center;gap:11px"><span style="width:22px;height:22px;border-radius:7px;background:#2D6A4F;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">✓</span><span style="font-size:14px;font-weight:500;color:#3a3a34">[필수] 이용약관 동의</span></div>
+            <div style="display:flex;align-items:center;gap:11px"><span style="width:22px;height:22px;border-radius:7px;background:#2D6A4F;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">✓</span><span style="font-size:14px;font-weight:500;color:#3a3a34">[필수] 개인정보 처리방침 동의</span></div>
+            <div style="display:flex;align-items:center;gap:11px"><span style="width:22px;height:22px;border-radius:7px;border:1.5px solid #d6d6cd;background:#fff;flex:none"></span><span style="font-size:14px;font-weight:500;color:#8a8a82">[선택] 마케팅 수신 동의</span></div>
+          </div>
+          <button onClick="{{ goSurvey }}" style="width:100%;height:54px;border:none;border-radius:15px;background:#2D6A4F;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 10px 22px -10px rgba(45,106,79,.6)">다음</button>
+        </div>
+      </sc-if>
+
+      <!-- SURVEY -->
+      <sc-if value="{{ isSurvey }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn" data-screen-label="초기 설문" style="flex:1;display:flex;flex-direction:column;min-height:0">
+          <div style="flex:none;display:flex;align-items:center;gap:14px;padding:8px 24px 0">
+            <div onClick="{{ surveyBack }}" style="font-size:20px;color:#888;cursor:pointer;width:22px">✕</div>
+            <h1 style="margin:0;font-size:17px;font-weight:800;color:#16331f">여행 성향 설문</h1>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:22px 24px 16px" class="scr">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:26px">
+              <div style="flex:1;height:7px;background:#ececE5;border-radius:5px;overflow:hidden"><div style="height:100%;border-radius:5px;background:#2D6A4F;transition:width .35s;width:{{ surveyPct }}%"></div></div>
+              <span style="font-size:13px;font-weight:700;color:#2D6A4F">{{ surveyStepLabel }}</span>
+            </div>
+            <h2 style="margin:0 0 22px;font-size:21px;font-weight:800;color:#16331f;line-height:1.42;letter-spacing:-.5px">{{ surveyQuestion }}</h2>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <sc-for list="{{ surveyOptions }}" as="opt" hint-placeholder-count="5">
+                <div onClick="{{ opt.pick }}" style="display:flex;align-items:center;gap:13px;padding:16px 16px;border:1.5px solid {{ opt.bd }};border-radius:15px;background:{{ opt.bg }};cursor:pointer">
+                  <span style="width:24px;height:24px;border-radius:50%;border:2px solid {{ opt.dotBd }};background:{{ opt.dotBg }};color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">{{ opt.mark }}</span>
+                  <span style="font-size:15px;font-weight:600;color:#2b2b27;letter-spacing:-.3px">{{ opt.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex:none;padding:12px 24px 28px">
+            <button onClick="{{ surveyNext }}" style="width:100%;height:54px;border:none;border-radius:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;background:{{ surveyNextBg }};box-shadow:{{ surveyNextShadow }}">{{ surveyNextLabel }}</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- DNA RESULT -->
+      <sc-if value="{{ isDnaResult }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn scr" data-screen-label="DNA 결과" style="flex:1;overflow-y:auto;padding:8px 24px 28px">
+          <h1 style="text-align:center;margin:6px 0 4px;font-size:18px;font-weight:800;color:#16331f">나의 여행 DNA</h1>
+          <p style="text-align:center;font-size:13px;font-weight:600;color:#97C459;margin:0 0 18px">진단이 완료되었어요!</p>
+          <div style="border-radius:24px;padding:30px 24px;text-align:center;color:#fff;box-shadow:0 18px 40px -16px rgba(45,106,79,.5);background:{{ dnaGrad }}">
+            <div style="font-size:60px;animation:popin .5s ease;margin-bottom:6px">{{ dnaIcon }}</div>
+            <h1 style="margin:0;font-size:26px;font-weight:800;letter-spacing:-.5px">{{ dnaName }}</h1>
+            <p style="margin:11px auto 18px;font-size:14px;line-height:1.6;font-weight:500;opacity:.92;max-width:230px">{{ dnaDesc }}</p>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+              <sc-for list="{{ dnaTags }}" as="tag" hint-placeholder-count="4">
+                <span style="font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,.22);color:#fff">{{ tag }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:18px;padding:18px;margin-top:18px">
+            <div style="font-size:13px;font-weight:700;color:#16331f;margin-bottom:11px">추천 퀘스트</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ dnaRecQuests }}" as="q" hint-placeholder-count="2">
+                <div onClick="{{ q.open }}" style="display:flex;gap:12px;align-items:center;cursor:pointer">
+                  <div style="width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;background:{{ q.thumbBg }}">{{ q.emoji }}</div>
+                  <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#1f1f1b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.title }}</div><div style="font-size:12px;color:#9a9a90;font-weight:500;margin-top:2px">📍 {{ q.regionName }}</div></div>
+                  <span style="color:#c8c8c0;font-size:18px">›</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <button onClick="{{ finishDna }}" style="width:100%;height:54px;border:none;border-radius:15px;background:#2D6A4F;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:18px;box-shadow:0 10px 22px -10px rgba(45,106,79,.6)">홈으로</button>
+          <button onClick="{{ retakeDna }}" style="width:100%;height:48px;border:none;background:transparent;color:#9a9a90;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px">다시 검사하기</button>
+        </div>
+      </sc-if>
+
+      <!-- APP -->
+      <sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn" style="flex:1;display:flex;flex-direction:column;min-height:0">
+
+          <!-- HOME -->
+          <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+            <div class="scr" data-screen-label="홈 지도" style="flex:1;overflow-y:auto;padding:6px 20px 16px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+                <div>
+                  <p style="margin:0;font-size:14px;color:#8a8a82;font-weight:500">안녕하세요, {{ nickname }}님 👋</p>
+                  <h1 style="margin:4px 0 0;font-size:22px;font-weight:800;color:#16331f;letter-spacing:-.5px">오늘은 어디를 칠해볼까요?</h1>
+                </div>
+                <div onClick="{{ goMy }}" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(140deg,#cfe6c4,#a9d49a);flex:none;cursor:pointer"></div>
+              </div>
+              <div style="display:flex;gap:11px;margin-bottom:14px">
+                <div style="flex:1;background:#fff;border:1px solid #eee;border-radius:16px;padding:14px 16px">
+                  <div style="font-size:12px;color:#9a9a90;font-weight:600">완료 지역</div>
+                  <div style="margin-top:6px"><span style="font-size:23px;font-weight:800;color:#16331f">{{ completedRegions }}</span><span style="font-size:14px;color:#aaa;font-weight:600">/11</span></div>
+                </div>
+                <div style="flex:1;background:#fff;border:1px solid #eee;border-radius:16px;padding:14px 16px">
+                  <div style="font-size:12px;color:#9a9a90;font-weight:600">진행률</div>
+                  <div style="margin-top:6px"><span style="font-size:23px;font-weight:800;color:#16331f">{{ progressPct }}</span><span style="font-size:14px;color:#aaa;font-weight:600">%</span></div>
+                  <div style="height:5px;background:#eef0ec;border-radius:3px;margin-top:8px;overflow:hidden"><div style="height:100%;background:#2D6A4F;border-radius:3px;transition:width .5s;width:{{ progressPct }}%"></div></div>
+                </div>
+              </div>
+              <sc-if value="{{ hasInProgress }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ openInProgress }}" style="border-radius:18px;padding:16px 18px;color:#fff;display:flex;align-items:center;gap:14px;cursor:pointer;margin-bottom:16px;box-shadow:0 12px 26px -14px rgba(45,106,79,.5);background:{{ dnaGrad }}">
+                  <div style="width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:24px;flex:none">🧭</div>
+                  <div style="flex:1"><div style="font-size:12px;font-weight:600;opacity:.85">진행중인 여행</div><div style="font-size:17px;font-weight:800;margin-top:2px">{{ inProgressName }} · {{ inProgressLabel }}</div></div>
+                  <span style="font-size:20px;opacity:.8">›</span>
+                </div>
+              </sc-if>
+              <div style="position:relative;width:100%;background:linear-gradient(160deg,#f7f8f4,#eef1e9);border-radius:22px;border:1px solid #eaeae2;padding:14px 14px 28px;overflow:hidden">
+                <svg viewBox="10 10 480 460" style="width:100%;height:auto;display:block">
+                  <sc-for list="{{ mapRegions }}" as="r" hint-placeholder-count="11">
+                    <g onClick="{{ r.open }}" style="cursor:pointer">
+                      <path d="{{ r.d }}" fill="{{ r.fill }}" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round" style="transition:fill .5s"></path>
+                      <text x="{{ r.lx }}" y="{{ r.ly }}" fill="{{ r.labelFill }}" font-size="12" font-weight="700" text-anchor="middle" dominant-baseline="middle" style="pointer-events:none;font-family:Pretendard,sans-serif">{{ r.name }}</text>
+                    </g>
+                  </sc-for>
+                </svg>
+                <div style="position:absolute;left:16px;bottom:10px;font-size:10px;color:#b3b3a8;font-weight:600">충청북도 채도 지도 · 지역을 눌러보세요</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:18px;margin-top:13px;padding:0 4px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:#e6e6df"></span><span style="font-size:11px;color:#8a8a82;font-weight:600">미방문</span></div>
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:#97C459"></span><span style="font-size:11px;color:#8a8a82;font-weight:600">1개 완료</span></div>
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:4px;background:#2D6A4F"></span><span style="font-size:11px;color:#8a8a82;font-weight:600">2개 이상</span></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin:24px 0 12px">
+                <h2 style="margin:0;font-size:17px;font-weight:800;color:#16331f">최근 완료</h2>
+                <span onClick="{{ goTimeline }}" style="font-size:13px;color:#9a9a90;font-weight:600;cursor:pointer">전체보기 ›</span>
+              </div>
+              <sc-if value="{{ recentEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#f5f5f0;border-radius:16px;padding:24px;text-align:center;color:#a3a399;font-size:13px;font-weight:600">아직 완료한 퀘스트가 없어요.<br>지도에서 지역을 골라 떠나보세요!</div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ recentDone }}" as="q" hint-placeholder-count="2">
+                  <div onClick="{{ q.open }}" style="display:flex;gap:13px;align-items:center;background:#fff;border:1px solid #eee;border-radius:16px;padding:13px;cursor:pointer">
+                    <div style="width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:24px;flex:none;background:{{ q.thumbBg }}">{{ q.emoji }}</div>
+                    <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#1f1f1b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.title }}</div><div style="font-size:12px;color:#9a9a90;font-weight:500;margin-top:2px">📍 {{ q.regionName }} · {{ q.date }}</div></div>
+                    <span style="width:22px;height:22px;border-radius:50%;background:#2D6A4F;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none">✓</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- TRAVEL -->
+          <sc-if value="{{ isTravel }}" hint-placeholder-val="{{ false }}">
+            <div class="scr" data-screen-label="퀘스트 목록" style="flex:1;overflow-y:auto;padding:6px 0 16px">
+              <h1 style="margin:6px 20px 14px;font-size:22px;font-weight:800;color:#16331f;letter-spacing:-.5px">여행 퀘스트</h1>
+              <div style="margin:0 20px 14px;height:46px;border:1.5px solid #e6e6df;border-radius:14px;background:#fff;display:flex;align-items:center;gap:9px;padding:0 14px">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b5b5ac" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.2-3.2"></path></svg>
+                <span style="font-size:14px;color:#b5b5ac;font-weight:500">지역·장소·퀘스트 검색</span>
+              </div>
+              <div class="scr" style="display:flex;gap:8px;overflow-x:auto;padding:0 20px 4px;margin-bottom:16px">
+                <sc-for list="{{ filterChips }}" as="c" hint-placeholder-count="6">
+                  <button onClick="{{ c.pick }}" style="flex:none;height:34px;padding:0 15px;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:11px;padding:0 20px">
+                <sc-for list="{{ questListVM }}" as="q" hint-placeholder-count="6">
+                  <div onClick="{{ q.open }}" style="display:flex;gap:14px;align-items:center;background:#fff;border:1px solid #eee;border-radius:18px;padding:14px;cursor:pointer;position:relative;opacity:{{ q.cardOpacity }}">
+                    <div style="width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:27px;flex:none;background:{{ q.thumbBg }}">{{ q.emoji }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;gap:5px;margin-bottom:5px">
+                        <span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:#eaf3de;color:#2D6A4F">{{ q.regionName }}</span>
+                        <span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:{{ q.typeBg }};color:{{ q.typeFg }}">{{ q.typeLabel }}</span>
+                      </div>
+                      <div style="font-size:15px;font-weight:700;color:#1f1f1b;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.title }}</div>
+                      <div style="font-size:12px;color:#9a9a90;margin-top:3px;font-weight:500">📍 {{ q.place }} · +{{ q.reward }}P</div>
+                    </div>
+                    <sc-if value="{{ q.done }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:50%;background:#2D6A4F;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800">✓</div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- MY -->
+          <sc-if value="{{ isMy }}" hint-placeholder-val="{{ false }}">
+            <div class="scr" data-screen-label="마이" style="flex:1;overflow-y:auto;padding:6px 20px 16px">
+              <h1 style="margin:6px 0 18px;font-size:22px;font-weight:800;color:#16331f;letter-spacing:-.5px">마이페이지</h1>
+              <div style="display:flex;align-items:center;gap:15px;margin-bottom:20px">
+                <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(140deg,#cfe6c4,#a9d49a);flex:none"></div>
+                <div>
+                  <div style="font-size:19px;font-weight:800;color:#16331f">{{ nickname }}</div>
+                  <div style="font-size:13px;color:#9a9a90;font-weight:500;margin-top:3px">{{ email }}</div>
+                </div>
+              </div>
+              <div style="border-radius:18px;padding:16px 18px;color:#fff;display:flex;align-items:center;gap:14px;margin-bottom:18px;background:{{ dnaGrad }}">
+                <span style="font-size:30px">{{ dnaIcon }}</span>
+                <div><div style="font-size:12px;opacity:.85;font-weight:600">나의 여행 DNA</div><div style="font-size:17px;font-weight:800;margin-top:1px">{{ dnaName }}</div></div>
+              </div>
+              <div style="display:flex;gap:10px;margin-bottom:20px">
+                <div style="flex:1;background:#fff;border:1px solid #eee;border-radius:15px;padding:15px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:#16331f">{{ doneQuestCount }}</div><div style="font-size:11px;color:#9a9a90;font-weight:600;margin-top:3px">완료 퀘스트</div></div>
+                <div style="flex:1;background:#fff;border:1px solid #eee;border-radius:15px;padding:15px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:#16331f">{{ completedRegions }}</div><div style="font-size:11px;color:#9a9a90;font-weight:600;margin-top:3px">색칠 지역</div></div>
+                <div style="flex:1;background:#fff;border:1px solid #eee;border-radius:15px;padding:15px 8px;text-align:center"><div style="font-size:22px;font-weight:800;color:#16331f">{{ totalReward }}</div><div style="font-size:11px;color:#9a9a90;font-weight:600;margin-top:3px">획득 포인트</div></div>
+              </div>
+              <div style="background:#fff;border:1px solid #eee;border-radius:18px;overflow:hidden">
+                <div onClick="{{ goTimeline }}" style="display:flex;align-items:center;gap:13px;padding:17px 18px;border-bottom:1px solid #f2f2ec;cursor:pointer"><span style="font-size:19px">🗂️</span><span style="flex:1;font-size:15px;font-weight:600;color:#2b2b27">여행 기록 타임라인</span><span style="color:#c8c8c0;font-size:18px">›</span></div>
+                <div onClick="{{ goShare }}" style="display:flex;align-items:center;gap:13px;padding:17px 18px;border-bottom:1px solid #f2f2ec;cursor:pointer"><span style="font-size:19px">📤</span><span style="flex:1;font-size:15px;font-weight:600;color:#2b2b27">내 지도 공유하기</span><span style="color:#c8c8c0;font-size:18px">›</span></div>
+                <div onClick="{{ goEditProfile }}" style="display:flex;align-items:center;gap:13px;padding:17px 18px;cursor:pointer"><span style="font-size:19px">⚙️</span><span style="flex:1;font-size:15px;font-weight:600;color:#2b2b27">내 정보 수정</span><span style="color:#c8c8c0;font-size:18px">›</span></div>
+              </div>
+              <div onClick="{{ openWithdraw }}" style="text-align:center;margin-top:22px;cursor:pointer"><span style="font-size:13px;color:#bbb;font-weight:600;text-decoration:underline;text-underline-offset:3px">회원 탈퇴</span></div>
+            </div>
+          </sc-if>
+
+          <!-- BOTTOM NAV -->
+          <div style="flex:none;height:78px;display:flex;align-items:flex-end;border-top:1px solid #e0e0da;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);padding:0 0 12px">
+            <div onClick="{{ goTravel }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer">
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ navTravelColor }}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              <span style="font-size:11px;font-weight:700;color:{{ navTravelColor }}">여행</span>
+            </div>
+            <div onClick="{{ goHome }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;position:relative">
+              <div style="width:52px;height:52px;border-radius:50%;background:{{ navHomeBg }};display:flex;align-items:center;justify-content:center;margin-top:-22px;box-shadow:0 8px 18px -6px rgba(45,106,79,.5);border:3px solid #fff;transition:background .2s">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{{ navHomeIcon }}" stroke-width="2.1" stroke-linejoin="round"><path d="M3 11l9-7 9 7v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+              </div>
+              <span style="font-size:11px;font-weight:700;color:{{ navHomeColor }}">홈</span>
+            </div>
+            <div onClick="{{ goMy }}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer">
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ navMyColor }}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"></circle><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"></path></svg>
+              <span style="font-size:11px;font-weight:700;color:{{ navMyColor }}">마이</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- REGION QUESTS -->
+      <sc-if value="{{ isRegionQuests }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn scr" data-screen-label="지역 퀘스트" style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
+          <div style="position:relative;height:170px;flex:none;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(45deg,#eef1ea,#eef1ea 12px,#e7ebe2 12px,#e7ebe2 24px)">
+            <div onClick="{{ goHome }}" style="position:absolute;top:8px;left:16px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-size:20px;color:#333;cursor:pointer">‹</div>
+            <span style="font-size:13px;color:#a3a399;font-family:ui-monospace,monospace">[ {{ selectedRegionName }} 대표 이미지 ]</span>
+          </div>
+          <div style="flex:1;background:#fafaf7;border-radius:24px 24px 0 0;margin-top:-22px;padding:22px 20px 20px;position:relative">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <h1 style="margin:0;font-size:22px;font-weight:800;color:#16331f">{{ selectedRegionName }}</h1>
+              <span style="font-size:13px;font-weight:700;padding:4px 11px;border-radius:9px;background:#eaf3de;color:#2D6A4F">{{ regionDoneLabel }}</span>
+            </div>
+            <div style="border-radius:16px;padding:15px 16px;color:#fff;display:flex;align-items:center;gap:13px;margin-bottom:20px;background:{{ dnaGrad }}">
+              <span style="font-size:26px">{{ dnaIcon }}</span>
+              <div><div style="font-size:11px;opacity:.85;font-weight:600">{{ dnaName }}님께 추천</div><div style="font-size:14px;font-weight:700;margin-top:2px">{{ selectedRegionName }}의 {{ dnaRecLabel }} 코스</div></div>
+            </div>
+            <h2 style="margin:0 0 12px;font-size:16px;font-weight:800;color:#16331f">이 지역의 퀘스트</h2>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <sc-for list="{{ regionQuestsVM }}" as="q" hint-placeholder-count="3">
+                <div onClick="{{ q.open }}" style="display:flex;gap:14px;align-items:center;background:#fff;border:1px solid #eee;border-radius:18px;padding:14px;cursor:pointer;position:relative;opacity:{{ q.cardOpacity }}">
+                  <div style="width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:27px;flex:none;background:{{ q.thumbBg }}">{{ q.emoji }}</div>
+                  <div style="flex:1;min-width:0">
+                    <span style="display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;margin-bottom:5px;background:{{ q.typeBg }};color:{{ q.typeFg }}">{{ q.typeLabel }}</span>
+                    <div style="font-size:15px;font-weight:700;color:#1f1f1b;letter-spacing:-.3px">{{ q.title }}</div>
+                    <div style="font-size:12px;color:#9a9a90;margin-top:3px;font-weight:500">📍 {{ q.place }} · +{{ q.reward }}P</div>
+                  </div>
+                  <sc-if value="{{ q.done }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:50%;background:#2D6A4F;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800">✓</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- QUEST DETAIL -->
+      <sc-if value="{{ isQuestDetail }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn scr" data-screen-label="퀘스트 상세" style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
+          <div style="position:relative;height:200px;flex:none;display:flex;align-items:center;justify-content:center;font-size:74px;background:{{ detailHeroBg }}">
+            <div onClick="{{ detailBack }}" style="position:absolute;top:8px;left:16px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:20px;color:#333;cursor:pointer">‹</div>
+            <div style="position:absolute;top:8px;right:16px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer">♡</div>
+            {{ quest.emoji }}
+            <div style="position:absolute;left:18px;bottom:18px;font-size:11px;color:rgba(255,255,255,.85);font-family:ui-monospace,monospace">[ {{ quest.place }} 이미지 ]</div>
+          </div>
+          <div style="flex:1;background:#fafaf7;border-radius:24px 24px 0 0;margin-top:-22px;padding:24px 22px;position:relative">
+            <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+              <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;background:#eaf3de;color:#2D6A4F">{{ quest.regionName }}</span>
+              <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;background:{{ quest.typeBg }};color:{{ quest.typeFg }}">{{ quest.typeLabel }}</span>
+              <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;background:{{ quest.verifyBadgeBg }};color:{{ quest.verifyBadgeFg }}">{{ quest.verifyLabel }}</span>
+            </div>
+            <h1 style="margin:0 0 6px;font-size:23px;font-weight:800;color:#16331f;letter-spacing:-.5px;line-height:1.3">{{ quest.title }}</h1>
+            <div style="font-size:14px;color:#9a9a90;font-weight:600;margin-bottom:18px">📍 {{ quest.place }}</div>
+            <p style="font-size:15px;line-height:1.65;color:#4a4a44;font-weight:500;margin:0 0 22px">{{ quest.desc }}</p>
+            <div style="background:#fff;border:1px solid #eee;border-radius:16px;padding:16px 18px;margin-bottom:18px">
+              <div style="font-size:13px;font-weight:800;color:#16331f;margin-bottom:12px">퀘스트 조건</div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ quest.conditions }}" as="cond" hint-placeholder-count="2">
+                  <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#2D6A4F;font-size:13px;margin-top:1px">●</span><span style="font-size:14px;color:#4a4a44;font-weight:500;line-height:1.4">{{ cond }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-bottom:22px">
+              <div style="flex:1;background:#f5f5f0;border-radius:14px;padding:14px;text-align:center"><div style="font-size:11px;color:#9a9a90;font-weight:600">인증 방식</div><div style="font-size:15px;font-weight:800;color:#16331f;margin-top:5px">{{ quest.verifyLabel }}</div></div>
+              <div style="flex:1;background:#f5f5f0;border-radius:14px;padding:14px;text-align:center"><div style="font-size:11px;color:#9a9a90;font-weight:600">보상</div><div style="font-size:15px;font-weight:800;color:#16331f;margin-top:5px">+{{ quest.reward }}P</div></div>
+            </div>
+            <sc-if value="{{ quest.isQuiz }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border:1px solid #eee;border-radius:18px;padding:20px;margin-bottom:16px">
+                <div style="font-size:12px;font-weight:700;color:#97C459;margin-bottom:8px">OX 퀴즈</div>
+                <p style="margin:0 0 18px;font-size:16px;font-weight:700;color:#1f1f1b;line-height:1.5">{{ quest.quizQ }}</p>
+                <div style="display:flex;gap:12px">
+                  <button onClick="{{ answerO }}" style="flex:1;height:64px;border:2px solid {{ quizObd }};border-radius:16px;background:{{ quizObg }};font-size:26px;font-weight:800;color:#2D6A4F;cursor:pointer;font-family:inherit">O</button>
+                  <button onClick="{{ answerX }}" style="flex:1;height:64px;border:2px solid {{ quizXbd }};border-radius:16px;background:{{ quizXbg }};font-size:26px;font-weight:800;color:#d9534f;cursor:pointer;font-family:inherit">X</button>
+                </div>
+                <sc-if value="{{ quizMsgShow }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin:14px 0 0;font-size:14px;font-weight:700;text-align:center;color:{{ quizMsgColor }}">{{ quizMsg }}</p>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+          <sc-if value="{{ detailCtaShow }}" hint-placeholder-val="{{ true }}">
+            <div style="position:sticky;bottom:0;padding:14px 22px 28px;background:linear-gradient(transparent,#fafaf7 26%)">
+              <button onClick="{{ quest.cta }}" style="width:100%;height:56px;border:none;border-radius:17px;font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff;background:{{ detailCtaBg }};box-shadow:{{ detailCtaShadow }}">{{ detailCtaLabel }}</button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- VERIFY -->
+      <sc-if value="{{ isVerify }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn" data-screen-label="인증" style="flex:1;display:flex;flex-direction:column;padding:8px 22px 26px">
+          <sc-if value="{{ verifyHeader }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+              <div onClick="{{ detailBack }}" style="font-size:24px;color:#888;cursor:pointer;width:24px">‹</div>
+              <h1 style="margin:0;font-size:19px;font-weight:800;color:#16331f">{{ verifyTitle }}</h1>
+            </div>
+            <p style="margin:0 0 18px 36px;font-size:13px;color:#9a9a90;font-weight:500">{{ quest.title }}</p>
+          </sc-if>
+
+          <!-- PHOTO -->
+          <sc-if value="{{ vStepPhoto }}" hint-placeholder-val="{{ true }}">
+            <div style="flex:1;display:flex;flex-direction:column">
+              <div onClick="{{ pickPhoto }}" style="flex:1;min-height:200px;border:2px dashed {{ photoBd }};border-radius:20px;background:{{ photoBg }};display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;text-align:center;padding:24px">
+                <sc-if value="{{ photoTaken }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:52px;margin-bottom:12px">🖼️</div>
+                  <div style="font-size:15px;font-weight:800;color:#2D6A4F">사진이 선택되었어요</div>
+                  <div style="font-size:13px;color:#8a8a82;font-weight:500;margin-top:6px">다시 누르면 변경할 수 있어요</div>
+                </sc-if>
+                <sc-if value="{{ photoEmpty }}" hint-placeholder-val="{{ true }}">
+                  <div style="width:64px;height:64px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:16px;box-shadow:0 8px 18px -8px rgba(45,106,79,.3)">📷</div>
+                  <div style="font-size:16px;font-weight:800;color:#16331f">사진 촬영 또는 갤러리 선택</div>
+                  <div style="font-size:13px;color:#8a8a82;font-weight:500;margin-top:8px;line-height:1.5">{{ verifyPlaceLine }}</div>
+                </sc-if>
+              </div>
+              <div style="display:flex;gap:10px;margin-top:12px">
+                <button onClick="{{ pickPhoto }}" style="flex:1;height:46px;border:1.5px solid #e6e6df;border-radius:13px;background:#fff;color:#333;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">📷 카메라</button>
+                <button onClick="{{ pickPhoto }}" style="flex:1;height:46px;border:1.5px solid #e6e6df;border-radius:13px;background:#fff;color:#333;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">🖼️ 갤러리</button>
+              </div>
+              <div style="background:#f5f5f0;border-radius:14px;padding:14px 16px;margin-top:14px">
+                <div style="font-size:13px;font-weight:800;color:#16331f;margin-bottom:8px">업로드 가이드</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div style="font-size:13px;color:#6a6a62;font-weight:500">• 목적지가 잘 보이는 사진</div>
+                  <div style="font-size:13px;color:#6a6a62;font-weight:500">• 최근 24시간 이내 촬영</div>
+                  <div style="font-size:13px;color:#6a6a62;font-weight:500">• 5MB 이하 JPG/PNG</div>
+                </div>
+              </div>
+              <button onClick="{{ submitPhoto }}" style="width:100%;height:54px;border:none;border-radius:15px;font-size:16px;font-weight:700;cursor:{{ photoCtaCursor }};font-family:inherit;color:#fff;background:{{ photoCtaBg }};margin-top:14px">{{ photoCtaLabel }}</button>
+            </div>
+          </sc-if>
+
+          <!-- GPS -->
+          <sc-if value="{{ vStepGps }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;display:flex;flex-direction:column">
+              <div style="position:relative;flex:none;height:230px;border-radius:20px;overflow:hidden;background:repeating-linear-gradient(45deg,#eef1ea,#eef1ea 12px,#e7ebe2 12px,#e7ebe2 24px);display:flex;align-items:center;justify-content:center">
+                <span style="font-size:12px;color:#a3a399;font-family:ui-monospace,monospace">[ 지도 미리보기 ]</span>
+                <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:38px;animation:floatpin 2.4s ease-in-out infinite">📍</div>
+              </div>
+              <div style="background:#fff;border:1px solid #eee;border-radius:16px;padding:16px 18px;margin-top:16px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                  <span style="font-size:13px;font-weight:700;color:#16331f">현재 위치</span>
+                  <span style="font-size:13px;font-weight:700;color:#2D6A4F;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="9" fill="none" stroke="#dce7d6" stroke-width="3"></circle><path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="#2D6A4F" stroke-width="3" stroke-linecap="round"></path></svg>위치 확인 중...</span>
+                </div>
+                <div style="font-size:12px;color:#9a9a90;font-weight:500;margin-bottom:10px">목적지까지 약 120m</div>
+                <div style="height:6px;background:#eef0ec;border-radius:3px;overflow:hidden"><div style="height:100%;width:78%;background:#2D6A4F;border-radius:3px"></div></div>
+              </div>
+              <div style="background:#eaf3de;border-radius:14px;padding:14px 16px;margin-top:14px;display:flex;gap:10px;align-items:flex-start">
+                <span style="font-size:16px">💡</span>
+                <span style="font-size:13px;color:#3c5a45;font-weight:500;line-height:1.5">GPS 정확도에 따라 인증이 지연될 수 있습니다. 실외에서 시도해주세요.</span>
+              </div>
+              <button onClick="{{ submitGps }}" style="width:100%;height:54px;border:none;border-radius:15px;background:#2D6A4F;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:auto;box-shadow:0 10px 22px -10px rgba(45,106,79,.6)">현재 위치로 인증하기</button>
+            </div>
+          </sc-if>
+
+          <!-- SCAN -->
+          <sc-if value="{{ vStepScan }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;display:flex;flex-direction:column">
+              <div style="position:relative;flex:none;height:230px;border-radius:20px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:80px;background:{{ detailHeroBg }}">
+                <div style="position:absolute;inset:0;background:rgba(22,51,31,.45)"></div>
+                <div style="position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#97C459,transparent);box-shadow:0 0 14px #97C459;animation:scanline 1.6s ease-in-out infinite"></div>
+                <span style="position:relative">{{ quest.emoji }}</span>
+              </div>
+              <div style="margin-top:26px;display:flex;flex-direction:column;gap:14px">
+                <sc-for list="{{ verifyChecks }}" as="ck" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:13px;animation:chkin .4s ease both;animation-delay:{{ ck.delaySec }}s">
+                    <div style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;background:{{ ck.iconBg }};color:{{ ck.iconColor }}">{{ ck.icon }}</div>
+                    <span style="font-size:14px;font-weight:600;color:#3a3a34">{{ ck.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="margin-top:auto;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;color:#2D6A4F">
+                <svg width="20" height="20" viewBox="0 0 24 24" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="9" fill="none" stroke="#dce7d6" stroke-width="3"></circle><path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="#2D6A4F" stroke-width="3" stroke-linecap="round"></path></svg>
+                <span style="font-size:14px;font-weight:700">AI가 사진을 분석하고 있어요...</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- RESULT -->
+          <sc-if value="{{ vStepResult }}" hint-placeholder-val="{{ false }}">
+            <div class="scr" style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
+              <div style="text-align:center;margin-top:8px">
+                <div style="width:104px;height:104px;border-radius:50%;background:linear-gradient(150deg,#eaf3df,#cfe6c4);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;animation:popin .55s ease;box-shadow:0 18px 40px -16px rgba(45,106,79,.45)">
+                  <div style="width:70px;height:70px;border-radius:50%;background:#2D6A4F;display:flex;align-items:center;justify-content:center;color:#fff;font-size:36px;font-weight:800">✓</div>
+                </div>
+                <h1 style="margin:0;font-size:24px;font-weight:800;color:#16331f">인증 성공!</h1>
+                <p style="margin:8px 0 0;font-size:14px;color:#9a9a90;font-weight:500">{{ verifySuccessLine }}</p>
+              </div>
+              <div style="background:#fff;border:1px solid #eee;border-radius:18px;padding:18px;margin-top:24px">
+                <div style="font-size:13px;font-weight:800;color:#16331f;margin-bottom:14px">AI 검증 결과</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><span style="font-size:13px;color:#6a6a62;font-weight:600">장소 일치도</span><span style="font-size:14px;font-weight:800;color:#2D6A4F">94%</span></div>
+                <div style="height:6px;background:#eef0ec;border-radius:3px;overflow:hidden;margin-bottom:16px"><div style="height:100%;width:94%;background:#2D6A4F;border-radius:3px"></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid #f2f2ec"><span style="font-size:13px;color:#6a6a62;font-weight:600">사진 진위 여부</span><span style="font-size:13px;font-weight:800;color:#2D6A4F">통과</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid #f2f2ec"><span style="font-size:13px;color:#6a6a62;font-weight:600">촬영 시간</span><span style="font-size:13px;font-weight:800;color:#16331f">24시간 이내</span></div>
+              </div>
+              <div style="background:#eaf3de;border-radius:14px;padding:16px;margin-top:14px;text-align:center">
+                <div style="font-size:15px;font-weight:800;color:#2D6A4F">🎨 퀘스트 완료!</div>
+                <div style="font-size:13px;color:#3c5a45;font-weight:600;margin-top:5px">{{ verifyRewardLine }}</div>
+              </div>
+              <div style="flex:none;display:flex;flex-direction:column;gap:10px;margin-top:20px">
+                <button onClick="{{ resultToMap }}" style="width:100%;height:54px;border:none;border-radius:15px;background:#2D6A4F;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">지도에서 확인하기</button>
+                <button onClick="{{ resultToQuest }}" style="width:100%;height:50px;border:1.5px solid #e6e6df;border-radius:15px;background:#fff;color:#555;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">다른 퀘스트 보기</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- TIMELINE -->
+      <sc-if value="{{ isTimeline }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn scr" data-screen-label="타임라인" style="flex:1;overflow-y:auto;padding:6px 20px 24px">
+          <div style="display:flex;align-items:center;gap:12px;margin:4px 0 6px">
+            <div onClick="{{ goMy }}" style="font-size:24px;color:#888;cursor:pointer;width:24px">‹</div>
+            <h1 style="margin:0;font-size:21px;font-weight:800;color:#16331f">여행 타임라인</h1>
+          </div>
+          <p style="margin:0 0 16px 36px;font-size:13px;color:#9a9a90;font-weight:500">{{ doneQuestCount }}개의 순간을 기록했어요</p>
+          <div class="scr" style="display:flex;gap:8px;overflow-x:auto;padding:0 0 4px;margin-bottom:18px">
+            <sc-for list="{{ timelineChips }}" as="c" hint-placeholder-count="4">
+              <button onClick="{{ c.pick }}" style="flex:none;height:32px;padding:0 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }}">{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ timelineEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;padding:50px 20px;color:#b3b3a8"><div style="font-size:42px;margin-bottom:12px">🗺️</div><p style="font-size:14px;font-weight:600">아직 기록이 없어요.<br>첫 퀘스트를 완료해보세요!</p></div>
+          </sc-if>
+          <sc-for list="{{ timelineGroups }}" as="g" hint-placeholder-count="2">
+            <div style="font-size:13px;font-weight:800;color:#8a8a82;margin:6px 0 12px">{{ g.month }}</div>
+            <div style="position:relative;padding-left:4px;margin-bottom:8px">
+              <sc-for list="{{ g.items }}" as="t" hint-placeholder-count="2">
+                <div style="display:flex;gap:16px;position:relative;padding-bottom:18px">
+                  <div style="flex:none;display:flex;flex-direction:column;align-items:center">
+                    <div style="width:14px;height:14px;border-radius:50%;background:#2D6A4F;border:3px solid #d7e7cf;z-index:1"></div>
+                    <div style="flex:1;width:2px;background:#e6e8e2;margin-top:2px"></div>
+                  </div>
+                  <div onClick="{{ t.open }}" style="flex:1;background:#fff;border:1px solid #eee;border-radius:16px;padding:14px;display:flex;gap:13px;align-items:center;margin-top:-4px;cursor:pointer">
+                    <div style="width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:24px;flex:none;background:{{ t.thumbBg }}">{{ t.emoji }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:14px;font-weight:700;color:#1f1f1b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.title }}</div>
+                      <div style="font-size:12px;color:#9a9a90;font-weight:500;margin-top:3px">📍 {{ t.regionName }} · {{ t.date }}</div>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <button onClick="{{ goShare }}" style="width:100%;height:52px;border:none;border-radius:15px;background:#2D6A4F;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px">기록 카드로 공유하기</button>
+        </div>
+      </sc-if>
+
+      <!-- SHARE -->
+      <sc-if value="{{ isShare }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn scr" data-screen-label="공유 카드" style="flex:1;overflow-y:auto;padding:6px 22px 24px;background:#16331f">
+          <div style="display:flex;align-items:center;gap:12px;margin:4px 0 18px">
+            <div onClick="{{ shareBack }}" style="font-size:24px;color:#cfe0d3;cursor:pointer;width:24px">‹</div>
+            <h1 style="margin:0;font-size:19px;font-weight:800;color:#fff">공유 카드 만들기</h1>
+          </div>
+          <div style="border-radius:24px;background:linear-gradient(165deg,#fdfdfa,#eef3e8);padding:24px 22px;box-shadow:0 24px 50px -20px rgba(0,0,0,.5)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <div style="font-size:14px;font-weight:800;color:#2D6A4F">나의 여행 지도</div>
+              <div style="font-size:11px;color:#9a9a90;font-weight:600">2026 충북 여행</div>
+            </div>
+            <sc-if value="{{ shareShowMap }}" hint-placeholder-val="{{ true }}">
+              <div style="position:relative;width:100%;background:#f7f8f4;border-radius:16px;overflow:hidden;border:1px solid #eaeae2;padding:8px">
+                <svg viewBox="10 10 480 460" style="width:100%;height:auto;display:block">
+                  <sc-for list="{{ mapRegions }}" as="r" hint-placeholder-count="11">
+                    <path d="{{ r.d }}" fill="{{ r.fill }}" stroke="#ffffff" stroke-width="1.4" stroke-linejoin="round"></path>
+                  </sc-for>
+                </svg>
+              </div>
+            </sc-if>
+            <sc-if value="{{ shareShowDna }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;gap:13px;margin-top:16px">
+                <div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;flex:none;background:{{ dnaGrad }}">{{ dnaIcon }}</div>
+                <div style="flex:1"><div style="font-size:11px;color:#9a9a90;font-weight:600">나의 여행 DNA</div><div style="font-size:17px;font-weight:800;color:#16331f">{{ dnaName }}</div></div>
+              </div>
+            </sc-if>
+            <div style="display:flex;gap:8px;margin-top:16px;text-align:center">
+              <div style="flex:1;background:#f3f5f0;border-radius:12px;padding:11px 4px"><div style="font-size:19px;font-weight:800;color:#16331f">{{ completedRegions }}</div><div style="font-size:10px;color:#9a9a90;font-weight:600;margin-top:2px">색칠 지역</div></div>
+              <div style="flex:1;background:#f3f5f0;border-radius:12px;padding:11px 4px"><div style="font-size:19px;font-weight:800;color:#16331f">{{ doneQuestCount }}</div><div style="font-size:10px;color:#9a9a90;font-weight:600;margin-top:2px">완료 퀘스트</div></div>
+              <div style="flex:1;background:#f3f5f0;border-radius:12px;padding:11px 4px"><div style="font-size:19px;font-weight:800;color:#16331f">{{ progressPct }}%</div><div style="font-size:10px;color:#9a9a90;font-weight:600;margin-top:2px">진행률</div></div>
+            </div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:#cfe0d3;margin:22px 0 11px">공유 스타일 선택</div>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ shareStyles }}" as="st" hint-placeholder-count="3">
+              <button onClick="{{ st.pick }}" style="flex:1;height:42px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid {{ st.bd }};background:{{ st.bg }};color:{{ st.fg }}">{{ st.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:9px">
+            <button onClick="{{ shareToastImg }}" style="flex:1;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#dfeee3;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📸 이미지 저장</button>
+            <button onClick="{{ shareToastLink }}" style="flex:1;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#dfeee3;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">🔗 링크 복사</button>
+          </div>
+          <button onClick="{{ shareToastSns }}" style="width:100%;height:54px;border:none;border-radius:15px;background:#97C459;color:#16331f;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:18px">공유</button>
+        </div>
+      </sc-if>
+
+      <!-- EDIT PROFILE -->
+      <sc-if value="{{ isEditProfile }}" hint-placeholder-val="{{ false }}">
+        <div class="scrn scr" data-screen-label="내 정보 수정" style="flex:1;overflow-y:auto;padding:6px 24px 26px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 18px">
+            <div style="display:flex;align-items:center;gap:10px"><div onClick="{{ goMy }}" style="font-size:24px;color:#888;cursor:pointer;width:22px">‹</div><h1 style="margin:0;font-size:18px;font-weight:800;color:#16331f">내 정보 수정</h1></div>
+            <span onClick="{{ saveProfile }}" style="font-size:15px;font-weight:700;color:#2D6A4F;cursor:pointer">저장</span>
+          </div>
+          <div style="display:flex;justify-content:center;margin:8px 0 26px">
+            <div style="position:relative"><div style="width:88px;height:88px;border-radius:50%;background:linear-gradient(140deg,#cfe6c4,#a9d49a)"></div><div style="position:absolute;right:0;bottom:0;width:30px;height:30px;border-radius:50%;background:#2D6A4F;border:2.5px solid #fafaf7;display:flex;align-items:center;justify-content:center;font-size:14px">📷</div></div>
+          </div>
+          <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:7px">닉네임</label>
+          <input value="천은백고구마" style="width:100%;height:50px;border:1.5px solid #e6e6df;border-radius:13px;padding:0 15px;font-size:15px;font-family:inherit;color:#222;background:#fff;outline:none;margin-bottom:16px">
+          <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:7px">이름</label>
+          <input value="티즈김" style="width:100%;height:50px;border:1.5px solid #e6e6df;border-radius:13px;padding:0 15px;font-size:15px;font-family:inherit;color:#222;background:#fff;outline:none;margin-bottom:16px">
+          <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:7px">생년월일</label>
+          <input value="1900.01.01" style="width:100%;height:50px;border:1.5px solid #e6e6df;border-radius:13px;padding:0 15px;font-size:15px;font-family:inherit;color:#222;background:#fff;outline:none;margin-bottom:16px">
+          <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:7px">이메일</label>
+          <input value="example@email.com (변경 불가)" disabled style="width:100%;height:50px;border:1.5px solid #ededea;border-radius:13px;padding:0 15px;font-size:15px;font-family:inherit;color:#aaa;background:#f5f5f0;outline:none;margin-bottom:16px">
+          <label style="display:block;font-size:13px;font-weight:600;color:#444;margin-bottom:7px">여행 DNA 유형</label>
+          <div onClick="{{ retakeDna }}" style="width:100%;height:50px;border:1.5px solid #e6e6df;border-radius:13px;padding:0 15px;font-size:15px;font-family:inherit;color:#222;background:#fff;display:flex;align-items:center;justify-content:space-between;cursor:pointer;margin-bottom:28px"><span>{{ dnaName }}</span><span style="font-size:13px;color:#2D6A4F;font-weight:700">다시 검사 ›</span></div>
+          <div onClick="{{ openWithdraw }}" style="text-align:center;cursor:pointer"><span style="font-size:14px;color:#E24B4A;font-weight:700;text-decoration:underline;text-underline-offset:3px">회원 탈퇴</span></div>
+        </div>
+      </sc-if>
+
+      <!-- WITHDRAW MODAL -->
+      <sc-if value="{{ showWithdraw }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;z-index:50;background:rgba(15,25,18,.42);display:flex;align-items:center;justify-content:center;padding:34px;animation:fadein .2s ease">
+          <div style="width:100%;background:#fff;border-radius:24px;padding:28px 24px;text-align:center;animation:popin .35s ease">
+            <div style="width:60px;height:60px;border-radius:50%;background:#fef0f0;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px">⚠️</div>
+            <h1 style="margin:0;font-size:19px;font-weight:800;color:#16331f">정말 탈퇴하시겠어요?</h1>
+            <p style="margin:12px 0 24px;font-size:14px;color:#8a8a82;font-weight:500;line-height:1.55">탈퇴 시 모든 퀘스트 기록과<br>지도 데이터가 삭제됩니다.</p>
+            <button onClick="{{ confirmWithdraw }}" style="width:100%;height:50px;border:none;border-radius:14px;background:#E24B4A;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">탈퇴하기</button>
+            <button onClick="{{ closeWithdraw }}" style="width:100%;height:50px;border:1.5px solid #e6e6df;border-radius:14px;background:#fff;color:#888;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit">취소</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- TOAST -->
+      <sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+        <div class="toast" style="position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:60;background:rgba(22,51,31,.94);color:#fff;font-size:14px;font-weight:600;padding:13px 22px;border-radius:14px;white-space:nowrap;box-shadow:0 10px 24px -8px rgba(0,0,0,.4)">{{ toastMsg }}</div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:440,&quot;height&quot;:880},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;스플래시&quot;,&quot;options&quot;:[&quot;스플래시&quot;,&quot;홈 지도&quot;,&quot;퀘스트 목록&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;showSampleProgress&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const REGION_NAME = {jecheon:'제천시',danyang:'단양군',eumseong:'음성군',chungju:'충주시',jincheon:'진천군',jeungpyeong:'증평군',goesan:'괴산군',cheongju:'청주시',boeun:'보은군',okcheon:'옥천군',yeongdong:'영동군'};
+const MAP_ORDER = ['jincheon','eumseong','jeungpyeong','cheongju','goesan','chungju','jecheon','danyang','boeun','okcheon','yeongdong'];
+const LABELS = {jincheon:[67,150],eumseong:[150,108],jeungpyeong:[120,180],cheongju:[95,255],goesan:[222,195],chungju:[245,110],jecheon:[320,72],danyang:[428,118],boeun:[185,295],okcheon:[135,365],yeongdong:[210,418]};
+const MAP_PATHS = {
+  jincheon:"M 67.7,100.9 L 70.4,101.7 L 70.5,113.9 L 72.1,114.8 L 73.3,118.1 L 72.5,119.9 L 69.5,119.6 L 69.8,123.8 L 75.5,124.4 L 78.0,128.9 L 81.7,129.8 L 83.4,128.0 L 85.7,128.0 L 92.2,131.0 L 96.8,137.4 L 100.0,137.8 L 106.7,142.7 L 107.6,147.4 L 110.1,148.8 L 112.1,147.5 L 113.4,150.6 L 115.3,149.7 L 117.9,151.6 L 117.9,153.3 L 114.9,155.3 L 115.6,160.0 L 113.2,160.7 L 113.6,163.9 L 112.2,165.0 L 112.6,168.4 L 115.8,168.8 L 113.4,171.8 L 107.6,172.7 L 101.2,176.0 L 105.0,179.8 L 107.5,179.5 L 110.8,186.5 L 91.5,191.4 L 91.8,189.2 L 90.1,186.8 L 87.2,186.6 L 84.9,188.9 L 81.9,188.0 L 77.9,190.7 L 74.4,190.3 L 70.7,194.3 L 70.6,198.0 L 68.1,197.9 L 67.0,196.4 L 62.8,197.3 L 62.7,194.8 L 60.2,194.8 L 57.9,189.1 L 54.3,188.3 L 51.8,185.7 L 53.6,179.5 L 47.2,174.1 L 41.7,172.9 L 36.3,167.8 L 30.5,167.9 L 31.2,159.0 L 21.0,157.1 L 20.5,155.8 L 22.4,153.3 L 21.2,147.6 L 14.2,144.6 L 19.6,136.4 L 16.7,130.9 L 21.6,131.4 L 24.1,129.4 L 27.8,129.0 L 32.6,126.4 L 35.8,122.8 L 38.6,124.7 L 44.9,124.3 L 46.2,120.6 L 48.9,118.5 L 53.9,117.3 L 48.1,111.4 L 50.9,106.3 L 58.6,105.4 L 60.8,103.9 L 63.4,104.5 L 66.0,103.4 L 67.7,100.9 Z",
+  eumseong:"M 144.8,53.9 L 153.2,55.5 L 156.4,53.5 L 160.2,54.7 L 162.2,58.2 L 165.1,59.9 L 165.9,62.9 L 165.1,64.5 L 158.6,67.3 L 157.3,68.7 L 157.7,71.5 L 155.2,75.3 L 152.2,76.5 L 154.9,85.8 L 149.5,89.3 L 148.2,92.6 L 145.5,94.1 L 145.6,96.8 L 142.7,99.5 L 145.9,104.2 L 142.3,104.8 L 140.9,111.7 L 144.9,113.7 L 147.2,111.7 L 152.9,110.5 L 153.3,112.2 L 158.7,115.4 L 163.7,120.7 L 167.3,120.5 L 171.7,122.9 L 176.4,120.9 L 179.8,124.4 L 180.2,127.2 L 183.8,129.8 L 188.7,128.5 L 188.8,132.4 L 186.4,133.3 L 187.1,135.4 L 190.8,136.2 L 192.3,139.2 L 190.2,142.5 L 188.3,144.3 L 188.6,149.4 L 181.2,151.6 L 176.9,152.1 L 170.3,149.7 L 161.0,150.2 L 155.9,149.6 L 153.0,153.9 L 153.3,157.1 L 150.2,160.4 L 146.0,157.7 L 141.4,156.7 L 137.7,158.6 L 136.2,161.9 L 132.3,163.5 L 131.4,166.0 L 128.5,166.7 L 127.1,161.5 L 128.9,157.5 L 121.9,160.1 L 120.2,157.9 L 117.4,157.0 L 115.6,157.9 L 114.9,155.3 L 117.9,153.3 L 117.9,151.6 L 115.3,149.7 L 113.4,150.6 L 112.1,147.5 L 110.1,148.8 L 107.6,147.4 L 106.7,142.7 L 100.0,137.8 L 96.8,137.4 L 92.2,131.0 L 85.7,128.0 L 83.4,128.0 L 81.7,129.8 L 78.0,128.9 L 75.5,124.4 L 69.8,123.8 L 69.5,119.6 L 72.5,119.9 L 73.3,118.7 L 72.1,114.8 L 70.5,113.9 L 71.0,107.2 L 69.8,100.9 L 71.1,98.2 L 73.7,97.8 L 74.2,91.3 L 73.2,89.8 L 77.2,86.8 L 83.5,85.1 L 88.2,87.8 L 94.6,83.8 L 102.6,86.6 L 108.1,90.1 L 112.5,87.6 L 110.9,83.0 L 115.4,77.5 L 121.8,78.1 L 124.7,80.0 L 124.9,77.3 L 121.4,72.9 L 127.3,73.1 L 135.1,68.8 L 135.7,63.0 L 134.6,61.0 L 136.3,53.2 L 132.6,49.3 L 133.0,48.0 L 139.7,49.7 L 144.8,53.9 Z",
+  jeungpyeong:"M 117.4,157.0 L 120.2,157.9 L 121.9,160.1 L 128.9,157.5 L 127.1,161.5 L 128.5,166.7 L 131.4,166.0 L 132.3,163.5 L 135.6,161.7 L 136.8,163.1 L 133.8,168.0 L 133.5,172.3 L 135.3,174.4 L 134.9,176.4 L 137.7,178.9 L 135.7,181.3 L 132.6,181.7 L 130.4,183.7 L 130.2,186.8 L 132.7,187.9 L 131.5,193.8 L 135.6,197.0 L 136.7,204.1 L 142.0,203.4 L 145.6,205.0 L 144.9,210.6 L 140.9,215.4 L 137.9,215.1 L 134.9,212.8 L 131.1,214.4 L 129.3,213.3 L 129.7,210.1 L 124.6,199.3 L 121.9,199.7 L 119.9,198.5 L 118.6,195.6 L 119.2,193.7 L 114.5,191.3 L 110.8,186.5 L 107.5,179.5 L 105.0,179.8 L 101.2,176.0 L 114.5,170.6 L 115.8,168.8 L 112.6,168.4 L 112.2,165.0 L 113.6,163.9 L 113.2,160.7 L 115.6,160.0 L 115.6,157.9 L 117.4,157.0 Z",
+  cheongju:"M 79.9,298.7 L 76.6,300.9 L 75.2,306.1 L 71.2,308.7 L 65.9,306.0 L 54.1,306.2 L 53.2,304.0 L 54.8,296.9 L 52.0,293.0 L 56.8,291.7 L 57.1,290.6 L 56.5,286.3 L 52.5,282.3 L 56.4,281.1 L 54.0,274.7 L 47.7,274.6 L 47.5,272.3 L 43.8,267.9 L 45.7,266.7 L 45.5,264.7 L 38.2,267.2 L 34.9,266.1 L 31.7,266.9 L 31.2,264.1 L 26.0,259.0 L 20.3,259.3 L 18.3,258.1 L 20.2,256.2 L 20.8,252.5 L 18.7,250.2 L 19.2,248.6 L 17.0,245.7 L 17.2,244.1 L 15.6,243.6 L 15.8,239.9 L 11.2,240.6 L 10.0,238.3 L 12.5,237.4 L 14.5,231.3 L 18.4,230.1 L 20.2,228.1 L 21.1,222.7 L 13.3,219.5 L 21.2,214.6 L 22.1,207.1 L 24.8,206.9 L 28.3,203.3 L 31.3,205.3 L 33.3,203.6 L 30.1,198.8 L 30.8,196.8 L 37.2,196.0 L 39.0,193.7 L 43.6,194.7 L 48.6,194.2 L 49.4,196.4 L 54.0,199.1 L 57.6,194.9 L 61.9,194.4 L 62.8,197.3 L 67.0,196.4 L 68.1,197.9 L 70.6,198.0 L 70.7,194.3 L 74.4,190.3 L 77.9,190.7 L 81.9,188.0 L 84.9,188.9 L 87.2,186.6 L 90.1,186.8 L 91.8,189.2 L 91.5,191.4 L 110.8,186.5 L 114.5,191.3 L 119.2,193.7 L 118.6,195.6 L 119.9,198.5 L 125.2,200.1 L 126.8,203.1 L 126.4,204.9 L 129.7,210.1 L 129.3,213.3 L 131.1,214.4 L 134.9,212.8 L 137.9,215.1 L 140.9,215.4 L 144.9,210.6 L 145.6,205.0 L 150.8,209.8 L 153.4,208.5 L 155.2,211.5 L 158.5,212.3 L 158.7,214.7 L 162.8,217.9 L 162.8,219.8 L 167.4,222.6 L 166.7,225.2 L 162.3,228.0 L 162.3,231.9 L 161.2,233.1 L 162.4,234.4 L 166.0,234.0 L 167.4,236.8 L 170.1,238.4 L 171.3,237.8 L 171.9,240.8 L 175.5,244.9 L 180.5,248.2 L 182.2,251.5 L 182.0,255.2 L 174.0,258.5 L 171.0,255.7 L 170.7,253.0 L 168.0,252.2 L 162.8,252.3 L 161.3,254.5 L 156.1,257.3 L 151.3,255.9 L 149.9,254.2 L 147.0,255.0 L 145.9,252.1 L 142.3,253.0 L 141.4,251.2 L 139.2,250.6 L 135.5,252.9 L 133.6,255.4 L 134.2,257.1 L 127.1,264.4 L 129.1,268.0 L 127.4,270.9 L 116.4,274.4 L 115.5,276.1 L 110.9,278.6 L 113.6,284.1 L 112.7,290.2 L 115.0,293.4 L 107.8,300.3 L 106.6,305.5 L 103.9,309.8 L 94.9,314.1 L 91.5,323.7 L 88.8,323.6 L 84.6,314.2 L 89.4,308.6 L 89.4,306.7 L 82.0,307.0 L 80.4,304.5 L 82.7,298.6 L 79.9,298.7 Z",
+  goesan:"M 195.5,127.1 L 200.4,126.2 L 204.3,127.6 L 203.9,129.2 L 205.3,131.2 L 207.9,132.4 L 206.8,134.9 L 207.5,135.8 L 206.1,137.2 L 212.9,140.2 L 215.2,143.7 L 221.3,143.8 L 222.3,145.8 L 225.3,145.4 L 228.0,143.2 L 229.0,146.7 L 232.5,147.6 L 233.9,149.3 L 239.0,146.9 L 245.6,147.3 L 243.6,152.1 L 251.9,157.3 L 251.0,160.4 L 254.4,165.6 L 252.7,169.5 L 256.3,170.5 L 256.5,173.3 L 266.6,176.7 L 270.8,173.9 L 271.0,169.6 L 275.0,170.0 L 279.1,171.0 L 283.2,173.1 L 282.8,176.6 L 281.8,181.9 L 278.5,185.7 L 278.2,189.9 L 273.9,195.7 L 273.9,198.5 L 286.3,207.9 L 288.0,211.7 L 287.1,213.3 L 279.8,213.2 L 269.9,208.0 L 267.8,205.0 L 265.9,205.6 L 263.3,209.7 L 258.0,209.6 L 248.7,202.4 L 244.9,208.8 L 245.0,213.1 L 239.4,213.7 L 237.8,219.5 L 225.6,218.2 L 223.4,219.2 L 221.5,222.2 L 220.7,224.0 L 227.8,222.7 L 233.9,228.0 L 238.7,232.6 L 241.3,233.5 L 239.7,237.8 L 240.3,240.8 L 239.0,246.1 L 236.1,252.3 L 234.3,249.8 L 231.8,247.6 L 224.1,242.2 L 224.0,238.3 L 218.6,232.7 L 214.5,239.7 L 209.1,240.5 L 210.2,245.8 L 213.2,248.0 L 207.0,250.0 L 200.2,248.1 L 199.2,249.9 L 193.5,252.3 L 188.1,247.9 L 182.2,251.5 L 180.5,248.2 L 171.9,240.8 L 171.3,237.8 L 170.1,238.4 L 167.4,236.8 L 166.0,234.0 L 162.4,234.4 L 161.2,233.1 L 162.3,231.9 L 162.3,228.0 L 166.7,225.2 L 167.4,222.6 L 162.8,219.8 L 162.8,217.9 L 158.7,214.7 L 155.2,211.5 L 153.4,208.5 L 150.8,209.8 L 144.8,204.1 L 136.9,204.3 L 135.6,197.0 L 131.5,193.8 L 133.1,189.3 L 130.2,186.8 L 130.4,183.7 L 132.6,181.7 L 135.7,181.3 L 137.7,178.9 L 134.9,176.4 L 135.3,174.4 L 133.5,172.3 L 133.8,168.0 L 136.6,164.0 L 137.7,158.6 L 142.4,156.7 L 150.2,160.4 L 153.3,157.1 L 155.9,149.6 L 161.0,150.2 L 170.3,149.7 L 176.9,152.1 L 181.2,151.6 L 188.6,149.4 L 188.3,144.3 L 190.2,142.5 L 187.6,140.1 L 191.7,141.2 L 192.3,139.1 L 190.5,136.0 L 187.3,135.8 L 186.4,133.3 L 188.8,132.4 L 188.7,128.5 L 191.1,125.3 L 195.1,125.3 L 195.5,127.1 Z",
+  chungju:"M 256.5,173.3 L 256.3,170.5 L 252.7,169.5 L 254.4,165.6 L 251.0,160.4 L 251.9,157.3 L 243.6,152.1 L 245.6,147.3 L 239.0,146.9 L 233.9,149.3 L 232.5,147.6 L 229.0,146.7 L 228.0,143.2 L 225.3,145.4 L 222.3,145.8 L 221.3,143.8 L 215.2,143.7 L 212.9,140.2 L 206.1,137.2 L 207.5,135.8 L 206.8,134.9 L 207.9,132.4 L 205.3,131.2 L 203.9,127.4 L 200.4,126.2 L 196.1,127.7 L 195.1,125.3 L 191.1,125.3 L 189.9,128.0 L 184.3,130.0 L 180.2,127.2 L 179.8,124.4 L 176.4,120.9 L 171.7,122.9 L 163.7,120.7 L 158.7,115.4 L 153.3,112.2 L 152.9,110.5 L 147.0,109.9 L 145.3,111.3 L 147.2,111.7 L 144.9,113.7 L 140.9,111.7 L 142.3,104.8 L 145.9,104.2 L 142.7,99.5 L 145.6,96.8 L 145.5,94.1 L 148.2,92.6 L 149.5,89.3 L 154.9,85.8 L 152.2,76.5 L 155.2,75.3 L 157.7,71.5 L 157.3,68.7 L 158.6,67.3 L 165.1,64.5 L 165.9,62.9 L 165.7,60.8 L 162.2,58.2 L 161.4,55.5 L 156.1,53.2 L 156.2,49.7 L 159.5,47.2 L 159.7,43.5 L 163.9,37.6 L 167.2,38.0 L 170.3,28.5 L 173.1,26.1 L 177.5,42.3 L 180.8,46.6 L 189.2,52.4 L 198.7,51.1 L 201.7,49.1 L 209.4,48.9 L 214.2,48.0 L 214.7,45.7 L 217.6,44.7 L 223.1,45.9 L 227.3,50.1 L 230.7,43.7 L 233.0,43.0 L 236.3,44.6 L 247.6,45.9 L 251.5,47.7 L 252.3,52.9 L 254.6,53.2 L 256.5,56.9 L 257.9,56.9 L 257.7,64.1 L 262.3,65.4 L 263.9,69.0 L 266.6,68.6 L 267.0,65.0 L 269.5,61.8 L 275.3,64.0 L 278.4,62.6 L 279.1,67.4 L 281.1,69.5 L 284.7,69.8 L 283.1,72.3 L 283.7,73.3 L 289.0,74.2 L 292.3,77.3 L 291.2,79.2 L 292.5,81.7 L 290.8,87.5 L 294.1,96.7 L 292.7,101.4 L 289.6,103.0 L 289.2,104.6 L 294.3,110.7 L 292.8,123.5 L 288.8,123.8 L 283.5,120.1 L 276.7,122.2 L 277.7,127.8 L 282.9,130.4 L 284.2,134.7 L 287.9,137.4 L 285.7,138.8 L 285.7,144.5 L 275.0,158.9 L 284.2,165.2 L 286.6,162.5 L 293.0,160.2 L 294.5,161.0 L 295.3,165.6 L 296.6,166.8 L 301.7,168.0 L 306.7,166.6 L 309.2,167.1 L 309.3,168.7 L 303.9,171.3 L 299.9,176.5 L 295.2,180.4 L 291.8,179.4 L 286.1,173.0 L 283.2,173.1 L 279.1,171.0 L 274.5,169.9 L 270.8,169.7 L 270.0,175.4 L 266.6,176.7 L 256.5,173.3 Z",
+  jecheon:"M 256.1,10.5 L 264.8,12.1 L 269.0,14.6 L 270.6,22.1 L 273.5,22.7 L 276.2,25.8 L 272.5,30.4 L 275.6,35.5 L 283.7,33.7 L 288.5,34.1 L 298.7,30.4 L 302.8,24.2 L 305.3,22.2 L 306.3,18.8 L 311.6,20.6 L 313.0,23.3 L 319.9,26.6 L 322.9,24.6 L 323.3,19.5 L 332.7,13.4 L 337.4,14.5 L 339.4,16.6 L 342.5,21.3 L 347.9,21.7 L 350.1,20.6 L 356.2,28.6 L 361.6,27.6 L 363.1,26.0 L 370.4,25.1 L 373.0,22.9 L 378.4,26.4 L 376.4,32.5 L 371.9,32.7 L 370.9,36.2 L 365.7,37.7 L 366.5,42.0 L 363.6,42.5 L 354.8,46.1 L 357.9,50.9 L 364.7,53.9 L 368.4,57.8 L 368.5,61.6 L 370.3,63.9 L 368.5,68.3 L 365.1,69.2 L 357.0,62.6 L 355.7,65.2 L 352.0,67.9 L 354.1,72.0 L 356.6,73.0 L 351.6,75.1 L 349.5,77.6 L 346.1,78.2 L 345.2,81.2 L 341.2,82.3 L 338.6,85.3 L 339.7,87.1 L 338.3,91.6 L 340.9,92.7 L 341.6,96.0 L 345.4,96.0 L 347.5,97.4 L 351.9,103.3 L 352.7,107.8 L 352.2,111.0 L 355.2,119.7 L 353.1,122.0 L 354.8,123.0 L 350.8,126.5 L 348.0,126.8 L 348.7,128.3 L 345.0,129.9 L 345.1,136.1 L 348.5,140.5 L 347.6,145.6 L 350.1,147.9 L 347.6,149.6 L 346.1,155.1 L 344.4,156.0 L 344.3,159.0 L 345.8,160.7 L 345.2,162.4 L 337.1,160.9 L 336.3,161.9 L 338.4,172.0 L 327.0,173.0 L 322.3,171.0 L 316.0,170.9 L 312.0,166.9 L 305.9,166.6 L 300.4,168.0 L 296.6,166.8 L 295.3,165.6 L 294.5,161.0 L 293.0,160.2 L 286.6,162.5 L 284.2,165.2 L 275.0,158.9 L 285.7,144.5 L 285.7,138.8 L 287.9,137.4 L 284.2,134.7 L 282.9,130.4 L 277.7,127.8 L 276.7,122.2 L 283.5,120.1 L 288.8,123.8 L 292.8,123.5 L 294.3,110.7 L 289.2,104.6 L 289.6,103.0 L 292.7,101.4 L 294.1,96.7 L 290.8,87.5 L 292.5,81.7 L 291.2,79.2 L 292.3,77.3 L 289.0,74.2 L 283.7,73.3 L 283.1,72.3 L 284.7,69.8 L 281.1,69.5 L 279.1,67.4 L 278.4,62.6 L 275.3,64.0 L 269.5,61.8 L 267.0,65.0 L 266.6,68.6 L 263.9,69.0 L 262.3,65.4 L 257.9,56.9 L 256.5,56.9 L 254.6,53.2 L 252.3,52.9 L 251.5,47.7 L 247.6,45.9 L 236.9,44.2 L 239.4,40.5 L 239.1,38.0 L 237.2,24.1 L 241.3,16.5 L 246.1,13.8 L 252.0,11.0 L 256.1,10.5 Z",
+  danyang:"M 399.5,48.7 L 402.4,51.1 L 403.4,53.8 L 400.7,57.9 L 408.5,61.1 L 410.7,67.5 L 412.6,67.1 L 414.4,64.3 L 417.9,65.7 L 419.6,64.0 L 429.2,64.7 L 435.8,58.9 L 440.5,63.3 L 441.9,67.1 L 447.8,68.4 L 449.8,72.1 L 455.7,73.4 L 458.5,72.0 L 462.9,75.3 L 468.8,76.5 L 472.4,74.7 L 474.0,77.0 L 479.7,73.1 L 482.2,78.0 L 490.0,81.2 L 485.0,86.3 L 483.3,90.4 L 474.3,89.3 L 466.1,89.2 L 464.1,92.2 L 459.8,93.7 L 462.4,97.7 L 461.1,100.6 L 456.0,106.0 L 452.0,108.3 L 442.4,110.2 L 439.3,116.4 L 432.2,119.3 L 429.0,121.1 L 425.5,123.3 L 423.1,129.7 L 416.6,132.2 L 417.7,137.2 L 415.4,142.3 L 411.4,146.2 L 411.9,147.9 L 410.4,150.9 L 414.8,152.0 L 419.1,155.8 L 418.5,163.1 L 414.0,166.6 L 413.3,170.3 L 409.5,174.8 L 396.3,174.1 L 391.1,178.4 L 385.8,174.6 L 379.2,172.9 L 372.8,173.0 L 362.5,162.6 L 361.1,158.5 L 346.9,152.5 L 347.6,149.6 L 350.1,147.9 L 347.6,145.6 L 348.5,140.5 L 345.1,136.1 L 345.0,129.9 L 348.7,128.3 L 348.0,126.8 L 350.8,126.5 L 354.8,123.0 L 353.1,122.0 L 355.2,119.7 L 352.2,111.0 L 352.7,107.8 L 351.9,103.3 L 347.5,97.4 L 345.4,96.0 L 341.6,96.0 L 340.9,92.7 L 338.3,91.6 L 339.7,87.1 L 338.6,85.3 L 341.2,82.3 L 345.2,81.2 L 346.1,78.2 L 349.5,77.6 L 351.6,75.1 L 356.6,73.0 L 354.1,72.0 L 352.0,67.9 L 355.7,65.2 L 357.0,62.6 L 359.4,62.6 L 359.5,64.5 L 365.1,69.2 L 368.5,68.3 L 370.3,63.9 L 368.5,58.0 L 366.6,55.8 L 369.4,54.6 L 370.5,51.8 L 375.8,50.7 L 377.9,49.9 L 380.5,47.0 L 385.2,47.2 L 388.0,49.9 L 389.7,47.6 L 393.9,49.1 L 396.5,47.0 L 399.5,48.7 Z",
+  boeun:"M 190.5,249.9 L 192.3,252.2 L 192.3,258.0 L 194.5,259.9 L 198.5,261.1 L 201.4,263.8 L 203.4,262.5 L 205.8,264.1 L 211.1,263.7 L 213.9,264.8 L 217.4,268.1 L 218.3,271.0 L 217.4,274.1 L 219.4,276.3 L 228.6,279.6 L 229.4,288.4 L 223.8,292.5 L 219.2,295.2 L 221.6,298.8 L 220.2,302.1 L 221.4,304.0 L 218.0,311.8 L 219.2,315.9 L 221.4,317.8 L 221.7,318.8 L 219.2,321.5 L 218.4,324.6 L 215.1,325.7 L 216.0,328.8 L 219.2,330.3 L 222.2,334.2 L 220.7,337.4 L 205.8,336.9 L 204.2,338.2 L 203.9,336.4 L 200.8,334.3 L 193.1,333.3 L 189.3,331.1 L 182.7,331.5 L 179.7,329.3 L 174.3,332.1 L 170.1,329.6 L 168.5,330.6 L 160.8,324.4 L 161.5,321.8 L 151.5,320.0 L 150.5,317.8 L 151.2,313.5 L 146.0,310.2 L 143.2,312.8 L 138.7,310.1 L 136.8,313.5 L 134.0,312.2 L 132.9,316.3 L 129.1,320.4 L 124.5,325.1 L 124.1,323.3 L 118.9,322.1 L 117.5,320.3 L 116.1,323.9 L 107.3,329.5 L 104.1,323.6 L 103.0,319.7 L 93.3,318.5 L 95.1,313.9 L 103.9,309.8 L 106.6,305.5 L 107.8,300.3 L 115.0,293.4 L 112.7,290.2 L 113.6,284.1 L 110.9,278.6 L 115.5,276.1 L 116.4,274.4 L 127.4,270.9 L 129.1,268.0 L 127.1,264.4 L 134.2,257.1 L 133.6,255.4 L 135.5,252.9 L 139.2,250.6 L 141.4,251.2 L 142.3,253.0 L 145.9,252.1 L 147.0,255.0 L 149.9,254.2 L 151.3,255.9 L 156.1,257.3 L 161.3,254.5 L 162.8,252.3 L 168.0,252.2 L 171.0,255.7 L 174.0,258.5 L 182.0,255.2 L 182.2,251.5 L 187.9,248.0 L 190.5,249.9 Z",
+  okcheon:"M 139.6,310.5 L 143.2,312.8 L 146.0,310.2 L 151.1,313.4 L 150.5,317.8 L 151.5,320.0 L 161.5,321.8 L 160.8,324.4 L 168.5,330.6 L 170.1,329.6 L 174.3,332.1 L 179.7,329.3 L 182.7,331.5 L 189.3,331.1 L 193.1,333.3 L 200.8,334.3 L 203.9,336.4 L 204.2,338.2 L 205.8,336.9 L 214.2,336.5 L 222.0,337.7 L 224.7,341.7 L 221.7,346.8 L 217.3,347.7 L 215.8,350.6 L 211.2,352.8 L 210.4,356.3 L 208.6,357.7 L 201.6,360.0 L 195.7,360.5 L 193.0,364.4 L 190.9,367.3 L 182.4,367.4 L 179.5,371.1 L 177.4,375.6 L 168.1,372.5 L 165.9,374.8 L 163.1,377.4 L 158.6,378.2 L 155.8,382.2 L 154.9,386.4 L 151.2,391.2 L 148.4,392.5 L 145.3,392.1 L 142.7,389.8 L 140.7,391.4 L 141.3,394.9 L 140.0,398.1 L 142.1,403.6 L 140.5,406.1 L 142.3,409.1 L 140.4,411.5 L 134.6,407.9 L 132.6,408.8 L 126.0,406.0 L 122.3,406.3 L 120.5,402.4 L 123.0,398.8 L 122.4,394.4 L 117.4,389.1 L 112.7,388.3 L 110.5,390.4 L 104.0,391.3 L 105.6,386.5 L 101.0,381.8 L 97.6,382.8 L 94.5,385.7 L 85.6,386.7 L 83.9,381.7 L 84.3,373.8 L 87.7,370.7 L 85.1,364.9 L 87.9,361.7 L 89.3,354.3 L 88.4,349.3 L 91.0,347.8 L 95.0,345.2 L 96.3,343.1 L 97.5,338.1 L 96.9,331.5 L 101.9,327.6 L 107.1,329.5 L 111.2,327.6 L 116.4,323.6 L 117.5,320.3 L 118.9,322.1 L 124.1,323.3 L 124.5,325.1 L 129.1,320.4 L 132.9,316.3 L 134.0,312.2 L 136.2,313.7 L 138.3,310.2 L 139.6,310.5 Z",
+  yeongdong:"M 208.3,358.0 L 207.3,360.7 L 209.2,363.5 L 211.0,373.4 L 214.1,372.2 L 221.7,373.4 L 224.2,367.7 L 229.2,363.2 L 230.5,369.1 L 239.1,372.3 L 240.9,375.2 L 244.9,379.8 L 248.9,381.4 L 252.3,382.1 L 255.0,380.5 L 256.0,377.2 L 259.3,377.3 L 262.9,376.1 L 266.1,374.0 L 268.0,375.5 L 271.7,375.6 L 274.2,378.0 L 279.1,379.8 L 273.0,385.9 L 276.3,390.1 L 277.3,394.2 L 280.3,398.5 L 282.9,400.2 L 276.0,402.8 L 271.0,398.2 L 266.0,397.2 L 262.2,397.9 L 260.2,400.7 L 254.9,401.4 L 256.0,402.2 L 254.0,405.2 L 257.1,408.7 L 256.6,411.8 L 261.6,417.1 L 258.2,420.1 L 258.3,427.0 L 251.0,430.9 L 251.7,436.4 L 248.1,440.9 L 248.9,448.5 L 240.4,455.6 L 233.5,454.5 L 231.0,456.0 L 228.7,460.1 L 222.4,461.3 L 221.9,464.1 L 219.6,466.2 L 215.9,465.5 L 211.3,460.1 L 199.5,463.8 L 192.6,464.9 L 188.6,469.1 L 180.7,470.0 L 179.3,465.1 L 172.1,465.3 L 169.9,462.5 L 158.6,461.5 L 156.2,457.6 L 156.2,452.8 L 153.8,451.3 L 147.4,455.5 L 144.1,460.3 L 142.1,453.9 L 138.6,449.8 L 134.3,444.1 L 129.1,440.0 L 129.8,434.3 L 119.4,424.9 L 123.7,415.4 L 123.6,412.1 L 120.8,409.2 L 122.3,406.3 L 126.0,406.0 L 132.6,408.8 L 134.6,407.9 L 140.4,411.5 L 142.3,409.1 L 140.5,406.1 L 142.1,403.6 L 141.3,394.9 L 140.7,391.4 L 142.7,389.8 L 145.3,392.1 L 148.4,392.5 L 151.2,391.2 L 154.9,386.4 L 155.8,382.2 L 158.6,378.2 L 163.1,377.4 L 162.8,375.3 L 165.3,375.1 L 168.8,372.5 L 177.4,375.6 L 179.5,374.2 L 182.4,367.4 L 190.9,367.3 L 193.0,364.4 L 195.7,360.5 L 201.6,360.0 L 208.3,358.0 Z"
+};
+const TYPE = {
+  nature:{label:'자연탐험',bg:'#e6f1e8',fg:'#2D6A4F',emoji:'🌲'},
+  food:{label:'미식방문',bg:'#fbeae0',fg:'#c2622e',emoji:'🍜'},
+  history:{label:'역사문화',bg:'#ece9f4',fg:'#5b4a9e',emoji:'🏛️'},
+  active:{label:'액티비티',bg:'#e6eef7',fg:'#3a6bb0',emoji:'🧗'},
+  healing:{label:'힐링',bg:'#eaf3e4',fg:'#5c8a3a',emoji:'☕'}
+};
+const VERIFY_LABEL = {photo:'사진 인증',gps:'GPS 인증',quiz:'OX 퀴즈'};
+const QUESTS = [
+  {id:'dy1',region:'danyang',type:'nature',title:'소백산 연화봉 전망대 인증',place:'소백산 연화봉',verify:'photo',reward:120,desc:'능선을 배경으로 인증샷을 남겨보세요. 정상에서 내려다보는 탁 트인 풍경이 기다리고 있습니다.',conditions:['연화봉 전망대 도착 후 촬영','능선이 보이도록 촬영']},
+  {id:'dy2',region:'danyang',type:'nature',title:'도담삼봉에서 인생샷 남기기',place:'도담삼봉',verify:'photo',reward:80,desc:'남한강 위에 솟은 세 개의 봉우리를 배경으로 한 장 찍어보세요.',conditions:['도담삼봉이 보이는 구도','정자(석문) 포함 시 보너스']},
+  {id:'dy3',region:'danyang',type:'food',title:'단양 마늘떡갈비 맛보기',place:'단양구경시장',verify:'photo',reward:70,desc:'단양의 명물 마늘 요리를 즐기고 음식 사진으로 기록하세요.',conditions:['음식이 명확히 보이는 사진','시장 내 식당에서 촬영']},
+  {id:'cj1',region:'cheongju',type:'history',title:'직지 OX 퀴즈 풀기',place:'청주고인쇄박물관',verify:'quiz',reward:90,desc:'직지심체요절에 대한 상식 퀴즈에 도전하고 청주의 인쇄 문화를 알아보세요.',conditions:['OX 퀴즈 정답 맞히기'],quizQ:'직지심체요절은 현존하는 세계 최초의 금속활자 인쇄본이다.',quizAns:true},
+  {id:'cj2',region:'cheongju',type:'healing',title:'수암골 벽화마을 산책',place:'수암골',verify:'photo',reward:60,desc:'골목 가득한 벽화 사이를 걸으며 감성 한 컷을 남겨보세요.',conditions:['벽화가 보이는 사진','골목 풍경 포함']},
+  {id:'cj3',region:'cheongju',type:'food',title:'서문시장 삼겹살 거리',place:'서문시장',verify:'photo',reward:60,desc:'청주식 삼겹살로 든든하게 배를 채우고 인증해보세요.',conditions:['삼겹살 거리 내에서 촬영','음식 사진 등록']},
+  {id:'be1',region:'boeun',type:'history',title:'법주사 팔상전 지정 구도 촬영',place:'속리산 법주사',verify:'photo',reward:110,desc:'국보 팔상전을 지정된 구도로 담아보세요. 우리나라 유일의 목조 5층탑입니다.',conditions:['팔상전 전체가 보이는 구도','지정 포토존에서 촬영']},
+  {id:'be2',region:'boeun',type:'active',title:'속리산 문장대 등반',place:'속리산 문장대',verify:'gps',reward:150,desc:'문장대 정상에서 GPS 위치 인증에 도전하세요!',conditions:['문장대 정상 100m 이내 도달','GPS 위치 인증']},
+  {id:'cu1',region:'chungju',type:'healing',title:'충주호 호반 드라이브',place:'충주호',verify:'photo',reward:70,desc:'잔잔한 호수를 따라 달리며 풍경 한 장을 남겨보세요.',conditions:['충주호가 보이는 사진']},
+  {id:'cu2',region:'chungju',type:'history',title:'탄금대에서 역사 한 조각',place:'탄금대',verify:'photo',reward:70,desc:'우륵이 가야금을 연주했다는 이야기가 깃든 절벽입니다.',conditions:['탄금대 표지석 포함 촬영']},
+  {id:'jc1',region:'jecheon',type:'nature',title:'청풍호반 케이블카',place:'청풍호반',verify:'photo',reward:90,desc:'케이블카에서 내려다보는 청풍호 전경을 담아보세요.',conditions:['케이블카 탑승 인증','호수 전경 촬영']},
+  {id:'jc2',region:'jecheon',type:'healing',title:'의림지 야경 감상',place:'의림지',verify:'photo',reward:70,desc:'삼한시대 저수지의 고요한 밤 풍경을 기록하세요.',conditions:['의림지 야경 촬영']},
+  {id:'es1',region:'eumseong',type:'history',title:'큰바위얼굴조각공원 방문',place:'큰바위얼굴조각공원',verify:'photo',reward:60,desc:'세계 위인들의 조각상 사이에서 한 컷.',conditions:['조각상 포함 촬영']},
+  {id:'jh1',region:'jincheon',type:'history',title:'농다리 건너보기',place:'진천 농다리',verify:'photo',reward:60,desc:'천 년을 버틴 돌다리를 직접 건너보세요.',conditions:['농다리 위 또는 앞에서 촬영']},
+  {id:'jp1',region:'jeungpyeong',type:'active',title:'좌구산 천문대 별 관측',place:'좌구산천문대',verify:'gps',reward:80,desc:'밤하늘 아래에서 위치 인증에 도전하세요.',conditions:['천문대 100m 이내 도달','GPS 위치 인증']},
+  {id:'gs1',region:'goesan',type:'nature',title:'산막이옛길 트레킹',place:'산막이옛길',verify:'photo',reward:90,desc:'괴산호를 끼고 걷는 아름다운 숲길을 걸어보세요.',conditions:['옛길 구간에서 촬영','괴산호 풍경 포함']},
+  {id:'oc1',region:'okcheon',type:'history',title:'정지용 생가 방문',place:'정지용 생가',verify:'photo',reward:60,desc:'시 향수의 고향에서 시인의 흔적을 만나보세요.',conditions:['생가 입구에서 촬영']},
+  {id:'yd1',region:'yeongdong',type:'food',title:'영동 와인터널 체험',place:'영동 와인터널',verify:'photo',reward:80,desc:'포도의 고장 영동에서 와인 한 잔을 즐겨보세요.',conditions:['와인터널 내부에서 촬영']}
+];
+const DNA = {
+  nature:{name:'자연탐험형 여행자',icon:'🌿',desc:'대자연 속에서 에너지를 얻고 조용한 힐링을 즐기는 탐험가예요.',rec:'자연 탐험',grad:'linear-gradient(150deg,#2f7d52,#1f5e3c)',tags:['자연친화','힐링','사진','트레킹']},
+  food:{name:'로컬 미식가',icon:'🍜',desc:'지역의 맛으로 여행을 기억하는 타입이에요. 진짜 여행은 현지 맛집에서 시작되죠.',rec:'미식 탐방',grad:'linear-gradient(150deg,#d27a3e,#a8551f)',tags:['미식','시장','카페','로컬']},
+  history:{name:'이야기 수집가',icon:'🏛️',desc:'골목과 유적에 담긴 이야기를 모으는 타입이에요. 오래된 것에서 깊이를 발견하죠.',rec:'역사 문화',grad:'linear-gradient(150deg,#6a5bb0,#473a8a)',tags:['역사','문화','사찰','박물관']},
+  active:{name:'에너지 탐험가',icon:'🧗',desc:'몸으로 부딪치며 즐기는 타입이에요. 가만히 있는 여행은 답답하죠.',rec:'액티비티',grad:'linear-gradient(150deg,#4c7fc4,#2f5f9f)',tags:['액티비티','등산','체험','짜릿']},
+  healing:{name:'느림의 여행자',icon:'☕',desc:'천천히 머무르며 충전하는 타입이에요. 여백이 있는 여행을 사랑하죠.',rec:'힐링',grad:'linear-gradient(150deg,#6fa84a,#4d7c30)',tags:['힐링','휴식','카페','산책']}
+};
+const SURVEY = [
+  {q:'여행에서 가장 중요한 것은 무엇인가요?',opts:[{t:'nature',label:'자연 속에서의 힐링과 휴식'},{t:'food',label:'현지 맛집 탐방과 미식 경험'},{t:'history',label:'역사·문화 유적지 탐방'},{t:'active',label:'액티비티와 모험적인 경험'},{t:'healing',label:'한적한 곳에서의 여유로운 시간'}]},
+  {q:'여행 사진첩에 제일 많은 사진은?',opts:[{t:'nature',label:'풍경과 하늘'},{t:'food',label:'음식과 카페'},{t:'history',label:'건축물과 유물'},{t:'active',label:'활동하는 순간'},{t:'healing',label:'감성 가득한 일상컷'}]},
+  {q:'충북에서 하루가 주어진다면?',opts:[{t:'nature',label:'호수와 산을 트레킹'},{t:'food',label:'로컬 맛집 투어'},{t:'history',label:'박물관과 사찰 탐방'},{t:'active',label:'케이블카와 짚라인'},{t:'healing',label:'한적한 카페에서 멍'}]},
+  {q:'당신의 여행 페이스는?',opts:[{t:'nature',label:'발길 닿는 대로 탐험'},{t:'food',label:'맛집 동선 위주로'},{t:'history',label:'미리 공부하고 깊이 있게'},{t:'active',label:'빽빽하고 알차게'},{t:'healing',label:'느긋하게 천천히'}]}
+];
+function mapFill(n){
+  if(!n||n<=0) return {bg:'#e6e6df',label:'#9a9a90'};
+  if(n===1) return {bg:'#97C459',label:'#234d12'};
+  return {bg:'#2D6A4F',label:'#ffffff'};
+}
+
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    const start = props.startScreen || '스플래시';
+    let screen='splash', tab='home';
+    if(start==='홈 지도'){ screen='app'; tab='home'; }
+    else if(start==='퀘스트 목록'){ screen='app'; tab='travel'; }
+    const seed = (props.showSampleProgress !== false);
+    const completed={}, progress={}; let timeline=[]; let dnaType=null;
+    if(seed){
+      dnaType='nature';
+      completed.dy1=true; completed.dy2=true; completed.cj1=true;
+      progress.danyang=2; progress.cheongju=1;
+      timeline=[{id:'cj1',date:'2026.06.14',month:'2026년 6월'},{id:'dy2',date:'2026.06.09',month:'2026년 6월'},{id:'dy1',date:'2026.05.28',month:'2026년 5월'}];
+    }
+    this.state={
+      screen,tab,
+      surveyStep:0, surveyPicks:[null,null,null,null],
+      dnaType,
+      selectedRegion:null, selectedQuestId:null, prevScreen:'app', prevTab:'travel',
+      verifyStep:'photo', photoTaken:false, quizState:null,
+      questFilter:'all', timelineFilter:'all', shareStyle:'map_dna',
+      completed, progress, timeline,
+      showWithdraw:false, toast:null
+    };
+    this._timers=[];
+  }
+  componentWillUnmount(){ (this._timers||[]).forEach(clearTimeout); }
+  _t(fn,ms){ const id=setTimeout(fn,ms); this._timers.push(id); return id; }
+  go(screen){ this.setState({screen}); }
+  setTab(tab){ this.setState({screen:'app',tab}); }
+  toast(msg){ if(this._tt) clearTimeout(this._tt); this.setState({toast:msg}); this._tt=this._t(()=>this.setState({toast:null}),1900); }
+
+  startSurvey(){ this.setState({screen:'survey',surveyStep:0,surveyPicks:[null,null,null,null]}); }
+  pickSurvey(t){ const picks=[...this.state.surveyPicks]; picks[this.state.surveyStep]=t; this.setState({surveyPicks:picks}); }
+  surveyNext(){
+    const cur=this.state.surveyPicks[this.state.surveyStep];
+    if(!cur){ this.toast('선택지를 골라주세요'); return; }
+    if(this.state.surveyStep>=SURVEY.length-1){
+      const tally={nature:0,food:0,history:0,active:0,healing:0};
+      this.state.surveyPicks.forEach(t=>{ if(t) tally[t]++; });
+      let best='nature',max=-1; for(const k in tally){ if(tally[k]>max){max=tally[k];best=k;} }
+      this.setState({dnaType:best,screen:'dnaResult'});
+    } else this.setState({surveyStep:this.state.surveyStep+1});
+  }
+  surveyBack(){ if(this.state.surveyStep===0) this.setState({screen:'signup'}); else this.setState({surveyStep:this.state.surveyStep-1}); }
+
+  openRegion(id){ this.setState({selectedRegion:id,screen:'regionQuests'}); }
+  openQuest(id,from){ this.setState({selectedQuestId:id,screen:'questDetail',quizState:null,prevScreen:from||this.state.screen,prevTab:this.state.tab}); }
+  curQuest(){ return QUESTS.find(q=>q.id===this.state.selectedQuestId)||QUESTS[0]; }
+  detailBack(){
+    const s=this.state;
+    if(s.screen==='verify'){ this.setState({screen:'questDetail'}); return; }
+    if(s.prevScreen==='regionQuests'&&s.selectedRegion) this.setState({screen:'regionQuests'});
+    else if(s.prevScreen==='dnaResult') this.setState({screen:'dnaResult'});
+    else this.setState({screen:'app',tab:s.prevTab||'travel'});
+  }
+  startVerify(){
+    const q=this.curQuest();
+    if(q.verify==='gps') this.setState({screen:'verify',verifyStep:'gps'});
+    else this.setState({screen:'verify',verifyStep:'photo',photoTaken:false});
+  }
+  pickPhoto(){ this.setState({photoTaken:true}); }
+  submitPhoto(){ if(!this.state.photoTaken){ this.toast('사진을 먼저 등록해주세요'); return; } this.runScan(); }
+  submitGps(){ this.runScan(); }
+  runScan(){ this.setState({verifyStep:'scan'}); this._t(()=>this.completeQuest(),2600); }
+  answerQuiz(val){
+    const q=this.curQuest();
+    if(val===q.quizAns){ this.setState({quizState:'correct'}); this._t(()=>this.completeQuest(),1100); }
+    else this.setState({quizState:'wrong'});
+  }
+  completeQuest(){
+    const q=this.curQuest();
+    const completed={...this.state.completed,[q.id]:true};
+    const progress={...this.state.progress};
+    progress[q.region]=(progress[q.region]||0)+1;
+    const today=new Date();
+    const m=(today.getMonth()+1);
+    const entry={id:q.id,date:`2026.0${m}.15`,month:`2026년 ${m}월`};
+    const timeline=[entry,...this.state.timeline.filter(t=>t.id!==q.id)];
+    this.setState({completed,progress,timeline,screen:'verify',verifyStep:'result'});
+  }
+  resultToMap(){ this.setState({screen:'app',tab:'home'}); }
+  resultToQuest(){ this.setState({screen:'app',tab:'travel'}); }
+
+  finishDna(){ this.setState({screen:'app',tab:'home'}); }
+  retakeDna(){ this.startSurvey(); }
+  saveProfile(){ this.toast('변경사항이 저장되었어요'); this.setState({screen:'app',tab:'my'}); }
+  openWithdraw(){ this.setState({showWithdraw:true}); }
+  closeWithdraw(){ this.setState({showWithdraw:false}); }
+  confirmWithdraw(){ this.setState({showWithdraw:false,screen:'splash'}); this.toast('탈퇴가 완료되었습니다'); }
+
+  countCompletedRegions(){ let n=0; for(const k in this.state.progress){ if(this.state.progress[k]>0) n++; } return n; }
+  countDoneQuests(){ return Object.keys(this.state.completed).filter(k=>this.state.completed[k]).length; }
+  totalReward(){ return QUESTS.filter(q=>this.state.completed[q.id]).reduce((a,q)=>a+q.reward,0); }
+
+  renderVals(){
+    const s=this.state;
+    const dnaType=s.dnaType||'nature';
+    const dna=DNA[dnaType];
+    const nickname='천은백고구마';
+    const screen=s.screen;
+    const completedRegions=this.countCompletedRegions();
+    const doneQuestCount=this.countDoneQuests();
+    const progressPct=Math.round((completedRegions/11)*100);
+    const statusColor = (screen==='share') ? '#ffffff' : '#16331f';
+
+    // map regions
+    const mapRegions = MAP_ORDER.map(id=>{
+      const f=mapFill(s.progress[id]);
+      const lab=LABELS[id]||[0,0];
+      return {id,name:REGION_NAME[id],d:MAP_PATHS[id],fill:f.bg,labelFill:f.label,lx:lab[0],ly:lab[1],open:()=>this.openRegion(id)};
+    });
+
+    // survey
+    const sv=SURVEY[s.surveyStep];
+    const pick=s.surveyPicks[s.surveyStep];
+    const surveyOptions=(sv?sv.opts:[]).map(o=>{
+      const sel=pick===o.t;
+      return {label:o.label,mark:sel?'✓':'',bd:sel?'#2D6A4F':'#e6e6df',bg:sel?'#f1f7ec':'#fff',dotBd:sel?'#2D6A4F':'#d6d6cd',dotBg:sel?'#2D6A4F':'#fff',pick:()=>this.pickSurvey(o.t)};
+    });
+    const lastStep=s.surveyStep>=SURVEY.length-1;
+
+    // dna rec quests
+    const dnaRecQuests=QUESTS.filter(q=>q.type===dnaType).slice(0,3).map(q=>({
+      title:q.title,emoji:TYPE[q.type].emoji,thumbBg:TYPE[q.type].bg,regionName:REGION_NAME[q.region],open:()=>this.openQuest(q.id,'dnaResult')
+    }));
+
+    // recent done (home)
+    const recentDone=s.timeline.slice(0,3).map(t=>{
+      const q=QUESTS.find(x=>x.id===t.id)||{};
+      return {title:q.title,emoji:TYPE[q.type]?TYPE[q.type].emoji:'📍',thumbBg:TYPE[q.type]?TYPE[q.type].bg:'#eee',regionName:REGION_NAME[q.region],date:t.date,open:()=>this.openQuest(q.id,'app')};
+    });
+
+    // in progress
+    let inProgress=null;
+    for(const id of MAP_ORDER){ const p=s.progress[id]||0; const total=QUESTS.filter(q=>q.region===id).length; if(p>0&&p<total){ inProgress={region:id,done:p,total}; break; } }
+    const hasInProgress=!!inProgress;
+
+    // quest list filters
+    const FILTERS=[{k:'all',label:'전체'},{k:'nature',label:'🌲 자연탐험'},{k:'food',label:'🍜 미식방문'},{k:'history',label:'🏛️ 역사문화'},{k:'active',label:'🧗 액티비티'},{k:'healing',label:'☕ 힐링'}];
+    const filterChips=FILTERS.map(f=>{
+      const on=s.questFilter===f.k;
+      return {label:f.label,bd:on?'#2D6A4F':'#e6e6df',bg:on?'#2D6A4F':'#fff',fg:on?'#fff':'#6a6a62',pick:()=>this.setState({questFilter:f.k})};
+    });
+    const listQuests = s.questFilter==='all'?QUESTS:QUESTS.filter(q=>q.type===s.questFilter);
+    const questListVM=listQuests.map(q=>({
+      title:q.title,place:q.place,reward:q.reward,emoji:TYPE[q.type].emoji,thumbBg:TYPE[q.type].bg,
+      regionName:REGION_NAME[q.region],typeLabel:TYPE[q.type].label,typeBg:TYPE[q.type].bg,typeFg:TYPE[q.type].fg,
+      done:!!s.completed[q.id],cardOpacity:s.completed[q.id]?0.62:1,open:()=>this.openQuest(q.id,'app')
+    }));
+
+    // region quests
+    const rid=s.selectedRegion;
+    const regionQuests = rid?QUESTS.filter(q=>q.region===rid):[];
+    const regionDone = regionQuests.filter(q=>s.completed[q.id]).length;
+    const regionQuestsVM=regionQuests.map(q=>({
+      title:q.title,place:q.place,reward:q.reward,emoji:TYPE[q.type].emoji,thumbBg:TYPE[q.type].bg,
+      typeLabel:TYPE[q.type].label,typeBg:TYPE[q.type].bg,typeFg:TYPE[q.type].fg,
+      done:!!s.completed[q.id],cardOpacity:s.completed[q.id]?0.62:1,open:()=>this.openQuest(q.id,'regionQuests')
+    }));
+
+    // quest detail
+    const q=this.curQuest();
+    const isQuiz=q.verify==='quiz';
+    const quizState=s.quizState;
+    const questVM={
+      emoji:TYPE[q.type].emoji,title:q.title,place:q.place,desc:q.desc,reward:q.reward,
+      regionName:REGION_NAME[q.region],typeLabel:TYPE[q.type].label,typeBg:TYPE[q.type].bg,typeFg:TYPE[q.type].fg,
+      verifyLabel:VERIFY_LABEL[q.verify],verifyBadgeBg:'#fff4e0',verifyBadgeFg:'#b07a18',
+      conditions:q.conditions||[],isQuiz,quizQ:q.quizQ||'',
+      cta:()=>this.startVerify()
+    };
+    const alreadyDone=!!s.completed[q.id];
+    const detailCtaShow=!isQuiz && !alreadyDone;
+    const detailCtaLabel=alreadyDone?'완료된 퀘스트':'퀘스트 시작하기';
+    const detailHeroBg=dna.grad;
+
+    // verify
+    const vStep=s.verifyStep;
+    const verifyTitle = q.verify==='gps'?'위치 인증':(vStep==='result'?'인증 완료':'사진 인증');
+    const verifyChecks=[
+      {label:'장소 특징 분석 중',icon:'✓',iconBg:'#2D6A4F',iconColor:'#fff',delaySec:0.1},
+      {label:'GPS 메타데이터 확인',icon:'✓',iconBg:'#2D6A4F',iconColor:'#fff',delaySec:0.7},
+      {label:'촬영 시간 검증',icon:'⟳',iconBg:'#dce7d6',iconColor:'#2D6A4F',delaySec:1.3}
+    ];
+
+    // timeline
+    const TLF=[{k:'all',label:'전체'},{k:'nature',label:'자연'},{k:'food',label:'미식'},{k:'history',label:'역사'},{k:'healing',label:'힐링'}];
+    const timelineChips=TLF.map(f=>{ const on=s.timelineFilter===f.k; return {label:f.label,bd:on?'#2D6A4F':'#e6e6df',bg:on?'#2D6A4F':'#fff',fg:on?'#fff':'#6a6a62',pick:()=>this.setState({timelineFilter:f.k})}; });
+    let tlItems=s.timeline.map(t=>({...t,q:QUESTS.find(x=>x.id===t.id)})).filter(t=>t.q);
+    if(s.timelineFilter!=='all') tlItems=tlItems.filter(t=>t.q.type===s.timelineFilter);
+    const monthMap={};
+    tlItems.forEach(t=>{ if(!monthMap[t.month]) monthMap[t.month]=[]; monthMap[t.month].push({title:t.q.title,emoji:TYPE[t.q.type].emoji,thumbBg:TYPE[t.q.type].bg,regionName:REGION_NAME[t.q.region],date:t.date,open:()=>this.openQuest(t.q.id,'app')}); });
+    const timelineGroups=Object.keys(monthMap).map(m=>({month:m,items:monthMap[m]}));
+
+    // share styles
+    const SS=[{k:'map_dna',label:'지도+DNA'},{k:'map',label:'지도만'},{k:'dna',label:'DNA만'}];
+    const shareStyles=SS.map(o=>{ const on=s.shareStyle===o.k; return {label:o.label,bd:on?'#97C459':'rgba(255,255,255,.3)',bg:on?'#97C459':'rgba(255,255,255,.08)',fg:on?'#16331f':'#dfeee3',pick:()=>this.setState({shareStyle:o.k})}; });
+
+    return {
+      statusColor,
+      isSplash:screen==='splash', isSignup:screen==='signup', isSurvey:screen==='survey', isDnaResult:screen==='dnaResult',
+      isApp:screen==='app', isHome:screen==='app'&&s.tab==='home', isTravel:screen==='app'&&s.tab==='travel', isMy:screen==='app'&&s.tab==='my',
+      isRegionQuests:screen==='regionQuests', isQuestDetail:screen==='questDetail', isVerify:screen==='verify',
+      isTimeline:screen==='timeline', isShare:screen==='share', isEditProfile:screen==='editProfile',
+      showWithdraw:s.showWithdraw, toastShow:!!s.toast, toastMsg:s.toast||'',
+
+      goSignup:()=>this.startSurvey(), backToSplash:()=>this.setState({screen:'splash'}),
+      goSurvey:()=>this.startSurvey(),
+
+      surveyPct:Math.round(((s.surveyStep+1)/SURVEY.length)*100),
+      surveyStepLabel:`${s.surveyStep+1}/${SURVEY.length}`,
+      surveyQuestion:sv?sv.q:'', surveyOptions,
+      surveyNext:()=>this.surveyNext(), surveyBack:()=>this.surveyBack(),
+      surveyNextLabel:lastStep?'결과 보기':'다음',
+      surveyNextBg:pick?'#2D6A4F':'#c4c9c2', surveyNextShadow:pick?'0 10px 22px -10px rgba(45,106,79,.6)':'none',
+
+      dnaName:dna.name, dnaIcon:dna.icon, dnaDesc:dna.desc, dnaGrad:dna.grad, dnaTags:dna.tags, dnaRecLabel:dna.rec, dnaRecQuests,
+      finishDna:()=>this.finishDna(), retakeDna:()=>this.retakeDna(),
+
+      nickname, email:'example@email.com',
+      completedRegions, doneQuestCount, progressPct, totalReward:this.totalReward(),
+      mapRegions,
+      hasInProgress, inProgressName:inProgress?REGION_NAME[inProgress.region]:'', inProgressLabel:inProgress?`${inProgress.done}/${inProgress.total} 완료`:'',
+      openInProgress:()=>{ if(inProgress) this.openRegion(inProgress.region); },
+      recentEmpty:recentDone.length===0, recentDone,
+      goTimeline:()=>this.setState({screen:'timeline'}), goShare:()=>this.setState({screen:'share'}),
+      goEditProfile:()=>this.setState({screen:'editProfile'}),
+      openWithdraw:()=>this.openWithdraw(), closeWithdraw:()=>this.closeWithdraw(), confirmWithdraw:()=>this.confirmWithdraw(), saveProfile:()=>this.saveProfile(),
+
+      filterChips, questListVM,
+
+      selectedRegionName:rid?REGION_NAME[rid]:'', regionDoneLabel:`${regionDone}/${regionQuests.length} 완료`, regionQuestsVM,
+      goHome:()=>this.setTab('home'), goTravel:()=>this.setTab('travel'), goMy:()=>this.setTab('my'),
+      navTravelColor:(screen==='app'&&s.tab==='travel')?'#2D6A4F':'#b3b3a8',
+      navMyColor:(screen==='app'&&s.tab==='my')?'#2D6A4F':'#b3b3a8',
+      navHomeColor:(screen==='app'&&s.tab==='home')?'#2D6A4F':'#b3b3a8',
+      navHomeBg:(screen==='app'&&s.tab==='home')?'#2D6A4F':'#cfd8cf',
+      navHomeIcon:(screen==='app'&&s.tab==='home')?'#fff':'#7d8a7d',
+
+      quest:questVM, detailBack:()=>this.detailBack(),
+      detailCtaShow, detailCtaLabel, detailCtaBg:'#2D6A4F', detailCtaShadow:'0 12px 26px -12px rgba(45,106,79,.6)', detailHeroBg,
+      answerO:()=>this.answerQuiz(true), answerX:()=>this.answerQuiz(false),
+      quizObd:quizState==='correct'?'#2D6A4F':'#dbe6dc', quizObg:quizState==='correct'?'#eaf3de':'#fff',
+      quizXbd:quizState==='wrong'?'#E24B4A':'#f0dede', quizXbg:quizState==='wrong'?'#fdeceb':'#fff',
+      quizMsgShow:!!quizState, quizMsg:quizState==='correct'?'정답이에요! 퀘스트를 완료합니다 🎉':'아쉬워요, 다시 시도해보세요',
+      quizMsgColor:quizState==='correct'?'#2D6A4F':'#E24B4A',
+
+      verifyHeader:vStep!=='result', verifyTitle,
+      vStepPhoto:vStep==='photo', vStepGps:vStep==='gps', vStepScan:vStep==='scan', vStepResult:vStep==='result',
+      photoTaken:s.photoTaken, photoEmpty:!s.photoTaken,
+      photoBd:s.photoTaken?'#2D6A4F':'#cfd8cf', photoBg:s.photoTaken?'#f1f7ec':'#fff',
+      photoCtaLabel:s.photoTaken?'인증 제출하기':'사진을 등록해주세요', photoCtaBg:s.photoTaken?'#2D6A4F':'#c4c9c2', photoCtaCursor:s.photoTaken?'pointer':'not-allowed',
+      verifyPlaceLine:`${q.place}에서 인증 사진을 등록해 주세요`,
+      verifyChecks, pickPhoto:()=>this.pickPhoto(), submitPhoto:()=>this.submitPhoto(), submitGps:()=>this.submitGps(),
+      verifySuccessLine:`${q.place} 방문이 확인되었습니다.`,
+      verifyRewardLine:`${REGION_NAME[q.region]} 지도가 더 진하게 칠해졌어요 · +${q.reward}P`,
+      resultToMap:()=>this.resultToMap(), resultToQuest:()=>this.resultToQuest(),
+
+      timelineChips, timelineGroups, timelineEmpty:timelineGroups.length===0,
+
+      shareStyles, shareBack:()=>this.setState({screen:'app',tab:'my'}),
+      shareShowMap:s.shareStyle!=='dna', shareShowDna:s.shareStyle!=='map',
+      shareToastImg:()=>this.toast('이미지가 저장되었어요'), shareToastLink:()=>this.toast('링크가 복사되었어요'), shareToastSns:()=>this.toast('공유 시트를 여는 중...')
+    };
+  }
+}
+</script>
+</body>
+</html>
