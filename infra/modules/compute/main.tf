@@ -36,6 +36,11 @@ resource "google_compute_instance" "vm" {
     scopes = ["cloud-platform"]
   }
 
+  # OS Login 활성화 — CI 배포자 SA가 IAP SSH로 접속(키 없이 IAM 제어)
+  metadata = {
+    enable-oslogin = "TRUE"
+  }
+
   # 부팅 시 Docker·compose 설치
   metadata_startup_script = file("${path.module}/startup.sh")
 

@@ -42,3 +42,13 @@ output "db_password_secret" {
   description = "DB 비밀번호가 저장된 Secret Manager 시크릿 ID"
   value       = module.database.password_secret_id
 }
+
+output "deployer_sa_email" {
+  description = "CI/CD 배포자 서비스 계정 (GitHub Actions DEPLOY_SA)"
+  value       = google_service_account.deployer.email
+}
+
+output "wif_provider" {
+  description = "GitHub Actions용 WIF 프로바이더 리소스 이름 (WIF_PROVIDER)"
+  value       = google_iam_workload_identity_pool_provider.github.name
+}

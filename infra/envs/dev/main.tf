@@ -13,6 +13,7 @@ locals {
     "secretmanager.googleapis.com",    # 시크릿 저장
     "iam.googleapis.com",              # 서비스 계정·권한
     "iamcredentials.googleapis.com",   # 키리스 인증(GitHub Actions WIF)
+    "iap.googleapis.com",              # IAP 터널(CI 배포 SSH)
   ]
 
   # 앱 인스턴스 서비스 계정 권한
