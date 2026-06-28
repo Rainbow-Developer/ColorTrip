@@ -26,15 +26,35 @@
 
 ## 규칙 / 적용
 
-- async/await를 전면 적용한다. DB 접근과 외부 호출은 모두 비동기로 통일한다.
-- 설정과 환경변수는 pydantic-settings로 일원화하고 `.env`로 주입한다.
-- 백그라운드 작업은 FastAPI BackgroundTasks로 처리한다.
-- 앱 서버는 로컬·운영 모두 Uvicorn으로 구동한다.
-- 애플리케이션 코드는 `app/` 아래에 두고, 비즈니스 도메인은 도메인별 패키지로 분리한다(`app/quests/`, `app/regions/` 등).
-- 각 도메인 패키지는 `models.py`(ORM 모델)·`schemas.py`(요청·응답 스키마)·`repository.py`(DB 접근)·`service.py`(비즈니스 로직)·`router.py`(엔드포인트)로 책임을 분리한다.
-- 영역 공통 코드(설정 등)는 `app/core/`에, 외부 API 연동은 `app/integrations/{서비스}/`에 서비스별로 둔다. 연동 대상·정책은 [외부 API & 데이터 연동](./external-apis.md)을 따른다.
-- DB 마이그레이션은 `alembic/`에서 관리하고 리비전 파일은 `alembic/versions/`에 둔다.
-- 실제 전체 디렉토리 트리는 [README의 프로젝트 구조](../../README.md#프로젝트-구조)가 단일 출처다. 이 문서는 구성 원칙만 정의한다.
+### 💡 파이썬 문법 규칙
+
+- **타입 힌트 필수화**: 모든 함수의 입력 인자(Parameters)와 반환값(Return Types)에는 명확한 타입을 기재합니다.
+  ```python
+  def get_user_status(user_id: int) -> str:
+      return "active"
+  ```
+- **비동기 함수 (`async def` vs `def`) 규칙**:
+  - `I/O Bound 작업` (DB 조회, 외부 API 호출 등)은 `async def`를 선언하고 비동기 라이브러리를 사용합니다.
+  - `CPU Bound / Non-I/O 작업` (단순 연산, 포맷 파싱 등)은 일반 `def`를 사용합니다.
+
+### 📁 디렉터리 구조 및 구성 원칙
+
+애플리케이션 코드는 `app/` 아래에 두며, 전체적인 디렉터리 구조와 역할은 다음과 같습니다.
+
+- **`app/`**: 전체 소스 코드 진입점
+  - **`app/main.py`**: FastAPI 인스턴스 생성 및 설정
+  - **`app/api/`**: 엔드포인트 레이어 (버전 관리 `/v1/endpoints/` 포함)
+  - **`app/core/`**: 환경 설정(`config.py`), 보안(`security.py`), DB 세션 및 연결(`database.py`)
+  - **`app/models/`**: SQLAlchemy/SQLModel 데이터베이스 테이블 정의
+  - **`app/schemas/`**: Pydantic DTO (입출력 데이터 유효성 검증)
+  - **`app/services/`**: 순수 비즈니스 로직 처리 레이어
+- **`tests/`**: Pytest 기반 유닛 테스트 디렉터리
+- **도메인별 패키지 구성**: 비즈니스 도메인은 도메인별 패키지로 분리합니다 (`app/quests/`, `app/regions/` 등). 각 도메인 패키지 내부에서도 `models.py`, `schemas.py`, `repository.py`, `service.py`, `router.py`로 책임을 분리하여 작성합니다.
+- **외부 API 연동**: `app/integrations/{서비스}/` 아래에 둡니다 (예: `app/integrations/tour_api/`). 연동 정책은 [외부 API & 데이터 연동](./external-apis.md)을 따릅니다.
+- **DB 마이그레이션**: `alembic/`에서 관리하고 리비전 파일은 `alembic/versions/`에 둡니다.
+
+> [!NOTE]
+> 실제 전체 디렉토리 트리는 [README의 프로젝트 구조](../../README.md#프로젝트-구조)가 단일 출처(SOT)입니다. 본 문서는 구성 원칙과 책임을 정의합니다.
 
 ## 관련 문서
 
