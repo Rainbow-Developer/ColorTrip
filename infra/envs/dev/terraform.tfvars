@@ -1,0 +1,6 @@
+project_id            = "colortrip"
+region                = "asia-northeast3"
+zone                  = "asia-northeast3-a"
+environment           = "dev"
+instance_machine_type = "e2-small"
+db_tier               = "db-g1-small"
