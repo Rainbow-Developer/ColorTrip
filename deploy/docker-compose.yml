@@ -1,0 +1,30 @@
+# ColorTrip 운영 인스턴스(Compute Engine)용 Docker Compose
+# 현재는 BE 중심: Cloud SQL Auth Proxy + FastAPI.
+# FE(Flutter Web → nginx)는 frontend/lib 소스가 repo에 들어온 뒤 web 서비스로 추가한다.
+services:
+  cloudsql-proxy:
+    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:latest # TODO: 운영 전 특정 버전으로 핀
+    command:
+      - "--address=0.0.0.0"
+      - "--port=5432"
+      - "${CLOUD_SQL_CONNECTION_NAME}"
+    restart: unless-stopped
+    # 인스턴스에 부착된 서비스 계정(roles/cloudsql.client)으로 인증 — 키 파일 불필요
+
+  api:
+    image: ${API_IMAGE}
+    env_file: .env
+    depends_on:
+      - cloudsql-proxy
+    restart: unless-stopped
+    # 임시: FE/nginx 도입 전까지 API를 80으로 노출. FE 들어오면 nginx(web)가 80을 차지하고
+    #       이 매핑은 제거(nginx가 /api 를 api:8000 으로 프록시)한다.
+    ports:
+      - "80:8000"
+
+# FE 도입 시 추가 예정:
+#   web:
+#     image: ${WEB_IMAGE}        # nginx + Flutter Web 빌드 (frontend/Dockerfile)
+#     depends_on: [api]
+#     restart: unless-stopped
+#     ports: ["80:80", "443:443"]
