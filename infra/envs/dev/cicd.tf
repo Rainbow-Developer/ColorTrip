@@ -58,3 +58,11 @@ resource "google_service_account_iam_member" "deployer_wif" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${local.github_repo}"
 }
+
+# 인스턴스에 붙은 앱 SA에 대한 actAs 권한.
+# (SA가 붙은 인스턴스에 SSH/scp 하려면 그 SA를 actAs 할 수 있어야 함)
+resource "google_service_account_iam_member" "deployer_actas_app" {
+  service_account_id = google_service_account.app.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.deployer.email}"
+}
