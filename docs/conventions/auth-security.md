@@ -32,6 +32,16 @@
 - CORS는 허용 도메인 화이트리스트로 제한한다.
 - 실제 Kakao OAuth 브라우저 검증은 앱에 개발용 라우트를 추가하지 않고, 프론트엔드 또는 별도 로컬 클라이언트에서 인가 코드를 받은 뒤 정식 API로 검증한다.
 
+## 보호 API 사용자 조회
+
+- 로그인 사용자가 필요한 API는 `app.auth.dependencies.CurrentUser`를 사용한다.
+- endpoint는 `current_user: CurrentUser`를 받고, service에는 `current_user` 또는 `current_user.id`만 전달한다.
+- endpoint나 service에서 JWT를 직접 decode하지 않는다.
+- service에는 raw JWT, Authorization header, refresh token을 사용자 식별용으로 넘기지 않는다.
+- 보호 API 인증에는 access token만 사용한다. refresh token은 재발급과 로그아웃 요청에만 사용한다.
+- `CurrentUser`는 JWT 검증 후 active user(`deleted_at IS NULL`, `anonymized_at IS NULL`)를 DB에서 다시 조회한다.
+- 탈퇴 또는 익명화된 사용자는 남은 access token이 있어도 보호 API에 접근할 수 없다.
+
 ## 관련 문서
 
 - [외부 API & 데이터 연동](./external-apis.md)

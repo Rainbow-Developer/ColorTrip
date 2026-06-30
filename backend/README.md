@@ -81,6 +81,46 @@ backend/
 
 응답은 공통 Envelope `{ code, status, message, data }`로 감싼다([api-design.md](../docs/conventions/api-design.md)).
 
+## 보호 API 사용자 사용
+
+로그인한 사용자 정보가 필요한 API는 `CurrentUser` dependency를 사용한다.
+JWT parsing과 active user 조회는 인증 dependency에서 끝내고, service에는 이미 식별된 사용자만 전달한다.
+
+```python
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.dependencies import CurrentUser
+from app.core.database import get_session
+from app.core.response import Envelope, success
+
+router = APIRouter(prefix="/quests", tags=["quests"])
+
+
+@router.post("/{quest_id}/start")
+async def start_quest(
+    quest_id: str,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_session),
+) -> Envelope[dict[str, str]]:
+    # service에는 JWT가 아니라 식별된 사용자 정보만 전달한다.
+    # await quest_service.start_quest(
+    #     session,
+    #     user_id=current_user.id,
+    #     quest_id=quest_id,
+    # )
+    return success({"quest_id": quest_id, "user_id": str(current_user.id)})
+```
+
+클라이언트는 보호 API 요청에 access token을 전달한다.
+
+```http
+Authorization: Bearer <access_token>
+```
+
+`CurrentUser`는 JWT 서명, 만료 시간, token type, `sub`를 검증한 뒤 DB에서 active user를 다시 조회한다.
+헤더 누락, 잘못된 token, refresh token 사용, 탈퇴/익명화 사용자는 `UNAUTHORIZED_ERROR` 또는 `TOKEN_EXPIRED_ERROR`로 응답한다.
+
 ## 테스트
 
 Auth/Member 테스트는 PostgreSQL을 사용한다.
