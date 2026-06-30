@@ -29,13 +29,14 @@ sed "s|PASSWORD|${PW}|" .env.example > .env   # 그 뒤 API_IMAGE 등 나머지 
 |--------|------|
 | `colortrip-dev-db-password` | Cloud SQL 접속 비밀번호 |
 | `colortrip-dev-jwt-secret-key` | Access JWT 서명과 refresh token hash |
+| `colortrip-dev-kakao-rest-api-key` | Kakao 로그인 REST API 키 |
+| `colortrip-dev-kakao-redirect-uri` | Kakao authorization code 교환용 redirect URI |
 
 선택 Secret Manager 값:
 
 | Secret | 용도 |
 |--------|------|
 | `colortrip-dev-tour-api-key` | 한국관광공사 TourAPI |
-| `colortrip-dev-kakao-rest-api-key` | Kakao 로그인 REST API 키 |
 
 ## 실행 (인스턴스에서)
 

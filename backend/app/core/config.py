@@ -43,6 +43,10 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET_KEY must be set outside local/test environments.")
         if len(self.jwt_secret_key) < 32:
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters.")
+        if not self.kakao_rest_api_key.strip():
+            raise ValueError("KAKAO_REST_API_KEY must be set outside local/test environments.")
+        if not self.kakao_redirect_uri.strip():
+            raise ValueError("KAKAO_REDIRECT_URI must be set outside local/test environments.")
         return self
 
 

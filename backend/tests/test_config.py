@@ -17,6 +17,36 @@ def test_non_local_env_rejects_default_jwt_secret() -> None:
         )
 
 
+def test_non_local_env_rejects_missing_kakao_rest_api_key() -> None:
+    with pytest.raises(ValueError, match="KAKAO_REST_API_KEY"):
+        _settings(
+            app_env="dev",
+            jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
+            kakao_rest_api_key="",
+            kakao_redirect_uri="https://example.com/auth/kakao/callback",
+        )
+
+
+def test_non_local_env_rejects_missing_kakao_redirect_uri() -> None:
+    with pytest.raises(ValueError, match="KAKAO_REDIRECT_URI"):
+        _settings(
+            app_env="dev",
+            jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
+            kakao_rest_api_key="test-kakao-rest-api-key",
+            kakao_redirect_uri="",
+        )
+
+
+def test_non_local_env_accepts_required_auth_settings() -> None:
+    settings = _settings(
+        app_env="dev",
+        jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
+        kakao_rest_api_key="test-kakao-rest-api-key",
+        kakao_redirect_uri="https://example.com/auth/kakao/callback",
+    )
+
+    assert settings.app_env == "dev"
+
 
 def test_local_env_allows_local_defaults() -> None:
     settings = _settings(

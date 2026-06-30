@@ -12,7 +12,8 @@ REGION="asia-northeast3"
 DB_SECRET="colortrip-dev-db-password"
 JWT_SECRET="colortrip-dev-jwt-secret-key"
 TOUR_SECRET="colortrip-dev-tour-api-key" # 없으면 빈 값
-KAKAO_REST_SECRET="colortrip-dev-kakao-rest-api-key" # 없으면 빈 값
+KAKAO_REST_SECRET="colortrip-dev-kakao-rest-api-key"
+KAKAO_REDIRECT_SECRET="colortrip-dev-kakao-redirect-uri"
 
 # 인스턴스 서비스 계정 액세스 토큰(메타데이터 서버)
 TOKEN="$(curl -s -H 'Metadata-Flavor: Google' \
@@ -34,6 +35,9 @@ JWT_KEY="$(read_secret "${JWT_SECRET}")"
 [ -n "${JWT_KEY}" ] || { echo "ERROR: JWT secret(${JWT_SECRET}) 조회 실패"; exit 1; }
 TOUR_KEY="$(read_secret "${TOUR_SECRET}")"
 KAKAO_REST_KEY="$(read_secret "${KAKAO_REST_SECRET}")"
+[ -n "${KAKAO_REST_KEY}" ] || { echo "ERROR: Kakao REST API 키(${KAKAO_REST_SECRET}) 조회 실패"; exit 1; }
+KAKAO_REDIRECT_URI="$(read_secret "${KAKAO_REDIRECT_SECRET}")"
+[ -n "${KAKAO_REDIRECT_URI}" ] || { echo "ERROR: Kakao redirect URI(${KAKAO_REDIRECT_SECRET}) 조회 실패"; exit 1; }
 
 # Artifact Registry 도커 인증(메타데이터 토큰)
 echo "${TOKEN}" | sudo docker login -u oauth2accesstoken --password-stdin "https://${REGION}-docker.pkg.dev"
@@ -49,8 +53,7 @@ JWT_SECRET_KEY=${JWT_KEY}
 ACCESS_TOKEN_TTL_MINUTES=15
 REFRESH_TOKEN_TTL_DAYS=14
 KAKAO_REST_API_KEY=${KAKAO_REST_KEY}
-KAKAO_REDIRECT_URI=
-ENABLE_DEV_AUTH_ROUTES=false
+KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
 TOUR_API_KEY=${TOUR_KEY}
 TOUR_API_BASE_URL=https://apis.data.go.kr/B551011/KorService2
 EOF

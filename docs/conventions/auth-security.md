@@ -28,7 +28,7 @@
 - 보호 API는 JWT 검증 후 active user(`deleted_at IS NULL`, `anonymized_at IS NULL`)를 DB에서 조회한다.
 - 클라이언트 토큰은 flutter_secure_storage에만 저장한다.
 - 시크릿은 코드/깃에 두지 않고 GCP Secret Manager를 사용한다(외부 API 키 관리도 동일).
-- `local/test` 외 환경은 `JWT_SECRET_KEY`를 반드시 주입해야 하며, 기본 placeholder secret으로는 앱이 시작되지 않아야 한다.
+- `local/test` 외 환경은 `JWT_SECRET_KEY`, `KAKAO_REST_API_KEY`, `KAKAO_REDIRECT_URI`를 반드시 주입해야 하며, 기본 placeholder secret이나 빈 Kakao 설정으로는 앱이 시작되지 않아야 한다.
 - CORS는 허용 도메인 화이트리스트로 제한한다.
 - 실제 Kakao OAuth 브라우저 검증은 앱에 개발용 라우트를 추가하지 않고, 프론트엔드 또는 별도 로컬 클라이언트에서 인가 코드를 받은 뒤 정식 API로 검증한다.
 
