@@ -17,7 +17,7 @@ docs/conventions/
 ├── database.md              # DB & 모델링 — PostgreSQL·snake_case·UUID v7·Soft Delete
 ├── api-design.md            # API 설계 & 응답 형식 — envelope·/api/v1·페이지네이션
 ├── auth-security.md         # 인증 & 보안 · 개인정보 — Kakao·JWT·Secret Manager·CORS
-├── infra-deploy.md          # 인프라 & 배포 — Docker Compose·GCP·GitHub Actions
+├── infra-deploy.md          # 인프라 & 배포 — Terraform(IaC)·GCP(Compute Engine·Cloud SQL)·GitHub Actions
 ├── logging-monitoring.md    # 로깅 & 모니터링 — JSON 로깅·Cloud Logging·Slack 알림
 ├── code-quality.md          # 코드 품질 & 컨벤션 — Ruff·Pyright·pre-commit(dart format/analyze)
 ├── docs-tools.md            # 문서화 & 협업 도구 — FigJam·Swagger·Figma·Slack

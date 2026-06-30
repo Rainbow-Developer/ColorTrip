@@ -102,6 +102,11 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 │   │   ├── state/           # 전역 상태(Riverpod)·파생 통계·지도 색칠 헬퍼
 │   │   └── features/        # 화면 단위: onboarding·survey·home·quests·timeline·profile
 │   └── pubspec.yaml
+├── infra/          # GCP 인프라 (Terraform / IaC) — SOT: docs/conventions/infra-deploy.md
+│   ├── modules/        # 재사용 모듈 (network·compute·database)
+│   ├── envs/dev/       # dev 환경 (GCS 원격 상태)
+│   └── scripts/        # Cloud SQL Auth Proxy 로컬 헬퍼 등
+├── deploy/         # 배포 — Compute Engine용 docker-compose·env 템플릿
 └── docs/           # 문서
     ├── AGENT_GUIDE.md   # AI 에이전트 공통 가이드 (작업 워크플로우·문서 동기화 규칙)
     ├── conventions/     # 팀 기술·규약 결정 (영역별 SOT)

@@ -1,0 +1,61 @@
+name: Deploy dev (BE)
+
+# dev 브랜치에 BE/배포 관련 변경이 머지되면 이미지 빌드 → Artifact Registry 푸시 →
+# 인스턴스에 IAP SSH로 배포한다. 인증은 WIF(키 없음).
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "backend/**"
+      - "deploy/**"
+      - ".github/workflows/deploy-dev.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # WIF OIDC 토큰 발급
+
+env:
+  PROJECT_ID: colortrip
+  REGION: asia-northeast3
+  IMAGE: asia-northeast3-docker.pkg.dev/colortrip/colortrip-dev/api
+  INSTANCE: colortrip-dev-app
+  ZONE: asia-northeast3-a
+  CLOUD_SQL_CONNECTION_NAME: colortrip:asia-northeast3:colortrip-dev-db
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker auth (Artifact Registry)
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build & push API image
+        run: |
+          docker build -t "${IMAGE}:${GITHUB_SHA}" -t "${IMAGE}:latest" ./backend
+          docker push "${IMAGE}:${GITHUB_SHA}"
+          docker push "${IMAGE}:latest"
+
+      - name: Upload deploy files to instance
+        run: |
+          gcloud compute scp deploy/docker-compose.yml deploy/deploy.sh \
+            "${INSTANCE}:~/" --zone "${ZONE}" --project "${PROJECT_ID}" \
+            --tunnel-through-iap --quiet
+
+      - name: Deploy on instance
+        run: |
+          gcloud compute ssh "${INSTANCE}" --zone "${ZONE}" --project "${PROJECT_ID}" \
+            --tunnel-through-iap --quiet \
+            --command "API_IMAGE='${IMAGE}:${GITHUB_SHA}' CLOUD_SQL_CONNECTION_NAME='${CLOUD_SQL_CONNECTION_NAME}' bash ~/deploy.sh"
