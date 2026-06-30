@@ -10,7 +10,9 @@ set -euo pipefail
 PROJECT="colortrip"
 REGION="asia-northeast3"
 DB_SECRET="colortrip-dev-db-password"
+JWT_SECRET="colortrip-dev-jwt-secret-key"
 TOUR_SECRET="colortrip-dev-tour-api-key" # 없으면 빈 값
+KAKAO_REST_SECRET="colortrip-dev-kakao-rest-api-key" # 없으면 빈 값
 
 # 인스턴스 서비스 계정 액세스 토큰(메타데이터 서버)
 TOKEN="$(curl -s -H 'Metadata-Flavor: Google' \
@@ -28,7 +30,10 @@ sys.stdout.write(base64.b64decode(p).decode() if p else "")'
 
 DB_PW="$(read_secret "${DB_SECRET}")"
 [ -n "${DB_PW}" ] || { echo "ERROR: DB 비밀번호(${DB_SECRET}) 조회 실패"; exit 1; }
+JWT_KEY="$(read_secret "${JWT_SECRET}")"
+[ -n "${JWT_KEY}" ] || { echo "ERROR: JWT secret(${JWT_SECRET}) 조회 실패"; exit 1; }
 TOUR_KEY="$(read_secret "${TOUR_SECRET}")"
+KAKAO_REST_KEY="$(read_secret "${KAKAO_REST_SECRET}")"
 
 # Artifact Registry 도커 인증(메타데이터 토큰)
 echo "${TOKEN}" | sudo docker login -u oauth2accesstoken --password-stdin "https://${REGION}-docker.pkg.dev"
@@ -38,7 +43,14 @@ cd "${HOME}" # CI가 docker-compose.yml 을 여기로 scp 한다
 cat > .env <<EOF
 API_IMAGE=${API_IMAGE}
 CLOUD_SQL_CONNECTION_NAME=${CLOUD_SQL_CONNECTION_NAME}
+APP_ENV=dev
 DATABASE_URL=postgresql+asyncpg://colortrip:${DB_PW}@cloudsql-proxy:5432/colortrip
+JWT_SECRET_KEY=${JWT_KEY}
+ACCESS_TOKEN_TTL_MINUTES=15
+REFRESH_TOKEN_TTL_DAYS=14
+KAKAO_REST_API_KEY=${KAKAO_REST_KEY}
+KAKAO_REDIRECT_URI=
+ENABLE_DEV_AUTH_ROUTES=false
 TOUR_API_KEY=${TOUR_KEY}
 TOUR_API_BASE_URL=https://apis.data.go.kr/B551011/KorService2
 EOF
