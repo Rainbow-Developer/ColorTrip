@@ -48,8 +48,7 @@ uv run uvicorn app.main:app --reload
 | `ACCESS_TOKEN_TTL_MINUTES` | Access token TTL (기본 15분) |
 | `REFRESH_TOKEN_TTL_DAYS` | Refresh token TTL (기본 14일) |
 | `KAKAO_REST_API_KEY` | Kakao REST API 키 |
-| `KAKAO_REDIRECT_URI` | Kakao authorization code callback URI |
-| `ENABLE_DEV_AUTH_ROUTES` | 로컬 Kakao OAuth 검증 route 노출 여부 |
+| `KAKAO_REDIRECT_URI` | Kakao authorization code 교환 시 사용하는 redirect URI. 카카오 인가 요청에 사용한 값과 같아야 한다. |
 
 ## 구조
 

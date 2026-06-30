@@ -17,20 +17,11 @@ def test_non_local_env_rejects_default_jwt_secret() -> None:
         )
 
 
-def test_non_local_env_rejects_dev_auth_routes() -> None:
-    with pytest.raises(ValueError, match="ENABLE_DEV_AUTH_ROUTES"):
-        _settings(
-            app_env="dev",
-            jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
-            enable_dev_auth_routes=True,
-        )
-
 
 def test_local_env_allows_local_defaults() -> None:
     settings = _settings(
         app_env="local",
         jwt_secret_key=DEFAULT_JWT_SECRET_KEY,
-        enable_dev_auth_routes=True,
     )
 
     assert settings.app_env == "local"

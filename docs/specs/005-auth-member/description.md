@@ -17,7 +17,7 @@
 |------|------|------|
 | auth 도메인 | `backend/app/auth/` | 모델, 스키마, repository, service, router, dependency |
 | 공통 보안 primitive | `backend/app/core/security.py` | access JWT 생성/검증, refresh token 생성/hash |
-| 공통 설정 | `backend/app/core/config.py` | JWT/Kakao/dev route 설정 |
+| 공통 설정 | `backend/app/core/config.py` | JWT/Kakao 설정 |
 | 공통 응답/예외 | `backend/app/core/response.py`, `backend/app/core/exceptions.py` | Envelope와 error code 변환 |
 | 마이그레이션 | `backend/alembic/versions/` | users, refresh_tokens 테이블 |
 
@@ -72,11 +72,9 @@ ANONYMIZED_OLD_USER + NEW_ACTIVE_USER
 - access token 검증과 active user 조회는 dependency 계층에서 끝낸다.
 - service는 이미 식별된 user 또는 user id를 입력으로 받는다.
 
-## Dev-only OAuth 검증
+## Kakao OAuth 수동 검증
 
-로컬 실제 Kakao OAuth 테스트를 위해 dev-only 라우터를 제공한다.
+정식 백엔드 앱에는 개발용 OAuth HTML 라우터를 포함하지 않는다.
 
-- `/dev/kakao-login-test`: Kakao authorize URL로 이동하는 HTML 페이지.
-- `/dev/kakao/callback`: authorization code를 backend login API로 교환하는 callback.
-
-이 라우터는 설정값이 켜진 경우에만 mount한다. 운영/배포 환경의 기본값은 off다.
+실제 Kakao OAuth 브라우저 검증이 필요하면 프론트엔드 또는 별도 로컬 클라이언트가
+Kakao authorization code를 받은 뒤 `POST /api/v1/auth/login/social`에 전달한다.

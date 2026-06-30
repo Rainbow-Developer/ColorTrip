@@ -17,7 +17,7 @@
 | 수집 개인정보 범위 | 이름, 이메일, 생년월일 | |
 | 비밀 / 키 관리 | GCP Secret Manager | |
 | CORS 정책 | 허용 도메인 화이트리스트 | |
-| 로컬 OAuth 검증 | dev-only route | 운영 기본 off |
+| 로컬 OAuth 검증 | 정식 API + 외부 클라이언트 | 개발용 라우트는 앱에 포함하지 않음 |
 
 ## 규칙 / 적용
 
@@ -30,7 +30,7 @@
 - 시크릿은 코드/깃에 두지 않고 GCP Secret Manager를 사용한다(외부 API 키 관리도 동일).
 - `local/test` 외 환경은 `JWT_SECRET_KEY`를 반드시 주입해야 하며, 기본 placeholder secret으로는 앱이 시작되지 않아야 한다.
 - CORS는 허용 도메인 화이트리스트로 제한한다.
-- 실제 Kakao OAuth 브라우저 검증용 dev route는 로컬/테스트 환경에서만 켠다.
+- 실제 Kakao OAuth 브라우저 검증은 앱에 개발용 라우트를 추가하지 않고, 프론트엔드 또는 별도 로컬 클라이언트에서 인가 코드를 받은 뒤 정식 API로 검증한다.
 
 ## 관련 문서
 

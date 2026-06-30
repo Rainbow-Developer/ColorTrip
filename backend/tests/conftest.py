@@ -21,8 +21,7 @@ os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-at-least-32-bytes-long")
 os.environ.setdefault("KAKAO_REST_API_KEY", "test-kakao-rest-api-key")
-os.environ.setdefault("KAKAO_REDIRECT_URI", "http://127.0.0.1:8000/dev/kakao/callback")
-os.environ.setdefault("ENABLE_DEV_AUTH_ROUTES", "true")
+os.environ.setdefault("KAKAO_REDIRECT_URI", "http://localhost:3000/auth/kakao/callback")
 
 
 class MockKakaoClient:

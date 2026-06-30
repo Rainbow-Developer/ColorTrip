@@ -7,7 +7,7 @@
 
 ## 구현 규모 / 단위 분할
 
-- **규모 판단**: 단위로 나눠 구현 — 문서 체계 이관, DB 마이그레이션, auth service, 보호 API dependency, dev-only 검증 페이지, PostgreSQL 테스트가 서로 의존한다.
+- **규모 판단**: 단위로 나눠 구현 — 문서 체계 이관, DB 마이그레이션, auth service, 보호 API dependency, PostgreSQL 테스트가 서로 의존한다.
 - **구현 단위**:
   - [x] 1) origin/dev 구조 분석 및 재구성 방향 확정.
   - [x] 2) 기능 스펙과 conventions/readme 문서 동기화.
@@ -24,14 +24,14 @@
   - 기존 root `app/`, root `tests/`, root backend용 `pyproject.toml`, root `uv.lock`는 최종 산출물에서 제거한다.
   - 응답 Envelope는 `code/status/message/data`를 따른다.
 - backend auth 도메인:
-  - `backend/app/auth/`에 모델, 스키마, repository, service, router, dependency, Kakao client, dev-only router를 추가했다.
+  - `backend/app/auth/`에 모델, 스키마, repository, service, router, dependency, Kakao client를 추가했다.
   - `backend/app/core/security.py`에 access JWT 생성/검증과 refresh token 생성/hash primitive를 추가했다.
   - `backend/app/core/exceptions.py`에 auth 관련 error code를 추가했다.
   - `backend/alembic/versions/d7b712f1a245_add_auth_member_tables.py`로 `users`, `refresh_tokens` 테이블을 추가했다.
   - Refresh token renewal은 row lock으로 rotation race를 막는다.
   - Kakao 로그인은 unique constraint 충돌 시 rollback 후 재시도해 동시 최초 로그인/재가입 요청을 수렴시킨다.
   - Kakao API invalid JSON/shape는 `SOCIAL_AUTH_ERROR` envelope로 변환한다.
-  - `local/test` 외 환경은 기본 JWT secret과 dev auth route 노출을 시작 시 거부한다.
+  - `local/test` 외 환경은 기본 JWT secret 사용을 시작 시 거부한다.
 - 테스트:
   - `backend/tests/`에 Kakao login, token rotation/logout, `CurrentUser`, 탈퇴/복구/익명화 API 테스트를 추가했다.
   - 테스트 DB는 PostgreSQL `localhost:5433/colortrip_test`를 사용하고, Alembic `upgrade head`로 스키마를 만든다.
@@ -39,6 +39,7 @@
 ## 미구현 / 남은 항목
 
 - 실제 Kakao OAuth 브라우저 수동 검증은 로컬 서버와 Kakao Console redirect 설정이 준비된 상태에서 별도 수행한다.
+- 정식 앱 코드에는 개발용 OAuth HTML 라우트를 포함하지 않는다.
 
 ## 알려진 한계 / TODO
 

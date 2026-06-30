@@ -25,12 +25,10 @@ services:
       ACCESS_TOKEN_TTL_MINUTES: ${ACCESS_TOKEN_TTL_MINUTES:-15}
       REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-14}
       KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
-      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI:-http://127.0.0.1:8000/dev/kakao/callback}
-      KAKAO_AUTHORIZE_URL: ${KAKAO_AUTHORIZE_URL:-https://kauth.kakao.com/oauth/authorize}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI:-}
       KAKAO_TOKEN_URL: ${KAKAO_TOKEN_URL:-https://kauth.kakao.com/oauth/token}
       KAKAO_USER_INFO_URL: ${KAKAO_USER_INFO_URL:-https://kapi.kakao.com/v2/user/me}
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
-      ENABLE_DEV_AUTH_ROUTES: ${ENABLE_DEV_AUTH_ROUTES:-false}
       TOUR_API_KEY: ${TOUR_API_KEY:-}
       TOUR_API_BASE_URL: ${TOUR_API_BASE_URL:-https://apis.data.go.kr/B551011/KorService2}
     ports:

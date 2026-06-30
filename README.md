@@ -64,7 +64,7 @@ KAKAO_API_KEY=       # Kakao 로그인
 # 인증
 JWT_SECRET_KEY=      # JWT(Access/Refresh) 서명 키
 KAKAO_REST_API_KEY=  # Kakao REST API 키
-KAKAO_REDIRECT_URI=  # 로컬 OAuth callback URI
+KAKAO_REDIRECT_URI=  # Kakao authorization code 교환용 redirect URI
 ```
 
 ## 실행 방법

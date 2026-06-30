@@ -23,13 +23,11 @@ class Settings(BaseSettings):
     jwt_secret_key: str = DEFAULT_JWT_SECRET_KEY
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 14
-    kakao_authorize_url: str = "https://kauth.kakao.com/oauth/authorize"
     kakao_token_url: str = "https://kauth.kakao.com/oauth/token"
     kakao_user_info_url: str = "https://kapi.kakao.com/v2/user/me"
     kakao_rest_api_key: str = ""
-    kakao_redirect_uri: str = "http://127.0.0.1:8000/dev/kakao/callback"
+    kakao_redirect_uri: str = ""
     kakao_client_secret: str | None = None
-    enable_dev_auth_routes: bool = False
 
     # 한국관광공사 TourAPI
     tour_api_key: str = ""
@@ -45,8 +43,6 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET_KEY must be set outside local/test environments.")
         if len(self.jwt_secret_key) < 32:
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters.")
-        if self.enable_dev_auth_routes:
-            raise ValueError("ENABLE_DEV_AUTH_ROUTES must be false outside local/test.")
         return self
 
 

@@ -92,7 +92,7 @@ endpoint receives active User
 | 응답 Envelope | `code/message/data` / `code/status/message/data` | **`code/status/message/data`** — `docs/conventions/api-design.md`의 단일 출처를 따른다. | 합의됨 |
 | refresh token 저장 | stateless JWT / DB 저장 hash | **DB 저장 hash** — 로그아웃, rotation, 재사용 감지, 탈퇴 시 전체 revoke가 필요하다. | 합의됨 |
 | 탈퇴 유예 | 7일 / 30일 / 분리 | **7일 복구 유예 + 30일 보존 정책** — 앱 복구 경험과 DB 보존 컨벤션을 분리한다. | 합의됨 |
-| dev OAuth 페이지 | 운영 API / dev-only / 제거 | **dev-only** — 실제 Kakao 브라우저 검증은 유지하되 운영 노출을 막는다. | 합의됨 |
+| dev OAuth 페이지 | 운영 API / dev-only / 제거 | **제거** — 정식 앱 코드에는 개발용 HTML 라우트를 포함하지 않고, 수동 검증은 외부 클라이언트로 수행한다. | 합의됨 |
 | 테스트 DB | SQLite / PostgreSQL | **PostgreSQL** — 모델이 PostgreSQL dialect와 asyncpg를 기준으로 하므로 SQLite 테스트는 제외한다. | 합의됨 |
 
 ## 영향 범위
@@ -109,7 +109,7 @@ endpoint receives active User
 - [x] auth/member spec 문서 작성.
 - [x] backend auth 도메인 모델/스키마/repository/service/router 구현.
 - [x] JWT `CurrentUser` dependency 구현.
-- [x] Kakao dev-only OAuth 검증 페이지 구현.
+- [x] Kakao dev-only OAuth 검증 페이지 제거.
 - [x] Alembic users/refresh_tokens 리비전 추가.
 - [x] PostgreSQL 기반 테스트 추가.
 - [x] root `app/`, root `tests/`, root backend용 `pyproject.toml`, root `uv.lock` 정리.
@@ -117,6 +117,6 @@ endpoint receives active User
 ## 리스크 / 미해결 질문
 
 - 테스트 DB가 로컬에 없으면 `docker compose -f docker-compose.test.yml up -d`가 선행되어야 한다.
-- `local/test` 외 환경은 placeholder JWT secret과 dev auth route 노출을 앱 시작 시 거부한다.
+- `local/test` 외 환경은 placeholder JWT secret 사용을 앱 시작 시 거부한다.
 - 운영 Secret Manager 등록은 별도 인프라 작업이다. dev 배포는 `colortrip-dev-jwt-secret-key`를 필수 secret으로 사용한다.
 - 30일 이후 hard delete batch는 별도 M3 작업으로 관리한다.

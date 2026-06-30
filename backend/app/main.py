@@ -7,7 +7,6 @@
 from fastapi import FastAPI
 
 from app.auth.router import auth_router, users_router
-from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.response import Envelope, success
 from app.quests.router import router as quests_router
@@ -20,11 +19,6 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(regions_router, prefix="/api/v1")
 app.include_router(quests_router, prefix="/api/v1")
-
-if settings.enable_dev_auth_routes:
-    from app.auth.dev_router import router as dev_auth_router
-
-    app.include_router(dev_auth_router)
 
 
 @app.get("/health", response_model=Envelope[dict])
