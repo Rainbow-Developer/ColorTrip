@@ -25,9 +25,9 @@
 
 | Method | URI | 설명 | 인증 |
 |------|------|------|------|
-| POST | `/api/v1/auth-tokens` | Kakao 로그인, 자동 가입, token 발급 | 없음 |
-| POST | `/api/v1/auth-token-renewals` | refresh token rotation | 없음 |
-| DELETE | `/api/v1/auth-tokens/current` | 로그아웃, refresh token 무효화 | Bearer access token |
+| POST | `/api/v1/auth/login/social` | Kakao 로그인, 자동 가입, token 발급 | 없음 |
+| POST | `/api/v1/auth/refresh` | refresh token rotation | 없음 |
+| POST | `/api/v1/auth/logout` | 로그아웃, refresh token 무효화 | Bearer access token |
 | GET | `/api/v1/users/me` | 내 정보 조회 | Bearer access token |
 | DELETE | `/api/v1/users/me` | 회원 탈퇴 | Bearer access token |
 

@@ -17,12 +17,11 @@ from app.auth.schemas import (
 from app.core.database import get_session
 from app.core.response import Envelope, success
 
-auth_tokens_router = APIRouter(prefix="/auth-tokens", tags=["auth"])
-token_renewals_router = APIRouter(prefix="/auth-token-renewals", tags=["auth"])
+auth_router = APIRouter(prefix="/auth", tags=["auth"])
 users_router = APIRouter(prefix="/users", tags=["users"])
 
 
-@auth_tokens_router.post("")
+@auth_router.post("/login/social")
 async def create_auth_token(
     payload: AuthTokenRequest,
     session: AsyncSession = Depends(get_session),
@@ -43,7 +42,7 @@ async def create_auth_token(
     return success(data)
 
 
-@token_renewals_router.post("")
+@auth_router.post("/refresh")
 async def renew_auth_token(
     payload: RefreshTokenRenewalRequest,
     session: AsyncSession = Depends(get_session),
@@ -52,7 +51,7 @@ async def renew_auth_token(
     return success(data)
 
 
-@auth_tokens_router.delete("/current")
+@auth_router.post("/logout")
 async def delete_current_auth_token(
     payload: LogoutRequest,
     current_user: CurrentUser,

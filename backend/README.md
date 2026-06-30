@@ -74,9 +74,9 @@ backend/
 | GET | `/api/v1/regions` | 충북 시·군 목록 |
 | GET | `/api/v1/quests` | 퀘스트 목록 (`region_id`·`category`·`page`·`size`) |
 | GET | `/api/v1/quests/{quest_id}` | 퀘스트 상세 |
-| POST | `/api/v1/auth-tokens` | Kakao 로그인·자동 가입·토큰 발급 |
-| POST | `/api/v1/auth-token-renewals` | Refresh token rotation |
-| DELETE | `/api/v1/auth-tokens/current` | 로그아웃 |
+| POST | `/api/v1/auth/login/social` | Kakao 로그인·자동 가입·토큰 발급 |
+| POST | `/api/v1/auth/refresh` | 리프레시 토큰 교체 |
+| POST | `/api/v1/auth/logout` | 로그아웃 |
 | GET | `/api/v1/users/me` | 내 정보 조회 |
 | DELETE | `/api/v1/users/me` | 회원 탈퇴 |
 

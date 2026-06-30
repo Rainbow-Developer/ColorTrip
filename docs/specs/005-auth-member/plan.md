@@ -38,9 +38,9 @@ origin/dev의 백엔드는 이미 `backend/app/` 도메인 패키지 구조, 공
 ## 요구사항
 
 **기능**
-- `POST /api/v1/auth-tokens`: Kakao access token 또는 authorization code 중 하나로 로그인한다.
-- `POST /api/v1/auth-token-renewals`: refresh token을 rotation하고 새 access/refresh token을 반환한다.
-- `DELETE /api/v1/auth-tokens/current`: 현재 refresh token을 무효화한다.
+- `POST /api/v1/auth/login/social`: Kakao access token 또는 authorization code 중 하나로 로그인한다.
+- `POST /api/v1/auth/refresh`: refresh token을 rotation하고 새 access/refresh token을 반환한다.
+- `POST /api/v1/auth/logout`: 현재 refresh token을 무효화한다.
 - `GET /api/v1/users/me`: 현재 active user profile을 반환한다.
 - `DELETE /api/v1/users/me`: 회원을 soft delete하고 활성 refresh token을 모두 무효화한다.
 
@@ -58,7 +58,7 @@ Kakao Login
 ===========
 Client
   |
-  | POST /api/v1/auth-tokens
+  | POST /api/v1/auth/login/social
   v
 auth.router
   |

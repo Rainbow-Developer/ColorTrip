@@ -30,7 +30,7 @@ async def test_kakao_authorization_code_login_exchanges_code(
     client: AsyncClient,
 ) -> None:
     response = await client.post(
-        "/api/v1/auth-tokens",
+        "/api/v1/auth/login/social",
         json={"provider": "kakao", "authorization_code": "valid-code"},
     )
 
@@ -42,7 +42,7 @@ async def test_kakao_authorization_code_login_exchanges_code(
 @pytest.mark.asyncio
 async def test_invalid_kakao_token_returns_social_auth_error(client: AsyncClient) -> None:
     response = await client.post(
-        "/api/v1/auth-tokens",
+        "/api/v1/auth/login/social",
         json={"provider": "kakao", "access_token": "invalid-token"},
     )
 
@@ -69,7 +69,7 @@ async def test_concurrent_same_kakao_login_reuses_one_user(client: AsyncClient) 
     responses = await asyncio.gather(
         *(
             client.post(
-                "/api/v1/auth-tokens",
+                "/api/v1/auth/login/social",
                 json={"provider": "kakao", "access_token": "kakao-token-1"},
             )
             for _ in range(5)

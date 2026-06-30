@@ -104,15 +104,15 @@ async def test_refresh_token_renewal_rotates_and_rejects_reuse(
     data = await login(client)
 
     renewal = await client.post(
-        "/api/v1/auth-token-renewals",
+        "/api/v1/auth/refresh",
         json={"refresh_token": data["refresh_token"]},
     )
     reused_old = await client.post(
-        "/api/v1/auth-token-renewals",
+        "/api/v1/auth/refresh",
         json={"refresh_token": data["refresh_token"]},
     )
     reused_new = await client.post(
-        "/api/v1/auth-token-renewals",
+        "/api/v1/auth/refresh",
         json={"refresh_token": renewal.json()["data"]["refresh_token"]},
     )
 
@@ -133,7 +133,7 @@ async def test_concurrent_refresh_token_renewal_allows_only_one_success(
     responses = await asyncio.gather(
         *(
             client.post(
-                "/api/v1/auth-token-renewals",
+                "/api/v1/auth/refresh",
                 json={"refresh_token": data["refresh_token"]},
             )
             for _ in range(5)
@@ -153,13 +153,13 @@ async def test_logout_invalidates_refresh_token(client: AsyncClient) -> None:
     data = await login(client)
 
     logout = await client.request(
-        "DELETE",
-        "/api/v1/auth-tokens/current",
+        "POST",
+        "/api/v1/auth/logout",
         headers={"Authorization": f"Bearer {data['access_token']}"},
         json={"refresh_token": data["refresh_token"]},
     )
     renewal = await client.post(
-        "/api/v1/auth-token-renewals",
+        "/api/v1/auth/refresh",
         json={"refresh_token": data["refresh_token"]},
     )
 
@@ -181,7 +181,7 @@ async def test_withdrawal_blocks_access_and_refresh_renewal(client: AsyncClient)
         headers={"Authorization": f"Bearer {data['access_token']}"},
     )
     renewal = await client.post(
-        "/api/v1/auth-token-renewals",
+        "/api/v1/auth/refresh",
         json={"refresh_token": data["refresh_token"]},
     )
 
