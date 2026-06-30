@@ -18,3 +18,11 @@ docs/specs/
 ```
 
 자세한 작성 규칙은 [docs/AGENT_GUIDE.md의 '기능 스펙'](../AGENT_GUIDE.md#기능-스펙-docsspecs)을 참고하세요.
+
+## 현재 스펙
+
+| Spec | 기능 |
+|------|------|
+| [000-frontend-app](000-frontend-app/) | Flutter 앱 프로토타입/프론트엔드 |
+| [000-quest](000-quest/) | 충북 시·군 퀘스트 조회 기반 |
+| [005-auth-member](005-auth-member/) | Kakao 인증, JWT, 회원 탈퇴/복구 |
