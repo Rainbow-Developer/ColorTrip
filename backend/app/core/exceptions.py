@@ -15,6 +15,9 @@ class ErrorCode(Enum):
     """(code, http_status, 기본 message)."""
 
     NOT_FOUND_ERROR = ("NOT_FOUND_ERROR", 404, "대상을 찾을 수 없습니다.")
+    UNAUTHORIZED_ERROR = ("UNAUTHORIZED_ERROR", 401, "인증이 필요합니다.")
+    TOKEN_EXPIRED_ERROR = ("TOKEN_EXPIRED_ERROR", 401, "토큰이 만료되었습니다.")
+    SOCIAL_AUTH_ERROR = ("SOCIAL_AUTH_ERROR", 401, "소셜 인증에 실패했습니다.")
     VALIDATION_ERROR = ("VALIDATION_ERROR", 422, "요청 값이 올바르지 않습니다.")
     INTERNAL_ERROR = ("INTERNAL_ERROR", 500, "서버 오류가 발생했습니다.")
 
