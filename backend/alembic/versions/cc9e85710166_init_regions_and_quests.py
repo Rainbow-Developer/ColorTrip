@@ -1,7 +1,7 @@
 """init regions and quests
 
 Revision ID: cc9e85710166
-Revises: 
+Revises:
 Create Date: 2026-06-25 20:26:30.116838
 
 """

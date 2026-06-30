@@ -2,6 +2,7 @@
 
 카테고리 5종은 퀘스트·DNA·추천이 공유한다(docs/specs/000-quest/plan.md 의사결정 6).
 """
+
 from enum import StrEnum
 
 

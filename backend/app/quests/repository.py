@@ -26,12 +26,7 @@ async def list_quests(
     if category is not None:
         filters.append(Quest.category == category)
 
-    items_stmt = (
-        select(Quest)
-        .where(*filters)
-        .offset((page - 1) * size)
-        .limit(size)
-    )
+    items_stmt = select(Quest).where(*filters).offset((page - 1) * size).limit(size)
     items_result = await session.execute(items_stmt)
     items = items_result.scalars().all()
 
