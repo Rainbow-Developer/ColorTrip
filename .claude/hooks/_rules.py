@@ -13,7 +13,7 @@ PROTECTED_BRANCHES = {"main", "dev"}
 
 # Conventional Commits 타입
 COMMIT_TYPES = (
-    "feat", "fix", "docs", "style", "refactor",
+    "feature", "fix", "docs", "style", "refactor",
     "perf", "test", "build", "ci", "chore", "revert",
 )
 
