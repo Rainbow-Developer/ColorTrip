@@ -65,6 +65,24 @@ repos:
         files: ^frontend/.*\.dart$
         pass_filenames: false
 
-# 백엔드 코드(backend/)가 추가되면 아래 린트·타입체크를 활성화한다(code-quality.md).
-#   - id: ruff       (uv run ruff check / format)
-#   - id: pyright    (uv run pyright)
+      # 백엔드(backend/) 커밋 전 검사 — ruff check/format, pyright
+      - id: ruff-check
+        name: 백엔드 ruff check 린트
+        entry: bash -c 'cd backend && uv run ruff check'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+
+      - id: ruff-format
+        name: 백엔드 ruff format 포맷팅
+        entry: bash -c 'cd backend && uv run ruff format --check'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+
+      - id: pyright
+        name: 백엔드 pyright 타입 체크
+        entry: bash -c 'cd backend && uv run pyright'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false

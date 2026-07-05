@@ -18,12 +18,26 @@
 
 ## 규칙 / 적용
 
-- `[강제]` dev/main 브랜치 직접 커밋·푸시 금지 — HOOK `.claude/hooks/check_protected_branch.py`(Claude Code) + git pre-push 훅.
-- `[강제]` 브랜치 네이밍 `type/이슈번호-설명` — HOOK `.claude/hooks/check_branch_name.py`.
-- `[강제]` 커밋 메시지 Conventional Commits (feat:, fix: 등) — HOOK `.claude/hooks/check_commit_message.py` + git commit-msg(pre-commit).
-- PR은 `dev` 브랜치로 올리고, Squash and merge로 병합하며, 최소 1명 승인이 필요합니다.
-- PR 작성 절차는 `dev-pr` 스킬을 사용합니다.
-- 올바른 브랜치·커밋 절차는 `commit` 스킬(`.claude/skills/commit/`)을 참고합니다.
+### 🌿 브랜치 전략 및 성격
+
+- **`main` 브랜치**: 운영 환경(Production)에 사용되는 최종 릴리즈 코드입니다.
+- **`dev` (development) 브랜치**: 다음 릴리즈를 위해 개발 및 통합이 일어나는 중심 브랜치입니다.
+- **작업 브랜치**: 담당 기능을 개별적으로 개발하는 브랜치이며, 규칙은 다음과 같습니다.
+  - **브랜치 명명**: `type/티켓번호-설명` 또는 `type/티켓번호` 형식을 따릅니다.
+    - 새로운 기능 추가: `feature/KAN-123-login` 또는 `feature/KAN-123`
+    - 버그 수정: `fix/KAN-123-error` 또는 `fix/KAN-123`
+    - 리팩토링: `refactor/KAN-123-clean` 또는 `refactor/KAN-123`
+  - **작업 흐름**:
+    1. **Jira**를 통해 "어떤 작업을 할 것인지?" 사전에 티켓을 생성합니다.
+    2. Jira에서 부여된 티켓 번호(예: `KAN-571` 등)를 확인합니다.
+    3. 해당 번호를 활용하여 로컬에서 작업 브랜치를 생성하고 작업을 시작합니다.
+
+### 🤝 코드 리뷰 및 머지 규칙
+
+- `dev` 브랜치 병합 전, **최소 1명 이상의 리뷰어 승인(Approve)이 필수**입니다.
+- 모든 PR은 `dev` 브랜치를 대상으로 생성하며, 병합 시에는 커밋 히스토리를 깔끔하게 유지하기 위해 **Squash and merge** 방식으로 병합합니다.
+- dev/main 브랜치 직접 커밋 및 푸시는 금지되며, 이는 `.claude/hooks/` 검사와 git pre-push 훅으로 강제됩니다.
+- PR 작성 절차는 `dev-pr` 스킬을 사용하며, 올바른 커밋 작성은 `commit` 스킬(`.claude/skills/commit/`)을 참고합니다.
 
 ## 관련 문서
 

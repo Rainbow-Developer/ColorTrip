@@ -19,9 +19,9 @@ import _rules  # noqa: E402
 def hint(name: str) -> str:
     return (
         f"브랜치 이름 '{name}'이 규칙에 맞지 않습니다.\n"
-        "  형식: <type>/<이슈번호>-<설명>\n"
-        f"  type: {', '.join(_rules.COMMIT_TYPES)}\n"
-        "  예) feat/123-add-login, fix/CT-12-pagination-bug"
+        "  형식: <type>/<이슈번호>-<설명> 또는 <type>/<이슈번호>\n"
+        f"  type: {', '.join(_rules.BRANCH_TYPES)}\n"
+        "  예) feature/123-add-login, feat/KAN-123, fix/CT-12-pagination-bug"
     )
 
 
