@@ -11,19 +11,26 @@ import subprocess
 # dev/main 직접 커밋·푸시 금지
 PROTECTED_BRANCHES = {"main", "dev"}
 
-# Conventional Commits 타입
+# Conventional Commits 타입 (커밋 메시지용)
 COMMIT_TYPES = (
     "feat", "fix", "docs", "style", "refactor",
     "perf", "test", "build", "ci", "chore", "revert",
 )
 
-_TYPES = "|".join(COMMIT_TYPES)
+# 브랜치 명명용 타입 (feature 허용)
+BRANCH_TYPES = (
+    "feature", "feat", "fix", "docs", "style", "refactor",
+    "perf", "test", "build", "ci", "chore", "revert",
+)
+
+_COMMIT_TYPES_JOINED = "|".join(COMMIT_TYPES)
+_BRANCH_TYPES_JOINED = "|".join(BRANCH_TYPES)
 
 # <type>(scope)?!?: <설명>
-_COMMIT_RE = re.compile(rf"^({_TYPES})(\([^)]+\))?!?: .+")
+_COMMIT_RE = re.compile(rf"^({_COMMIT_TYPES_JOINED})(\([^)]+\))?!?: .+")
 
-# <type>/<이슈번호>-<설명>  (이슈번호: 숫자 또는 Jira 키 PROJ-123)
-_BRANCH_RE = re.compile(rf"^({_TYPES})/([A-Z]+-)?\d+-[a-z0-9._-]+$")
+# <type>/<이슈번호>-<설명> 또는 <type>/<이슈번호> (이슈번호: 숫자 또는 Jira 키 PROJ-123)
+_BRANCH_RE = re.compile(rf"^({_BRANCH_TYPES_JOINED})/([A-Z]+-)?\d+(-[a-z0-9._-]+)?$")
 
 
 def is_valid_commit_message(message: str) -> bool:

@@ -19,12 +19,16 @@
 
 - **URI 자원 명명**: 복수형 명사를 사용하고, 단어 구분은 하이픈(`-`, kebab-case)을 사용합니다.
   - 예시: `/api/v1/user-profiles`
-- **에러 응답 규격**: FastAPI 기본 `HTTPException` 규격을 사용하며, 공통 에러 응답은 아래와 같이 `detail` 키를 사용하는 구조를 따릅니다.
+- **에러 응답 규격**: 에러 발생 시에도 정상 응답과 일관되게 공통 Envelope(`code / status / message / data`) 구조를 사용하며, `data` 필드는 `null`로 반환합니다.
   ```json
   {
-      "detail": "에러 발생 원인 메시지"
+      "code": "NOT_FOUND_ERROR",
+      "status": 404,
+      "message": "대상을 찾을 수 없습니다.",
+      "data": null
   }
   ```
+  FastAPI 기본 `HTTPException` 및 `RequestValidationError` 등도 전역 예외 핸들러(`app/core/exceptions.py`)를 통해 이 공통 에러 Envelope 규격으로 일괄 변환됩니다.
 - **정상 응답 Envelope**: 정상 응답의 경우 모든 결과를 envelope(`code / status / message / data`)로 감싸서 반환합니다.
 - **페이지네이션**: Offset 방식으로 `page` / `size` 파라미터를 사용합니다.
 - **날짜 / 시간 응답**: ISO 8601 (`+09:00`, 한국 표준시 KST) 포맷을 사용합니다.

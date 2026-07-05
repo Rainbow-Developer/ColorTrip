@@ -42,15 +42,16 @@
 애플리케이션 코드는 `app/` 아래에 두며, 전체적인 디렉터리 구조와 역할은 다음과 같습니다.
 
 - **`app/`**: 전체 소스 코드 진입점
-  - **`app/main.py`**: FastAPI 인스턴스 생성 및 설정
-  - **`app/api/`**: 엔드포인트 레이어 (버전 관리 `/v1/endpoints/` 포함)
-  - **`app/core/`**: 환경 설정(`config.py`), 보안(`security.py`), DB 세션 및 연결(`database.py`)
-  - **`app/models/`**: SQLAlchemy/SQLModel 데이터베이스 테이블 정의
-  - **`app/schemas/`**: Pydantic DTO (입출력 데이터 유효성 검증)
-  - **`app/services/`**: 순수 비즈니스 로직 처리 레이어
+  - **`app/main.py`**: FastAPI 인스턴스 생성, 라우터 등록 및 미들웨어 설정
+  - **`app/core/`**: 전역 공통 모듈 (환경 설정 `config.py`, 공통 DB 연결 `database.py`, 공통 Envelope 응답 `response.py`, 예외 처리 `exceptions.py` 등)
+  - **도메인별 패키지 (`app/{도메인}/`)**: 비즈니스 도메인별(예: `app/quests/`, `app/regions/` 등)로 폴더를 격리하고, 내부에 독립된 레이어 파일을 구성합니다.
+    - **`models.py`**: SQLAlchemy 데이터베이스 테이블 정의
+    - **`schemas.py`**: Pydantic DTO (입출력 데이터 유효성 검증 및 API 직렬화 스키마)
+    - **`repository.py`**: 해당 도메인의 DB CRUD 데이터 접근 레이어
+    - **`service.py`**: 복잡한 비즈니스 로직 및 정책 처리 레이어
+    - **`router.py`**: API 엔드포인트(FastAPI APIRouter) 정의
+  - **`app/integrations/{서비스}/`**: 외부 API 연동 모듈 (예: `app/integrations/tour_api/`). 연동 정책은 [외부 API & 데이터 연동](./external-apis.md)을 따릅니다.
 - **`tests/`**: Pytest 기반 유닛 테스트 디렉터리
-- **도메인별 패키지 구성**: 비즈니스 도메인은 도메인별 패키지로 분리합니다 (`app/quests/`, `app/regions/` 등). 각 도메인 패키지 내부에서도 `models.py`, `schemas.py`, `repository.py`, `service.py`, `router.py`로 책임을 분리하여 작성합니다.
-- **외부 API 연동**: `app/integrations/{서비스}/` 아래에 둡니다 (예: `app/integrations/tour_api/`). 연동 정책은 [외부 API & 데이터 연동](./external-apis.md)을 따릅니다.
 - **DB 마이그레이션**: `alembic/`에서 관리하고 리비전 파일은 `alembic/versions/`에 둡니다.
 
 > [!NOTE]
