@@ -14,7 +14,7 @@
   - [ ] 2) 여정 API — POST/GET `/journeys`, GET `/journeys/{id}`, POST/DELETE `/journeys/{id}/quests…` (JRN-01·02). 완료 기준: 생성 검증(지역-퀘스트 소속)·목록/상세(진행률 포함) 동작.
   - [ ] 3) 추천 API — GET `/quests/recommended` (REC-01, DNA seam + category fallback). 완료 기준: 카테고리 매칭 정렬 확인.
   - [ ] 4) 진행·인증 API — POST `/quests/{id}/start`·`/verify`, GET `/users/me/progress` (VRF-01~04). 완료 기준: gps_photo(반경)·quiz(정답) 판정, 완료 시 여정 자동 완료.
-  - [ ] 5) 사진 업로드 — POST `/uploads/photo` + 로컬 스토리지 추상화 (VRF-03). 완료 기준: multipart 업로드 → photo_url 반환·정적 서빙.
+  - [ ] 5) 사진 업로드 — POST `/uploads/photo` + 스토리지 추상화(GCS 기본, 로컬은 개발·테스트용) (VRF-03). 완료 기준: multipart 업로드 → photo_url 반환.
   - [ ] 6) 검증·문서 — 테스트(ruff·pyright 포함), README `주요 기능과 위치` 갱신, Notion(테이블·API 명세) 역동기화 목록 정리.
 
 ## 구현된 항목
@@ -29,7 +29,7 @@
 
 - **사진 판정**: MVP는 룰 기반(GPS 반경 + 사진 존재). LLM 판정은 `mission_meta.judgement_prompt` 데이터만 준비하고 후속.
 - **DNA 연동**: DNA 도메인 미구현 — `get_user_primary_category` seam이 None이면 `?category=` fallback. DNA 도메인 완성 시 교체.
-- **스토리지**: 로컬 디스크(단일 인스턴스 전제). GCS 전환 시 스토리지 구현체만 교체.
+- **스토리지**: 운영은 GCS(버킷·SA 권한 IaC 후속 필요). 버킷 미설정 시 로컬 디스크로 동작(개발·테스트).
 - **의존**: PR #13(005-auth-member) 머지 전까지 본 브랜치는 그 위에 스택됨.
 
 ## 변경 이력

@@ -101,8 +101,11 @@ flowchart LR
 
 | 환경변수 | 기본값 | 설명 |
 |----------|--------|------|
-| `UPLOAD_DIR` | `./uploads` | 인증 사진 저장 경로(로컬 스토리지) |
-| `UPLOAD_BASE_URL` | `/uploads` | 반환되는 photo_url prefix |
+| `GCS_UPLOAD_BUCKET` | (빈 값) | 인증 사진 GCS 버킷명. **설정 시 GCS 사용(운영 기본)** |
+| `UPLOAD_DIR` | `./uploads` | 버킷 미설정 시 로컬 저장 경로(개발·테스트) |
+
+GCS 사용 시 애플리케이션 SA에 버킷 `roles/storage.objectAdmin`(쓰기)이 필요하고,
+반환 URL(`https://storage.googleapis.com/{bucket}/{object}`)로 읽으려면 버킷 공개 읽기 또는 별도 서빙이 필요하다(IaC 후속).
 
 모든 API는 보호 엔드포인트 — `Authorization: Bearer <accessToken>` 필요([005-auth-member](../005-auth-member/)).
 엔드포인트 목록은 [plan.md](plan.md#api) 표 참고.
