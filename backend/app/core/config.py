@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     tour_api_key: str = ""
     tour_api_base_url: str = "https://apis.data.go.kr/B551011/KorService2"
 
+    # 업로드(인증 사진) — docs/specs/010-journey/
+    gcs_upload_bucket: str = ""  # 설정 시 GCS 사용(운영 기본), 미설정 시 로컬 디스크
+    upload_dir: str = "./uploads"  # 로컬 스토리지 경로(개발·테스트)
+    max_upload_size_mb: int = 10
+
     @model_validator(mode="after")
     def validate_non_local_security(self) -> Self:
         env = self.app_env.strip().lower()

@@ -65,6 +65,9 @@ KAKAO_API_KEY=       # Kakao 로그인
 JWT_SECRET_KEY=      # JWT(Access/Refresh) 서명 키
 KAKAO_REST_API_KEY=  # Kakao REST API 키
 KAKAO_REDIRECT_URI=  # Kakao authorization code 교환용 redirect URI
+
+# 업로드 (퀘스트 인증 사진)
+GCS_UPLOAD_BUCKET=   # 설정 시 GCS 사용(운영), 미설정 시 로컬 디스크(개발·테스트)
 ```
 
 ## 실행 방법
@@ -166,6 +169,7 @@ flowchart TD
 | `pydantic-settings` | 미정 | 설정·환경변수 |
 | `uvicorn` | 미정 | ASGI 앱 서버 |
 | `pyjwt` | 미정 | JWT 생성·검증 |
+| `google-cloud-storage` | 미정 | 인증 사진 GCS 업로드 |
 
 ### 프론트엔드 주요 의존성
 

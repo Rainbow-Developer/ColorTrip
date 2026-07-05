@@ -121,12 +121,12 @@ flowchart TD
 
 ## 작업 단계
 
-- [ ] 테이블·모델·마이그레이션 — journeys · journey_quests · quest_progress
-- [ ] 여정 API — 생성/목록/상세/퀘스트 추가·제거 (JRN-01·02)
-- [ ] 추천 API — GET /quests/recommended (REC-01, DNA seam)
-- [ ] 진행·인증 API — start / verify(GPS·사진·퀴즈) / users/me/progress (VRF-01~04)
-- [ ] 사진 업로드 — POST /uploads/photo + 스토리지 추상화 (VRF-03)
-- [ ] 테스트·검증 (ruff·pyright·API 동작) 및 문서 동기화 (README·implementation.md·Notion)
+- [x] 테이블·모델·마이그레이션 — journeys · journey_quests · quest_progress
+- [x] 여정 API — 생성/목록/상세/퀘스트 추가·제거 (JRN-01·02)
+- [x] 추천 API — GET /quests/recommended (REC-01, DNA seam)
+- [x] 진행·인증 API — start / verify(GPS·사진·퀴즈) / users/me/progress (VRF-01~04)
+- [x] 사진 업로드 — POST /uploads/photo + 스토리지 추상화 (VRF-03)
+- [ ] 테스트·검증(ruff·pyright·pytest 완료) 및 문서 동기화 — README·implementation.md 완료, **Notion 역동기화 남음**
 
 ## 리스크 / 미해결 질문
 

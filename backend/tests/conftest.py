@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -22,6 +23,7 @@ os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-at-least-32-bytes-long")
 os.environ.setdefault("KAKAO_REST_API_KEY", "test-kakao-rest-api-key")
 os.environ.setdefault("KAKAO_REDIRECT_URI", "http://localhost:3000/auth/kakao/callback")
+os.environ.setdefault("UPLOAD_DIR", os.path.join(tempfile.gettempdir(), "colortrip-test-uploads"))
 
 
 class MockKakaoClient:
@@ -114,7 +116,15 @@ async def client(
 
 def _reset_database_with_migrations(connection: Connection) -> None:
     connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
-    for table_name in ("refresh_tokens", "users", "quests", "regions"):
+    for table_name in (
+        "quest_progress",
+        "journey_quests",
+        "journeys",
+        "refresh_tokens",
+        "users",
+        "quests",
+        "regions",
+    ):
         connection.execute(text(f"DROP TABLE IF EXISTS {table_name} CASCADE"))
 
     config = Config("alembic.ini")
