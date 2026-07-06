@@ -5,15 +5,11 @@
 
 import uuid
 from datetime import date, datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.base import Base, TimestampMixin, UUIDPKMixin
-
-if TYPE_CHECKING:
-    from app.auth.models import RefreshToken
 
 
 class User(UUIDPKMixin, TimestampMixin, Base):
@@ -41,7 +37,7 @@ class RefreshToken(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "refresh_tokens"
     __table_args__ = (
         Index("ix_refresh_tokens_user_id", "user_id"),
-        Index("ix_refresh_tokens_token_hash", "token_hash"),
+        Index("ix_refresh_tokens_token_hash", "token_hash", unique=True),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
