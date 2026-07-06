@@ -56,6 +56,21 @@ async def test_invalid_kakao_token_returns_social_auth_error(client: AsyncClient
 
 
 @pytest.mark.asyncio
+async def test_blank_kakao_credentials_are_rejected(client: AsyncClient) -> None:
+    blank_access_token = await client.post(
+        "/api/v1/auth/login/social",
+        json={"provider": "kakao", "access_token": "   "},
+    )
+    blank_authorization_code = await client.post(
+        "/api/v1/auth/login/social",
+        json={"provider": "kakao", "authorization_code": ""},
+    )
+
+    assert blank_access_token.status_code == 422
+    assert blank_authorization_code.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_same_kakao_login_reuses_active_user(client: AsyncClient) -> None:
     first = await login(client, "kakao-token-1")
     second = await login(client, "kakao-token-2")

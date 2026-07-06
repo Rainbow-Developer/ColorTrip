@@ -14,6 +14,10 @@ class AuthTokenRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_token_source(self) -> Self:
+        if self.access_token is not None and not self.access_token.strip():
+            raise ValueError("access_token must not be blank.")
+        if self.authorization_code is not None and not self.authorization_code.strip():
+            raise ValueError("authorization_code must not be blank.")
         has_access_token = self.access_token is not None
         has_authorization_code = self.authorization_code is not None
         if has_access_token == has_authorization_code:
@@ -42,6 +46,12 @@ class AuthTokenData(BaseModel):
 class RefreshTokenRenewalRequest(BaseModel):
     refresh_token: str
 
+    @model_validator(mode="after")
+    def validate_refresh_token(self) -> Self:
+        if not self.refresh_token.strip():
+            raise ValueError("refresh_token must not be blank.")
+        return self
+
 
 class RefreshTokenRenewalData(BaseModel):
     access_token: str
@@ -51,3 +61,9 @@ class RefreshTokenRenewalData(BaseModel):
 
 class LogoutRequest(BaseModel):
     refresh_token: str
+
+    @model_validator(mode="after")
+    def validate_refresh_token(self) -> Self:
+        if not self.refresh_token.strip():
+            raise ValueError("refresh_token must not be blank.")
+        return self

@@ -82,7 +82,11 @@ class HttpKakaoClient:
 
         data = _json_object(response, "Kakao user API failed.")
         social_id = data.get("id")
-        if social_id is None:
+        if (
+            not isinstance(social_id, (str, int))
+            or isinstance(social_id, bool)
+            or not str(social_id).strip()
+        ):
             raise AppException(ErrorCode.SOCIAL_AUTH_ERROR, "Kakao user API failed.")
 
         account = data.get("kakao_account")

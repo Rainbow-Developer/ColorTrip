@@ -125,6 +125,25 @@ async def test_refresh_token_renewal_rotates_and_rejects_reuse(
 
 
 @pytest.mark.asyncio
+async def test_blank_refresh_token_requests_are_rejected(client: AsyncClient) -> None:
+    data = await login(client)
+
+    renewal = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": "   "},
+    )
+    logout = await client.request(
+        "POST",
+        "/api/v1/auth/logout",
+        headers={"Authorization": f"Bearer {data['access_token']}"},
+        json={"refresh_token": ""},
+    )
+
+    assert renewal.status_code == 422
+    assert logout.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_concurrent_refresh_token_renewal_allows_only_one_success(
     client: AsyncClient,
 ) -> None:

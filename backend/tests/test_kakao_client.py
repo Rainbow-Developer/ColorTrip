@@ -33,3 +33,17 @@ async def test_kakao_user_api_invalid_json_shape_returns_social_auth_error() -> 
             await kakao_client.get_user_info("access-token")
 
     assert exc_info.value.error is ErrorCode.SOCIAL_AUTH_ERROR
+
+
+@pytest.mark.asyncio
+async def test_kakao_user_api_invalid_id_shape_returns_social_auth_error() -> None:
+    async def handler(request: Request) -> Response:
+        return Response(200, json={"id": []}, request=request)
+
+    async with AsyncClient(transport=MockTransport(handler)) as http_client:
+        kakao_client = HttpKakaoClient(http_client)
+
+        with pytest.raises(AppException) as exc_info:
+            await kakao_client.get_user_info("access-token")
+
+    assert exc_info.value.error is ErrorCode.SOCIAL_AUTH_ERROR
