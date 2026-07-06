@@ -20,7 +20,16 @@ DB 비밀번호와 JWT secret 등 시크릿은 Secret Manager에서 가져와 �
 ```bash
 # DB 비밀번호를 Secret Manager에서 읽어 .env의 PASSWORD 자리에 주입하는 예시
 PW=$(gcloud secrets versions access latest --secret=colortrip-dev-db-password)
-sed "s|PASSWORD|${PW}|" .env.example > .env   # 그 뒤 API_IMAGE 등 나머지 값 확인
+PW="$PW" python3 - <<'PY' > .env
+from pathlib import Path
+import os
+from urllib.parse import quote
+
+text = Path(".env.example").read_text()
+pw = quote(os.environ["PW"], safe="")
+print(text.replace("PASSWORD", pw), end="")
+PY
+# 그 뒤 API_IMAGE 등 나머지 값 확인
 ```
 
 필수 Secret Manager 값:

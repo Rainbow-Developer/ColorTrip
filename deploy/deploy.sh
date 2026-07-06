@@ -38,6 +38,13 @@ KAKAO_REST_KEY="$(read_secret "${KAKAO_REST_SECRET}")"
 [ -n "${KAKAO_REST_KEY}" ] || { echo "ERROR: Kakao REST API 키(${KAKAO_REST_SECRET}) 조회 실패"; exit 1; }
 KAKAO_REDIRECT_URI="$(read_secret "${KAKAO_REDIRECT_SECRET}")"
 [ -n "${KAKAO_REDIRECT_URI}" ] || { echo "ERROR: Kakao redirect URI(${KAKAO_REDIRECT_SECRET}) 조회 실패"; exit 1; }
+DB_PW_ENCODED="$(DB_PW="${DB_PW}" python3 - <<'PY'
+import os
+from urllib.parse import quote
+
+print(quote(os.environ["DB_PW"], safe=""))
+PY
+)"
 
 # Artifact Registry 도커 인증(메타데이터 토큰)
 echo "${TOKEN}" | sudo docker login -u oauth2accesstoken --password-stdin "https://${REGION}-docker.pkg.dev"
@@ -48,7 +55,7 @@ cat > .env <<EOF
 API_IMAGE=${API_IMAGE}
 CLOUD_SQL_CONNECTION_NAME=${CLOUD_SQL_CONNECTION_NAME}
 APP_ENV=dev
-DATABASE_URL=postgresql+asyncpg://colortrip:${DB_PW}@cloudsql-proxy:5432/colortrip
+DATABASE_URL=postgresql+asyncpg://colortrip:${DB_PW_ENCODED}@cloudsql-proxy:5432/colortrip
 JWT_SECRET_KEY=${JWT_KEY}
 ACCESS_TOKEN_TTL_MINUTES=15
 REFRESH_TOKEN_TTL_DAYS=14
