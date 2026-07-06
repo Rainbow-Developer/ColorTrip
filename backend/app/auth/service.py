@@ -107,11 +107,14 @@ async def logout(
     current_user: User,
 ) -> None:
     token_hash = hash_refresh_token(refresh_token)
-    token_row = await repository.get_refresh_token_by_hash(session, token_hash)
-    if token_row is None or token_row.user_id != current_user.id:
+    token_row = await repository.get_refresh_token_by_hash_for_update(session, token_hash)
+    if (
+        token_row is None
+        or token_row.user_id != current_user.id
+        or token_row.deleted_at is not None
+    ):
         raise AppException(ErrorCode.UNAUTHORIZED_ERROR, "Refresh token is invalid.")
-    if token_row.deleted_at is None:
-        token_row.deleted_at = now_kst()
+    token_row.deleted_at = now_kst()
     await session.commit()
 
 

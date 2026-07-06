@@ -31,6 +31,7 @@ def decode_access_token(token: str) -> UUID:
             token,
             settings.jwt_secret_key,
             algorithms=["HS256"],
+            options={"require": ["exp", "iat", "sub", "type"]},
         )
     except jwt.ExpiredSignatureError as exc:
         raise AppException(ErrorCode.TOKEN_EXPIRED_ERROR, "Access token has expired.") from exc

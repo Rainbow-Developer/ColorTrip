@@ -74,6 +74,15 @@ async def test_current_user_rejects_expired_invalid_and_unknown_jwt(
         settings.jwt_secret_key,
         algorithm="HS256",
     )
+    missing_exp = jwt.encode(
+        {
+            "sub": data["user"]["id"],
+            "type": "access",
+            "iat": int(now.timestamp()),
+        },
+        settings.jwt_secret_key,
+        algorithm="HS256",
+    )
     unknown = create_access_token(user_id=uuid4())
 
     expired_response = await client.get(
@@ -84,6 +93,10 @@ async def test_current_user_rejects_expired_invalid_and_unknown_jwt(
         "/api/v1/users/me",
         headers={"Authorization": f"Bearer {refresh_like}"},
     )
+    missing_exp_response = await client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {missing_exp}"},
+    )
     unknown_response = await client.get(
         "/api/v1/users/me",
         headers={"Authorization": f"Bearer {unknown}"},
@@ -93,6 +106,8 @@ async def test_current_user_rejects_expired_invalid_and_unknown_jwt(
     assert expired_response.json()["code"] == "TOKEN_EXPIRED_ERROR"
     assert refresh_like_response.status_code == 401
     assert refresh_like_response.json()["code"] == "UNAUTHORIZED_ERROR"
+    assert missing_exp_response.status_code == 401
+    assert missing_exp_response.json()["code"] == "UNAUTHORIZED_ERROR"
     assert unknown_response.status_code == 401
     assert unknown_response.json()["code"] == "UNAUTHORIZED_ERROR"
 
@@ -177,6 +192,12 @@ async def test_logout_invalidates_refresh_token(client: AsyncClient) -> None:
         headers={"Authorization": f"Bearer {data['access_token']}"},
         json={"refresh_token": data["refresh_token"]},
     )
+    second_logout = await client.request(
+        "POST",
+        "/api/v1/auth/logout",
+        headers={"Authorization": f"Bearer {data['access_token']}"},
+        json={"refresh_token": data["refresh_token"]},
+    )
     renewal = await client.post(
         "/api/v1/auth/refresh",
         json={"refresh_token": data["refresh_token"]},
@@ -184,6 +205,7 @@ async def test_logout_invalidates_refresh_token(client: AsyncClient) -> None:
 
     assert logout.status_code == 200
     assert logout.json()["data"] is None
+    assert second_logout.status_code == 401
     assert renewal.status_code == 401
 
 
