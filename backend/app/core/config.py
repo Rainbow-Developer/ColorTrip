@@ -39,9 +39,10 @@ class Settings(BaseSettings):
         if env in {"local", "test"}:
             return self
 
-        if self.jwt_secret_key == DEFAULT_JWT_SECRET_KEY or not self.jwt_secret_key.strip():
+        jwt_secret_key = self.jwt_secret_key.strip()
+        if jwt_secret_key == DEFAULT_JWT_SECRET_KEY or not jwt_secret_key:
             raise ValueError("JWT_SECRET_KEY must be set outside local/test environments.")
-        if len(self.jwt_secret_key) < 32:
+        if len(jwt_secret_key) < 32:
             raise ValueError("JWT_SECRET_KEY must be at least 32 characters.")
         if not self.kakao_rest_api_key.strip():
             raise ValueError("KAKAO_REST_API_KEY must be set outside local/test environments.")

@@ -27,6 +27,16 @@ def test_non_local_env_rejects_missing_kakao_rest_api_key() -> None:
         )
 
 
+def test_non_local_env_rejects_space_padded_short_jwt_secret() -> None:
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY must be at least 32 characters"):
+        _settings(
+            app_env="dev",
+            jwt_secret_key="short-secret                    ",
+            kakao_rest_api_key="test-kakao-rest-api-key",
+            kakao_redirect_uri="https://example.com/auth/kakao/callback",
+        )
+
+
 def test_non_local_env_rejects_missing_kakao_redirect_uri() -> None:
     with pytest.raises(ValueError, match="KAKAO_REDIRECT_URI"):
         _settings(
