@@ -46,8 +46,6 @@
 | MAP-03 | GET | `/users/me/map` | 지도 | 내 지도(지역별 색칠/채도/진행률) | Y | M2 |
 | SHR-01/02 | GET | `/users/me/timeline` | 공유 | 여행 타임라인 조회 | Y | M3 |
 | SHR-03 | GET | `/users/me/share-card` | 공유 | 공유 카드 데이터(지도+DNA) | Y | M3 |
-| EVT-01 | GET | `/festivals` | 이벤트 | 행사/축제 목록(region, date) | Y | M3 |
-| EVT-01/02 | GET | `/festivals/nearby` | 이벤트 | 인근/시즌 행사 | Y | M3 |
 
 ---
 
@@ -61,6 +59,9 @@
 
 - **인증** : 불필요
 - **설명** : 소셜 OAuth 코드를 받아 로그인 또는 신규 가입 처리 후 토큰을 발급합니다.
+- 소셜 provider에서 발급한 OAuth 코드를 서버에서 검증해 사용자 정보를 확인
+- `users` 테이블에 `(social_provider, social_id)` 조합이 없으면 신규 레코드 생성, 있으면 로그인 처리 (단일 엔드포인트에서 가입+로그인 통합)
+- 응답으로 단기 액세스 토큰과 장기 리프레시 토큰을 함께 발급하며, 리프레시 토큰은 `refresh_tokens` 테이블에 해시로 저장
 
 ---
 
@@ -68,6 +69,8 @@
 
 - **인증** : 불필요
 - **설명** : 리프레시 토큰을 사용해 만료된 액세스 토큰을 갱신합니다.
+- 전달된 리프레시 토큰을 해시화해 `refresh_tokens.token_hash`와 비교, 유효하지 않거나 만료된 경우 401 반환
+- 토큰 로테이션 적용: 기존 리프레시 토큰을 무효화(`deleted_at` 채움)하고 새 리프레시 토큰도 함께 발급
 
 ---
 
@@ -75,6 +78,8 @@
 
 - **인증** : 필요
 - **설명** : 서버에 저장된 리프레시 토큰을 무효화합니다.
+- `refresh_tokens` 테이블의 해당 토큰 레코드에 `deleted_at`을 채워 소프트 삭제 처리
+- 클라이언트는 로컬에 저장된 토큰을 별도로 삭제 필요 (서버는 리프레시 토큰만 관리)
 
 ---
 
@@ -86,6 +91,8 @@
 
 - **인증** : 필요
 - **설명** : 현재 로그인한 사용자의 프로필 정보를 반환합니다.
+- 액세스 토큰에서 추출한 `user_id`로 `users` 테이블을 조회
+- `dna`가 null이면 클라이언트에서 설문 화면으로 유도하는 분기에 활용 가능
 
 ---
 
@@ -93,6 +100,8 @@
 
 - **인증** : 필요
 - **설명** : 닉네임, 프로필 사진 등 사용자 정보를 수정합니다.
+- 요청에 포함된 필드만 업데이트하고 나머지는 기존 값 유지
+- 수정 가능 필드: `nickname`, `profile_image`
 
 ---
 
@@ -100,6 +109,8 @@
 
 - **인증** : 필요
 - **설명** : 회원을 soft delete 처리합니다(`deleted_at` 채움).
+- `users.deleted_at`에 현재 시각을 기록하며, 물리 삭제는 하지 않음 (이력 보존 및 2년 후 물리삭제)
+
 
 ---
 
@@ -107,17 +118,8 @@
 
 - **인증** : 필요
 - **설명** : 사용자의 여행 DNA 유형을 반환합니다.
-
-**Response Body**
-
-```json
-{
-  "success": true,
-  "data": {
-    "tripDna": "ACTIVITY"
-  }
-}
-```
+- `users.dna` 컬럼 값(`NATURE` / `FOOD` / `HISTORY` / `ACTIVITY` / `HEALING`)을 반환
+- 설문을 완료하지 않은 경우 `tripDna: null` 반환
 
 ---
 
@@ -129,46 +131,8 @@
 
 - **인증** : 필요
 - **설명** : 여행 성향 분석을 위한 설문 문항과 선택지 목록을 반환합니다.
+- `trip_questions` + `trip_question_options` 테이블에서 `is_deleted = false`인 항목을 `sort_order` 오름차순으로 반환
 
-**Response Body**
-
-```json
-{
-  "success": true,
-  "data": {
-    "questions": [
-      {
-        "questionId": "a1b2c3d4-0000-0000-0000-000000000001",
-        "sortOrder": 1,
-        "choices": [
-          {
-            "choiceId": "c1c1c1c1-0000-0000-0000-000000000001",
-            "content": "한적한 자연 속에서 휴식을 즐긴다"
-          },
-          {
-            "choiceId": "c1c1c1c1-0000-0000-0000-000000000002",
-            "content": "사람 많은 번화가에서 활기를 느낀다"
-          }
-        ]
-      },
-      {
-        "questionId": "a1b2c3d4-0000-0000-0000-000000000002",
-        "sortOrder": 2,
-        "choices": [
-          {
-            "choiceId": "c2c2c2c2-0000-0000-0000-000000000001",
-            "content": "액티비티 위주로 빡빡하게 다닌다"
-          },
-          {
-            "choiceId": "c2c2c2c2-0000-0000-0000-000000000002",
-            "content": "느긋하게 카페에서 시간을 보낸다"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
 
 ---
 
@@ -176,34 +140,9 @@
 
 - **인증** : 필요
 - **설명** : 설문 응답을 제출하면 서버에서 DNA 유형을 산출해 반환합니다. 재설문 시에도 동일 엔드포인트를 사용합니다.
-
-**Request Body**
-
-```json
-{
-  "answers": [
-    {
-      "questionId": "a1b2c3d4-0000-0000-0000-000000000001",
-      "choiceId": "c1c1c1c1-0000-0000-0000-000000000001"
-    },
-    {
-      "questionId": "a1b2c3d4-0000-0000-0000-000000000002",
-      "choiceId": "c2c2c2c2-0000-0000-0000-000000000002"
-    }
-  ]
-}
-```
-
-**Response Body**
-
-```json
-{
-  "success": true,
-  "data": {
-    "tripDna": "ACTIVITY"
-  }
-}
-```
+- 문항별 선택지의 `score_value`(JSONB)를 합산해 가장 높은 점수의 DNA 유형 결정
+- `trip_replies`에 응답 저장 후 `users.dna` 갱신 및 `user_dna_history`에 이력 추가
+- 재설문 시에도 동일 엔드포인트: 기존 응답을 덮어쓰고 새 DNA로 갱신
 
 ---
 
@@ -215,6 +154,8 @@
 
 - **인증** : 필요
 - **설명** : 충북 11개 시·군의 목록과 사용자의 퀘스트 진행 현황을 반환합니다.
+- `regions` 테이블 전체 목록에 `map_progress`를 조인해 각 지역의 `completed_count`와 첫 방문 시각(`first_colored_at`)을 포함
+- 지도 화면 진입 시 초기 데이터 로드에 사용
 
 ---
 
@@ -222,14 +163,8 @@
 
 - **인증** : 필요
 - **설명** : 퀘스트 목록을 반환합니다. `region`, `category`, `sort` 쿼리 파라미터로 필터링/정렬 가능합니다.
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|------|------|
-| `region` | Long | N | 지역 ID |
-| `category` | String | N | `nature` \| `food` \| `history` \| `activity` \| `healing` |
-| `sort` | String | N | 정렬 기준 |
+- `quest_progress`를 LEFT JOIN해 사용자의 퀘스트 완료 여부(`status`)도 함께 응답
+- `region` 미지정 시 전체 지역, `category` 미지정 시 전체 카테고리 반환
 
 ---
 
@@ -237,12 +172,9 @@
 
 - **인증** : 필요
 - **설명** : 특정 퀘스트의 상세 정보를 반환합니다. 운영정보(시간·휴무)는 관광공사 OpenAPI에서 조회합니다.
-
-**Path Parameters**
-
-| 파라미터 | 타입 | 설명 |
-|----------|------|------|
-| `id` | Long | 퀘스트 ID |
+- `quests` 테이블 기본 정보 + `content_id`로 한국관광공사 TourAPI를 호출해 운영시간·휴무일 병합
+- 외부 API 장애 시 기본 정보만 반환하고 운영정보는 `null` 처리 (장애가 전체 응답을 막지 않음)
+- 사용자의 해당 퀘스트 `quest_progress` 상태도 포함
 
 ---
 
@@ -250,13 +182,8 @@
 
 - **인증** : 필요
 - **설명** : 현재 위치 기준 반경 내의 퀘스트 목록을 반환합니다.
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|------|------|
-| `lat` | Double | Y | 현재 위도 |
-| `lng` | Double | Y | 현재 경도 |
+- 전달한 `lat`/`lng`와 `quests.lat`/`lng`를 Haversine 공식으로 거리 계산, 가까운 순으로 정렬
+- 사용자 `quest_progress` 조인으로 완료 여부 포함
 
 ---
 
@@ -268,6 +195,8 @@
 
 - **인증** : 필요
 - **설명** : 사용자의 여행 DNA 유형에 맞는 퀘스트를 추천합니다.
+- `users.dna` 유형과 일치하는 `category`의 퀘스트를 우선 추천
+- 이미 완료(`status = completed`)한 퀘스트는 제외하고 미완료 퀘스트만 반환
 
 ---
 
@@ -275,6 +204,8 @@
 
 - **인증** : 필요
 - **설명** : 사용자가 아직 방문하지 않은 지역을 추천합니다.
+- `map_progress`에 레코드가 없거나 `completed_count = 0`인 `regions`를 반환
+- 방문 이력 없는 지역 탐색 동기를 부여하는 데 사용
 
 ---
 
@@ -286,12 +217,8 @@
 
 - **인증** : 필요
 - **설명** : 퀘스트 진행 기록을 생성합니다(`status: in_progress`).
-
-**Path Parameters**
-
-| 파라미터 | 타입 | 설명 |
-|----------|------|------|
-| `id` | Long | 퀘스트 ID |
+- `quest_progress`에 `status = 'in_progress'`로 레코드 생성
+- 동일 `(user_id, quest_id)` 조합의 레코드가 이미 존재하면 에러 반환 (중복 시작 방지)
 
 ---
 
@@ -299,6 +226,8 @@
 
 - **인증** : 필요
 - **설명** : 인증용 사진을 업로드하고 URL을 반환합니다. `/quests/{id}/verify` 호출 전 먼저 사진 URL을 확보하는 용도입니다.
+- 이미지를 스토리지(GCS/S3)에 업로드 후 퍼블릭 URL 반환
+- 반환된 URL을 `POST /quests/{id}/verify`의 `photo_url` 필드에 전달하는 2-step 흐름
 - **Content-Type** : `multipart/form-data`
 
 ---
@@ -307,12 +236,9 @@
 
 - **인증** : 필요
 - **설명** : GPS 좌표와 사진 URL을 전달해 퀘스트 완료를 처리합니다. 좌표가 `verify_radius` 이내에 있으면 완료 처리됩니다.
-
-**Path Parameters**
-
-| 파라미터 | 타입 | 설명 |
-|----------|------|------|
-| `id` | Long | 퀘스트 ID |
+- 전달된 좌표(`lat`, `lng`)가 `quests.verify_radius`(m) 이내인지 Haversine으로 검증, 범위 밖이면 400 반환
+- 검증 통과 시 `quest_progress.status = 'completed'` 갱신 및 `verified_lat`, `verified_lng`, `photo_url`, `completed_at` 기록
+- 완료 처리 후 `map_progress.completed_count` 증가 및 `timeline_events` 레코드 추가
 
 ---
 
@@ -320,6 +246,8 @@
 
 - **인증** : 필요
 - **설명** : 사용자의 퀘스트 진행 중 및 완료 목록을 반환합니다.
+- `quest_progress` 테이블에서 `user_id` 기준으로 조회
+- `status` 쿼리 파라미터로 `in_progress` / `completed` 구분 조회 지원
 
 ---
 
@@ -331,6 +259,8 @@
 
 - **인증** : 필요
 - **설명** : 지역별 색칠 현황, 채도 단계, 퀘스트 진행률을 반환합니다.
+- `map_progress` 테이블에서 사용자별 지역 색칠 현황(`completed_count`, `first_colored_at`) 조회
+- `completed_count` 기준으로 채도 단계를 계산해 응답 (클라이언트는 단계값으로 색칠 강도 표현)
 
 ---
 
@@ -342,6 +272,8 @@
 
 - **인증** : 필요
 - **설명** : 사용자의 여행 기록(퀘스트 완료, 지역 색칠 등)을 시간순으로 반환합니다.
+- `timeline_events` 테이블에서 `user_id` 기준으로 `occurred_at DESC` 정렬 + 페이지네이션 조회
+- `event_type`별로 클라이언트 UI 표현이 다름 (퀘스트 완료·지역 첫 방문·DNA 업데이트 등)
 
 ---
 
@@ -349,49 +281,7 @@
 
 - **인증** : 필요
 - **설명** : SNS 공유용 카드에 필요한 지도 현황과 DNA 정보를 반환합니다.
+- `map_progress` 집계(지역별 색칠 현황) + `users.dna` 를 조합해 카드 구성 데이터 반환
+- 클라이언트에서 이 데이터를 렌더링해 SNS 공유 이미지를 생성하는 흐름
 
 ---
-
-### 🎪 이벤트 / 행사 (Festival)
-
----
-
-#### `GET /festivals` — 행사 / 축제 목록
-
-- **인증** : 필요
-- **설명** : 지역 또는 날짜로 필터링한 행사·축제 목록을 반환합니다.
-
-**Query Parameters**
-
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|------|------|
-| `region` | Long | N | 지역 ID |
-| `date` | String | N | 조회 기준 날짜 (`YYYY-MM-DD`) |
-
----
-
-#### `GET /festivals/nearby` — 인근 / 시즌 행사
-
-- **인증** : 필요
-- **설명** : 현재 위치 기준 인근에서 열리는 행사 또는 현재 시즌 행사를 반환합니다.
-
----
-
-## 결정 메모
-
-1. **사진 업로드 방식** — 별도 `/uploads/photo`로 URL 먼저 받기 vs `/verify`에서 multipart 한 번에
-2. **추천 분리** — `/quests/recommended`에 `?type=unvisited`로 합치기 vs `/regions/unvisited` 분리
-3. **근처/공유/찜** — 어디까지 MVP에 포함할지
-4. **페이지네이션** — 목록 API 커서 vs offset (`?page`, `?size`)
-
----
-
-## P2 (선택 기능)
-
-찜 기능 도입 시 별도 `bookmarks` 테이블 필요
-
-| Method | Path | 설명 |
-|--------|------|------|
-| POST | `/quests/{id}/bookmark` | 퀘스트 찜 추가 |
-| DELETE | `/quests/{id}/bookmark` | 퀘스트 찜 취소 |
-| GET | `/users/me/bookmarks` | 내 찜 목록 조회 |
