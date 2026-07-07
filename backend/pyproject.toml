@@ -12,6 +12,7 @@ dependencies = [
     "pydantic-settings>=2.7",
     "httpx>=0.28",
     "uuid-utils>=0.10",
+    "pyjwt>=2.10",
 ]
 
 [dependency-groups]
@@ -38,7 +39,10 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
 [tool.pyright]
 pythonVersion = "3.13"
 typeCheckingMode = "basic"
+include = ["app", "tests"]
 exclude = ["alembic/versions", "**/.venv", "**/__pycache__"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]

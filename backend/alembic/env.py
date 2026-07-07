@@ -2,6 +2,7 @@
 
 DB URL과 메타데이터는 앱 설정·모델에서 가져온다(단일 출처).
 """
+
 import asyncio
 from logging.config import fileConfig
 
@@ -10,10 +11,11 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from app.core.base import Base
-from app.core.config import settings
 
 # 모델을 import해야 Base.metadata에 테이블이 등록된다.
+from app.auth.models import RefreshToken, User  # noqa: F401
+from app.core.base import Base
+from app.core.config import settings
 from app.quests.models import Quest  # noqa: F401
 from app.regions.models import Region  # noqa: F401
 
@@ -55,6 +57,11 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
+    existing_connection = config.attributes.get("connection")
+    if existing_connection is not None:
+        do_run_migrations(existing_connection)
+        return
+
     asyncio.run(run_async_migrations())
 
 

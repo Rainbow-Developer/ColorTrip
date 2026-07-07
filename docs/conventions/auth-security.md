@@ -10,18 +10,39 @@
 | 소셜 로그인 방식 | Kakao 직접 구현 (옵션 A) | |
 | 소셜 제공자 범위 | Kakao | |
 | 토큰 전략 | Access + Refresh (JWT) | |
+| Access token TTL | 15분 | 짧은 TTL, blacklist 미사용 |
+| Refresh token TTL | 14일 | DB 저장 hash + rotation |
+| Refresh token 저장 | 서버 DB에 hash 저장 | 원문 저장 금지, 로그아웃/탈퇴 시 무효화 |
 | 토큰 저장(클라이언트) | flutter_secure_storage | |
 | 수집 개인정보 범위 | 이름, 이메일, 생년월일 | |
 | 비밀 / 키 관리 | GCP Secret Manager | |
 | CORS 정책 | 허용 도메인 화이트리스트 | |
+| 로컬 OAuth 검증 | 정식 API + 외부 클라이언트 | 개발용 라우트는 앱에 포함하지 않음 |
 
 ## 규칙 / 적용
 
 - 인증은 Kakao 직접 구현 + JWT(Access/Refresh)로 처리한다.
+- Access token은 15분 TTL로 짧게 유지하고, access token blacklist는 사용하지 않는다.
+- Refresh token은 서버 DB에 hash만 저장하고, 재발급 시 rotation한다.
+- 로그아웃과 탈퇴는 저장된 refresh token을 `deleted_at`으로 무효화한다.
+- 보호 API는 JWT 검증 후 active user(`deleted_at IS NULL`, `anonymized_at IS NULL`)를 DB에서 조회한다.
 - 클라이언트 토큰은 flutter_secure_storage에만 저장한다.
 - 시크릿은 코드/깃에 두지 않고 GCP Secret Manager를 사용한다(외부 API 키 관리도 동일).
+- `local/test` 외 환경은 `JWT_SECRET_KEY`, `KAKAO_REST_API_KEY`, `KAKAO_REDIRECT_URI`를 반드시 주입해야 하며, 기본 placeholder secret이나 빈 Kakao 설정으로는 앱이 시작되지 않아야 한다.
 - CORS는 허용 도메인 화이트리스트로 제한한다.
+- 실제 Kakao OAuth 브라우저 검증은 앱에 개발용 라우트를 추가하지 않고, 프론트엔드 또는 별도 로컬 클라이언트에서 인가 코드를 받은 뒤 정식 API로 검증한다.
+
+## 보호 API 사용자 조회
+
+- 로그인 사용자가 필요한 API는 `app.auth.dependencies.CurrentUser`를 사용한다.
+- endpoint는 `current_user: CurrentUser`를 받고, service에는 `current_user` 또는 `current_user.id`만 전달한다.
+- endpoint나 service에서 JWT를 직접 decode하지 않는다.
+- service에는 raw JWT, Authorization header, refresh token을 사용자 식별용으로 넘기지 않는다.
+- 보호 API 인증에는 access token만 사용한다. refresh token은 재발급과 로그아웃 요청에만 사용한다.
+- `CurrentUser`는 JWT 검증 후 active user(`deleted_at IS NULL`, `anonymized_at IS NULL`)를 DB에서 다시 조회한다.
+- 탈퇴 또는 익명화된 사용자는 남은 access token이 있어도 보호 API에 접근할 수 없다.
 
 ## 관련 문서
 
 - [외부 API & 데이터 연동](./external-apis.md)
+- [인증/회원 스펙](../specs/005-auth-member/)

@@ -5,6 +5,7 @@
 - mission_meta: 미션 타입별 부가데이터 JSONB (의사결정 7)
 - 운영정보(시간·휴무 등)는 저장하지 않고 content_id로 TourAPI 조회 (의사결정 5)
 """
+
 import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any

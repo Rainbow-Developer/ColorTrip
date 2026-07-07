@@ -15,16 +15,19 @@ cd backend
 # 1. 의존성
 uv sync
 
-# 2. 로컬 DB (PostgreSQL) 기동
+# 2. 로컬 환경 변수
+cp .env.example .env
+
+# 3. 로컬 DB (PostgreSQL) 기동
 docker compose up -d --wait db
 
-# 3. 마이그레이션 적용
+# 4. 마이그레이션 적용
 uv run alembic upgrade head
 
-# 4. 마스터 시드 (충북 11개 시·군)
+# 5. 마스터 시드 (충북 11개 시·군)
 uv run python -m app.regions.seed
 
-# 5. 개발 서버
+# 6. 개발 서버
 uv run uvicorn app.main:app --reload
 ```
 
@@ -37,9 +40,15 @@ uv run uvicorn app.main:app --reload
 
 | 변수 | 설명 |
 |------|------|
+| `APP_ENV` | 실행 환경 (`local`, `test`, `dev`, `prod`) |
 | `DATABASE_URL` | PostgreSQL 비동기 DSN (`postgresql+asyncpg://...`) |
 | `TOUR_API_KEY` | 한국관광공사 TourAPI 키 (미발급 시 적재는 빈 결과) |
 | `TOUR_API_BASE_URL` | TourAPI base URL (기본: KorService2) |
+| `JWT_SECRET_KEY` | Access JWT 서명과 refresh token hash에 사용하는 secret. `local/test` 외 환경에서는 필수이며 기본값 사용 시 앱이 시작되지 않는다. |
+| `ACCESS_TOKEN_TTL_MINUTES` | Access token TTL (기본 15분) |
+| `REFRESH_TOKEN_TTL_DAYS` | Refresh token TTL (기본 14일) |
+| `KAKAO_REST_API_KEY` | Kakao REST API 키 |
+| `KAKAO_REDIRECT_URI` | Kakao authorization code 교환 시 사용하는 redirect URI. 카카오 인가 요청에 사용한 값과 같아야 한다. |
 
 ## 구조
 
@@ -48,6 +57,7 @@ backend/
 ├── app/
 │   ├── main.py              # FastAPI 진입점·라우터 등록
 │   ├── core/                # config·database·base(모델 믹스인)·response(Envelope)·exceptions·enums
+│   ├── auth/                # Kakao 인증·JWT·회원 탈퇴/복구
 │   ├── regions/             # 시·군 마스터 (모델·스키마·repository·service·router·seed)
 │   ├── quests/              # 퀘스트 (모델·스키마·repository·service·router)
 │   └── integrations/tour_api/  # 한국관광공사 TourAPI 클라이언트·적재 로더
@@ -63,8 +73,63 @@ backend/
 | GET | `/api/v1/regions` | 충북 시·군 목록 |
 | GET | `/api/v1/quests` | 퀘스트 목록 (`region_id`·`category`·`page`·`size`) |
 | GET | `/api/v1/quests/{quest_id}` | 퀘스트 상세 |
+| POST | `/api/v1/auth/login/social` | Kakao 로그인·자동 가입·토큰 발급 |
+| POST | `/api/v1/auth/refresh` | 리프레시 토큰 교체 |
+| POST | `/api/v1/auth/logout` | 로그아웃 |
+| GET | `/api/v1/users/me` | 내 정보 조회 |
+| DELETE | `/api/v1/users/me` | 회원 탈퇴 |
 
 응답은 공통 Envelope `{ code, status, message, data }`로 감싼다([api-design.md](../docs/conventions/api-design.md)).
+
+## 보호 API 사용자 사용
+
+로그인한 사용자 정보가 필요한 API는 `CurrentUser` dependency를 사용한다.
+JWT parsing과 active user 조회는 인증 dependency에서 끝내고, service에는 이미 식별된 사용자만 전달한다.
+
+```python
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.dependencies import CurrentUser
+from app.core.database import get_session
+from app.core.response import Envelope, success
+
+router = APIRouter(prefix="/quests", tags=["quests"])
+
+
+@router.post("/{quest_id}/start")
+async def start_quest(
+    quest_id: str,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_session),
+) -> Envelope[dict[str, str]]:
+    # service에는 JWT가 아니라 식별된 사용자 정보만 전달한다.
+    # await quest_service.start_quest(
+    #     session,
+    #     user_id=current_user.id,
+    #     quest_id=quest_id,
+    # )
+    return success({"quest_id": quest_id, "user_id": str(current_user.id)})
+```
+
+클라이언트는 보호 API 요청에 access token을 전달한다.
+
+```http
+Authorization: Bearer <access_token>
+```
+
+`CurrentUser`는 JWT 서명, 만료 시간, token type, `sub`를 검증한 뒤 DB에서 active user를 다시 조회한다.
+헤더 누락, 잘못된 token, refresh token 사용, 탈퇴/익명화 사용자는 `UNAUTHORIZED_ERROR` 또는 `TOKEN_EXPIRED_ERROR`로 응답한다.
+
+## 테스트
+
+Auth/Member 테스트는 PostgreSQL을 사용한다.
+테스트 fixture는 Alembic `upgrade head`로 스키마를 만든 뒤 API 테스트를 실행한다.
+
+```bash
+docker compose -f docker-compose.test.yml up -d
+uv run pytest -q
+```
 
 ## 코드 품질
 

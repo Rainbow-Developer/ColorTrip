@@ -2,6 +2,7 @@
 
 테이블 설계: docs/specs/000-quest/ (Notion 동기화)
 """
+
 from decimal import Decimal
 from typing import TYPE_CHECKING
 

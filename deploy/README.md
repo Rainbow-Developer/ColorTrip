@@ -15,13 +15,37 @@
 ## 환경변수
 
 `.env`는 인스턴스에서 생성하며 **커밋하지 않는다**. 템플릿은 [.env.example](.env.example).
-DB 비밀번호 등 시크릿은 Secret Manager에서 가져와 채운다.
+DB 비밀번호와 JWT secret 등 시크릿은 Secret Manager에서 가져와 채운다.
 
 ```bash
 # DB 비밀번호를 Secret Manager에서 읽어 .env의 PASSWORD 자리에 주입하는 예시
 PW=$(gcloud secrets versions access latest --secret=colortrip-dev-db-password)
-sed "s|PASSWORD|${PW}|" .env.example > .env   # 그 뒤 API_IMAGE 등 나머지 값 확인
+PW="$PW" python3 - <<'PY' > .env
+from pathlib import Path
+import os
+from urllib.parse import quote
+
+text = Path(".env.example").read_text()
+pw = quote(os.environ["PW"], safe="")
+print(text.replace("PASSWORD", pw), end="")
+PY
+# 그 뒤 API_IMAGE 등 나머지 값 확인
 ```
+
+필수 Secret Manager 값:
+
+| Secret | 용도 |
+|--------|------|
+| `colortrip-dev-db-password` | Cloud SQL 접속 비밀번호 |
+| `colortrip-dev-jwt-secret-key` | Access JWT 서명과 refresh token hash |
+| `colortrip-dev-kakao-rest-api-key` | Kakao 로그인 REST API 키 |
+| `colortrip-dev-kakao-redirect-uri` | Kakao authorization code 교환용 redirect URI |
+
+선택 Secret Manager 값:
+
+| Secret | 용도 |
+|--------|------|
+| `colortrip-dev-tour-api-key` | 한국관광공사 TourAPI |
 
 ## 실행 (인스턴스에서)
 
