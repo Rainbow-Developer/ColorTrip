@@ -168,6 +168,7 @@ flowchart TD
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
 | **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈)·완료 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
+| **DB/데이터 모델 기반** | 여행 DNA 설문·퀘스트 진행·지도 진행·타임라인 기록을 위한 백엔드 데이터 모델 | `backend/app/auth/`, `backend/app/quests/`, `backend/app/progress/`, `backend/app/timeline/`, `backend/app/trip_dna/`, `backend/alembic/` · 스펙 [docs/specs/015-database-migration/](docs/specs/015-database-migration/) |
 
 > 위 표는 기능이 **어디 있는지**를 가리킵니다. 개별 기능의 **상세 설명**은 이 README에 중복해 적지 않고, 해당 기능 스펙의 `description.md`를 단일 출처(SOT)로 둡니다. 지도 색칠·여행 DNA·공유 등은 별도 도메인으로 진행 예정이며, 스펙이 만들어지면 이 표에 추가합니다.
 
