@@ -123,6 +123,12 @@ async def client(
 def _reset_database_with_migrations(connection: Connection) -> None:
     connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
     for table_name in (
+        "timeline_events",
+        "trip_replies",
+        "trip_question_options",
+        "trip_questions",
+        "user_dna_history",
+        "map_progress",
         "quest_progress",
         "journey_quests",
         "journeys",
@@ -132,6 +138,7 @@ def _reset_database_with_migrations(connection: Connection) -> None:
         "regions",
     ):
         connection.execute(text(f"DROP TABLE IF EXISTS {table_name} CASCADE"))
+    connection.execute(text("DROP TYPE IF EXISTS dna_type CASCADE"))
 
     config = Config("alembic.ini")
     config.attributes["connection"] = connection
