@@ -21,11 +21,11 @@
 | 후보 API | 관련 DB/컬럼 | 비고 |
 |----------|--------------|------|
 | `GET /users/dna`, `GET /surveys`, `POST /surveys/reply` | `users.dna`, `trip_questions`, `trip_question_options`, `trip_replies`, `user_dna_history` | 신규 DNA/설문 API |
-| `POST /quests/{id}/start`, `POST /quests/{id}/verify`, `GET /users/me/progress` | `quest_progress` | 신규 퀘스트 진행/인증 API. 정정 전 생성한 [#19](https://github.com/Rainbow-Developer/ColorTrip/issues/19)는 not planned로 닫음 |
+| `POST /quests/{id}/start`, `POST /quests/{id}/verify`, `GET /users/me/progress` | `quest_progress` | 신규 퀘스트 진행/인증 API |
 | `GET /quests/nearby`, `GET /quests/recommended` | `quest_progress`, `users.dna`, `quests` | 신규 퀘스트 탐색/추천 API |
 | `GET /users/me/map`, `GET /regions/unvisited` | `map_progress`, `regions` | 신규 지도/지역 진행 API |
-| `GET /users/me/timeline`, `GET /users/me/share-card` | `timeline_events`, `map_progress`, `users.dna` | 신규 타임라인/공유 API. 정정 전 생성한 [#22](https://github.com/Rainbow-Developer/ColorTrip/issues/22)는 not planned로 닫음 |
-| `POST /uploads/photo` | `quest_progress.photo_url` | 신규 업로드 API. 정정 전 생성한 [#23](https://github.com/Rainbow-Developer/ColorTrip/issues/23)는 not planned로 닫음 |
+| `GET /users/me/timeline`, `GET /users/me/share-card` | `timeline_events`, `map_progress`, `users.dna` | 신규 타임라인/공유 API |
+| `POST /uploads/photo` | `quest_progress.photo_url` | 신규 업로드 API |
 
 ## 참고 기준
 

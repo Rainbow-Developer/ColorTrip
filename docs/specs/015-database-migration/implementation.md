@@ -34,7 +34,6 @@
   - [#18](https://github.com/Rainbow-Developer/ColorTrip/issues/18): 사용자 프로필 응답의 `dna`/`profile_image` 반영 검토.
   - [#20](https://github.com/Rainbow-Developer/ColorTrip/issues/20): 기존 퀘스트 조회 응답의 진행 상태 반영 검토.
   - [#21](https://github.com/Rainbow-Developer/ColorTrip/issues/21): 기존 지역 목록 응답의 지도 진행 정보 반영 검토.
-- 신규 API 후보로 과하게 생성했던 [#19](https://github.com/Rainbow-Developer/ColorTrip/issues/19), [#22](https://github.com/Rainbow-Developer/ColorTrip/issues/22), [#23](https://github.com/Rainbow-Developer/ColorTrip/issues/23)은 not planned로 닫았다.
 
 ## 미구현 / 남은 항목
 
