@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -22,6 +23,7 @@ os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-at-least-32-bytes-long")
 os.environ.setdefault("KAKAO_REST_API_KEY", "test-kakao-rest-api-key")
 os.environ.setdefault("KAKAO_REDIRECT_URI", "http://localhost:3000/auth/kakao/callback")
+os.environ.setdefault("UPLOAD_DIR", os.path.join(tempfile.gettempdir(), "colortrip-test-uploads"))
 
 
 class MockKakaoClient:
@@ -93,8 +95,13 @@ def mock_kakao_client() -> MockKakaoClient:
 async def client(
     mock_kakao_client: MockKakaoClient,
 ) -> AsyncGenerator[AsyncClient]:
-    if "colortrip_test" not in TEST_DATABASE_URL:
-        pytest.fail("TEST_DATABASE_URL must point to colortrip_test.")
+    # 엔진이 실제로 바인딩하는 DATABASE_URL을 검사한다(환경에 다른 DB가 설정돼 있으면
+    # setdefault가 덮어쓰지 않으므로, TEST_DATABASE_URL만 확인하면 파괴적 리셋이 오작동할 수 있다).
+    effective_database_url = os.environ.get("DATABASE_URL", "")
+    if "colortrip_test" not in effective_database_url:
+        pytest.fail(
+            "DATABASE_URL must point to colortrip_test before running destructive fixtures."
+        )
 
     from app.auth.kakao import get_kakao_client
     from app.core.database import engine
@@ -102,19 +109,28 @@ async def client(
 
     app.dependency_overrides[get_kakao_client] = lambda: mock_kakao_client
 
-    async with engine.begin() as conn:
-        await conn.run_sync(_reset_database_with_migrations)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(_reset_database_with_migrations)
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as api:
-        yield api
-
-    app.dependency_overrides.clear()
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://testserver") as api:
+            yield api
+    finally:
+        app.dependency_overrides.clear()
 
 
 def _reset_database_with_migrations(connection: Connection) -> None:
     connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
-    for table_name in ("refresh_tokens", "users", "quests", "regions"):
+    for table_name in (
+        "quest_progress",
+        "journey_quests",
+        "journeys",
+        "refresh_tokens",
+        "users",
+        "quests",
+        "regions",
+    ):
         connection.execute(text(f"DROP TABLE IF EXISTS {table_name} CASCADE"))
 
     config = Config("alembic.ini")

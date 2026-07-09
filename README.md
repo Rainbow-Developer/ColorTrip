@@ -65,6 +65,9 @@ KAKAO_API_KEY=       # Kakao 로그인
 JWT_SECRET_KEY=      # JWT(Access/Refresh) 서명 키
 KAKAO_REST_API_KEY=  # Kakao REST API 키
 KAKAO_REDIRECT_URI=  # Kakao authorization code 교환용 redirect URI
+
+# 업로드 (퀘스트 인증 사진)
+GCS_UPLOAD_BUCKET=   # 설정 시 GCS 사용(운영), 미설정 시 로컬 디스크(개발·테스트)
 ```
 
 ## 실행 방법
@@ -96,7 +99,7 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 ├── AGENTS.md       # Codex 등 에이전트 진입점 → docs/AGENT_GUIDE.md
 ├── CLAUDE.md       # Claude Code 진입점 → docs/AGENT_GUIDE.md
 ├── README.md       # 프로젝트 개요·구조·실행 (이 문서)
-├── backend/        # 백엔드 — Python (도메인 골격: core·auth·integrations·quests·regions)
+├── backend/        # 백엔드 — Python (도메인 골격: core·auth·integrations·journeys·quests·regions·uploads)
 ├── frontend/       # 프론트엔드 — Flutter 앱 (다채로울지도)
 │   ├── lib/
 │   │   ├── main.dart        # 진입점 (ProviderScope)
@@ -148,6 +151,7 @@ flowchart TD
 | **인증·회원(Auth/Member)** | Kakao 로그인·JWT·내 정보·탈퇴/복구 | `backend/app/auth/` · 스펙 [docs/specs/005-auth-member/](docs/specs/005-auth-member/) |
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
+| **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈)·완료 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
 
 > 위 표는 기능이 **어디 있는지**를 가리킵니다. 개별 기능의 **상세 설명**은 이 README에 중복해 적지 않고, 해당 기능 스펙의 `description.md`를 단일 출처(SOT)로 둡니다. 지도 색칠·여행 DNA·공유 등은 별도 도메인으로 진행 예정이며, 스펙이 만들어지면 이 표에 추가합니다.
 
@@ -165,6 +169,7 @@ flowchart TD
 | `pydantic-settings` | 미정 | 설정·환경변수 |
 | `uvicorn` | 미정 | ASGI 앱 서버 |
 | `pyjwt` | 미정 | JWT 생성·검증 |
+| `google-cloud-storage` | 미정 | 인증 사진 GCS 업로드 |
 
 ### 프론트엔드 주요 의존성
 

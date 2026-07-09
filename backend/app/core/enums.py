@@ -17,3 +17,17 @@ class Category(StrEnum):
 class MissionType(StrEnum):
     GPS_PHOTO = "gps_photo"  # GPS + 사진 인증 (기본)
     QUIZ = "quiz"  # 퀴즈
+
+
+class ProgressStatus(StrEnum):
+    """퀘스트 진행 상태 (quest_progress.status)."""
+
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
+class JourneyStatus(StrEnum):
+    """여정 상태 (journeys.status) — 모든 퀘스트 완료 시 자동 completed."""
+
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"

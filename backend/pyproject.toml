@@ -13,6 +13,9 @@ dependencies = [
     "httpx>=0.28",
     "uuid-utils>=0.10",
     "pyjwt>=2.10",
+    "python-multipart>=0.0.20",
+    "google-cloud-storage>=2.19",
+    "tzdata>=2025.1",  # Windows에는 시스템 tz 데이터가 없어 ZoneInfo("Asia/Seoul")에 필요
 ]
 
 [dependency-groups]
