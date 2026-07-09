@@ -2,7 +2,7 @@
 
 from httpx import AsyncClient
 
-from tests.helpers import auth_headers, seed_quest_fixture
+from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
 
 async def test_create_and_get_journey(client: AsyncClient) -> None:
@@ -38,6 +38,33 @@ async def test_create_and_get_journey(client: AsyncClient) -> None:
     detail_response = await client.get(f"/api/v1/journeys/{data['id']}", headers=headers)
     assert detail_response.status_code == 200
     assert detail_response.json()["data"]["id"] == data["id"]
+
+
+async def test_create_journey_with_already_completed_quest_is_completed(
+    client: AsyncClient,
+) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    # 여정에 담기 전에 퀘스트를 먼저 완료해 둔다(진행도는 사용자 기준).
+    verify = await client.post(
+        f"/api/v1/quests/{seed['gps_quest_id']}/verify",
+        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/x.jpg"},
+        headers=headers,
+    )
+    assert verify.json()["data"]["verified"] is True
+
+    # 이미 완료한 퀘스트만으로 여정을 만들면 생성 즉시 completed여야 한다.
+    response = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        headers=headers,
+    )
+    assert response.status_code == 201
+    data = response.json()["data"]
+    assert data["status"] == "completed"
+    assert data["completed_at"] is not None
+    assert data["progress"] == {"completed": 1, "total": 1}
 
 
 async def test_create_journey_rejects_cross_region_quest(client: AsyncClient) -> None:

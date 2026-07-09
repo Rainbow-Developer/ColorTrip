@@ -99,7 +99,7 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 ├── AGENTS.md       # Codex 등 에이전트 진입점 → docs/AGENT_GUIDE.md
 ├── CLAUDE.md       # Claude Code 진입점 → docs/AGENT_GUIDE.md
 ├── README.md       # 프로젝트 개요·구조·실행 (이 문서)
-├── backend/        # 백엔드 — Python (도메인 골격: core·auth·integrations·quests·regions)
+├── backend/        # 백엔드 — Python (도메인 골격: core·auth·integrations·journeys·quests·regions·uploads)
 ├── frontend/       # 프론트엔드 — Flutter 앱 (다채로울지도)
 │   ├── lib/
 │   │   ├── main.dart        # 진입점 (ProviderScope)

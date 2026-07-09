@@ -2,6 +2,7 @@
 
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.base import now_kst
@@ -98,7 +99,15 @@ async def start_quest(
 
     progress = QuestProgress(user_id=user_id, quest_id=quest_id, journey_id=journey_id)
     session.add(progress)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        # 동시 중복 요청: 유니크 제약 위반 → 먼저 생성된 진행을 읽어 그대로 반환(멱등).
+        await session.rollback()
+        existing = await repository.get_progress(session, user_id, quest_id)
+        if existing is None:
+            raise
+        return ProgressItem.model_validate(existing)
     return ProgressItem.model_validate(progress)
 
 
@@ -137,14 +146,29 @@ async def verify_quest(
     if verified:
         progress.status = ProgressStatus.COMPLETED.value
         progress.completed_at = now_kst()
-        await session.flush()
-        # 이 퀘스트를 담은 모든 내 여정의 완료 상태를 재계산한다.
-        for journey in await journeys_repository.list_journeys_containing_quest(
-            session, user_id, quest_id
-        ):
-            await journeys_service.recalculate_status(session, journey)
 
-    await session.commit()
+    try:
+        await session.flush()
+        if verified:
+            # 이 퀘스트를 담은 모든 내 여정의 완료 상태를 재계산한다.
+            for journey in await journeys_repository.list_journeys_containing_quest(
+                session, user_id, quest_id
+            ):
+                await journeys_service.recalculate_status(session, journey)
+        await session.commit()
+    except IntegrityError:
+        # 동시 중복 요청(진행이 없던 상태에서 병렬 인증): 먼저 만들어진 진행 결과를 반환.
+        await session.rollback()
+        existing = await repository.get_progress(session, user_id, quest_id)
+        if existing is None:
+            raise
+        already_done = existing.status == ProgressStatus.COMPLETED.value
+        return VerifyResultData(
+            verified=already_done,
+            reason=None if already_done else reason,
+            progress=ProgressItem.model_validate(existing),
+        )
+
     return VerifyResultData(
         verified=verified, reason=reason, progress=ProgressItem.model_validate(progress)
     )

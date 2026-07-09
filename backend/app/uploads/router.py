@@ -38,11 +38,18 @@ async def upload_photo(
             f"지원하지 않는 이미지 형식입니다: {content_type or '알 수 없음'}",
         )
 
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    # 전체를 읽어 버퍼링하기 전에, 파서가 계산한 크기로 초과 업로드를 먼저 차단한다.
+    if file.size is not None and file.size > max_bytes:
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR,
+            f"파일이 너무 큽니다 (최대 {settings.max_upload_size_mb}MB).",
+        )
+
     content = await file.read()
     if not content:
         raise AppException(ErrorCode.VALIDATION_ERROR, "빈 파일은 업로드할 수 없습니다.")
-    max_bytes = settings.max_upload_size_mb * 1024 * 1024
-    if len(content) > max_bytes:
+    if len(content) > max_bytes:  # size가 None인 경우의 안전망
         raise AppException(
             ErrorCode.VALIDATION_ERROR,
             f"파일이 너무 큽니다 (최대 {settings.max_upload_size_mb}MB).",

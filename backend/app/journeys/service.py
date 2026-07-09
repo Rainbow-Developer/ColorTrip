@@ -47,6 +47,9 @@ async def create_journey(
     await session.flush()
     for order, quest_id in enumerate(unique_ids):
         session.add(JourneyQuest(journey_id=journey.id, quest_id=quest_id, sort_order=order))
+    await session.flush()
+    # 담은 퀘스트를 이미 완료한 사용자라면 생성 즉시 완료 상태가 되어야 한다(진행도는 user 기준).
+    await recalculate_status(session, journey)
     await session.commit()
 
     return await get_journey_detail(session, user_id, journey.id)

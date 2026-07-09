@@ -40,6 +40,8 @@ class GCSPhotoStorage:
     async def save(self, object_name: str, content: bytes, content_type: str) -> str:
         blob = self._bucket.blob(object_name)
         await asyncio.to_thread(blob.upload_from_string, content, content_type=content_type)
+        # 공개 읽기 버킷을 전제로 public URL 반환(plan 의사결정 3 · IaC 후속).
+        # 비공개 버킷 운영 시 signed URL 발급으로 교체해야 한다.
         return f"https://storage.googleapis.com/{self._bucket_name}/{object_name}"
 
 

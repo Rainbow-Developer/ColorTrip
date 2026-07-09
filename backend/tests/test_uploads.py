@@ -32,6 +32,20 @@ async def test_upload_rejects_non_image(client: AsyncClient) -> None:
     assert response.status_code == 422
 
 
+async def test_upload_rejects_oversized(client: AsyncClient) -> None:
+    from app.core.config import settings
+
+    headers = await auth_headers(client)
+    oversized = b"\x89PNG\r\n\x1a\n" + b"0" * (settings.max_upload_size_mb * 1024 * 1024 + 1)
+
+    response = await client.post(
+        "/api/v1/uploads/photo",
+        files={"file": ("big.png", oversized, "image/png")},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+
 async def test_upload_requires_auth(client: AsyncClient) -> None:
     response = await client.post(
         "/api/v1/uploads/photo",
