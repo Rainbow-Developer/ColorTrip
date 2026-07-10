@@ -49,6 +49,9 @@ uv run uvicorn app.main:app --reload
 | `REFRESH_TOKEN_TTL_DAYS` | Refresh token TTL (기본 14일) |
 | `KAKAO_REST_API_KEY` | Kakao REST API 키 |
 | `KAKAO_REDIRECT_URI` | Kakao authorization code 교환 시 사용하는 redirect URI. 카카오 인가 요청에 사용한 값과 같아야 한다. |
+| `GCS_UPLOAD_BUCKET` | 인증 사진 업로드용 GCS 버킷 (미설정 시 로컬 디스크로 저장) |
+| `UPLOAD_DIR` | 버킷 미설정 시 로컬 저장 경로 (기본: `./uploads`) |
+| `MAX_UPLOAD_SIZE_MB` | 인증 사진 최대 크기 (기본 10MB) |
 
 ## 구조
 
@@ -59,7 +62,9 @@ backend/
 │   ├── core/                # config·database·base(모델 믹스인)·response(Envelope)·exceptions·enums
 │   ├── auth/                # Kakao 인증·JWT·회원 탈퇴/복구
 │   ├── regions/             # 시·군 마스터 (모델·스키마·repository·service·router·seed)
-│   ├── quests/              # 퀘스트 (모델·스키마·repository·service·router)
+│   ├── quests/              # 퀘스트 조회·추천·진행/인증 (모델·스키마·repository·service·router·verification·dna)
+│   ├── journeys/            # 여정 생성·관리 (모델·스키마·repository·service·router)
+│   ├── uploads/             # 인증 사진 업로드 (router·storage: GCS/로컬)
 │   └── integrations/tour_api/  # 한국관광공사 TourAPI 클라이언트·적재 로더
 ├── alembic/                 # 마이그레이션
 ├── docker-compose.yml       # 로컬 PostgreSQL + API
@@ -72,7 +77,17 @@ backend/
 |--------|------|------|
 | GET | `/api/v1/regions` | 충북 시·군 목록 |
 | GET | `/api/v1/quests` | 퀘스트 목록 (`region_id`·`category`·`page`·`size`) |
+| GET | `/api/v1/quests/recommended` | DNA 기반 추천 퀘스트 (보호) |
 | GET | `/api/v1/quests/{quest_id}` | 퀘스트 상세 |
+| POST | `/api/v1/quests/{quest_id}/start` | 퀘스트 시작(진행 생성, 보호) |
+| POST | `/api/v1/quests/{quest_id}/verify` | 퀘스트 인증(GPS·사진·퀴즈, 보호) |
+| GET | `/api/v1/users/me/progress` | 내 진행/완료 목록 (보호) |
+| POST | `/api/v1/journeys` | 여정 생성 (보호) |
+| GET | `/api/v1/journeys` | 내 여정 목록 (보호) |
+| GET | `/api/v1/journeys/{journey_id}` | 여정 상세·진행률 (보호) |
+| POST | `/api/v1/journeys/{journey_id}/quests` | 여정에 퀘스트 추가 (보호) |
+| DELETE | `/api/v1/journeys/{journey_id}/quests/{quest_id}` | 여정에서 퀘스트 제거 (보호) |
+| POST | `/api/v1/uploads/photo` | 인증 사진 업로드 (보호) |
 | POST | `/api/v1/auth/login/social` | Kakao 로그인·자동 가입·토큰 발급 |
 | POST | `/api/v1/auth/refresh` | 리프레시 토큰 교체 |
 | POST | `/api/v1/auth/logout` | 로그아웃 |
