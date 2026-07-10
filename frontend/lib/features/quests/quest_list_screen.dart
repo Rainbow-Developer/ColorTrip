@@ -72,7 +72,7 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  subtitle: Text('📍 ${region.name}'),
+                  subtitle: Text('📍 ${region?.name ?? quest.region}'),
                   trailing: done
                       ? const Icon(
                           Icons.check_circle,

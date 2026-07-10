@@ -20,6 +20,9 @@ class RegionOverviewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final region = ref.watch(regionRepositoryProvider).byId(regionId);
+    if (region == null) {
+      return const Scaffold(body: Center(child: Text('지역을 찾을 수 없어요')));
+    }
     final questRepo = ref.watch(questRepositoryProvider);
     final regionQuests = questRepo.byRegion(regionId);
     final progress = ref.watch(progressProvider);

@@ -1,3 +1,6 @@
+/// 닉네임 미설정 시 화면 전반(마이·내 정보 수정)에서 공통으로 쓰는 기본값.
+const kDefaultNickname = '여행자닉네임';
+
 /// 타임라인 항목 — 완료한 퀘스트 1건의 기록.
 class TimelineEntry {
   const TimelineEntry({
@@ -32,6 +35,7 @@ class ProgressState {
     required this.timeline,
     required this.dnaType,
     required this.tripQuests,
+    required this.nickname,
   });
 
   const ProgressState.empty()
@@ -39,7 +43,8 @@ class ProgressState {
       regionProgress = const {},
       timeline = const [],
       dnaType = null,
-      tripQuests = const {};
+      tripQuests = const {},
+      nickname = null;
 
   final Set<String> completedQuestIds;
   final Map<String, int> regionProgress;
@@ -48,6 +53,9 @@ class ProgressState {
 
   /// 지역별로 "여행 시작하기"에서 고른 퀘스트 id 목록([RegionQuestSelectScreen] 다중 선택).
   final Map<String, Set<String>> tripQuests;
+
+  /// 사용자가 내 정보 수정에서 설정한 닉네임(없으면 [kDefaultNickname] 표시).
+  final String? nickname;
 
   bool isCompleted(String questId) => completedQuestIds.contains(questId);
 
@@ -72,6 +80,7 @@ class ProgressState {
     List<TimelineEntry>? timeline,
     String? dnaType,
     Map<String, Set<String>>? tripQuests,
+    String? nickname,
   }) {
     return ProgressState(
       completedQuestIds: completedQuestIds ?? this.completedQuestIds,
@@ -79,6 +88,7 @@ class ProgressState {
       timeline: timeline ?? this.timeline,
       dnaType: dnaType ?? this.dnaType,
       tripQuests: tripQuests ?? this.tripQuests,
+      nickname: nickname ?? this.nickname,
     );
   }
 }

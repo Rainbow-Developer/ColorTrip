@@ -27,18 +27,14 @@ class QuestVerifyScreen extends ConsumerWidget {
     }
 
     void completeAndPop() {
-      ref
-          .read(progressProvider.notifier)
-          .completeQuest(questId, month: DateTime.now().month);
+      ref.read(progressProvider.notifier).completeQuest(questId);
       showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
       context.pop();
       context.pop();
     }
 
     void completeAndShowResult() {
-      ref
-          .read(progressProvider.notifier)
-          .completeQuest(questId, month: DateTime.now().month);
+      ref.read(progressProvider.notifier).completeQuest(questId);
       context.push('/quest/$questId/verify/result');
     }
 

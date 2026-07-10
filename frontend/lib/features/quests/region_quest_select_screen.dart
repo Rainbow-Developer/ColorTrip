@@ -38,6 +38,9 @@ class _RegionQuestSelectScreenState
   @override
   Widget build(BuildContext context) {
     final region = ref.watch(regionRepositoryProvider).byId(widget.regionId);
+    if (region == null) {
+      return const Scaffold(body: Center(child: Text('지역을 찾을 수 없어요')));
+    }
     final allRegionQuests = ref
         .watch(questRepositoryProvider)
         .byRegion(widget.regionId);
@@ -133,7 +136,7 @@ class _RegionQuestSelectScreenState
                   : () {
                       ref
                           .read(progressProvider.notifier)
-                          .startTrip(widget.regionId, _selectedQuestIds!);
+                          .setTripQuests(widget.regionId, _selectedQuestIds!);
                       context.go('/travel');
                     },
               child: Text(

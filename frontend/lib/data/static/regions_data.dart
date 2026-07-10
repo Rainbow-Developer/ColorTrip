@@ -98,7 +98,14 @@ const List<Region> kRegions = [
 /// MAP_ORDER — 지도 렌더 순서(프로토타입과 동일하게 유지).
 List<Region> get kRegionsInMapOrder => kRegions;
 
-Region regionById(String id) => kRegions.firstWhere((r) => r.id == id);
+/// id에 해당하는 지역을 찾는다. 잘못되거나 오래된 링크로 알 수 없는 id가 들어올 수 있어
+/// (예: `/region/:id` 진입) 예외를 던지는 대신 null을 반환한다(CodeRabbit 리뷰 반영).
+Region? regionById(String id) {
+  for (final region in kRegions) {
+    if (region.id == id) return region;
+  }
+  return null;
+}
 
 /// "단양군" → "단양 여행" — 여행 목록 카드 제목([Figma] 여행 목록 화면).
 String tripTitleFor(Region region) {

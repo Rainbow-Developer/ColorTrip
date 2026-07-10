@@ -190,8 +190,9 @@ class _InProgressDnaCard extends ConsumerWidget {
 
     String? inProgressLabel;
     for (final region in kRegionsInMapOrder) {
-      if (progress.tripStatusOf(region.id) != RegionTripStatus.inProgress)
+      if (progress.tripStatusOf(region.id) != RegionTripStatus.inProgress) {
         continue;
+      }
       final trip = progress.tripQuestsOf(region.id);
       final done = trip.where(progress.isCompleted).length;
       inProgressLabel = '${region.name} $done/${trip.length}';
@@ -315,7 +316,7 @@ class _RecentCompletedTile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${region.name} · ${entry.date}',
+                  '${region?.name ?? quest.region} · ${entry.date}',
                   style: const TextStyle(
                     color: AppColors.timelineDateText,
                     fontSize: 11,

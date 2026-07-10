@@ -76,7 +76,7 @@ class QuestDetailScreen extends ConsumerWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-                RegionBadge(regionName: region.name),
+                RegionBadge(regionName: region?.name ?? quest.region),
                 QuestTypeBadge(type: quest.type),
                 VerifyBadge(verify: quest.verify),
               ],

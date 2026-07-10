@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../state/progress_notifier.dart';
+import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -31,9 +32,12 @@ class ProfileScreen extends ConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '무지개고구마',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                  Text(
+                    progress.nickname ?? kDefaultNickname,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   Text(
                     '${dna.icon} ${dna.name}',

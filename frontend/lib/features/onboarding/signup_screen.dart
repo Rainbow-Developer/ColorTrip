@@ -1,26 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_form_field.dart';
+import '../../state/progress_notifier.dart';
 
 /// 회원가입 — Figma 스펙(2026-07-08 공유) 반영: 닉네임(카카오 프로필 프리필 가정)
 /// + 이름·생년월일·이메일(빈 값, placeholder) + 필수/선택 약관 동의.
-class SignupScreen extends StatefulWidget {
+class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nicknameController = TextEditingController(text: '전은배고구마');
   final _nameController = TextEditingController();
   final _birthdateController = TextEditingController();
   final _emailController = TextEditingController();
 
-  bool _agreeTerms = true;
-  bool _agreePrivacy = true;
+  // 필수 약관은 사용자가 실제로 체크해야만 진행 가능하다 — 사전 체크는 컴플라이언스 리스크
+  // (CodeRabbit 리뷰 반영, 이전엔 true로 사전 체크되어 있었음).
+  bool _agreeTerms = false;
+  bool _agreePrivacy = false;
   bool _agreeMarketing = false;
 
   @override
@@ -103,7 +107,15 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: (_agreeTerms && _agreePrivacy)
-                    ? () => context.go('/survey')
+                    ? () {
+                        final nickname = _nicknameController.text.trim();
+                        if (nickname.isNotEmpty) {
+                          ref
+                              .read(progressProvider.notifier)
+                              .setNickname(nickname);
+                        }
+                        context.go('/survey');
+                      }
                     : null,
                 child: const Text('다음'),
               ),

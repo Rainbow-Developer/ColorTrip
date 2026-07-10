@@ -117,7 +117,7 @@ class PhotoVerifyResultScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${region.name} 지도가 색칠되었습니다 🎉',
+                    '${region?.name ?? quest.region} 지도가 색칠되었습니다 🎉',
                     style: const TextStyle(
                       color: AppColors.primaryDark,
                       fontSize: 12,

@@ -171,7 +171,7 @@ class _TimelineRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${region.name} · ${entry.date}',
+                      '${region?.name ?? quest.region} · ${entry.date}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.timelineDateText,

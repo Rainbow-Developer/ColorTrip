@@ -7,6 +7,7 @@ import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_form_field.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../state/progress_notifier.dart';
+import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
 
 /// 내 정보 수정 — Figma 스펙(2026-07-08 공유) 반영: 프로필 아이콘, 닉네임/이름/생년월일/이메일(변경불가)
@@ -19,7 +20,9 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
-  final _nicknameController = TextEditingController(text: '여행자닉네임');
+  late final _nicknameController = TextEditingController(
+    text: ref.read(progressProvider).nickname ?? kDefaultNickname,
+  );
   final _nameController = TextEditingController();
   final _birthdateController = TextEditingController();
   final _emailController = TextEditingController(
@@ -47,6 +50,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         actions: [
           TextButton(
             onPressed: () {
+              final nickname = _nicknameController.text.trim();
+              if (nickname.isNotEmpty) {
+                ref.read(progressProvider.notifier).setNickname(nickname);
+              }
               showAppToast(context, '변경사항이 저장되었어요');
               context.pop();
             },
@@ -133,6 +140,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           TextButton(onPressed: () => context.pop(), child: const Text('취소')),
           TextButton(
             onPressed: () {
+              ref.read(progressProvider.notifier).reset();
               context.pop();
               context.go('/splash');
             },
