@@ -16,7 +16,10 @@ class SignupScreen extends ConsumerStatefulWidget {
 }
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
-  final _nicknameController = TextEditingController(text: '전은배고구마');
+  // 카카오 로그인이 실제 연동되기 전까지는 프로필 닉네임을 가져올 수 없어 빈 값으로 시작한다.
+  // 하드코딩된 예시값을 넣으면 사용자가 수정하지 않고 넘어갈 때 그대로 저장되는 문제가 있었다
+  // (CodeRabbit 리뷰 반영).
+  final _nicknameController = TextEditingController();
   final _nameController = TextEditingController();
   final _birthdateController = TextEditingController();
   final _emailController = TextEditingController();
