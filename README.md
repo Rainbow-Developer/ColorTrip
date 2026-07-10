@@ -47,6 +47,12 @@ cd frontend
 flutter pub get
 ```
 
+- **Flutter SDK 미설치 환경**: `frontend/Dockerfile`·`frontend/docker-compose.yml`로 컨테이너에서 대신 실행할 수 있습니다.
+  ```bash
+  cd frontend
+  docker compose run --rm frontend flutter pub get
+  ```
+
 ### 환경 변수 설정
 
 백엔드는 pydantic-settings로 `.env`에서 설정을 읽습니다([backend.md](docs/conventions/backend.md)). 운영 시크릿·API 키는 GCP Secret Manager로 관리합니다([auth-security.md](docs/conventions/auth-security.md)).
@@ -89,6 +95,14 @@ flutter run -d chrome       # 웹(빠른 확인용)
 ```
 
 - **용도**: 다채로울지도 앱 구동. iOS/Android 실행은 각 플랫폼 툴체인(Xcode/Android SDK) 필요. 빠른 확인은 웹(Chrome)으로 가능.
+- **Flutter SDK 미설치 환경(Docker)**: iOS/Android 툴체인 없이 웹 빌드·테스트만 필요할 때 사용합니다.
+  ```bash
+  cd frontend
+  docker compose run --rm frontend flutter analyze
+  docker compose run --rm frontend flutter test
+  docker compose run --rm frontend flutter build web
+  docker compose run --rm --service-ports frontend flutter run -d web-server --web-hostname=0.0.0.0 --web-port=5000
+  ```
 
 ## 프로젝트 구조
 
@@ -103,11 +117,12 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 ├── frontend/       # 프론트엔드 — Flutter 앱 (다채로울지도)
 │   ├── lib/
 │   │   ├── main.dart        # 진입점 (ProviderScope)
-│   │   ├── app/             # MaterialApp.router·GoRouter 라우트·테마(디자인 토큰)·앱 셸(탭바)
-│   │   ├── core/            # Dio 클라이언트(설정)·공용 위젯(지도·토스트)
+│   │   ├── app/             # MaterialApp.router·GoRouter 라우트(app_shell 탭바 포함)·테마(디자인 토큰)
+│   │   ├── core/            # Dio 클라이언트(설정)·공용 위젯(ChungbukMap·토스트·배지·필터칩)
 │   │   ├── data/            # 모델·정적 데이터(static/)·Repository(정적/Auth 스텁)
-│   │   ├── state/           # 전역 상태(Riverpod)·파생 통계·지도 색칠 헬퍼
-│   │   └── features/        # 화면 단위: onboarding·survey·home·quests·timeline·profile
+│   │   ├── state/           # 전역 상태(Riverpod)·진행도 Notifier
+│   │   └── features/        # 화면 단위: onboarding·survey·home·travel·quests·timeline·profile
+│   ├── Dockerfile / docker-compose.yml  # Flutter SDK 미설치 환경 보조용
 │   └── pubspec.yaml
 ├── infra/          # GCP 인프라 (Terraform / IaC) — SOT: docs/conventions/infra-deploy.md
 │   ├── modules/        # 재사용 모듈 (network·compute·database)
@@ -139,13 +154,14 @@ flowchart TD
 
 ## 주요 기능과 위치
 
-기능을 수정할 때 **어느 폴더를 건드려야 하는지**를 정리합니다. `frontend/`는 아직 생성 전이며, 기능이 구현되는 대로 위치를 갱신합니다.
+기능을 수정할 때 **어느 폴더를 건드려야 하는지**를 정리합니다. 프론트엔드 화면은 1차 구현(최소 버전) 상태이며, 남은 항목은 [docs/specs/000-frontend-app/implementation.md](docs/specs/000-frontend-app/implementation.md)를 참고하세요.
 
 | 기능 | 설명 | 위치 |
 |------|------|------|
 | **온보딩·여행 DNA** | 스플래시·회원가입·초기 설문·DNA 결과 | `frontend/lib/features/onboarding/`, `frontend/lib/features/survey/` |
 | **홈 지도(색칠)** | 충북 11개 시·군 색칠 지도·통계 | `frontend/lib/features/home/`, 지도 위젯 `frontend/lib/core/widgets/chungbuk_map.dart` |
-| **퀘스트·인증** | 목록·지역별·상세·인증(사진/GPS/OX퀴즈) | `frontend/lib/features/quests/` |
+| **여행 목록** | 진행중/지난 여행(지역 단위) 목록 | `frontend/lib/features/travel/` |
+| **퀘스트·인증** | 지역별·상세·인증(사진/GPS/OX퀴즈), 유형별 전체 목록(보조) | `frontend/lib/features/quests/` |
 | **타임라인·프로필·공유** | 완료 기록·마이·내정보수정·공유 카드 | `frontend/lib/features/timeline/`, `frontend/lib/features/profile/` |
 | **도메인 데이터·상태** | 지역·퀘스트·DNA·설문 정적 데이터, 전역 상태 | `frontend/lib/data/`, `frontend/lib/state/` |
 | **인증·회원(Auth/Member)** | Kakao 로그인·JWT·내 정보·탈퇴/복구 | `backend/app/auth/` · 스펙 [docs/specs/005-auth-member/](docs/specs/005-auth-member/) |
