@@ -9,7 +9,7 @@ class AppBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-      onPressed: () => context.pop(),
+      onPressed: context.canPop() ? () => context.pop() : null,
     );
   }
 }
