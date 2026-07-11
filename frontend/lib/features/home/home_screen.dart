@@ -13,7 +13,9 @@ import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
 
 /// 홈(지도) — Figma 스펙(2026-07-08 공유) 반영: 완료 지역/진행률 스탯, 진행중 여행+DNA 카드,
-/// 지도 색칠(3단계 범례 포함), 최근 완료 섹션. 우측 상단 공유 아이콘으로 공유 카드 화면 진입.
+/// 지도 색칠(3단계 범례 포함), 최근 완료 섹션. 공유 버튼은 지도 바로 위에 붙여
+/// 무엇을 공유하는지 헷갈리지 않게 한다(2026-07-11 KAN-029 — 기존엔 AppBar 우측 상단에
+/// 있어 지도와 멀리 떨어져 있었다).
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -24,16 +26,7 @@ class HomeScreen extends ConsumerWidget {
         .round();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('다채로울지도'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.ios_share),
-            tooltip: '공유 카드 만들기',
-            onPressed: () => context.push('/share'),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('다채로울지도')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -63,6 +56,21 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               const _InProgressDnaCard(),
               const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => context.push('/share'),
+                  icon: const Icon(Icons.ios_share, size: 16),
+                  label: const Text('공유하기'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primaryDark,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
               ChungbukMap(
                 regionProgress: progress.regionProgress,
                 onRegionTap: (regionId) => context.push('/region/$regionId'),
