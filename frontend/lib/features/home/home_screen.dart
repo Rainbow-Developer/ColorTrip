@@ -65,8 +65,7 @@ class HomeScreen extends ConsumerWidget {
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.primaryDark,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    minimumSize: const Size(48, 48),
                   ),
                 ),
               ),
