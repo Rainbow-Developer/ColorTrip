@@ -3,14 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/filter_chip_row.dart';
 import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
 
-/// 여행 타임라인 — Figma 스펙(2026-07-08 공유) 반영: 월별 필터 칩, 월별 그룹 헤더,
+/// 여행 타임라인 — 월별 필터 칩 대신 캘린더형 "‹ 2026년 7월 ›" 네비게이터로 한 달씩 이동하며 조회.
 /// 점+선으로 이어지는 타임라인 카드(마지막 항목만 회색 점).
 class TimelineScreen extends ConsumerStatefulWidget {
   const TimelineScreen({super.key});
@@ -20,10 +19,17 @@ class TimelineScreen extends ConsumerStatefulWidget {
 }
 
 class _TimelineScreenState extends ConsumerState<TimelineScreen> {
-  String _filter = 'all';
+  /// 선택된 월의 인덱스(monthLabels 기준). null이면 가장 최근 달을 기본으로 보여준다.
+  int? _monthIndex;
 
-  /// "2026년 7월" → "7월" (필터 칩·그룹 헤더에서 재사용, 연도가 다른 동월은 v1에서 구분하지 않음).
-  String _monthLabel(String month) => month.split(' ').last;
+  /// "2026년 7월" → 정렬용 정수(202607). 형식이 어긋나면 0으로 취급한다.
+  int _monthSortKey(String month) {
+    final match = RegExp(r'(\d+)년 (\d+)월').firstMatch(month);
+    if (match == null) return 0;
+    final year = int.parse(match.group(1)!);
+    final m = int.parse(match.group(2)!);
+    return year * 100 + m;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,18 +39,20 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
 
     final monthLabels = <String>[];
     for (final entry in timeline) {
-      final label = _monthLabel(entry.month);
-      if (!monthLabels.contains(label)) monthLabels.add(label);
+      if (!monthLabels.contains(entry.month)) monthLabels.add(entry.month);
     }
-    final filters = [
-      const FilterChipOption(key: 'all', label: '전체'),
-      for (final label in monthLabels)
-        FilterChipOption(key: label, label: label),
-    ];
+    monthLabels.sort((a, b) => _monthSortKey(a).compareTo(_monthSortKey(b)));
 
-    final filtered = _filter == 'all'
-        ? timeline
-        : timeline.where((e) => _monthLabel(e.month) == _filter).toList();
+    final idx = monthLabels.isEmpty
+        ? 0
+        : (_monthIndex ?? monthLabels.length - 1).clamp(
+            0,
+            monthLabels.length - 1,
+          );
+
+    final filtered = monthLabels.isEmpty
+        ? const <TimelineEntry>[]
+        : timeline.where((e) => e.month == monthLabels[idx]).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -53,13 +61,15 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       ),
       body: Column(
         children: [
-          if (timeline.isNotEmpty)
+          if (monthLabels.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: FilterChipRow(
-                options: filters,
-                selectedKey: _filter,
-                onSelected: (key) => setState(() => _filter = key),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: _MonthNavigator(
+                label: monthLabels[idx],
+                canGoPrev: idx > 0,
+                canGoNext: idx < monthLabels.length - 1,
+                onPrev: () => setState(() => _monthIndex = idx - 1),
+                onNext: () => setState(() => _monthIndex = idx + 1),
               ),
             ),
           Expanded(
@@ -73,31 +83,93 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                 : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     children: [
-                      for (var i = 0; i < filtered.length; i++) ...[
-                        if (i == 0 ||
-                            filtered[i].month != filtered[i - 1].month)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8, top: 12),
-                            child: Text(
-                              filtered[i].month,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ),
+                      for (var i = 0; i < filtered.length; i++)
                         _TimelineRow(
                           entry: filtered[i],
                           isLast: i == filtered.length - 1,
                           questRepo: questRepo,
                           regionRepo: regionRepo,
                         ),
-                      ],
                     ],
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "‹ 2026년 7월 ›" 형태의 캘린더형 월 이동 네비게이터.
+class _MonthNavigator extends StatelessWidget {
+  const _MonthNavigator({
+    required this.label,
+    required this.canGoPrev,
+    required this.canGoNext,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  final String label;
+  final bool canGoPrev;
+  final bool canGoNext;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _MonthNavButton(
+          icon: Icons.chevron_left,
+          enabled: canGoPrev,
+          onTap: onPrev,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+        ),
+        _MonthNavButton(
+          icon: Icons.chevron_right,
+          enabled: canGoNext,
+          onTap: onNext,
+        ),
+      ],
+    );
+  }
+}
+
+class _MonthNavButton extends StatelessWidget {
+  const _MonthNavButton({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: enabled ? onTap : null,
+          child: Icon(
+            icon,
+            size: 20,
+            color: enabled ? AppColors.primaryDark : AppColors.checkboxBorder,
+          ),
+        ),
       ),
     );
   }
