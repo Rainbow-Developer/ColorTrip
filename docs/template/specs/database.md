@@ -21,7 +21,7 @@ CREATE TYPE dna_type AS ENUM (
 
 ```sql
 CREATE TABLE users (
-    id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id               UUID GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     social_provider  VARCHAR(20)  NOT NULL,
     social_id        VARCHAR(100) NOT NULL,
     email            VARCHAR(255),
