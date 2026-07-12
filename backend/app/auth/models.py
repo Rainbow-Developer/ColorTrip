@@ -10,6 +10,7 @@ from sqlalchemy import Date, DateTime, ForeignKey, Index, String, UniqueConstrai
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.base import Base, TimestampMixin, UUIDPKMixin
+from app.core.enums import dna_type_column
 
 
 class User(UUIDPKMixin, TimestampMixin, Base):
@@ -27,6 +28,8 @@ class User(UUIDPKMixin, TimestampMixin, Base):
     email: Mapped[str | None] = mapped_column(String(255))
     nickname: Mapped[str | None] = mapped_column(String(30))
     birth_date: Mapped[date | None] = mapped_column(Date)
+    dna: Mapped[str | None] = mapped_column(dna_type_column())
+    profile_image: Mapped[str | None] = mapped_column(String(500))
     withdrawal_grace_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     anonymized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

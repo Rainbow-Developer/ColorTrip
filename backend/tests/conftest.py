@@ -9,7 +9,8 @@ import pytest
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-from sqlalchemy.engine import Connection
+from sqlalchemy.engine import Connection, make_url
+from sqlalchemy.exc import ArgumentError
 
 from alembic import command
 
@@ -17,6 +18,7 @@ TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql+asyncpg://colortrip:colortrip@localhost:5433/colortrip_test",
 )
+TEST_DATABASE_NAME = "colortrip_test"
 
 os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
 os.environ.setdefault("APP_ENV", "test")
@@ -97,11 +99,7 @@ async def client(
 ) -> AsyncGenerator[AsyncClient]:
     # 엔진이 실제로 바인딩하는 DATABASE_URL을 검사한다(환경에 다른 DB가 설정돼 있으면
     # setdefault가 덮어쓰지 않으므로, TEST_DATABASE_URL만 확인하면 파괴적 리셋이 오작동할 수 있다).
-    effective_database_url = os.environ.get("DATABASE_URL", "")
-    if "colortrip_test" not in effective_database_url:
-        pytest.fail(
-            "DATABASE_URL must point to colortrip_test before running destructive fixtures."
-        )
+    _assert_test_database_url(os.environ.get("DATABASE_URL", ""))
 
     from app.auth.kakao import get_kakao_client
     from app.core.database import engine
@@ -121,18 +119,33 @@ async def client(
 
 
 def _reset_database_with_migrations(connection: Connection) -> None:
-    connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
-    for table_name in (
-        "quest_progress",
-        "journey_quests",
-        "journeys",
-        "refresh_tokens",
-        "users",
-        "quests",
-        "regions",
-    ):
-        connection.execute(text(f"DROP TABLE IF EXISTS {table_name} CASCADE"))
+    _assert_test_database_url(os.environ.get("DATABASE_URL", ""))
+
+    schema_name = connection.execute(text("SELECT current_schema()")).scalar_one()
+    if schema_name in {"information_schema", "pg_catalog"}:
+        raise RuntimeError(f"Refusing to reset system schema: {schema_name}")
+
+    quoted_schema_name = _quote_identifier(schema_name)
+    connection.execute(text(f"DROP SCHEMA {quoted_schema_name} CASCADE"))
+    connection.execute(text(f"CREATE SCHEMA {quoted_schema_name}"))
 
     config = Config("alembic.ini")
     config.attributes["connection"] = connection
     command.upgrade(config, "head")
+
+
+def _quote_identifier(identifier: str) -> str:
+    return '"' + identifier.replace('"', '""') + '"'
+
+
+def _assert_test_database_url(database_url: str) -> None:
+    try:
+        database_name = make_url(database_url).database
+    except ArgumentError as exc:
+        pytest.fail(f"DATABASE_URL is invalid: {exc}")
+
+    if database_name != TEST_DATABASE_NAME:
+        pytest.fail(
+            "DATABASE_URL database must be exactly "
+            f"{TEST_DATABASE_NAME!r} before running destructive fixtures."
+        )
