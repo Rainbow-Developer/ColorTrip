@@ -3,9 +3,9 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import ForeignKey, Index, Integer, Text, desc
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, desc
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.base import Base, TimestampMixin, UUIDPKMixin
 from app.core.enums import dna_type_column
@@ -14,19 +14,28 @@ from app.core.enums import dna_type_column
 class TripQuestion(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "trip_questions"
 
-    question: Mapped[str] = mapped_column(Text)
-    sort_order: Mapped[int | None] = mapped_column(Integer)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    options: Mapped[list["TripQuestionOption"]] = relationship(
+        back_populates="question", cascade="all, delete-orphan"
+    )
 
 
 class TripQuestionOption(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "trip_question_options"
-    __table_args__ = (Index("ix_trip_question_options_question_id", "question_id"),)
 
-    question_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trip_questions.id"))
-    score_value: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
-    content: Mapped[str] = mapped_column(Text)
-    category: Mapped[str] = mapped_column(dna_type_column())
-    sort_order: Mapped[int | None] = mapped_column(Integer)
+    question_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("trip_questions.id", ondelete="CASCADE"), nullable=False
+    )
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    # JSONB 타입 매핑: score_value는 Dict[str, int] 형태로 자동 매핑됩니다.
+    score_value: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    category: Mapped[str | None] = mapped_column(dna_type_column(), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # N:1 역관계 정의
+    question: Mapped["TripQuestion"] = relationship(back_populates="options")
 
 
 class TripReply(UUIDPKMixin, TimestampMixin, Base):
