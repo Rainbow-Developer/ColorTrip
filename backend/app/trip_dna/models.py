@@ -3,12 +3,12 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import Enum, ForeignKey, Index, Integer, Text, desc
+from sqlalchemy import ForeignKey, Index, Integer, Text, desc
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.base import Base, TimestampMixin, UUIDPKMixin
-from app.core.enums import DNA_TYPE_VALUES
+from app.core.enums import dna_type_column
 
 
 class TripQuestion(UUIDPKMixin, TimestampMixin, Base):
@@ -25,9 +25,7 @@ class TripQuestionOption(UUIDPKMixin, TimestampMixin, Base):
     question_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("trip_questions.id"))
     score_value: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     content: Mapped[str] = mapped_column(Text)
-    category: Mapped[str] = mapped_column(
-        Enum(*DNA_TYPE_VALUES, name="dna_type", validate_strings=True)
-    )
+    category: Mapped[str] = mapped_column(dna_type_column())
     sort_order: Mapped[int | None] = mapped_column(Integer)
 
 
@@ -48,4 +46,4 @@ class UserDnaHistory(UUIDPKMixin, TimestampMixin, Base):
     __table_args__ = (Index("ix_user_dna_history_user_created", "user_id", desc("created_at")),)
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
-    dna: Mapped[str] = mapped_column(Enum(*DNA_TYPE_VALUES, name="dna_type", validate_strings=True))
+    dna: Mapped[str] = mapped_column(dna_type_column())

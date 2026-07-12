@@ -25,6 +25,28 @@ def _dna_type(create_type: bool = False) -> postgresql.ENUM:
     return postgresql.ENUM(*DNA_TYPE_VALUES, name="dna_type", create_type=create_type)
 
 
+def _ensure_valid_quest_progress_statuses() -> None:
+    invalid_statuses = op.get_bind().execute(
+        sa.text(
+            """
+            SELECT status, count(*) AS row_count
+            FROM quest_progress
+            WHERE status NOT IN ('in_progress', 'completed')
+            GROUP BY status
+            ORDER BY status
+            """
+        )
+    )
+    invalid_status_summary = ", ".join(
+        f"{status!r} ({row_count})" for status, row_count in invalid_statuses
+    )
+    if invalid_status_summary:
+        raise RuntimeError(
+            "Cannot add ck_quest_progress_status; invalid "
+            f"quest_progress.status values exist: {invalid_status_summary}"
+        )
+
+
 def upgrade() -> None:
     """Upgrade schema."""
     _dna_type(create_type=True).create(op.get_bind(), checkfirst=True)
@@ -32,6 +54,7 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("dna", _dna_type(), nullable=True))
     op.add_column("users", sa.Column("profile_image", sa.String(length=500), nullable=True))
 
+    _ensure_valid_quest_progress_statuses()
     op.alter_column(
         "quest_progress",
         "status",

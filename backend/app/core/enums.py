@@ -5,6 +5,8 @@
 
 from enum import StrEnum
 
+from sqlalchemy import Enum as SQLEnum
+
 
 class Category(StrEnum):
     NATURE = "nature"  # 자연탐험
@@ -23,6 +25,10 @@ class DnaType(StrEnum):
 
 
 DNA_TYPE_VALUES = tuple(dna_type.value for dna_type in DnaType)
+
+
+def dna_type_column() -> SQLEnum:
+    return SQLEnum(*DNA_TYPE_VALUES, name="dna_type", validate_strings=True)
 
 
 class MissionType(StrEnum):

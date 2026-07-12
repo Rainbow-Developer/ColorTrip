@@ -122,24 +122,36 @@ async def client(
 
 def _reset_database_with_migrations(connection: Connection) -> None:
     connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
-    for table_name in (
-        "timeline_events",
-        "trip_replies",
-        "trip_question_options",
-        "trip_questions",
-        "user_dna_history",
-        "map_progress",
-        "quest_progress",
-        "journey_quests",
-        "journeys",
-        "refresh_tokens",
-        "users",
-        "quests",
-        "regions",
-    ):
-        connection.execute(text(f"DROP TABLE IF EXISTS {table_name} CASCADE"))
-    connection.execute(text("DROP TYPE IF EXISTS dna_type CASCADE"))
+    table_names = connection.execute(
+        text(
+            """
+            SELECT tablename
+            FROM pg_tables
+            WHERE schemaname = current_schema()
+            """
+        )
+    ).scalars()
+    for table_name in table_names:
+        connection.execute(text(f"DROP TABLE IF EXISTS {_quote_identifier(table_name)} CASCADE"))
+
+    enum_type_names = connection.execute(
+        text(
+            """
+            SELECT pg_type.typname
+            FROM pg_type
+            JOIN pg_namespace ON pg_namespace.oid = pg_type.typnamespace
+            WHERE pg_type.typtype = 'e'
+              AND pg_namespace.nspname = current_schema()
+            """
+        )
+    ).scalars()
+    for enum_type_name in enum_type_names:
+        connection.execute(text(f"DROP TYPE IF EXISTS {_quote_identifier(enum_type_name)} CASCADE"))
 
     config = Config("alembic.ini")
     config.attributes["connection"] = connection
     command.upgrade(config, "head")
+
+
+def _quote_identifier(identifier: str) -> str:
+    return '"' + identifier.replace('"', '""') + '"'
