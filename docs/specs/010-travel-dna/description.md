@@ -8,25 +8,25 @@
 
 ```mermaid
 flowchart TD
-    C["클라이언트 (Flutter)"] -->|"1. GET /api/v1/survey/questions"| Q["질문/선택지 반환 (점수 숨김)"]
-    C -->|"2. POST /api/v1/survey/replies (답변 제출)"| S["백엔드 점수 합산 및 DNA 판정"]
+    C["클라이언트 (Flutter)"] -->|"1. GET /api/v1/trip_dna/questions"| Q["질문/선택지 반환 (점수 숨김)"]
+    C -->|"2. POST /api/v1/trip_dna/replies (답변 제출)"| S["백엔드 점수 합산 및 DNA 판정"]
     S -->|"3. trip_replies 저장 및 대표 DNA 계산"| DB[("PostgreSQL (replies)")]
     S -->|"4. 판정 결과 및 유형별 점수 반환"| C
 ```
 
-1. **질문 조회**: 사용자가 설문 화면에 진입하면 `GET /api/v1/survey/questions`를 통해 질문과 선택지 텍스트를 불러옵니다. 이 때 선택지가 가진 가중치 점수는 클라이언트에 노출하지 않습니다.
+1. **질문 조회**: 사용자가 설문 화면에 진입하면 `GET /api/v1/trip_dna/questions`를 통해 질문과 선택지 텍스트를 불러옵니다. 이 때 선택지가 가진 가중치 점수는 클라이언트에 노출하지 않습니다.
 2. **답변 제출**: 사용자가 설문을 마친 후 답변을 전송하면, 서버는 데이터베이스에 각 선택지별 점수(`score_value` JSONB)를 확인하여 합계를 구합니다.
-3. **결과 산출**: 합산 점수가 가장 높은 카테고리가 해당 사용자의 최종 `travel_dna`로 결정됩니다.
+3. **결과 산출**: 합산 점수가 가장 높은 카테고리가 해당 사용자의 최종 `dna`로 결정됩니다.
 
 ## 주요 구성 요소 / 위치
 
 | 구성 요소 | 역할 | 위치 |
 |-----------|------|------|
-| `trip_questions` 테이블 | 설문 질문 마스터 | `backend/app/survey/models.py` |
-| `trip_question_options` 테이블 | 질문별 선택지 및 성향 점수 매핑 | `backend/app/survey/models.py` |
-| `trip_replies` 테이블 | 사용자가 제출한 설문 답변 기록 | `backend/app/survey/models.py` |
-| 설문 도메인 API 라우터 | 설문 및 DNA 조회/제출 API | `backend/app/survey/router.py` |
-| 데이터 시드 스크립트 | 초기 설문 문항 및 카테고리 데이터 적재 | `backend/app/core/seeds/survey.py` |
+| `trip_questions` 테이블 | 설문 질문 마스터 | `backend/app/trip_dna/models.py` |
+| `trip_question_options` 테이블 | 질문별 선택지 및 성향 점수 매핑 | `backend/app/trip_dna/models.py` |
+| `trip_replies` 테이블 | 사용자가 제출한 설문 답변 기록 | `backend/app/trip_dna/models.py` |
+| 설문 도메인 API 라우터 | 설문 및 DNA 조회/제출 API | `backend/app/trip_dna/router.py` |
+| 데이터 시드 스크립트 | 초기 설문 문항 및 카테고리 데이터 적재 | `backend/app/trip_dna/seed.py` |
 
 ## 설정 / 사용법
 
@@ -41,11 +41,11 @@ flowchart TD
 각 선택지는 JSON 형식으로 여러 카테고리의 가중치 점수를 복합적으로 가질 수 있습니다.
 ```json
 {
-  "NATURE": 3,
-  "FOOD": 0,
-  "HISTORY": 1,
-  "ACTIVITY": 2,
-  "HEALING": 0
+  "nature": 3,
+  "food": 0,
+  "history": 1,
+  "activity": 2,
+  "healing": 0
 }
 ```
 

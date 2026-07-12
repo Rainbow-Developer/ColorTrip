@@ -20,3 +20,15 @@ class QuestionRead(BaseModel):
     question: str
     sort_order: int
     options: list[OptionRead]  # 질문 하나에 여러 선택지가 리스트 형태로 귀속됩니다.
+
+class ReplySubmitItem(BaseModel):
+    question_id: UUID
+    question_option_id: UUID
+
+class RepliesSubmitRequest(BaseModel):
+    replies: list[ReplySubmitItem]
+
+class DNAResultResponse(BaseModel):
+    user_id: UUID
+    main_dna_type: str
+    scores: dict[str, int]
