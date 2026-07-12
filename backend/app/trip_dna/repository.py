@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.survey.models import TripQuestion
+from app.trip_dna.models import TripQuestion, TripQuestionOption
 
 
 async def list_active_questions(session: AsyncSession) -> Sequence[TripQuestion]:
@@ -21,7 +21,7 @@ async def list_active_questions(session: AsyncSession) -> Sequence[TripQuestion]
         .options(
             # 질문을 가져올 때 연관된 options(선택지) 리스트도 한 번의 쿼리로 다 가져오도록 지정합니다.
             selectinload(
-                TripQuestion.options.and_(TripQuestion.deleted_at.is_(None))
+                TripQuestion.options.and_(TripQuestionOption.deleted_at.is_(None))
             )
         )
     )

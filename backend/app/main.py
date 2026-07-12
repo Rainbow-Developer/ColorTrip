@@ -18,7 +18,7 @@ from app.quests.router import progress_router
 from app.quests.router import router as quests_router
 from app.regions.router import router as regions_router
 from app.uploads.router import router as uploads_router
-from app.survey.router import router as dna_servey_router
+from app.trip_dna.router import router as trip_dna_router
 
 app = FastAPI(title="ColorTrip API", version="0.1.0")
 register_exception_handlers(app)
@@ -30,13 +30,13 @@ app.include_router(quests_router, prefix="/api/v1")
 app.include_router(progress_router, prefix="/api/v1")
 app.include_router(journeys_router, prefix="/api/v1")
 app.include_router(uploads_router, prefix="/api/v1")
+app.include_router(trip_dna_router, prefix="/api/v1")
 
 # 로컬 스토리지 사용 시 업로드 파일 정적 서빙 (GCS 사용 시 불필요)
 if not settings.gcs_upload_bucket:
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
-app.include_router(dna_servey_router, prefix="/api/v1")
 
 @app.get("/health", response_model=Envelope[dict])
 async def health() -> Envelope[dict]:

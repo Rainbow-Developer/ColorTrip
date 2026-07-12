@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.survey import repository
-from app.survey.models import TripQuestion
+from app.trip_dna import repository
+from app.trip_dna.models import TripQuestion
 
 
 async def get_survey_questions(session: AsyncSession) -> Sequence[TripQuestion]:

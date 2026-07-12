@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import CurrentUser
 from app.core.database import get_session
 from app.core.response import Envelope, success
-from app.survey import service
-from app.survey.schemas import QuestionRead
+from app.trip_dna import service
+from app.trip_dna.schemas import QuestionRead
 
 logger = logging.getLogger(__name__)
 
-# prefix를 "/survey"로 지정하여 진입 경로를 묶습니다.
-router = APIRouter(prefix="/survey", tags=["survey"])
+# prefix를 "/trip_dna"로 지정하여 진입 경로를 묶습니다.
+router = APIRouter(prefix="/trip_dna", tags=["trip_dna"])
 
 @router.get(
     "/questions",
@@ -37,7 +37,7 @@ async def get_survey_questions(
     ### 📌 정렬 순서
     - 질문과 선택지는 각각 DB에 설정된 `sort_order` 기준으로 정렬되어 반환됩니다.
     """
-    logger.info(f"[SURVEY] Request questions (User: current_user.id - current_user.username)")
+    logger.info(f"[TRIP_DNA] Request questions (User: current_user.id - current_user.username)")
 
     """설문용 질문 및 선택지 리스트를 조회합니다."""
     questions = await service.get_survey_questions(session)
