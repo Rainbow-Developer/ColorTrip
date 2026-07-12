@@ -29,7 +29,7 @@
 - `quest_progress.status`, `map_progress.completed_count`는 ORM default와 DB server default를 함께 가진다.
 - `quest_progress.status` CHECK 제약 추가 전 기존 데이터에 허용되지 않은 상태값이 있는지 명시적으로 검사한다.
 - `timeline_events`, `trip_replies`, `user_dna_history`의 사용자별 시간순 조회 인덱스는 PR #15 조회 의도에 맞춰 시간 컬럼 DESC 정렬을 명시한다.
-- 테스트 DB reset 로직이 현재 schema의 테이블과 enum을 동적으로 제거한 뒤 `upgrade head` 하도록 갱신했다.
+- 테스트 DB reset 로직이 현재 schema를 재생성한 뒤 `upgrade head` 하도록 갱신했다.
 - `backend/tests/test_database_spec_schema.py`로 PR #15 스키마 핵심 계약, DB server default, 신규 ORM 모델 insert 기본값을 검증한다.
 - 기존 구현된 API 수정 필요 지점만 GitHub Issue로 유지했다:
   - [#18](https://github.com/Rainbow-Developer/ColorTrip/issues/18): 사용자 프로필 응답의 `dna`/`profile_image` 반영 검토.
@@ -55,4 +55,4 @@
 | 2026-07-08 | PR #15 database.md 우선 Alembic 마이그레이션 스펙 최초 작성 |
 | 2026-07-08 | ORM 모델, Alembic revision, schema regression 테스트, API 후속 GitHub Issue 연결 |
 | 2026-07-08 | DB server default, DESC index, ORM insert 기본값 검증 보강 |
-| 2026-07-12 | CodeRabbit 검토 후 enum 중복 제거, 테스트 DB reset 동적화, quest_progress 상태값 preflight 보강 |
+| 2026-07-12 | CodeRabbit 검토 후 enum 중복 제거, 테스트 DB reset 스키마 재생성, quest_progress 상태값 preflight 보강 |

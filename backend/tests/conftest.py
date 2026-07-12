@@ -121,32 +121,13 @@ async def client(
 
 
 def _reset_database_with_migrations(connection: Connection) -> None:
-    connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
-    table_names = connection.execute(
-        text(
-            """
-            SELECT tablename
-            FROM pg_tables
-            WHERE schemaname = current_schema()
-            """
-        )
-    ).scalars()
-    for table_name in table_names:
-        connection.execute(text(f"DROP TABLE IF EXISTS {_quote_identifier(table_name)} CASCADE"))
+    schema_name = connection.execute(text("SELECT current_schema()")).scalar_one()
+    if schema_name in {"information_schema", "pg_catalog"}:
+        raise RuntimeError(f"Refusing to reset system schema: {schema_name}")
 
-    enum_type_names = connection.execute(
-        text(
-            """
-            SELECT pg_type.typname
-            FROM pg_type
-            JOIN pg_namespace ON pg_namespace.oid = pg_type.typnamespace
-            WHERE pg_type.typtype = 'e'
-              AND pg_namespace.nspname = current_schema()
-            """
-        )
-    ).scalars()
-    for enum_type_name in enum_type_names:
-        connection.execute(text(f"DROP TYPE IF EXISTS {_quote_identifier(enum_type_name)} CASCADE"))
+    quoted_schema_name = _quote_identifier(schema_name)
+    connection.execute(text(f"DROP SCHEMA {quoted_schema_name} CASCADE"))
+    connection.execute(text(f"CREATE SCHEMA {quoted_schema_name}"))
 
     config = Config("alembic.ini")
     config.attributes["connection"] = connection
