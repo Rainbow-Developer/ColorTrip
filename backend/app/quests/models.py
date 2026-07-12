@@ -11,7 +11,17 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,6 +61,10 @@ class QuestProgress(UUIDPKMixin, TimestampMixin, Base):
 
     __tablename__ = "quest_progress"
     __table_args__ = (
+        CheckConstraint(
+            "status IN ('in_progress', 'completed')",
+            name="ck_quest_progress_status",
+        ),
         UniqueConstraint("user_id", "quest_id", name="uq_quest_progress_user_id_quest_id"),
         Index("ix_quest_progress_user_status", "user_id", "status"),
     )
@@ -58,7 +72,11 @@ class QuestProgress(UUIDPKMixin, TimestampMixin, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     quest_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("quests.id"))
     journey_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("journeys.id"))
-    status: Mapped[str] = mapped_column(String(20), default=ProgressStatus.IN_PROGRESS.value)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default=ProgressStatus.IN_PROGRESS.value,
+        server_default=ProgressStatus.IN_PROGRESS.value,
+    )
     verified_lat: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
     verified_lng: Mapped[Decimal | None] = mapped_column(Numeric(10, 7))
     photo_url: Mapped[str | None] = mapped_column(String(500))

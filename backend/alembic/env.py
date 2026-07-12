@@ -17,8 +17,16 @@ from app.auth.models import RefreshToken, User  # noqa: F401
 from app.core.base import Base
 from app.core.config import settings
 from app.journeys.models import Journey, JourneyQuest  # noqa: F401
+from app.progress.models import MapProgress  # noqa: F401
 from app.quests.models import Quest, QuestProgress  # noqa: F401
 from app.regions.models import Region  # noqa: F401
+from app.timeline.models import TimelineEvent  # noqa: F401
+from app.trip_dna.models import (  # noqa: F401
+    TripQuestion,
+    TripQuestionOption,
+    TripReply,
+    UserDnaHistory,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

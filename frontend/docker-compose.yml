@@ -1,0 +1,15 @@
+# 로컬 개발 환경 — Flutter SDK 미설치 머신에서 컨테이너로 pub get·analyze·test·build web 실행.
+# 사용 예:
+#   docker compose run --rm frontend flutter pub get
+#   docker compose run --rm frontend flutter analyze
+#   docker compose run --rm frontend flutter test
+#   docker compose run --rm --service-ports frontend flutter run -d web-server --web-hostname=0.0.0.0 --web-port=5000
+services:
+  frontend:
+    build: .
+    volumes:
+      - .:/app
+    working_dir: /app
+    ports:
+      - "5000:5000"
+    tty: true
