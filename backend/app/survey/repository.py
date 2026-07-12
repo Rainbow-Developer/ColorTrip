@@ -20,7 +20,9 @@ async def list_active_questions(session: AsyncSession) -> Sequence[TripQuestion]
         .order_by(TripQuestion.sort_order.asc())
         .options(
             # 질문을 가져올 때 연관된 options(선택지) 리스트도 한 번의 쿼리로 다 가져오도록 지정합니다.
-            selectinload(TripQuestion.options)
+            selectinload(
+                TripQuestion.options.and_(TripQuestion.deleted_at.is_(None))
+            )
         )
     )
     result = await session.execute(stmt)

@@ -1,23 +1,24 @@
-"""
-    survey — 여행 DNA 초기 질문지 데이터 시드.
+"""survey — 여행 DNA 초기 질문지 데이터 시드.
 
-    실행: uv run python -m app.survey.seed
+실행: uv run python -m app.survey.seed [--reset]
 """
 
 import asyncio
-from sqlalchemy import delete
+import sys
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
 from app.survey.models import TripQuestion, TripQuestionOption
 
 
-async def seed_survey(session: AsyncSession) -> None:
-    # 1. 여러 번 실행해도 데이터가 꼬이지 않도록 기존 데이터 삭제 (멱등성 확보)
-    await session.execute(delete(TripQuestionOption))
-    await session.execute(delete(TripQuestion))
+async def seed_survey(session: AsyncSession, reset: bool = False) -> None:
+    if reset:
+        print("Resetting survey tables...")
+        await session.execute(delete(TripQuestionOption))
+        await session.execute(delete(TripQuestion))
+        await session.flush()
 
-    # 2. 질문 및 선택지(점수 매핑 포함) 데이터셋 정의
     questions_data = [
         {
             "question": "여행 계획을 세울 때 내가 가장 먼저 찾아보는 것은?",
@@ -141,33 +142,54 @@ async def seed_survey(session: AsyncSession) -> None:
         },
     ]
 
-    # 3. DB에 일괄 Insert
     for q_data in questions_data:
-        question = TripQuestion(
-            question=q_data["question"],
-            sort_order=q_data["sort_order"]
+        q_stmt = select(TripQuestion).where(
+            TripQuestion.sort_order == q_data["sort_order"],
+            TripQuestion.deleted_at.is_(None)
         )
-        session.add(question)
+        q_result = await session.execute(q_stmt)
+        question = q_result.scalars().first()
 
-        # SQLAlchemy가 생성한 question.id를 하위 options의 외래키로 매핑하기 위해 메모리 플러시
-        await session.flush()
+        if question:
+            question.question = q_data["question"]
+        else:
+            question = TripQuestion(
+                question=q_data["question"],
+                sort_order=q_data["sort_order"]
+            )
+            session.add(question)
+            await session.flush()
 
         for opt_data in q_data["options"]:
-            option = TripQuestionOption(
-                question_id=question.id,
-                content=opt_data["content"],
-                category=opt_data["category"],
-                score_value=opt_data["score_value"],
-                sort_order=opt_data["sort_order"]
+            opt_stmt = select(TripQuestionOption).where(
+                TripQuestionOption.question_id == question.id,
+                TripQuestionOption.sort_order == opt_data["sort_order"],
+                TripQuestionOption.deleted_at.is_(None)
             )
-            session.add(option)
+            opt_result = await session.execute(opt_stmt)
+            option = opt_result.scalars().first()
 
-    print("Success: Survey questions and options seeded.")
+            if option:
+                option.content = opt_data["content"]
+                option.category = opt_data["category"]
+                option.score_value = opt_data["score_value"]
+            else:
+                option = TripQuestionOption(
+                    question_id=question.id,
+                    content=opt_data["content"],
+                    category=opt_data["category"],
+                    score_value=opt_data["score_value"],
+                    sort_order=opt_data["sort_order"]
+                )
+                session.add(option)
+
+    print("Success: Survey questions and options seeded (upserted).")
 
 
 async def _main() -> None:
+    reset = "--reset" in sys.argv
     async with AsyncSessionLocal() as session:
-        await seed_survey(session)
+        await seed_survey(session, reset=reset)
         await session.commit()
 
 

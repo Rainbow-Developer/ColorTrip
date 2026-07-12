@@ -41,11 +41,11 @@ flowchart TD
 각 선택지는 JSON 형식으로 여러 카테고리의 가중치 점수를 복합적으로 가질 수 있습니다.
 ```json
 {
-  "nature": 3,
-  "eat": 0,
-  "history": 1,
-  "activity": 2,
-  "healing": 0
+  "NATURE": 3,
+  "FOOD": 0,
+  "HISTORY": 1,
+  "ACTIVITY": 2,
+  "HEALING": 0
 }
 ```
 

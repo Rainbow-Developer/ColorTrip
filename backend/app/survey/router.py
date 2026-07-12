@@ -20,6 +20,7 @@ router = APIRouter(prefix="/survey", tags=["survey"])
     summary = "여행 DNA 질문 및 선택지 목록 조회"
 )
 async def get_survey_questions(
+    # TODO: 인증 정보 연동되면 current_user 주석 해제
     # current_user: CurrentUser,
     session: AsyncSession = Depends(get_session),
 ) -> Envelope[list[QuestionRead]]:
