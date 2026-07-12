@@ -13,15 +13,20 @@
 | 요청 로깅 | 미들웨어로 전 요청 로깅 | |
 | 모니터링 / 알림 | Cloud Monitoring + Slack 알림 | |
 | 로그 레벨 운영 기준 | DEBUG(개발) / INFO(운영) | |
+| 로그 레벨 설정 | `LOG_LEVEL` 선택 override | 미설정 시 `APP_ENV` 기준 |
+| 요청 식별자 | `X-Request-ID` 수용·생성 | 응답 헤더로 반환 |
 
 ## 규칙 / 적용
 
 - 앱 로그는 구조화 JSON 형식으로 출력한다.
-- 로그는 GCP Cloud Logging으로 수집한다.
+- 앱은 stdout에 JSON 로그를 출력하고, 운영 로그 수집은 GCP Cloud Logging으로 연결한다.
 - 에러 트래킹은 초기에는 도입하지 않는다.
 - 요청은 미들웨어로 전수 로깅한다.
 - 운영 알림은 Cloud Monitoring에서 감지해 Slack으로 보낸다.
 - 로그 레벨은 개발 환경 DEBUG, 운영 환경 INFO로 운영한다.
+- `LOG_LEVEL`이 설정되면 환경별 기본 로그 레벨을 덮어쓴다. 허용 값은 `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`이다.
+- 요청 로그는 `time`, `severity`, `message`, `logger`, `request_id`, `method`, `path`, `status_code`, `duration_ms`, `client_ip`를 기본 필드로 한다.
+- 요청 body, query string, Authorization header, access/refresh token, API key, secret, password는 로그에 남기지 않는다.
 
 ## 관련 문서
 
