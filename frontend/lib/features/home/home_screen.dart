@@ -8,6 +8,7 @@ import '../../core/widgets/map_legend.dart';
 import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
+import '../../state/map_sync_provider.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
@@ -21,6 +22,8 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 진입 시 서버 지도 진행도를 1회 동기화한다(로그인 전이면 조용히 무시, [020-frontend-map-sync]).
+    ref.watch(mapSyncProvider);
     final progress = ref.watch(progressProvider);
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
