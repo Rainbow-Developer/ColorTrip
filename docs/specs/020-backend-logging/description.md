@@ -18,11 +18,14 @@
   -> X-Request-ID 검증 또는 생성
   -> ContextVar에 request_id 저장
   -> 라우터/정적 파일 핸들러 실행
+  -> 응답 시작 시 X-Request-ID 헤더 반환
+  -> 스트리밍을 포함한 응답 body 전송 완료 대기
   -> status_code, duration_ms, method, path, client_ip 로그 출력
-  -> 응답 헤더 X-Request-ID 반환
 ```
 
-요청 로그는 body, query string, Authorization header를 기록하지 않는다. 앱 내부 로그 메시지에 토큰이나 시크릿 형태의 값이 섞인 경우 redaction filter가 대표적인 민감 패턴을 마스킹한다.
+요청 로그는 body, query string, Authorization header를 기록하지 않는다. 앱 내부 로그 메시지, 구조화 extra, 중첩 객체, exception traceback, stack 정보에 토큰이나 시크릿 형태의 값이 섞인 경우 redaction filter와 formatter가 대표적인 민감 패턴을 마스킹한다.
+
+정상적인 2xx~4xx 응답은 `INFO`, 5xx 응답과 처리 중 예외는 `ERROR`로 기록한다. 예외는 로깅 후 FastAPI로 재전파되므로 기존 공통 예외 핸들러가 응답 Envelope를 생성한다.
 
 ## 주요 구성 요소 / 위치
 
@@ -60,7 +63,7 @@ uv run uvicorn app.main:app --reload --no-access-log
 요청 로그 예시:
 
 ```json
-{"time":"2026-07-12T12:34:56.789+09:00","severity":"INFO","message":"request completed","logger":"app.request","request_id":"7d8f9b2c4e7a4b24a2d3a1f0e9c8b7a6","method":"GET","path":"/health","status_code":200,"duration_ms":3.42,"client_ip":"127.0.0.1"}
+{"time":"2026-07-12T03:34:56.789+00:00","severity":"INFO","message":"request completed","logger":"app.request","request_id":"7d8f9b2c4e7a4b24a2d3a1f0e9c8b7a6","method":"GET","path":"/health","status_code":200,"duration_ms":3.42,"client_ip":"127.0.0.1"}
 ```
 
 앱 내부 로그 예시:

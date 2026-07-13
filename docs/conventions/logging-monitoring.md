@@ -25,8 +25,12 @@
 - 운영 알림은 Cloud Monitoring에서 감지해 Slack으로 보낸다.
 - 로그 레벨은 개발 환경 DEBUG, 운영 환경 INFO로 운영한다.
 - `LOG_LEVEL`이 설정되면 환경별 기본 로그 레벨을 덮어쓴다. 허용 값은 `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`이다.
+- 공통 handler에도 최종 로그 레벨을 적용해 명시적 레벨을 가진 하위 logger가 설정을 우회하지 못하게 한다.
 - 요청 로그는 `time`, `severity`, `message`, `logger`, `request_id`, `method`, `path`, `status_code`, `duration_ms`, `client_ip`를 기본 필드로 한다.
-- 요청 body, query string, Authorization header, access/refresh token, API key, secret, password는 로그에 남기지 않는다.
+- 요청 duration은 스트리밍을 포함한 응답 body 전송이 완료될 때까지 측정한다.
+- 정상적인 2xx~4xx 응답은 `INFO`, 5xx 응답과 처리 중 예외는 `ERROR`로 기록한다.
+- 처리 중 예외는 요청 로그를 남긴 뒤 재전파해 기존 FastAPI 예외 처리 흐름을 보존한다.
+- 요청 body, query string, Authorization header, access/refresh token, API key, secret, password는 로그에 남기지 않는다. 메시지, 구조화 필드, 중첩 객체, exception traceback, stack 정보에도 같은 redaction 규칙을 적용한다.
 
 ## 관련 문서
 

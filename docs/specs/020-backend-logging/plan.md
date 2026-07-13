@@ -46,9 +46,11 @@ ColorTrip 백엔드는 FastAPI, Uvicorn, Docker Compose, Compute Engine 기반�
 
 **비기능**
 - 요청 body, query string, Authorization header, access/refresh token, service key, password, secret은 로그에 남기지 않는다.
+- 민감정보 마스킹은 메시지뿐 아니라 구조화 extra, 중첩 객체, 예외 traceback, stack 정보에도 적용한다.
 - `local`, `test` 기본 로그 레벨은 `DEBUG`, `dev`, `prod` 기본 로그 레벨은 `INFO`로 한다.
 - `LOG_LEVEL`이 설정되면 기본값을 덮어쓴다.
 - 잘못된 `LOG_LEVEL` 값은 앱 시작 시 설정 검증에서 실패한다.
+- 최종 로그 레벨은 명시적인 레벨을 가진 하위 logger에도 공통 handler에서 일관되게 적용한다.
 - Uvicorn access log는 앱 요청 로그와 중복되지 않게 끈다.
 
 ## 설계 개요 / 접근 방식
@@ -57,13 +59,14 @@ ColorTrip 백엔드는 FastAPI, Uvicorn, Docker Compose, Compute Engine 기반�
 HTTP request
   |
   v
-FastAPI app middleware
+FastAPI pure ASGI middleware
   |
   +-- validate or create X-Request-ID
   +-- set request_id ContextVar
-  +-- call route/static handler
-  +-- log request metadata as JSON
-  +-- return X-Request-ID response header
+  +-- call route/static/streaming handler
+  +-- return X-Request-ID in response start
+  +-- wait until the response body is complete
+  +-- log request metadata as JSON once
   |
   v
 stdout JSON logs -> container logs -> infrastructure collection layer
@@ -72,7 +75,9 @@ stdout JSON logs -> container logs -> infrastructure collection layer
 - `backend/app/core/logging.py`는 formatter, filter, request context, middleware 등록 함수를 한 곳에 둔다.
 - Cloud Logging이 이해하기 쉬운 필드 이름(`time`, `severity`, `message`, `logger`)을 사용한다.
 - 요청 로그는 별도 logger 이름 `app.request`로 남겨 앱 내부 로그와 구분한다.
-- 예외 발생 시 요청 메타데이터를 `ERROR`로 남긴 뒤 기존 FastAPI 예외 흐름을 유지한다.
+- 요청 duration은 응답 body 전송이 완료될 때까지 측정한다.
+- 5xx 응답과 처리 중 예외는 요청 메타데이터를 `ERROR`로 남긴다.
+- 처리 중 예외는 로깅 후 재전파해 기존 FastAPI 예외 핸들러와 응답 Envelope 흐름을 유지한다.
 
 ## 의사결정 (함께 논의 · 근거 필수)
 

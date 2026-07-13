@@ -19,8 +19,9 @@ from types import TracebackType
 from typing import Any, TextIO
 from uuid import uuid4
 
-from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse
+from fastapi import FastAPI
+from starlette.datastructures import Headers, MutableHeaders
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 REQUEST_ID_HEADER = "X-Request-ID"
 REQUEST_LOGGER_NAME = "app.request"
@@ -28,12 +29,32 @@ DEFAULT_REQUEST_ID = "-"
 
 _request_id_context: ContextVar[str] = ContextVar("request_id", default=DEFAULT_REQUEST_ID)
 _REQUEST_ID_RE = re.compile(r"^[A-Za-z0-9._:/@+-]{1,128}$")
-_BEARER_RE = re.compile(r"(?i)(Bearer\s+)[A-Za-z0-9._~+/-]+=*")
+_AUTHORIZATION_RE = re.compile(
+    r"(?i)(\bauthorization\b[\"']?\s*[:=]\s*[\"']?)"
+    r"(?:(?:bearer|basic)\s+)?[^\"'\s&,}]+"
+)
+_CREDENTIAL_RE = re.compile(r"(?i)\b(bearer|basic)(\s+)[A-Za-z0-9._~+/-]+=*")
 _SENSITIVE_KEY_RE = re.compile(
     r"(?i)\b(access_token|refresh_token|id_token|authorization|jwt_secret_key|"
-    r"secret|password|serviceKey|service_key|api_key|token)\b"
-    r"([\"']?\s*[:=]\s*[\"']?)([^\"'\s&,}]+)"
+    r"client_secret|secret|password|serviceKey|service_key|api_key|token)\b"
+    r"([\"']?\s*[:=]\s*)(\"[^\"]*\"|'[^']*'|[^\s&,}]+)"
 )
+_SENSITIVE_FIELD_NAMES = {
+    "accesstoken",
+    "apikey",
+    "authorization",
+    "clientsecret",
+    "credential",
+    "credentials",
+    "idtoken",
+    "jwtsecretkey",
+    "password",
+    "refreshtoken",
+    "secret",
+    "servicekey",
+    "token",
+}
+_REDACTED = "[REDACTED]"
 
 _LOG_RECORD_RESERVED_ATTRS = {
     "args",
@@ -84,8 +105,20 @@ def resolve_log_level(app_env: str, log_level: str | None = None) -> str:
 
 def redact_sensitive_data(value: str) -> str:
     """대표적인 토큰·시크릿 문자열을 로그 출력 전에 마스킹한다."""
-    redacted = _BEARER_RE.sub(r"\1[REDACTED]", value)
-    return _SENSITIVE_KEY_RE.sub(r"\1\2[REDACTED]", redacted)
+    redacted = _AUTHORIZATION_RE.sub(rf"\1{_REDACTED}", value)
+    redacted = _CREDENTIAL_RE.sub(rf"\1\2{_REDACTED}", redacted)
+    return _SENSITIVE_KEY_RE.sub(_redact_sensitive_match, redacted)
+
+
+def _redact_sensitive_match(match: re.Match[str]) -> str:
+    raw_value = match.group(3)
+    quote = (
+        raw_value[0]
+        if len(raw_value) >= 2 and raw_value[0] in {'"', "'"} and raw_value[0] == raw_value[-1]
+        else ""
+    )
+    redacted_value = f"{quote}{_REDACTED}{quote}"
+    return f"{match.group(1)}{match.group(2)}{redacted_value}"
 
 
 def _safe_request_id(value: str | None) -> str:
@@ -131,16 +164,16 @@ class JsonLogFormatter(logging.Formatter):
         }
 
         if record.exc_info:
-            payload["exception"] = self.formatException(record.exc_info)
+            payload["exception"] = redact_sensitive_data(self.formatException(record.exc_info))
         if record.stack_info:
-            payload["stack"] = self.formatStack(record.stack_info)
+            payload["stack"] = redact_sensitive_data(self.formatStack(record.stack_info))
 
         for key, value in record.__dict__.items():
             if key in _LOG_RECORD_RESERVED_ATTRS or key in payload or key in _EXTRA_FIELDS:
                 continue
             if key.startswith("_") or key.startswith("logging."):
                 continue
-            payload[key] = _json_safe(value)
+            payload[key] = _REDACTED if _is_sensitive_key(key) else _json_safe(value)
 
         return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
@@ -160,6 +193,7 @@ def setup_logging(
     """앱 공통 로깅 설정을 적용한다."""
     resolved_level = resolve_log_level(app_env, log_level)
     handler = logging.StreamHandler(stream or sys.stdout)
+    handler.setLevel(resolved_level)
     handler.setFormatter(JsonLogFormatter())
     handler.addFilter(RequestContextFilter())
     handler.addFilter(SensitiveDataFilter())
@@ -185,41 +219,69 @@ def setup_logging(
     access_logger.disabled = True
 
 
-def register_request_logging(app: FastAPI) -> None:
-    """FastAPI 앱에 요청 로깅 미들웨어를 등록한다."""
-    request_logger = logging.getLogger(REQUEST_LOGGER_NAME)
+class RequestLoggingMiddleware:
+    """응답 전송 완료까지 측정하는 순수 ASGI 요청 로깅 미들웨어."""
 
-    @app.middleware("http")
-    async def _log_request(request: Request, call_next: Any) -> Any:
-        request_id = _safe_request_id(request.headers.get(REQUEST_ID_HEADER))
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        self.request_logger = logging.getLogger(REQUEST_LOGGER_NAME)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request_id = _safe_request_id(Headers(scope=scope).get(REQUEST_ID_HEADER))
+        scope.setdefault("state", {})["request_id"] = request_id
         token = _request_id_context.set(request_id)
         started_at = time.perf_counter()
         status_code = 500
 
+        async def send_with_request_id(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = int(message["status"])
+                MutableHeaders(scope=message)[REQUEST_ID_HEADER] = request_id
+            await send(message)
+
         try:
-            response = await call_next(request)
-            status_code = response.status_code
+            await self.app(scope, receive, send_with_request_id)
         except Exception:
             duration_ms = _duration_ms(started_at)
-            request_logger.exception(
+            self.request_logger.exception(
                 "request failed",
-                extra=_request_extra(request, request_id, status_code, duration_ms),
+                extra=_request_extra(scope, request_id, status_code, duration_ms),
             )
-            return PlainTextResponse(
-                "Internal Server Error",
-                status_code=status_code,
-                headers={REQUEST_ID_HEADER: request_id},
-            )
+            raise
         else:
             duration_ms = _duration_ms(started_at)
-            response.headers[REQUEST_ID_HEADER] = request_id
-            request_logger.info(
-                "request completed",
-                extra=_request_extra(request, request_id, status_code, duration_ms),
+            log_method = (
+                self.request_logger.error if status_code >= 500 else self.request_logger.info
             )
-            return response
+            message = "request failed" if status_code >= 500 else "request completed"
+            log_method(
+                message,
+                extra=_request_extra(scope, request_id, status_code, duration_ms),
+            )
         finally:
             _request_id_context.reset(token)
+
+
+def register_request_logging(app: FastAPI) -> None:
+    """FastAPI 앱에 요청 로깅 미들웨어를 등록한다."""
+    app.add_middleware(RequestLoggingMiddleware)
+
+
+def request_id_from_scope(scope: Mapping[str, Any]) -> str | None:
+    """ASGI scope에 저장된 검증 완료 request id를 반환한다."""
+    state = scope.get("state")
+    if not isinstance(state, Mapping):
+        return None
+
+    request_id = state.get("request_id")
+    if not isinstance(request_id, str) or not _REQUEST_ID_RE.fullmatch(request_id):
+        return None
+    return request_id
 
 
 def _duration_ms(started_at: float) -> float:
@@ -258,7 +320,12 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, Enum):
         return _json_safe(value.value)
     if isinstance(value, Mapping):
-        return {str(_json_safe(key)): _json_safe(item) for key, item in value.items()}
+        return {
+            redact_sensitive_data(str(key)): (
+                _REDACTED if _is_sensitive_key(key) else _json_safe(item)
+            )
+            for key, item in value.items()
+        }
     if isinstance(value, (list, tuple)):
         return [_json_safe(item) for item in value]
     if isinstance(value, set):
@@ -266,22 +333,32 @@ def _json_safe(value: Any) -> Any:
     return redact_sensitive_data(str(value))
 
 
+def _is_sensitive_key(key: Any) -> bool:
+    normalized = re.sub(r"[^a-z0-9]", "", str(key).lower())
+    if normalized in _SENSITIVE_FIELD_NAMES:
+        return True
+    return normalized.endswith(
+        ("apikey", "authorization", "password", "secret", "secretkey", "servicekey", "token")
+    ) or normalized.startswith(("password", "secret"))
+
+
 def _request_extra(
-    request: Request,
+    scope: Scope,
     request_id: str,
     status_code: int,
     duration_ms: float,
 ) -> dict[str, str | int | float | None]:
+    client = scope.get("client")
     return {
         "request_id": request_id,
-        "method": request.method,
-        "path": request.url.path,
+        "method": str(scope.get("method", "")),
+        "path": str(scope.get("path", "")),
         "status_code": status_code,
         "duration_ms": duration_ms,
-        "client_ip": request.client.host if request.client else None,
+        "client_ip": client[0] if client else None,
     }
 
 
 def format_exception(exc_info: tuple[type[BaseException], BaseException, TracebackType]) -> str:
     """테스트와 확장 지점에서 사용할 수 있는 예외 문자열 포맷 헬퍼."""
-    return logging.Formatter().formatException(exc_info)
+    return redact_sensitive_data(logging.Formatter().formatException(exc_info))

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import sys
 from datetime import UTC, datetime
 from io import StringIO
 from typing import Any, cast
@@ -9,11 +11,14 @@ from uuid import uuid4
 
 import pytest
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import Settings
+from app.core.exceptions import AppException, ErrorCode, register_exception_handlers
 from app.core.logging import (
     REQUEST_ID_HEADER,
+    JsonLogFormatter,
     redact_sensitive_data,
     register_request_logging,
     resolve_log_level,
@@ -91,17 +96,76 @@ def test_json_formatter_serializes_non_json_extra_values() -> None:
 
 def test_sensitive_data_is_redacted() -> None:
     message = (
-        "Authorization: Bearer access-token-123 "
-        "access_token=kakao-token serviceKey=tour-key password=secret"
+        "Authorization: Bearer access-token-123 Authorization: Basic dXNlcjpwYXNz "
+        "access_token=kakao-token serviceKey=tour-key password=secret "
+        'client_secret="two word secret"'
     )
 
     redacted = redact_sensitive_data(message)
 
     assert "access-token-123" not in redacted
+    assert "dXNlcjpwYXNz" not in redacted
     assert "kakao-token" not in redacted
     assert "tour-key" not in redacted
     assert "password=secret" not in redacted
+    assert "two" not in redacted
+    assert "word secret" not in redacted
+    assert 'client_secret="[REDACTED]"' in redacted
     assert "[REDACTED]" in redacted
+
+
+def test_json_formatter_redacts_sensitive_structured_extras() -> None:
+    stream = StringIO()
+    setup_logging(app_env="test", log_level="INFO", stream=stream)
+
+    logger = logging.getLogger("app.test")
+    logger.info(
+        "authentication metadata",
+        extra={
+            "api_key": "top-level-secret",
+            "profile": {
+                "password": "nested-secret",
+                "safe_value": "visible",
+                "tokens": [{"access_token": "list-secret"}],
+            },
+        },
+    )
+
+    raw_log = stream.getvalue()
+    payload = _single_payload(stream)
+    assert "top-level-secret" not in raw_log
+    assert "nested-secret" not in raw_log
+    assert "list-secret" not in raw_log
+    assert payload["api_key"] == "[REDACTED]"
+    assert payload["profile"] == {
+        "password": "[REDACTED]",
+        "safe_value": "visible",
+        "tokens": [{"access_token": "[REDACTED]"}],
+    }
+
+
+def test_json_formatter_redacts_exception_and_stack() -> None:
+    try:
+        raise RuntimeError("password=traceback-secret")
+    except RuntimeError:
+        record = logging.LogRecord(
+            "app.test",
+            logging.ERROR,
+            __file__,
+            1,
+            "request failed",
+            (),
+            sys.exc_info(),
+        )
+
+    record.stack_info = "Authorization: Basic stack-secret"
+    raw_log = JsonLogFormatter().format(record)
+    payload = json.loads(raw_log)
+
+    assert "traceback-secret" not in raw_log
+    assert "stack-secret" not in raw_log
+    assert "[REDACTED]" in payload["exception"]
+    assert "[REDACTED]" in payload["stack"]
 
 
 def test_setup_logging_reenables_existing_app_loggers() -> None:
@@ -115,6 +179,22 @@ def test_setup_logging_reenables_existing_app_loggers() -> None:
     payload = _single_payload(stream)
     assert payload["message"] == "request completed"
     assert payload["request_id"] == "req-reenabled"
+
+
+def test_setup_logging_enforces_level_for_explicit_child_logger() -> None:
+    stream = StringIO()
+    setup_logging(app_env="test", log_level="ERROR", stream=stream)
+    logger = logging.getLogger("third_party.explicit")
+    logger.setLevel(logging.DEBUG)
+
+    try:
+        logger.warning("warning must be filtered")
+        logger.error("error remains")
+    finally:
+        logger.setLevel(logging.NOTSET)
+
+    payloads = _payloads(stream)
+    assert [payload["message"] for payload in payloads] == ["error remains"]
 
 
 @pytest.mark.asyncio
@@ -235,6 +315,7 @@ async def test_unhandled_exception_is_logged_as_error() -> None:
     setup_logging(app_env="test", log_level="INFO", stream=stream)
     app = FastAPI()
     register_request_logging(app)
+    register_exception_handlers(app)
 
     @app.get("/boom")
     async def boom() -> dict[str, str]:
@@ -246,6 +327,12 @@ async def test_unhandled_exception_is_logged_as_error() -> None:
 
     assert response.status_code == 500
     assert response.headers[REQUEST_ID_HEADER] == "req-boom"
+    assert response.json() == {
+        "code": "INTERNAL_ERROR",
+        "status": 500,
+        "message": "서버 오류가 발생했습니다.",
+        "data": None,
+    }
 
     payload = _payloads(stream)[0]
     assert payload["severity"] == "ERROR"
@@ -254,6 +341,101 @@ async def test_unhandled_exception_is_logged_as_error() -> None:
     assert payload["path"] == "/boom"
     assert payload["status_code"] == 500
     assert "exception" in payload
+
+
+@pytest.mark.asyncio
+async def test_request_duration_includes_streaming_response_completion() -> None:
+    stream = StringIO()
+    setup_logging(app_env="test", log_level="INFO", stream=stream)
+    app = FastAPI()
+    register_request_logging(app)
+
+    async def chunks():
+        yield b"first"
+        await asyncio.sleep(0.03)
+        yield b"second"
+
+    @app.get("/stream")
+    async def stream_response() -> StreamingResponse:
+        return StreamingResponse(chunks())
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/stream")
+
+    assert response.status_code == 200
+    payload = _single_payload(stream)
+    assert payload["duration_ms"] >= 20
+
+
+@pytest.mark.asyncio
+async def test_streaming_exception_is_logged_as_error() -> None:
+    stream = StringIO()
+    setup_logging(app_env="test", log_level="INFO", stream=stream)
+    app = FastAPI()
+    register_request_logging(app)
+
+    async def broken_chunks():
+        yield b"partial"
+        raise RuntimeError("stream failed")
+
+    @app.get("/broken-stream")
+    async def broken_stream() -> StreamingResponse:
+        return StreamingResponse(broken_chunks())
+
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/broken-stream", headers={REQUEST_ID_HEADER: "req-stream"})
+
+    assert response.status_code == 200
+    assert response.headers[REQUEST_ID_HEADER] == "req-stream"
+    payload = _single_payload(stream)
+    assert payload["severity"] == "ERROR"
+    assert payload["message"] == "request failed"
+    assert payload["request_id"] == "req-stream"
+    assert payload["status_code"] == 200
+
+
+@pytest.mark.asyncio
+async def test_handled_server_error_is_logged_as_error() -> None:
+    stream = StringIO()
+    setup_logging(app_env="test", log_level="INFO", stream=stream)
+    app = FastAPI()
+    register_request_logging(app)
+    register_exception_handlers(app)
+
+    @app.get("/handled-error")
+    async def handled_error() -> None:
+        raise AppException(ErrorCode.INTERNAL_ERROR)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/handled-error")
+
+    assert response.status_code == 500
+    payload = _single_payload(stream)
+    assert payload["severity"] == "ERROR"
+    assert payload["message"] == "request failed"
+    assert payload["status_code"] == 500
+
+
+@pytest.mark.asyncio
+async def test_main_health_uses_request_logging() -> None:
+    from app.main import app
+
+    stream = StringIO()
+    setup_logging(app_env="test", log_level="INFO", stream=stream)
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/health", headers={REQUEST_ID_HEADER: "req-main-health"})
+
+    assert response.status_code == 200
+    assert response.headers[REQUEST_ID_HEADER] == "req-main-health"
+    payload = next(item for item in _payloads(stream) if item.get("logger") == "app.request")
+    assert payload["message"] == "request completed"
+    assert payload["path"] == "/health"
+    assert payload["status_code"] == 200
 
 
 def _settings(**kwargs: Any) -> Settings:

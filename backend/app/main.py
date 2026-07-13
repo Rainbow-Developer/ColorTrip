@@ -79,6 +79,7 @@ def custom_openapi():
 app.openapi = custom_openapi
 # --------------------------------------------------------------------------
 
+
 @app.get("/health", response_model=Envelope[dict])
 async def health() -> Envelope[dict]:
     return success({"status": "ok"})
