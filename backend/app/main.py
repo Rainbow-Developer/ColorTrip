@@ -7,6 +7,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 
 from app.auth.router import auth_router, users_router
@@ -41,6 +42,42 @@ if not settings.gcs_upload_bucket:
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
+
+# --- Swagger UI 글로벌 자물쇠(Authorize) 추가 및 Header 매핑 커스텀 스키마 ---
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="ColorTrip API",
+        version="0.1.0",
+        routes=app.routes,
+    )
+    # 1. Bearer 인증 스키마 등록
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+    }
+    # 2. 모든 엔드포인트를 돌며 수동 'authorization' 헤더 입력을 글로벌 자물쇠 연동으로 치환
+    for path in openapi_schema["paths"].values():
+        for method in path.values():
+            params = method.get("parameters", [])
+            has_auth = False
+            for param in list(params):
+                if param.get("name") == "authorization" and param.get("in") == "header":
+                    params.remove(param)  # 수동 입력 상자 제거
+                    has_auth = True
+            if has_auth:
+                method["security"] = [{"BearerAuth": []}]  # 글로벌 자물쇠 자격증명 요구 설정
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
+# --------------------------------------------------------------------------
 
 @app.get("/health", response_model=Envelope[dict])
 async def health() -> Envelope[dict]:
