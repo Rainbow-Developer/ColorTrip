@@ -46,6 +46,15 @@ class ProgressNotifier extends Notifier<ProgressState> {
     state = state.copyWith(completedQuestIds: completed, timeline: timeline);
   }
 
+  /// 서버(`GET /users/me/map`) 진행도를 로컬 상태에 반영한다([020-frontend-map-sync]).
+  /// 서버가 값을 준 지역만 덮어쓰고, 응답에 없는 지역은 기존 로컬 값을 유지한다.
+  void syncRegionProgressFromServer(Map<String, int> serverRegionProgress) {
+    if (serverRegionProgress.isEmpty) return;
+    state = state.copyWith(
+      regionProgress: {...state.regionProgress, ...serverRegionProgress},
+    );
+  }
+
   int totalReward() => kQuests
       .where((q) => state.isCompleted(q.id))
       .fold(0, (sum, q) => sum + q.reward);
