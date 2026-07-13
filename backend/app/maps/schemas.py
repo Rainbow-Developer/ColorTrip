@@ -1,0 +1,14 @@
+"""maps — API 입출력 스키마 (pydantic v2)."""
+
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
+
+
+class MapProgressRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    region_id: UUID
+    completed_count: int
+    first_colored_at: datetime | None
