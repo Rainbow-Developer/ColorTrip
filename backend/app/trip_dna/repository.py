@@ -57,7 +57,13 @@ async def save_user_replies(session: AsyncSession, replies: list[TripReply]) -> 
 
 async def get_options_by_ids(session: AsyncSession, option_ids: list[UUID]) -> Sequence[TripQuestionOption]:
     """선택된 선택지(options)들의 상세 가중치 점수를 조회하기 위해 상세 엔티티들을 일괄 조회합니다."""
-    stmt = select(TripQuestionOption).where(TripQuestionOption.id.in_(option_ids))
+    stmt = (
+        select(TripQuestionOption)
+        .where(
+            TripQuestionOption.id.in_(option_ids),
+            TripQuestionOption.deleted_at.is_(None)
+        )
+    )
     result = await session.execute(stmt)
     return result.scalars().all()
 

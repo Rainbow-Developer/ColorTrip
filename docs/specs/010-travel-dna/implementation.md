@@ -19,13 +19,13 @@
  ## 구현된 항목
  - [x] 1) Alembic 테이블 생성 및 ORM 모델 구성
    - `a4f2c8d1e9b0_add_pr15_database_spec_tables.py` 마이그레이션 반영 완료.
-   - [models.py](file:///Users/jeon-eunbae/PycharmProjects/ColorTrip/backend/app/trip_dna/models.py) 테이블 매핑 완료.
+   - [models.py](../../../backend/app/trip_dna/models.py) 테이블 매핑 완료.
  - [x] 2) 데이터 시드(Seed) 스크립트 작성 및 적재
-   - [seed.py](file:///Users/jeon-eunbae/PycharmProjects/ColorTrip/backend/app/trip_dna/seed.py) 파일 작성 및 `food` 가중치 통일 시드 적재 완료.
+   - [seed.py](../../../backend/app/trip_dna/seed.py) 파일 작성 및 `food` 가중치 통일 시드 적재 완료.
  - [x] 3) 질문 목록 조회 및 답변 제출 API 구현
-   - [router.py](file:///Users/jeon-eunbae/PycharmProjects/ColorTrip/backend/app/trip_dna/router.py) 엔드포인트 `/api/v1/trip_dna/questions` 및 `/api/v1/trip_dna/replies` 연동 완료.
+   - [router.py](router.py) 엔드포인트 `/api/v1/trip_dna/questions` 및 `/api/v1/trip_dna/replies` 연동 완료.
  - [x] 4) 통합 테스트 검증
-   - [test_trip_dna.py](file:///Users/jeon-eunbae/PycharmProjects/ColorTrip/backend/tests/test_trip_dna.py)를 통한 질문 목록 및 답변 제출(점수 계산 및 대표 DNA 판정) 연산 통합 검증 성공.
+   - [test_trip_dna.py](../../tests/test_trip_dna.py)를 통한 질문 목록 및 답변 제출(점수 계산 및 대표 DNA 판정) 연산 통합 검증 성공.
  
  ## 미구현 / 남은 항목
  - [ ] 3) 내 결과 조회 API (`GET /api/v1/users/me/travel-dna` 또는 회원 도메인 연동 조회)

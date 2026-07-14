@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
@@ -32,8 +33,20 @@ async def submit_survey_replies(
     """사용자가 제출한 설문 답변을 기반으로 점수를 연산하고,
     이전 답변 Soft Delete 및 유저 대표 DNA 결과를 데이터베이스에 기록합니다.
     """
+    # 중복 질문 제출 검증
+    question_ids = [item.question_id for item in replies_data]
+    if len(question_ids) != len(set(question_ids)):
+        raise HTTPException(status_code=400, detail="중복된 질문에 대한 답변이 존재합니다.")
+
     option_ids = [item.question_option_id for item in replies_data]
     options = await repository.get_options_by_ids(session, option_ids)
+
+    # question_id와 question_option_id 간 유효 매핑 검증
+    option_map = {opt.id: opt for opt in options}
+    for item in replies_data:
+        option = option_map.get(item.question_option_id)
+        if option is None or option.question_id != item.question_id:
+            raise HTTPException(status_code=400, detail="유효하지 않은 답변 조합입니다.")
 
     # 1. 5대 카테고리 점수판 초기화 (eat -> food 변경)
     scores = {"nature": 0, "food": 0, "history": 0, "activity": 0, "healing": 0}

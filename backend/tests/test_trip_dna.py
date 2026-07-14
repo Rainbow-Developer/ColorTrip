@@ -136,3 +136,67 @@ async def test_submit_survey_replies_success_and_grading(client: AsyncClient) ->
     assert data["scores"]["nature"] == 3
     assert data["scores"]["food"] == 3
     assert data["scores"]["history"] == 0
+
+
+@pytest.mark.asyncio
+async def test_submit_survey_replies_empty(client: AsyncClient) -> None:
+    """빈 replies 목록을 제출했을 때 422 Unprocessable Entity 에러가 발생하는지 검증합니다."""
+    headers = await auth_headers(client)
+    payload = {"replies": []}
+    response = await client.post("/api/v1/trip_dna/replies", json=payload, headers=headers)
+    assert response.status_code == 422
+    res_json = response.json()
+    assert res_json["code"] == "VALIDATION_ERROR"
+    assert res_json["message"] == "요청 값이 올바르지 않습니다."
+
+
+@pytest.mark.asyncio
+async def test_submit_survey_replies_duplicate_question(client: AsyncClient) -> None:
+    """동일한 질문에 대해 중복된 답변을 제출했을 때 400 Bad Request 에러가 발생하는지 검증합니다."""
+    async with AsyncSessionLocal() as session:
+        q = TripQuestion(question="중복 테스트용 질문", sort_order=1)
+        session.add(q)
+        await session.flush()
+
+        o1 = TripQuestionOption(question_id=q.id, content="opt 1", score_value={"healing": 3}, category="healing", sort_order=1)
+        o2 = TripQuestionOption(question_id=q.id, content="opt 2", score_value={"nature": 3}, category="nature", sort_order=2)
+        session.add_all([o1, o2])
+        await session.commit()
+
+    headers = await auth_headers(client)
+    payload = {
+        "replies": [
+            {"question_id": str(q.id), "question_option_id": str(o1.id)},
+            {"question_id": str(q.id), "question_option_id": str(o2.id)}
+        ]
+    }
+    response = await client.post("/api/v1/trip_dna/replies", json=payload, headers=headers)
+    assert response.status_code == 400
+    res_json = response.json()
+    assert res_json["message"] == "중복된 질문에 대한 답변이 존재합니다."
+
+
+@pytest.mark.asyncio
+async def test_submit_survey_replies_invalid_mapping(client: AsyncClient) -> None:
+    """제출된 선택지(question_option_id)가 해당 질문(question_id)에 속하지 않을 때 400 에러를 반환하는지 검증합니다."""
+    async with AsyncSessionLocal() as session:
+        q1 = TripQuestion(question="질문 1", sort_order=1)
+        q2 = TripQuestion(question="질문 2", sort_order=2)
+        session.add_all([q1, q2])
+        await session.flush()
+
+        o1 = TripQuestionOption(question_id=q1.id, content="Q1 선택지", score_value={"healing": 3}, category="healing", sort_order=1)
+        o2 = TripQuestionOption(question_id=q2.id, content="Q2 선택지", score_value={"nature": 3}, category="nature", sort_order=1)
+        session.add_all([o1, o2])
+        await session.commit()
+
+    headers = await auth_headers(client)
+    payload = {
+        "replies": [
+            {"question_id": str(q1.id), "question_option_id": str(o2.id)}
+        ]
+    }
+    response = await client.post("/api/v1/trip_dna/replies", json=payload, headers=headers)
+    assert response.status_code == 400
+    res_json = response.json()
+    assert res_json["message"] == "유효하지 않은 답변 조합입니다."

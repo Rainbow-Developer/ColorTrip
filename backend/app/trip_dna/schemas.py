@@ -1,5 +1,5 @@
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class OptionRead(BaseModel):
@@ -26,7 +26,7 @@ class ReplySubmitItem(BaseModel):
     question_option_id: UUID
 
 class RepliesSubmitRequest(BaseModel):
-    replies: list[ReplySubmitItem]
+    replies: list[ReplySubmitItem] = Field(min_length=1)
 
 class DNAResultResponse(BaseModel):
     user_id: UUID
