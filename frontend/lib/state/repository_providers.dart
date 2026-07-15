@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/network/dio_client.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/dna_repository.dart';
 import '../data/repositories/quest_repository.dart';
 import '../data/repositories/region_repository.dart';
-import '../data/repositories/survey_repository.dart';
+import '../data/repositories/trip_dna_repository.dart';
 
 /// Repository seam — 백엔드 연동 시 이 Provider들의 override만 교체하면 된다([plan.md] 의사결정).
 final questRepositoryProvider = Provider<QuestRepository>(
@@ -19,8 +20,11 @@ final dnaRepositoryProvider = Provider<DnaRepository>(
   (ref) => const StaticDnaRepository(),
 );
 
-final surveyRepositoryProvider = Provider<SurveyRepository>(
-  (ref) => const StaticSurveyRepository(),
+final tripDnaRepositoryProvider = Provider<TripDnaRepository>(
+  (ref) {
+    final dio = ref.watch(dioProvider);
+    return ApiTripDnaRepository(dio);
+  },
 );
 
 final authRepositoryProvider = Provider<AuthRepository>(

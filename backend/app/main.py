@@ -7,6 +7,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 
@@ -22,6 +23,15 @@ from app.trip_dna.router import router as trip_dna_router
 from app.uploads.router import router as uploads_router
 
 app = FastAPI(title="ColorTrip API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 register_exception_handlers(app)
 
 app.include_router(auth_router, prefix="/api/v1")

@@ -9,6 +9,9 @@ final dioProvider = Provider<Dio>((ref) {
       baseUrl: 'http://localhost:8000/api/v1',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
+      headers: {
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTlmNTVkMS1iMTMyLTc2YjItOWE0Mi02OTM0YzU2NGJiNWEiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzg0MDM4NTI4LCJleHAiOjE3ODQ2NDMzMjh9.yQEQowCBtwJaRZg3MgfZAkrtY9DgP6BFM4s2BjHm33Q',
+      },
     ),
   );
 });
