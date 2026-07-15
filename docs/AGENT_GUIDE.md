@@ -60,7 +60,7 @@ ColorTrip은 **backend(Python) + frontend(Flutter)** 를 함께 관리하는 **�
 ### 브랜치·PR
 
 - 이런 작업은 **반드시 새 브랜치를 만들어** 진행합니다 (`dev`에서 직접 작업하지 않습니다).
-- **이슈번호는 Jira로 관리합니다.** 작업 전 Jira에서 티켓을 만들어 번호(예: `KAN-123`)를 받고, 그 번호로 `type/KAN-123-설명` 형식의 브랜치를 만듭니다. 이슈 트래킹·브랜치 네이밍 규약의 단일 출처는 [scm-collaboration](conventions/scm-collaboration.md)입니다.
+- **이슈번호는 Jira로 관리합니다.** 작업 전 Jira에서 티켓을 만들어 번호(예: `KAN-123`)를 받고, 그 번호로 `type/KAN-123-설명` 또는 `type/KAN-123` 형식의 브랜치를 만듭니다. 이슈 트래킹·브랜치 네이밍 규약의 단일 출처는 [scm-collaboration](conventions/scm-collaboration.md)입니다.
 - 작업이 끝나면 **`dev` 브랜치로 향하는 PR을 생성**합니다. PR 생성은 `dev-pr` 스킬 절차를 따르고, 레포의 [PR 템플릿](../.github/pull_request_template.md)을 준수합니다.
 
 ## 강제 규칙 (SKILL · HOOK)
