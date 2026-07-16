@@ -1,13 +1,11 @@
-from collections.abc import Sequence
-
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.core.enums import DnaType
 from app.trip_dna import repository
-from app.trip_dna.models import TripQuestion, TripReply
-from app.trip_dna.schemas import ReplySubmitItem, DNAResultResponse
+from app.trip_dna.models import TripReply
+from app.trip_dna.schemas import DNAResultResponse, QuestionRead, ReplySubmitItem
 
 # 동률 점수 발생 시 우선순위 가중치 (낮을수록 더 높은 우선순위)
 TIE_BREAKER_PRIORITY = {
@@ -19,16 +17,14 @@ TIE_BREAKER_PRIORITY = {
 }
 
 
-async def get_survey_questions(session: AsyncSession) -> Sequence[TripQuestion]:
-    """사용자가 진행할 초기 설문의 질문 및 선택지 리스트를 조회합니다."""
+async def get_survey_questions(session: AsyncSession) -> list[QuestionRead]:
+    """사용자가 진행할 초기 설문의 질문 및 선택지 리스트를 응답 스키마로 변환해 조회합니다."""
     questions = await repository.list_active_questions(session)
-    return questions
+    return [QuestionRead.model_validate(question) for question in questions]
 
 
 async def submit_survey_replies(
-        session: AsyncSession,
-        user: User,
-        replies_data: list[ReplySubmitItem]
+    session: AsyncSession, user: User, replies_data: list[ReplySubmitItem]
 ) -> DNAResultResponse:
     """사용자가 제출한 설문 답변을 기반으로 점수를 연산하고,
     이전 답변 Soft Delete 및 유저 대표 DNA 결과를 데이터베이스에 기록합니다.
@@ -71,7 +67,7 @@ async def submit_survey_replies(
         TripReply(
             user_id=user.id,
             question_id=item.question_id,
-            question_option_id=item.question_option_id
+            question_option_id=item.question_option_id,
         )
         for item in replies_data
     ]
@@ -81,8 +77,4 @@ async def submit_survey_replies(
     # 7. User 테이블의 dna 컬럼 갱신
     await repository.update_user_dna(session, user, main_dna_type)
 
-    return DNAResultResponse(
-        user_id=user.id,
-        main_dna_type=main_dna_type.value,
-        scores=scores
-    )
+    return DNAResultResponse(user_id=user.id, main_dna_type=main_dna_type.value, scores=scores)
