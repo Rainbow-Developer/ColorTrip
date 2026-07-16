@@ -65,6 +65,35 @@ async def test_new_tables_have_required_constraints(client: AsyncClient) -> None
     assert dna_history_fks["user_id"] == ("users", ("id",), None)
 
 
+async def test_journey_migration_schema_is_preserved(client: AsyncClient) -> None:
+    _ = client
+
+    async with engine.connect() as connection:
+        tables = await connection.run_sync(
+            lambda sync_connection: set(sa.inspect(sync_connection).get_table_names())
+        )
+        journeys_columns = await connection.run_sync(_columns_for("journeys"))
+        journey_quests_uniques = await connection.run_sync(
+            _unique_constraints_for("journey_quests")
+        )
+        journey_quests_fks = await connection.run_sync(_foreign_keys_for("journey_quests"))
+        quest_progress_columns = await connection.run_sync(_columns_for("quest_progress"))
+        quest_progress_fks = await connection.run_sync(_foreign_keys_for("quest_progress"))
+        journeys_indexes = await connection.run_sync(_indexes_for("journeys"))
+
+    assert {"journeys", "journey_quests"} <= tables
+    assert {"user_id", "region_id", "title", "status", "completed_at"} <= journeys_columns
+    assert journey_quests_uniques >= {("journey_id", "quest_id")}
+    assert journey_quests_fks["journey_id"] == ("journeys", ("id",), None)
+    assert journey_quests_fks["quest_id"] == ("quests", ("id",), None)
+    assert {"journey_id", "quiz_answer"} <= quest_progress_columns
+    assert quest_progress_fks["journey_id"] == ("journeys", ("id",), None)
+    assert journeys_indexes["ix_journeys_user_status"] == {
+        "columns": ("user_id", "status"),
+        "unique": False,
+    }
+
+
 async def test_new_tables_have_database_defaults_and_sort_indexes(
     client: AsyncClient,
 ) -> None:
