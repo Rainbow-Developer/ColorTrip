@@ -14,6 +14,33 @@ class TimelineEntry {
   final String month;
 }
 
+/// 여행 메타 정보 — "여행 시작하기" 시트에서 입력받는 이름·기간(2026-07-16 KAN-28).
+/// 백엔드 journeys.title/start_date/end_date에 대응한다.
+class TripInfo {
+  const TripInfo({
+    required this.name,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  final String name;
+  final DateTime startDate;
+  final DateTime endDate;
+
+  /// "2026.07.20 ~ 07.22" — 여행 목록 카드의 기간 표기(같은 해면 연도 생략).
+  String get periodLabel => formatPeriod(startDate, endDate);
+
+  static String formatPeriod(DateTime startDate, DateTime endDate) {
+    String md(DateTime d) =>
+        '${d.month.toString().padLeft(2, '0')}.${d.day.toString().padLeft(2, '0')}';
+    final start = '${startDate.year}.${md(startDate)}';
+    final end = endDate.year == startDate.year
+        ? md(endDate)
+        : '${endDate.year}.${md(endDate)}';
+    return '$start ~ $end';
+  }
+}
+
 /// 지역의 "여행" 진행 상태 — [progressState.tripQuests] 기준(2026-07-09, "여행 시작하기" 도입).
 enum RegionTripStatus {
   /// 여행 시작 전 (선택한 퀘스트 없음).
@@ -35,6 +62,7 @@ class ProgressState {
     required this.timeline,
     required this.dnaType,
     required this.tripQuests,
+    required this.tripInfo,
     required this.nickname,
   });
 
@@ -44,6 +72,7 @@ class ProgressState {
       timeline = const [],
       dnaType = null,
       tripQuests = const {},
+      tripInfo = const {},
       nickname = null;
 
   final Set<String> completedQuestIds;
@@ -53,6 +82,9 @@ class ProgressState {
 
   /// 지역별로 "여행 시작하기"에서 고른 퀘스트 id 목록([RegionQuestSelectScreen] 다중 선택).
   final Map<String, Set<String>> tripQuests;
+
+  /// 지역별 여행 이름·기간 — 여행 시작 시 입력([TripInfo]).
+  final Map<String, TripInfo> tripInfo;
 
   /// 사용자가 내 정보 수정에서 설정한 닉네임(없으면 [kDefaultNickname] 표시).
   final String? nickname;
@@ -67,6 +99,9 @@ class ProgressState {
   /// 지역의 여행 시작 시 선택한 퀘스트 목록(없으면 빈 집합).
   Set<String> tripQuestsOf(String regionId) => tripQuests[regionId] ?? const {};
 
+  /// 지역의 여행 이름·기간(여행 시작 전이면 null).
+  TripInfo? tripInfoOf(String regionId) => tripInfo[regionId];
+
   RegionTripStatus tripStatusOf(String regionId) {
     final trip = tripQuestsOf(regionId);
     if (trip.isEmpty) return RegionTripStatus.notStarted;
@@ -80,6 +115,7 @@ class ProgressState {
     List<TimelineEntry>? timeline,
     String? dnaType,
     Map<String, Set<String>>? tripQuests,
+    Map<String, TripInfo>? tripInfo,
     String? nickname,
   }) {
     return ProgressState(
@@ -88,6 +124,7 @@ class ProgressState {
       timeline: timeline ?? this.timeline,
       dnaType: dnaType ?? this.dnaType,
       tripQuests: tripQuests ?? this.tripQuests,
+      tripInfo: tripInfo ?? this.tripInfo,
       nickname: nickname ?? this.nickname,
     );
   }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/map_legend.dart';
+import '../../data/models/region.dart';
 import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
@@ -12,8 +13,8 @@ import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
 
-/// 홈(지도) — Figma 스펙(2026-07-08 공유) 반영: 완료 지역/진행률 스탯, 진행중 여행+DNA 카드,
-/// 지도 색칠(3단계 범례 포함), 최근 완료 섹션. 공유 버튼은 지도 바로 위에 붙여
+/// 홈(지도) — Figma 스펙(2026-07-08 공유) 반영: 완료 지역/진행률 스탯, 추천 여행지 배너,
+/// 진행중 여행+DNA 카드, 지도 색칠(3단계 범례 포함), 최근 완료 섹션. 공유 버튼은 지도 바로 위에 붙여
 /// 무엇을 공유하는지 헷갈리지 않게 한다(2026-07-11 KAN-029 — 기존엔 AppBar 우측 상단에
 /// 있어 지도와 멀리 떨어져 있었다).
 class HomeScreen extends ConsumerWidget {
@@ -54,6 +55,7 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 16),
+              const _RecommendedRegionBanner(),
               const _InProgressDnaCard(),
               const SizedBox(height: 16),
               Align(
@@ -179,6 +181,102 @@ class _StatTile extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// 추천 여행지 배너 — 사용자 DNA 유형과 같은 유형 퀘스트가 가장 많은 **여행 시작 전** 지역을
+/// 추천한다(동률이면 전체 퀘스트 수가 많은 쪽). 탭하면 지역 개요로 이동해 바로 여행을 시작할 수
+/// 있다. 시작 안 한 지역이 없으면 배너를 숨긴다(KAN-28).
+class _RecommendedRegionBanner extends ConsumerWidget {
+  const _RecommendedRegionBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(progressProvider);
+    final dnaId = progress.dnaType ?? 'nature';
+    final dna = ref.watch(dnaRepositoryProvider).byId(dnaId);
+    final questRepo = ref.watch(questRepositoryProvider);
+
+    Region? best;
+    var bestMatch = -1;
+    var bestTotal = -1;
+    for (final region in kRegionsInMapOrder) {
+      if (progress.tripStatusOf(region.id) != RegionTripStatus.notStarted) {
+        continue;
+      }
+      final quests = questRepo.byRegion(region.id);
+      if (quests.isEmpty) continue;
+      final match = quests.where((q) => q.type == dnaId).length;
+      if (match > bestMatch ||
+          (match == bestMatch && quests.length > bestTotal)) {
+        best = region;
+        bestMatch = match;
+        bestTotal = quests.length;
+      }
+    }
+    if (best == null) return const SizedBox.shrink();
+
+    final region = best;
+    final typeLabel = questTypeStyles[dnaId]?.label ?? dnaId;
+    final questLabel = bestMatch > 0
+        ? '$typeLabel 퀘스트 $bestMatch개가 기다리고 있어요'
+        : '퀘스트 $bestTotal개가 기다리고 있어요';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => context.push('/region/${region.id}'),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: dna.gradient,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${dna.icon} ${dna.name}를 위한 추천 여행지',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      region.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      questLabel,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white, size: 26),
+            ],
+          ),
+        ),
       ),
     );
   }

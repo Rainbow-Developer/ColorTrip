@@ -101,6 +101,7 @@ class _TripCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(progressProvider);
     final trip = progress.tripQuestsOf(region.id);
+    final tripInfo = progress.tripInfoOf(region.id);
     final total = trip.length;
     final done = trip.where(progress.isCompleted).length;
     final dominantType = dominantTypeForRegion(region.id);
@@ -122,12 +123,23 @@ class _TripCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                tripTitleFor(region),
+                // 여행 시작 시 입력한 이름 우선, 없으면(과거 데이터) 지역명 기반 기본값.
+                tripInfo?.name ?? tripTitleFor(region),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              if (tripInfo != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  tripInfo.periodLabel,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.timelineDateText,
+                  ),
+                ),
+              ],
               const SizedBox(height: 6),
               Row(
                 children: [

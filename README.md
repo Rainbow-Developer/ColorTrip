@@ -197,6 +197,7 @@ flowchart TD
 | ------ | ---- | ---- |
 | `go_router` | `^17.3.0` | 라우팅 |
 | `flutter_riverpod` | `^3.3.2` | 상태관리(전역·서버) |
+| `flutter_localizations` | Flutter SDK | Material 위젯 한국어화(날짜 피커 등) |
 | `dio` | `^5.9.2` | HTTP 클라이언트(현재 설정만) |
 | `flutter_form_builder` · `form_builder_validators` | `^10.3.0` · `^11.3.0` | 폼 |
 | `flutter_secure_storage` | `^10.3.1` | 토큰 저장(인증 연동 시) |
