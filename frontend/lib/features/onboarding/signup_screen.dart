@@ -117,7 +117,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               .read(progressProvider.notifier)
                               .setNickname(nickname);
                         }
-                        context.go('/survey');
+                        context.go('/trip-dna');
                       }
                     : null,
                 child: const Text('다음'),

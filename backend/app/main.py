@@ -7,6 +7,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.staticfiles import StaticFiles
 
@@ -25,6 +26,13 @@ from app.uploads.router import router as uploads_router
 setup_logging(app_env=settings.app_env, log_level=settings.log_level)
 
 app = FastAPI(title="ColorTrip API", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 register_request_logging(app)
 register_exception_handlers(app)
 

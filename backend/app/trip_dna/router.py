@@ -7,22 +7,23 @@ from app.auth.dependencies import CurrentUser
 from app.core.database import get_session
 from app.core.response import Envelope, success
 from app.trip_dna import service
-from app.trip_dna.schemas import QuestionRead
+from app.trip_dna.schemas import QuestionRead, DNAResultResponse, RepliesSubmitRequest
 
 logger = logging.getLogger(__name__)
 
 # prefix를 "/trip_dna"로 지정하여 진입 경로를 묶습니다.
 router = APIRouter(prefix="/trip_dna", tags=["trip_dna"])
 
+
 @router.get(
     "/questions",
     response_model=Envelope[list[QuestionRead]],
-    summary = "여행 DNA 질문 및 선택지 목록 조회"
+    summary="여행 DNA 질문 및 선택지 목록 조회"
 )
 async def get_survey_questions(
-    # TODO: 인증 정보 연동되면 current_user 주석 해제
-    # current_user: CurrentUser,
-    session: AsyncSession = Depends(get_session),
+        # TODO: 인증 정보 연동되면 current_user 주석 해제
+        # current_user: CurrentUser,
+        session: AsyncSession = Depends(get_session),
 ) -> Envelope[list[QuestionRead]]:
     """
     사용자가 온보딩 또는 재진단 시 진행할 여행 DNA 설문지 질문 목록과 선택지를 조회합니다.
@@ -42,3 +43,21 @@ async def get_survey_questions(
     """설문용 질문 및 선택지 리스트를 조회합니다."""
     questions = await service.get_survey_questions(session)
     return success(questions)
+
+
+@router.post(
+    "/replies",
+    response_model=Envelope[DNAResultResponse],
+    status_code=201,
+    summary="설문 답변 제출 및 여행 DNA 진단 완료"
+)
+async def submit_survey_replies(
+        payload: RepliesSubmitRequest,
+        current_user: CurrentUser,
+        session: AsyncSession = Depends(get_session),
+) -> Envelope[DNAResultResponse]:
+    """사용자가 선택한 답변 목록을 제출받아 저장하고, 성향 점수를 계산하여 최종 판정된 DNA 결과를 유저 정보에 기록합니다."""
+    logger.info(f"[TRIP_DNA] Submit survey replies by User(id: {current_user.id})")
+
+    result = await service.submit_survey_replies(session, current_user, payload.replies)
+    return success(result)

@@ -1,9 +1,13 @@
 from collections.abc import Sequence
-from sqlalchemy import select
+from uuid import UUID
+
+from app.auth.models import User
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.trip_dna.models import TripQuestion, TripQuestionOption
+from app.core.enums import DnaType
+from app.trip_dna.models import TripQuestion, TripQuestionOption, TripReply
 
 
 async def list_active_questions(session: AsyncSession) -> Sequence[TripQuestion]:
@@ -34,3 +38,37 @@ async def list_active_questions(session: AsyncSession) -> Sequence[TripQuestion]
         question.options.sort(key=lambda opt: opt.sort_order)
 
     return questions
+
+
+async def soft_delete_user_replies(session: AsyncSession, user_id: UUID) -> None:
+    """사용자가 이전에 제출하여 활성화(deleted_at IS NULL)되어 있던 답변들을 Soft Delete 처리합니다."""
+    stmt = (
+        update(TripReply)
+        .where(TripReply.user_id == user_id, TripReply.deleted_at.is_(None))
+        .values(deleted_at=func.now())
+    )
+    await session.execute(stmt)
+
+
+async def save_user_replies(session: AsyncSession, replies: list[TripReply]) -> None:
+    """새로운 설문 답변 목록을 데이터베이스에 일괄 저장합니다."""
+    session.add_all(replies)
+
+
+async def get_options_by_ids(session: AsyncSession, option_ids: list[UUID]) -> Sequence[TripQuestionOption]:
+    """선택된 선택지(options)들의 상세 가중치 점수를 조회하기 위해 상세 엔티티들을 일괄 조회합니다."""
+    stmt = (
+        select(TripQuestionOption)
+        .where(
+            TripQuestionOption.id.in_(option_ids),
+            TripQuestionOption.deleted_at.is_(None)
+        )
+    )
+    result = await session.execute(stmt)
+    return result.scalars().all()
+
+
+async def update_user_dna(session: AsyncSession, user: User, dna_type: DnaType) -> None:
+    """User 테이블의 dna 컬럼 값을 최종 판정된 DnaType으로 갱신합니다."""
+    user.dna = dna_type
+    session.add(user)

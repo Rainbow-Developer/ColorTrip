@@ -13,8 +13,8 @@ import '../features/quests/quest_list_screen.dart';
 import '../features/quests/quest_verify_screen.dart';
 import '../features/quests/region_overview_screen.dart';
 import '../features/quests/region_quest_select_screen.dart';
-import '../features/survey/dna_result_screen.dart';
-import '../features/survey/survey_screen.dart';
+import '../features/trip_dna/dna_result_screen.dart';
+import '../features/trip_dna/trip_dna_screen.dart';
 import '../features/timeline/timeline_screen.dart';
 import '../features/travel/travel_list_screen.dart';
 import 'app_shell.dart';
@@ -32,11 +32,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SignupScreen(),
       ),
       GoRoute(
-        path: '/survey',
-        builder: (context, state) => const SurveyScreen(),
+        path: '/trip-dna',
+        builder: (context, state) => const TripDnaScreen(),
       ),
       GoRoute(
-        path: '/dna-result',
+        path: '/trip-dna/result',
         builder: (context, state) => const DnaResultScreen(),
       ),
       GoRoute(
