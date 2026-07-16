@@ -10,6 +10,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.logging import REQUEST_ID_HEADER, request_id_from_scope
+
 
 class ErrorCode(Enum):
     """(code, http_status, 기본 message)."""
@@ -60,4 +62,15 @@ def register_exception_handlers(app: FastAPI) -> None:
         message = exc.detail if isinstance(exc.detail, str) else "요청을 처리할 수 없습니다."
         return JSONResponse(
             status_code=exc.status_code, content=_body(code, exc.status_code, message)
+        )
+
+    @app.exception_handler(Exception)
+    async def _handle_unexpected(request: Request, _: Exception) -> JSONResponse:
+        e = ErrorCode.INTERNAL_ERROR
+        request_id = request_id_from_scope(request.scope)
+        headers = {REQUEST_ID_HEADER: request_id} if request_id else None
+        return JSONResponse(
+            status_code=e.status,
+            content=_body(e.code, e.status, e.message),
+            headers=headers,
         )

@@ -9,12 +9,14 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_JWT_SECRET_KEY = "change-me-in-production-32-byte-minimum"
+VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_env: str = "local"
+    log_level: str | None = None
 
     # DB
     database_url: str = "postgresql+asyncpg://colortrip:colortrip@localhost:5432/colortrip"
@@ -40,6 +42,15 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_non_local_security(self) -> Self:
+        if self.log_level is not None:
+            log_level = self.log_level.strip().upper()
+            if not log_level:
+                self.log_level = None
+            elif log_level not in VALID_LOG_LEVELS:
+                raise ValueError("LOG_LEVEL must be one of DEBUG, INFO, WARNING, ERROR, CRITICAL.")
+            else:
+                self.log_level = log_level
+
         env = self.app_env.strip().lower()
         if env in {"local", "test"}:
             return self

@@ -28,7 +28,7 @@ uv run alembic upgrade head
 uv run python -m app.regions.seed
 
 # 6. 개발 서버
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload --no-access-log
 ```
 
 - API 문서(Swagger): `http://localhost:8000/docs`
@@ -42,6 +42,7 @@ uv run uvicorn app.main:app --reload
 |------|------|
 | `APP_ENV` | 실행 환경 (`local`, `test`, `dev`, `prod`) |
 | `DATABASE_URL` | PostgreSQL 비동기 DSN (`postgresql+asyncpg://...`) |
+| `LOG_LEVEL` | 선택 로그 레벨 override (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) |
 | `TOUR_API_KEY` | 한국관광공사 TourAPI 키 (미발급 시 적재는 빈 결과) |
 | `TOUR_API_BASE_URL` | TourAPI base URL (기본: KorService2) |
 | `JWT_SECRET_KEY` | Access JWT 서명과 refresh token hash에 사용하는 secret. `local/test` 외 환경에서는 필수이며 기본값 사용 시 앱이 시작되지 않는다. |
@@ -59,7 +60,7 @@ uv run uvicorn app.main:app --reload
 backend/
 ├── app/
 │   ├── main.py              # FastAPI 진입점·라우터 등록
-│   ├── core/                # config·database·base(모델 믹스인)·response(Envelope)·exceptions·enums
+│   ├── core/                # config·database·base(모델 믹스인)·response(Envelope)·exceptions·enums·logging
 │   ├── auth/                # Kakao 인증·JWT·회원 탈퇴/복구
 │   ├── regions/             # 시·군 마스터 (모델·스키마·repository·service·router·seed)
 │   ├── quests/              # 퀘스트 조회·추천·진행/인증 (모델·스키마·repository·service·router·verification·dna)
@@ -95,6 +96,13 @@ backend/
 | DELETE | `/api/v1/users/me` | 회원 탈퇴 |
 
 응답은 공통 Envelope `{ code, status, message, data }`로 감싼다([api-design.md](../docs/conventions/api-design.md)).
+
+## 로깅
+
+앱 로그와 요청 로그는 stdout에 JSON 한 줄로 출력한다([logging-monitoring.md](../docs/conventions/logging-monitoring.md)).
+`LOG_LEVEL`을 설정하지 않으면 `local/test`는 `DEBUG`, `dev/prod`는 `INFO`를 사용한다.
+
+요청 로그는 `X-Request-ID`를 응답 헤더로 반환한다. 요청 body, query string, Authorization header, token, API key, secret은 로그에 남기지 않는다.
 
 ## 보호 API 사용자 사용
 
