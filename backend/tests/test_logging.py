@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import sys
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from io import StringIO
 from typing import Any, cast
@@ -24,6 +25,50 @@ from app.core.logging import (
     resolve_log_level,
     setup_logging,
 )
+
+
+@pytest.fixture(autouse=True)
+def restore_logging_state():
+    """각 테스트가 전역 logging 설정을 다음 테스트로 유출하지 않게 한다."""
+    manager = logging.Logger.manager
+    original_logger_dict = manager.loggerDict.copy()
+    original_logger_states = {
+        name: _snapshot_logger(logger)
+        for name, logger in original_logger_dict.items()
+        if isinstance(logger, logging.Logger)
+    }
+    original_root_state = _snapshot_logger(logging.getLogger())
+    original_disable = manager.disable
+    original_handler_ids = {
+        id(handler)
+        for logger in [logging.getLogger(), *original_logger_dict.values()]
+        if isinstance(logger, logging.Logger)
+        for handler in logger.handlers
+    }
+
+    try:
+        yield
+    finally:
+        seen_handler_ids: set[int] = set()
+        current_loggers = [logging.getLogger(), *manager.loggerDict.values()]
+        for logger in current_loggers:
+            if not isinstance(logger, logging.Logger):
+                continue
+            for handler in logger.handlers:
+                handler_id = id(handler)
+                if handler_id in original_handler_ids or handler_id in seen_handler_ids:
+                    continue
+                seen_handler_ids.add(handler_id)
+                handler.close()
+
+        manager.loggerDict.clear()
+        manager.loggerDict.update(original_logger_dict)
+        _restore_logger(logging.getLogger(), original_root_state)
+        for name, state in original_logger_states.items():
+            logger = original_logger_dict[name]
+            assert isinstance(logger, logging.Logger)
+            _restore_logger(logger, state)
+        manager.disable = original_disable
 
 
 def test_resolve_log_level_uses_env_defaults() -> None:
@@ -441,6 +486,30 @@ async def test_main_health_uses_request_logging() -> None:
 def _settings(**kwargs: Any) -> Settings:
     settings_cls = cast(Any, Settings)
     return settings_cls(_env_file=None, **kwargs)
+
+
+def _snapshot_logger(
+    logger: logging.Logger,
+) -> tuple[Sequence[logging.Handler], Sequence[Any], int, bool, bool]:
+    return (
+        list(logger.handlers),
+        list(logger.filters),
+        logger.level,
+        logger.disabled,
+        logger.propagate,
+    )
+
+
+def _restore_logger(
+    logger: logging.Logger,
+    state: tuple[Sequence[logging.Handler], Sequence[Any], int, bool, bool],
+) -> None:
+    handlers, filters, level, disabled, propagate = state
+    logger.handlers = list(handlers)
+    logger.filters = list(filters)
+    logger.setLevel(level)
+    logger.disabled = disabled
+    logger.propagate = propagate
 
 
 def _payloads(stream: StringIO) -> list[dict[str, Any]]:

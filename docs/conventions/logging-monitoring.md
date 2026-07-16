@@ -8,10 +8,10 @@
 | 항목 | 결정 | 비고 |
 |------|------|------|
 | 앱 로그 형식 | 구조화 JSON 로깅 | |
-| 로그 수집 | GCP Cloud Logging | |
+| 로그 수집 | 미구현, GCP Cloud Logging 별도 인프라 구성 예정 | 현재는 앱 JSON stdout까지만 구현 |
 | 에러 트래킹 | 초기엔 안 함 | |
 | 요청 로깅 | 미들웨어로 전 요청 로깅 | |
-| 모니터링 / 알림 | Cloud Monitoring + Slack 알림 | |
+| 모니터링 / 알림 | 미구현, Cloud Monitoring + Slack 알림 별도 구성 예정 | 현재 범위 밖 |
 | 로그 레벨 운영 기준 | DEBUG(개발) / INFO(운영) | |
 | 로그 레벨 설정 | `LOG_LEVEL` 선택 override | 미설정 시 `APP_ENV` 기준 |
 | 요청 식별자 | `X-Request-ID` 수용·생성 | 응답 헤더로 반환 |
@@ -19,10 +19,10 @@
 ## 규칙 / 적용
 
 - 앱 로그는 구조화 JSON 형식으로 출력한다.
-- 앱은 stdout에 JSON 로그를 출력하고, 운영 로그 수집은 GCP Cloud Logging으로 연결한다.
+- 앱은 stdout에 JSON 로그를 출력한다. 운영 로그 수집은 현재 미구현이며, GCP Cloud Logging 연결은 별도 인프라 작업으로 진행한다.
 - 에러 트래킹은 초기에는 도입하지 않는다.
 - 요청은 미들웨어로 전수 로깅한다.
-- 운영 알림은 Cloud Monitoring에서 감지해 Slack으로 보낸다.
+- 운영 알림은 현재 미구현이다. Cloud Monitoring 감지와 Slack 연동은 별도 인프라 작업으로 진행한다.
 - 로그 레벨은 개발 환경 DEBUG, 운영 환경 INFO로 운영한다.
 - `LOG_LEVEL`이 설정되면 환경별 기본 로그 레벨을 덮어쓴다. 허용 값은 `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`이다.
 - 공통 handler에도 최종 로그 레벨을 적용해 명시적 레벨을 가진 하위 logger가 설정을 우회하지 못하게 한다.

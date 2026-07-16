@@ -129,13 +129,11 @@ def _safe_request_id(value: str | None) -> str:
 
 
 class RequestContextFilter(logging.Filter):
-    """LogRecord에 현재 요청 request_id를 추가하고 메시지를 redaction한다."""
+    """LogRecord에 현재 요청 request_id를 추가한다."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         if not hasattr(record, "request_id"):
             record.request_id = current_request_id()
-        record.msg = redact_sensitive_data(record.getMessage())
-        record.args = ()
         return True
 
 
@@ -148,7 +146,7 @@ class JsonLogFormatter(logging.Formatter):
                 timespec="milliseconds"
             ),
             "severity": record.levelname,
-            "message": redact_sensitive_data(record.getMessage()),
+            "message": record.getMessage(),
             "logger": record.name,
         }
 
