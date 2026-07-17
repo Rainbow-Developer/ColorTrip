@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:colortrip/data/models/region.dart';
 import 'package:colortrip/data/static/quests_data.dart';
+import 'package:colortrip/data/static/regions_data.dart';
 import 'package:colortrip/features/home/home_screen.dart';
 import 'package:colortrip/features/quests/region_quest_select_screen.dart';
 import 'package:colortrip/features/travel/travel_list_screen.dart';
@@ -39,14 +41,16 @@ Widget _wrap(
 }
 
 void main() {
-  testWidgets('퀘스트 정적 데이터는 11개 시·군 각 5개씩 55개다', (tester) async {
-    expect(kQuests.length, 55);
+  testWidgets('퀘스트 정적 데이터는 11개 시·군 각 20개씩 220개다', (tester) async {
+    expect(kQuests.length, 220);
     final byRegion = <String, int>{};
     for (final q in kQuests) {
       byRegion[q.region] = (byRegion[q.region] ?? 0) + 1;
     }
     expect(byRegion.length, 11);
-    expect(byRegion.values.every((c) => c == 5), isTrue);
+    expect(byRegion.values.every((c) => c == 20), isTrue);
+    // id는 전역 유일해야 한다(TourAPI 생성분 포함).
+    expect(kQuests.map((q) => q.id).toSet().length, kQuests.length);
     // OX퀴즈 퀘스트는 질문·정답이 반드시 있어야 한다.
     for (final q in kQuests.where((q) => q.verify == 'quiz')) {
       expect(q.quizQuestion, isNotNull, reason: q.id);
@@ -58,10 +62,25 @@ void main() {
     await tester.pumpWidget(_wrap(const HomeScreen()));
     await tester.pumpAndSettle();
 
-    // 기본 DNA(nature) 기준: 자연탐험 퀘스트 2개 동률(괴산·단양) 중 지도 순서상 괴산이 먼저.
+    // 기본 DNA(nature)·초기 상태(모든 지역 미시작) 기준, 배너 로직과 같은 방식으로
+    // 기대 지역을 데이터에서 계산한다(퀘스트 데이터가 늘어나도 테스트가 깨지지 않게).
+    Region? expected;
+    var bestMatch = -1;
+    var bestTotal = -1;
+    for (final region in kRegionsInMapOrder) {
+      final quests = questsByRegion(region.id);
+      final match = quests.where((q) => q.type == 'nature').length;
+      if (match > bestMatch ||
+          (match == bestMatch && quests.length > bestTotal)) {
+        expected = region;
+        bestMatch = match;
+        bestTotal = quests.length;
+      }
+    }
+
     expect(find.textContaining('추천 여행지'), findsOneWidget);
-    expect(find.text('괴산군'), findsWidgets);
-    expect(find.text('자연탐험 퀘스트 2개가 기다리고 있어요'), findsOneWidget);
+    expect(find.text(expected!.name), findsWidgets);
+    expect(find.text('자연탐험 퀘스트 $bestMatch개가 기다리고 있어요'), findsOneWidget);
   });
 
   testWidgets('여행 시작하기 시 이름·날짜 입력 시트를 거쳐 여행이 등록된다', (tester) async {
