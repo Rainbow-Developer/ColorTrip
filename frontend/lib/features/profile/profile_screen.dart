@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
+import '../../state/home_tutorial_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
@@ -16,6 +17,7 @@ class ProfileScreen extends ConsumerWidget {
     final dna = ref
         .watch(dnaRepositoryProvider)
         .byId(progress.dnaType ?? 'nature');
+    final tutorialDismissed = ref.watch(homeTutorialDismissedProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('마이')),
@@ -59,6 +61,20 @@ class ProfileScreen extends ConsumerWidget {
             title: const Text('내 정보 수정'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/profile/edit'),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.help_outline),
+            title: const Text('홈 화면 가이드 다시 보기'),
+            subtitle: const Text('지도 사용법 안내를 홈 화면에서 다시 표시해요'),
+            value: !tutorialDismissed,
+            onChanged: (value) {
+              final notifier = ref.read(homeTutorialDismissedProvider.notifier);
+              if (value) {
+                notifier.showAgain();
+              } else {
+                notifier.dismiss(persist: true);
+              }
+            },
           ),
           const Divider(height: 32),
           Text(

@@ -11,11 +11,12 @@ import '../../data/static/regions_data.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
+import '../../state/home_tutorial_notifier.dart';
+import 'home_tutorial_overlay.dart';
 
 /// 홈(지도) — Figma 스펙(2026-07-08 공유) 반영: 완료 지역/진행률 스탯, 진행중 여행+DNA 카드,
-/// 지도 색칠(3단계 범례 포함), 최근 완료 섹션. 공유 버튼은 지도 바로 위에 붙여
-/// 무엇을 공유하는지 헷갈리지 않게 한다(2026-07-11 KAN-029 — 기존엔 AppBar 우측 상단에
-/// 있어 지도와 멀리 떨어져 있었다).
+/// 지도 색칠(3단계 범례 포함), 최근 완료 섹션. 최초 진입 시 [HomeTutorialOverlay]로
+/// 지도 탭 → 여행 시작 흐름을 안내한다(KAN-041).
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -24,92 +25,105 @@ class HomeScreen extends ConsumerWidget {
     final progress = ref.watch(progressProvider);
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
+    final tutorialDismissed = ref.watch(homeTutorialDismissedProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('다채로울지도')),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: _StatTile(
-                      label: '완료 지역',
-                      value: '${progress.completedRegionCount}',
-                      suffix: '/${kRegions.length}',
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatTile(
+                          label: '완료 지역',
+                          value: '${progress.completedRegionCount}',
+                          suffix: '/${kRegions.length}',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _StatTile(
+                          label: '진행률',
+                          value: '$progressPct',
+                          suffix: '%',
+                          progress: progressPct / 100,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const _InProgressDnaCard(),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () => context.push('/share'),
+                      icon: const Icon(Icons.ios_share, size: 16),
+                      label: const Text('공유하기'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primaryDark,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        minimumSize: const Size(48, 48),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _StatTile(
-                      label: '진행률',
-                      value: '$progressPct',
-                      suffix: '%',
-                      progress: progressPct / 100,
-                    ),
+                  const SizedBox(height: 4),
+                  ChungbukMap(
+                    regionProgress: progress.regionProgress,
+                    onRegionTap: (regionId) =>
+                        context.push('/region/$regionId'),
                   ),
+                  const SizedBox(height: 10),
+                  const MapLegend(),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        '최근 완료',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => context.push('/timeline'),
+                        child: const Text(
+                          '더보기 ›',
+                          style: TextStyle(color: AppColors.timelineDateText),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (progress.timeline.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Text(
+                        '아직 완료한 퀘스트가 없어요.',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    )
+                  else
+                    for (final entry in progress.timeline.take(3))
+                      _RecentCompletedTile(
+                        entry: entry,
+                        questRepo: ref.watch(questRepositoryProvider),
+                        regionRepo: ref.watch(regionRepositoryProvider),
+                      ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const _InProgressDnaCard(),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => context.push('/share'),
-                  icon: const Icon(Icons.ios_share, size: 16),
-                  label: const Text('공유하기'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primaryDark,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: const Size(48, 48),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              ChungbukMap(
-                regionProgress: progress.regionProgress,
-                onRegionTap: (regionId) => context.push('/region/$regionId'),
-              ),
-              const SizedBox(height: 10),
-              const MapLegend(),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    '최근 완료',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                  ),
-                  TextButton(
-                    onPressed: () => context.push('/timeline'),
-                    child: const Text(
-                      '더보기 ›',
-                      style: TextStyle(color: AppColors.timelineDateText),
-                    ),
-                  ),
-                ],
-              ),
-              if (progress.timeline.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    '아직 완료한 퀘스트가 없어요.',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-                  ),
-                )
-              else
-                for (final entry in progress.timeline.take(3))
-                  _RecentCompletedTile(
-                    entry: entry,
-                    questRepo: ref.watch(questRepositoryProvider),
-                    regionRepo: ref.watch(regionRepositoryProvider),
-                  ),
-            ],
-          ),
+            ),
+            if (!tutorialDismissed) const HomeTutorialOverlay(),
+          ],
         ),
       ),
     );

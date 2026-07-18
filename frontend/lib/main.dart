@@ -3,9 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/router.dart';
 import 'app/theme.dart';
+import 'state/home_tutorial_notifier.dart';
 
-void main() {
-  runApp(const ProviderScope(child: ColorTripApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final tutorialDismissed = await loadHomeTutorialDismissed();
+  runApp(
+    ProviderScope(
+      overrides: [
+        homeTutorialDismissedProvider.overrideWith(
+          () => HomeTutorialNotifier(tutorialDismissed),
+        ),
+      ],
+      child: const ColorTripApp(),
+    ),
+  );
 }
 
 class ColorTripApp extends ConsumerWidget {
