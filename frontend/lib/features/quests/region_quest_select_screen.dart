@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/filter_chip_row.dart';
 import '../../data/models/quest.dart';
+import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
@@ -26,6 +28,7 @@ class RegionQuestSelectScreen extends ConsumerStatefulWidget {
 class _RegionQuestSelectScreenState
     extends ConsumerState<RegionQuestSelectScreen> {
   final _searchController = TextEditingController();
+  final _startTripButtonKey = GlobalKey();
   String _typeFilter = 'all';
   Set<String>? _selectedQuestIds;
 
@@ -68,82 +71,106 @@ class _RegionQuestSelectScreenState
     }).toList();
 
     final selectedCount = _selectedQuestIds!.length;
+    final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
       appBar: AppBar(leading: const AppBackButton(), title: const Text('퀘스트')),
-      body: Column(
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: '퀘스트 검색',
-                suffixIcon: const Icon(
-                  Icons.search,
-                  color: AppColors.textMuted,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.primaryDark),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppColors.primaryDark),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: '퀘스트 검색',
+                    suffixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.textMuted,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: FilterChipRow(
-              options: filters,
-              selectedKey: _typeFilter,
-              onSelected: (key) => setState(() => _typeFilter = key),
-            ),
-          ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              itemCount: quests.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final quest = quests[index];
-                return _SelectableQuestCard(
-                  quest: quest,
-                  regionName: region.name,
-                  selected: _selectedQuestIds!.contains(quest.id),
-                  onToggle: () => setState(() {
-                    if (!_selectedQuestIds!.add(quest.id)) {
-                      _selectedQuestIds!.remove(quest.id);
-                    }
-                  }),
-                  onViewDetail: () => context.push('/quest/${quest.id}'),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: ElevatedButton(
-              onPressed: selectedCount == 0
-                  ? null
-                  : () {
-                      ref
-                          .read(progressProvider.notifier)
-                          .setTripQuests(widget.regionId, _selectedQuestIds!);
-                      context.go('/travel');
-                    },
-              child: Text(
-                selectedCount == 0 ? '퀘스트를 선택해주세요' : '여행 시작하기 ($selectedCount)',
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: FilterChipRow(
+                  options: filters,
+                  selectedKey: _typeFilter,
+                  onSelected: (key) => setState(() => _typeFilter = key),
+                ),
               ),
-            ),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  itemCount: quests.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final quest = quests[index];
+                    return _SelectableQuestCard(
+                      quest: quest,
+                      regionName: region.name,
+                      selected: _selectedQuestIds!.contains(quest.id),
+                      onToggle: () => setState(() {
+                        if (!_selectedQuestIds!.add(quest.id)) {
+                          _selectedQuestIds!.remove(quest.id);
+                        }
+                      }),
+                      onViewDetail: () => context.push('/quest/${quest.id}'),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: ElevatedButton(
+                  key: _startTripButtonKey,
+                  onPressed: selectedCount == 0
+                      ? null
+                      : () {
+                          ref
+                              .read(progressProvider.notifier)
+                              .setTripQuests(
+                                widget.regionId,
+                                _selectedQuestIds!,
+                              );
+                          context.go('/travel');
+                        },
+                  child: Text(
+                    selectedCount == 0
+                        ? '퀘스트를 선택해주세요'
+                        : '여행 시작하기 ($selectedCount)',
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (!tour.isDone && tour.step == 2)
+            CoachMarkOverlay(
+              targetKey: _startTripButtonKey,
+              stepIndex: 2,
+              title: '여행을 시작해보세요',
+              body:
+                  '퀘스트를 고른 뒤 "여행 시작하기"를 누르면\n'
+                  '나만의 여행이 시작돼요.',
+            ),
         ],
       ),
     );

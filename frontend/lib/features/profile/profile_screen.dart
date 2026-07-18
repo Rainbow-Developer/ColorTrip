@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
-import '../../state/home_tutorial_notifier.dart';
+import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
@@ -17,7 +17,7 @@ class ProfileScreen extends ConsumerWidget {
     final dna = ref
         .watch(dnaRepositoryProvider)
         .byId(progress.dnaType ?? 'nature');
-    final tutorialDismissed = ref.watch(homeTutorialDismissedProvider);
+    final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('마이')),
@@ -64,15 +64,15 @@ class ProfileScreen extends ConsumerWidget {
           ),
           SwitchListTile(
             secondary: const Icon(Icons.help_outline),
-            title: const Text('홈 화면 가이드 다시 보기'),
-            subtitle: const Text('지도 사용법 안내를 홈 화면에서 다시 표시해요'),
-            value: !tutorialDismissed,
+            title: const Text('이용 가이드 다시 보기'),
+            subtitle: const Text('지도·퀘스트·여행 시작 사용법 안내를 처음부터 다시 봐요'),
+            value: !tour.isDone,
             onChanged: (value) {
-              final notifier = ref.read(homeTutorialDismissedProvider.notifier);
+              final notifier = ref.read(onboardingTourProvider.notifier);
               if (value) {
-                notifier.showAgain();
+                notifier.restart();
               } else {
-                notifier.dismiss(persist: true);
+                notifier.skipForever();
               }
             },
           ),

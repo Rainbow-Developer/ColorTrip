@@ -3,16 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/router.dart';
 import 'app/theme.dart';
-import 'state/home_tutorial_notifier.dart';
+import 'state/onboarding_tour_notifier.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final tutorialDismissed = await loadHomeTutorialDismissed();
+  final onboardingTour = await loadOnboardingTourState();
   runApp(
     ProviderScope(
       overrides: [
-        homeTutorialDismissedProvider.overrideWith(
-          () => HomeTutorialNotifier(tutorialDismissed),
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(onboardingTour),
         ),
       ],
       child: const ColorTripApp(),

@@ -4,19 +4,22 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/chungbuk_map.dart';
+import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/map_legend.dart';
 import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
+import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
-import '../../state/home_tutorial_notifier.dart';
-import 'home_tutorial_overlay.dart';
+
+/// 홈 화면에 하나만 존재하므로 모듈 전역 키로 충분하다(코치마크가 지도 위치를 측정하는 용도).
+final _mapKey = GlobalKey();
 
 /// 홈(지도) — Figma 스펙(2026-07-08 공유) 반영: 완료 지역/진행률 스탯, 진행중 여행+DNA 카드,
-/// 지도 색칠(3단계 범례 포함), 최근 완료 섹션. 최초 진입 시 [HomeTutorialOverlay]로
-/// 지도 탭 → 여행 시작 흐름을 안내한다(KAN-041).
+/// 지도 색칠(3단계 범례 포함), 최근 완료 섹션. 온보딩 투어 1단계로 지도를 코치마크로 안내한다
+/// (KAN-040 피드백 — 텍스트 설명 대신 실제 화면에 화살표로 표시).
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -25,7 +28,7 @@ class HomeScreen extends ConsumerWidget {
     final progress = ref.watch(progressProvider);
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
-    final tutorialDismissed = ref.watch(homeTutorialDismissedProvider);
+    final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('다채로울지도')),
@@ -74,10 +77,13 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  ChungbukMap(
-                    regionProgress: progress.regionProgress,
-                    onRegionTap: (regionId) =>
-                        context.push('/region/$regionId'),
+                  KeyedSubtree(
+                    key: _mapKey,
+                    child: ChungbukMap(
+                      regionProgress: progress.regionProgress,
+                      onRegionTap: (regionId) =>
+                          context.push('/region/$regionId'),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   const MapLegend(),
@@ -122,7 +128,13 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            if (!tutorialDismissed) const HomeTutorialOverlay(),
+            if (!tour.isDone && tour.step == 0)
+              CoachMarkOverlay(
+                targetKey: _mapKey,
+                stepIndex: 0,
+                title: '지도에서 지역을 눌러보세요',
+                body: '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요.',
+              ),
           ],
         ),
       ),
