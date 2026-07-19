@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
@@ -33,8 +36,8 @@ class QuestVerifyScreen extends ConsumerWidget {
       context.pop();
     }
 
-    void completeAndShowResult() {
-      ref.read(progressProvider.notifier).completeQuest(questId);
+    void completeAndShowResult(Uint8List? photo) {
+      ref.read(progressProvider.notifier).completeQuest(questId, photo: photo);
       context.push('/quest/$questId/verify/result');
     }
 
@@ -308,17 +311,28 @@ class _PhotoVerifyBody extends StatefulWidget {
   const _PhotoVerifyBody({required this.questTitle, required this.onVerified});
 
   final String questTitle;
-  final VoidCallback onVerified;
+
+  /// 완료 처리 콜백 — 사용자가 실제로 고른 사진을 함께 넘겨 히스토리에 남긴다.
+  final ValueChanged<Uint8List?> onVerified;
 
   @override
   State<_PhotoVerifyBody> createState() => _PhotoVerifyBodyState();
 }
 
 class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
-  bool _photoSelected = false;
+  Uint8List? _photoBytes;
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    final picked = await ImagePicker().pickImage(source: source);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(() => _photoBytes = bytes);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final photoBytes = _photoBytes;
     return Scaffold(
       appBar: AppBar(
         leading: const AppBackButton(),
@@ -340,37 +354,41 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
             ),
             const SizedBox(height: 14),
             InkWell(
-              onTap: () => setState(() => _photoSelected = true),
+              onTap: () => _pickPhoto(ImageSource.gallery),
               borderRadius: BorderRadius.circular(12),
               child: Container(
                 height: 120,
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: AppColors.uploadBoxBg,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _photoSelected
+                    color: photoBytes != null
                         ? AppColors.primaryDark
                         : AppColors.uploadBoxBorder,
                   ),
                 ),
                 alignment: Alignment.center,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _photoSelected ? '✅' : '📷',
-                      style: const TextStyle(fontSize: 28),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _photoSelected ? '사진이 선택됐어요' : '사진 촬영 또는 갤러리 선택',
-                      style: const TextStyle(
-                        color: AppColors.formPlaceholder,
-                        fontSize: 13,
+                child: photoBytes != null
+                    ? Image.memory(
+                        photoBytes,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Text('📷', style: TextStyle(fontSize: 28)),
+                          SizedBox(height: 4),
+                          Text(
+                            '사진 촬영 또는 갤러리 선택',
+                            style: TextStyle(
+                              color: AppColors.formPlaceholder,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -379,14 +397,14 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
                 Expanded(
                   child: _PhotoSourceButton(
                     label: '📷 카메라',
-                    onTap: () => setState(() => _photoSelected = true),
+                    onTap: () => _pickPhoto(ImageSource.camera),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _PhotoSourceButton(
                     label: '🖼 갤러리',
-                    onTap: () => setState(() => _photoSelected = true),
+                    onTap: () => _pickPhoto(ImageSource.gallery),
                   ),
                 ),
               ],
@@ -420,8 +438,10 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
             ),
             const Spacer(),
             ElevatedButton(
-              onPressed: _photoSelected ? widget.onVerified : null,
-              child: Text(_photoSelected ? '사진으로 인증하기' : '사진 선택 후 인증 가능'),
+              onPressed: photoBytes != null
+                  ? () => widget.onVerified(photoBytes)
+                  : null,
+              child: Text(photoBytes != null ? '사진으로 인증하기' : '사진 선택 후 인증 가능'),
             ),
           ],
         ),

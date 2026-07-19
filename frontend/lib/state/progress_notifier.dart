@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/static/quests_data.dart';
@@ -25,7 +27,7 @@ class ProgressNotifier extends Notifier<ProgressState> {
     state = state.copyWith(tripQuests: tripQuests);
   }
 
-  void completeQuest(String questId) {
+  void completeQuest(String questId, {Uint8List? photo}) {
     final quest = questById(questId);
     if (quest == null || state.isCompleted(questId)) return;
 
@@ -33,13 +35,10 @@ class ProgressNotifier extends Notifier<ProgressState> {
     final progress = {...state.regionProgress};
     progress[quest.region] = (progress[quest.region] ?? 0) + 1;
 
-    final now = DateTime.now();
-    final month = now.month.toString().padLeft(2, '0');
-    final day = now.day.toString().padLeft(2, '0');
     final entry = TimelineEntry(
       questId: questId,
-      date: '${now.year}.$month.$day',
-      month: '${now.year}년 ${now.month}월',
+      completedAt: DateTime.now(),
+      photo: photo,
     );
     final timeline = [
       entry,
