@@ -9,11 +9,14 @@ import '../../core/widgets/filter_chip_row.dart';
 import '../../data/models/quest.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
+import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
 
 /// 퀘스트 선택 — 지역 퀘스트를 여러 개 골라 "여행 시작하기"로 여행을 시작한다.
 /// 여기서 고른 퀘스트는 그 자리에서 수행하는 게 아니라, 여행 탭의 "진행중인 여행"에 담기고
 /// 나중에 지역 개요 화면에서 하나씩 수행한다(2026-07-09 사용자 확정).
+/// 이미 여행을 시작(또는 완료)한 지역이면 기존 선택을 유지한 채 이어서 고르고, 버튼 문구도
+/// "퀘스트 추가하기"로 바뀐다(KAN-46 — 완료된 지역도 재방문해 남은 퀘스트를 추가할 수 있다).
 /// Figma 스펙(2026-07-09 공유) 반영: 검색·유형 필터, 카드별 "퀘스트 설명"으로 퀘스트 상세(정보만) 진입.
 class RegionQuestSelectScreen extends ConsumerStatefulWidget {
   const RegionQuestSelectScreen({super.key, required this.regionId});
@@ -49,6 +52,9 @@ class _RegionQuestSelectScreenState
         .byRegion(widget.regionId);
 
     // 기존에 이 지역 여행에서 이미 고른 퀘스트가 있으면 그 상태로 시작한다(추가 선택 지원).
+    final tripAlreadyStarted =
+        ref.read(progressProvider).tripStatusOf(widget.regionId) !=
+        RegionTripStatus.notStarted;
     _selectedQuestIds ??= {
       ...ref.read(progressProvider).tripQuestsOf(widget.regionId),
     };
@@ -156,6 +162,8 @@ class _RegionQuestSelectScreenState
                   child: Text(
                     selectedCount == 0
                         ? '퀘스트를 선택해주세요'
+                        : tripAlreadyStarted
+                        ? '퀘스트 추가하기 ($selectedCount)'
                         : '여행 시작하기 ($selectedCount)',
                   ),
                 ),
