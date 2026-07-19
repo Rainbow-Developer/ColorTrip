@@ -34,6 +34,57 @@ Path parseSimpleSvgPath(String d) {
   return path;
 }
 
+/// [parseSimpleSvgPath]와 좌표 파싱을 공유하되, `Path` 대신 정점 목록을 반환한다
+/// (다각형 중심 계산용).
+List<Offset> _parseSvgPathPoints(String d) {
+  final points = <Offset>[];
+  final tokens = RegExp(r'([MLZ])([^MLZ]*)').allMatches(d);
+  for (final token in tokens) {
+    final command = token.group(1)!;
+    if (command == 'Z') continue;
+    final coords = token
+        .group(2)!
+        .trim()
+        .split(RegExp(r'[\s,]+'))
+        .where((s) => s.isNotEmpty)
+        .map(double.parse)
+        .toList();
+    for (var i = 0; i + 1 < coords.length; i += 2) {
+      points.add(Offset(coords[i], coords[i + 1]));
+    }
+  }
+  return points;
+}
+
+/// 다각형의 무게중심 — 라벨을 지역 도형 정 가운데에 자동으로 배치하기 위해 사용한다
+/// (수동으로 좌표를 하나하나 맞추면 지역마다 어긋나기 쉽다). 넓이가 0에 가까운 퇴화
+/// 폴리곤(매우 가늘고 긴 조각)은 정점 평균으로 대체한다.
+Offset _polygonCentroid(List<Offset> points) {
+  if (points.length < 3) {
+    return points.isEmpty ? Offset.zero : points.first;
+  }
+  var area = 0.0;
+  var cx = 0.0;
+  var cy = 0.0;
+  for (var i = 0; i < points.length; i++) {
+    final p0 = points[i];
+    final p1 = points[(i + 1) % points.length];
+    final cross = p0.dx * p1.dy - p1.dx * p0.dy;
+    area += cross;
+    cx += (p0.dx + p1.dx) * cross;
+    cy += (p0.dy + p1.dy) * cross;
+  }
+  area *= 0.5;
+  if (area.abs() < 1e-6) {
+    final avgX =
+        points.map((p) => p.dx).reduce((a, b) => a + b) / points.length;
+    final avgY =
+        points.map((p) => p.dy).reduce((a, b) => a + b) / points.length;
+    return Offset(avgX, avgY);
+  }
+  return Offset(cx / (6 * area), cy / (6 * area));
+}
+
 /// 지역 진행도(n)별 색칠 단계 — 0 회색 / 1 라이트그린 / 2+ 진그린([description.md]).
 ({Color background, Color label}) mapFillColors(int progress) {
   if (progress <= 0) {
@@ -129,6 +180,7 @@ class _ChungbukMapPainter extends CustomPainter {
 
     for (final region in kRegionsInMapOrder) {
       final colors = mapFillColors(regionProgress[region.id] ?? 0);
+      final centroid = _polygonCentroid(_parseSvgPathPoints(region.path));
       final textPainter = TextPainter(
         text: TextSpan(
           text: region.name,
@@ -143,8 +195,8 @@ class _ChungbukMapPainter extends CustomPainter {
       textPainter.paint(
         canvas,
         Offset(
-          region.labelX - textPainter.width / 2,
-          region.labelY - textPainter.height / 2,
+          centroid.dx - textPainter.width / 2,
+          centroid.dy - textPainter.height / 2,
         ),
       );
     }
