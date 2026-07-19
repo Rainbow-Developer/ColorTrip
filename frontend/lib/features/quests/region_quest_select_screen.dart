@@ -17,6 +17,9 @@ import '../../state/repository_providers.dart';
 /// 나중에 지역 개요 화면에서 하나씩 수행한다(2026-07-09 사용자 확정).
 /// 이미 여행을 시작(또는 완료)한 지역이면 기존 선택을 유지한 채 이어서 고르고, 버튼 문구도
 /// "퀘스트 추가하기"로 바뀐다(KAN-46 — 완료된 지역도 재방문해 남은 퀘스트를 추가할 수 있다).
+/// 이미 완료한 퀘스트는 체크 해제할 수 없다(잠금) — 완료 기록은 히스토리로 남아야 하고,
+/// 체크 해제로 조용히 지워지면 안 된다(KAN-46 피드백). 대신 카드를 탭하면 퀘스트 상세(완료 표시
+/// 포함)로 이동해 히스토리를 확인할 수 있다.
 /// Figma 스펙(2026-07-09 공유) 반영: 검색·유형 필터, 카드별 "퀘스트 설명"으로 퀘스트 상세(정보만) 진입.
 class RegionQuestSelectScreen extends ConsumerStatefulWidget {
   const RegionQuestSelectScreen({super.key, required this.regionId});
@@ -51,13 +54,12 @@ class _RegionQuestSelectScreenState
         .watch(questRepositoryProvider)
         .byRegion(widget.regionId);
 
+    final progress = ref.watch(progressProvider);
+
     // 기존에 이 지역 여행에서 이미 고른 퀘스트가 있으면 그 상태로 시작한다(추가 선택 지원).
     final tripAlreadyStarted =
-        ref.read(progressProvider).tripStatusOf(widget.regionId) !=
-        RegionTripStatus.notStarted;
-    _selectedQuestIds ??= {
-      ...ref.read(progressProvider).tripQuestsOf(widget.regionId),
-    };
+        progress.tripStatusOf(widget.regionId) != RegionTripStatus.notStarted;
+    _selectedQuestIds ??= {...progress.tripQuestsOf(widget.regionId)};
 
     final availableTypes = <String>{for (final q in allRegionQuests) q.type};
     final filters = [
@@ -130,10 +132,13 @@ class _RegionQuestSelectScreenState
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final quest = quests[index];
+                    final completed = progress.isCompleted(quest.id);
                     return _SelectableQuestCard(
                       quest: quest,
                       regionName: region.name,
-                      selected: _selectedQuestIds!.contains(quest.id),
+                      selected:
+                          completed || _selectedQuestIds!.contains(quest.id),
+                      locked: completed,
                       onToggle: () => setState(() {
                         if (!_selectedQuestIds!.add(quest.id)) {
                           _selectedQuestIds!.remove(quest.id);
@@ -190,6 +195,7 @@ class _SelectableQuestCard extends StatelessWidget {
     required this.quest,
     required this.regionName,
     required this.selected,
+    required this.locked,
     required this.onToggle,
     required this.onViewDetail,
   });
@@ -197,13 +203,16 @@ class _SelectableQuestCard extends StatelessWidget {
   final Quest quest;
   final String regionName;
   final bool selected;
+
+  /// 이미 완료한 퀘스트 — 체크 해제할 수 없고, 탭하면 토글 대신 히스토리(퀘스트 상세)로 이동한다.
+  final bool locked;
   final VoidCallback onToggle;
   final VoidCallback onViewDetail;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onToggle,
+      onTap: locked ? onViewDetail : onToggle,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(10),
@@ -215,11 +224,15 @@ class _SelectableQuestCard extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              selected ? Icons.check_circle : Icons.circle_outlined,
+              locked
+                  ? Icons.lock
+                  : selected
+                  ? Icons.check_circle
+                  : Icons.circle_outlined,
               color: selected
                   ? AppColors.primaryDark
                   : AppColors.timelineDotGrey,
-              size: 22,
+              size: locked ? 18 : 22,
             ),
             const SizedBox(width: 8),
             Container(
@@ -250,12 +263,16 @@ class _SelectableQuestCard extends StatelessWidget {
                       _MiniBadge(
                         label: questTypeStyles[quest.type]?.label ?? quest.type,
                       ),
+                      if (locked) ...[
+                        const SizedBox(width: 4),
+                        const _MiniBadge(label: '완료됨'),
+                      ],
                       const Spacer(),
                       GestureDetector(
                         onTap: onViewDetail,
-                        child: const Text(
-                          '퀘스트 설명',
-                          style: TextStyle(
+                        child: Text(
+                          locked ? '히스토리 보기' : '퀘스트 설명',
+                          style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: AppColors.tripMutedBadgeFg,
