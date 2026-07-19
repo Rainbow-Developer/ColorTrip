@@ -12,9 +12,9 @@ import '../../state/repository_providers.dart';
 
 /// 여행하기 — 지도에서 지역을 탭하면 처음 보는 화면. Figma 스펙(2026-07-09 공유) 반영:
 /// 지역 이미지 placeholder, DNA 요약 카드, 추천 퀘스트 2건(정보만, 수행 버튼 없음),
-/// "퀘스트 선택하기" → 퀘스트 선택 화면. 여행이 이미 시작된 지역이면 대신 "내 여행 퀘스트"
+/// "퀘스트 선택하러 가기" → 퀘스트 선택 화면. 여행이 이미 시작된 지역이면 대신 "내 여행 퀘스트"
 /// 목록을 보여준다(2026-07-09 사용자 확정 — 퀘스트 선택은 다중 선택이며, 그 자리에서 수행하지 않는다).
-/// 온보딩 투어 2단계("퀘스트 선택하기" 버튼)·4단계("내 여행 퀘스트" 탭)를 코치마크로 안내한다.
+/// 온보딩 투어 2단계("퀘스트 선택하러 가기" 버튼)·4단계("내 여행 퀘스트" 탭)를 코치마크로 안내한다.
 class RegionOverviewScreen extends ConsumerStatefulWidget {
   const RegionOverviewScreen({super.key, required this.regionId});
 
@@ -181,7 +181,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   ElevatedButton(
                     key: _selectQuestButtonKey,
                     onPressed: () => context.push('/region/$regionId/quests'),
-                    child: const Text('퀘스트 선택하기'),
+                    child: const Text('퀘스트 선택하러 가기'),
                   ),
                 ],
               ],
@@ -193,7 +193,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
               stepIndex: 1,
               title: '퀘스트를 선택해보세요',
               body:
-                  '추천 퀘스트를 확인하고 "퀘스트 선택하기"를 누르면\n'
+                  '추천 퀘스트를 확인하고 "퀘스트 선택하러 가기"를 누르면\n'
                   '이번 여행에서 수행할 퀘스트를 여러 개 고를 수 있어요.',
             ),
           if (!tour.isDone && tour.step == 3 && tripStarted)

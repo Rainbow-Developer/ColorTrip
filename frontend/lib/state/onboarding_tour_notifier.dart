@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 온보딩 투어 전체 단계 수 — 지도 탭 → 퀘스트 선택하기 → 여행 시작하기 → 퀘스트 인증.
+/// 온보딩 투어 전체 단계 수 — 지도 탭 → 퀘스트 선택하러 가기 → 여행 시작하기 → 퀘스트 인증.
 const kOnboardingTotalSteps = 4;
 
 const _kStepKey = 'onboarding_step';
