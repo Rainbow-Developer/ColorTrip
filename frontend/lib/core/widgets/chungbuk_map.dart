@@ -85,6 +85,16 @@ Offset _polygonCentroid(List<Offset> points) {
   return Offset(cx / (6 * area), cy / (6 * area));
 }
 
+/// 지역별 파싱된 Path·중심 좌표 캐시 — 지역 도형 데이터는 정적이라 절대 바뀌지 않으므로,
+/// 매 프레임/매 탭마다 SVG 문자열을 다시 파싱하고 중심을 재계산할 필요가 없다.
+final Map<String, ({Path path, Offset centroid})> _regionGeometryCache = {
+  for (final region in kRegionsInMapOrder)
+    region.id: (
+      path: parseSimpleSvgPath(region.path),
+      centroid: _polygonCentroid(_parseSvgPathPoints(region.path)),
+    ),
+};
+
 /// 지역 진행도(n)별 색칠 단계 — 0 회색 / 1 라이트그린 / 2+ 진그린([description.md]).
 ({Color background, Color label}) mapFillColors(int progress) {
   if (progress <= 0) {
@@ -141,7 +151,7 @@ class ChungbukMap extends StatelessWidget {
       local.dy / scaleY + _viewBoxMinY,
     );
     for (final region in kRegionsInMapOrder) {
-      if (parseSimpleSvgPath(region.path).contains(svgPoint)) {
+      if (_regionGeometryCache[region.id]!.path.contains(svgPoint)) {
         onTap(region.id);
         return;
       }
@@ -172,7 +182,7 @@ class _ChungbukMapPainter extends CustomPainter {
     // 한 지역씩 도형+라벨을 번갈아 그리면 나중에 그려지는 인접 지역의 도형이 먼저 그린
     // 지역의 라벨을 덮어버릴 수 있다(예: 충주시가 음성군 라벨 위를 가림).
     for (final region in kRegionsInMapOrder) {
-      final path = parseSimpleSvgPath(region.path);
+      final path = _regionGeometryCache[region.id]!.path;
       final colors = mapFillColors(regionProgress[region.id] ?? 0);
       canvas.drawPath(path, Paint()..color = colors.background);
       canvas.drawPath(path, strokePaint);
@@ -180,7 +190,7 @@ class _ChungbukMapPainter extends CustomPainter {
 
     for (final region in kRegionsInMapOrder) {
       final colors = mapFillColors(regionProgress[region.id] ?? 0);
-      final centroid = _polygonCentroid(_parseSvgPathPoints(region.path));
+      final centroid = _regionGeometryCache[region.id]!.centroid;
       final textPainter = TextPainter(
         text: TextSpan(
           text: region.name,
