@@ -10,22 +10,30 @@ import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
-/// 이 화면은 한 번에 하나만 떠 있으므로 모듈 전역 키로 충분하다(코치마크 위치 측정용).
-final _selectQuestButtonKey = GlobalKey();
-final _firstTripQuestKey = GlobalKey();
-
 /// 여행하기 — 지도에서 지역을 탭하면 처음 보는 화면. Figma 스펙(2026-07-09 공유) 반영:
 /// 지역 이미지 placeholder, DNA 요약 카드, 추천 퀘스트 2건(정보만, 수행 버튼 없음),
 /// "퀘스트 선택하기" → 퀘스트 선택 화면. 여행이 이미 시작된 지역이면 대신 "내 여행 퀘스트"
 /// 목록을 보여준다(2026-07-09 사용자 확정 — 퀘스트 선택은 다중 선택이며, 그 자리에서 수행하지 않는다).
 /// 온보딩 투어 2단계("퀘스트 선택하기" 버튼)·4단계("내 여행 퀘스트" 탭)를 코치마크로 안내한다.
-class RegionOverviewScreen extends ConsumerWidget {
+class RegionOverviewScreen extends ConsumerStatefulWidget {
   const RegionOverviewScreen({super.key, required this.regionId});
 
   final String regionId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RegionOverviewScreen> createState() =>
+      _RegionOverviewScreenState();
+}
+
+class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
+  // 다른 지역의 RegionOverviewScreen이 스택에 동시에 남아 있어도(예: 라우트 전환 애니메이션,
+  // 브라우저 뒤로/앞으로가기) GlobalKey가 중복되지 않도록 인스턴스별로 소유한다.
+  final _selectQuestButtonKey = GlobalKey();
+  final _firstTripQuestKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    final regionId = widget.regionId;
     final region = ref.watch(regionRepositoryProvider).byId(regionId);
     if (region == null) {
       return const Scaffold(body: Center(child: Text('지역을 찾을 수 없어요')));

@@ -129,6 +129,8 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
             _BubblePlacement.center => Positioned(
               left: margin,
               right: margin,
+              top: margin,
+              bottom: margin,
               child: Center(child: bubble),
             ),
           },
