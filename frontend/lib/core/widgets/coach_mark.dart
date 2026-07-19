@@ -90,8 +90,10 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     return Positioned.fill(
       child: Stack(
         children: [
+          // AbsorbPointer로 스크림이 터치를 흡수해 뒤 화면의 탭·스크롤이 전달되지 않게 막는다
+          // (코치마크가 떠 있는 동안 실제 화면을 조작할 수 없어야 한다).
           Positioned.fill(
-            child: IgnorePointer(
+            child: AbsorbPointer(
               child: CustomPaint(painter: _SpotlightPainter(rect.inflate(8))),
             ),
           ),
