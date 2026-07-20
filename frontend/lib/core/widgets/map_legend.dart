@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../constants.dart';
+import 'chungbuk_map.dart';
 
-/// 지도 색칠 범례 — 미방문/1개 완료/2개 이상([core/widgets/chungbuk_map.dart]의 mapFillColors 대응).
+/// 지도 색칠 범례 — 지역 채색은 퀘스트 개수가 아니라 완료한 난이도 비율(0~100%)에 따라
+/// 연속적으로 진해지므로([core/widgets/chungbuk_map.dart]의 mapFillColors 대응, KAN-44),
+/// 대표값(0%/50%/100%) 3개로 그 흐름을 보여준다.
 class MapLegend extends StatelessWidget {
   const MapLegend({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: const [
-        _LegendItem(color: AppColors.mapEmpty, label: '미방문'),
-        SizedBox(width: 12),
-        _LegendItem(color: AppColors.mapStep1, label: '1개 완료'),
-        SizedBox(width: 12),
-        _LegendItem(color: AppColors.mapStep2, label: '2개 이상'),
+      children: [
+        _LegendItem(color: mapFillColors(0).background, label: '미방문'),
+        const SizedBox(width: 12),
+        _LegendItem(color: mapFillColors(0.5).background, label: '진행중'),
+        const SizedBox(width: 12),
+        _LegendItem(color: mapFillColors(1).background, label: '완료'),
       ],
     );
   }

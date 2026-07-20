@@ -32,8 +32,6 @@ class ProgressNotifier extends Notifier<ProgressState> {
     if (quest == null || state.isCompleted(questId)) return;
 
     final completed = {...state.completedQuestIds, questId};
-    final progress = {...state.regionProgress};
-    progress[quest.region] = (progress[quest.region] ?? 0) + 1;
 
     final entry = TimelineEntry(
       questId: questId,
@@ -45,11 +43,7 @@ class ProgressNotifier extends Notifier<ProgressState> {
       ...state.timeline.where((t) => t.questId != questId),
     ];
 
-    state = state.copyWith(
-      completedQuestIds: completed,
-      regionProgress: progress,
-      timeline: timeline,
-    );
+    state = state.copyWith(completedQuestIds: completed, timeline: timeline);
   }
 
   int totalReward() => kQuests

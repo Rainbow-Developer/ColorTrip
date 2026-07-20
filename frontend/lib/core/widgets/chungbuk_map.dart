@@ -95,22 +95,21 @@ final Map<String, ({Path path, Offset centroid})> _regionGeometryCache = {
     ),
 };
 
-/// 지역 진행도(n)별 색칠 단계 — 0 회색 / 1 라이트그린 / 2+ 진그린([description.md]).
-({Color background, Color label}) mapFillColors(int progress) {
-  if (progress <= 0) {
-    return (background: AppColors.mapEmpty, label: AppColors.mapEmptyLabel);
-  }
-  if (progress == 1) {
-    return (background: AppColors.mapStep1, label: AppColors.mapStep1Label);
-  }
-  return (background: AppColors.mapStep2, label: AppColors.mapStep2Label);
+/// 지역 채색 진하기(0.0 미완료 ~ 1.0 완전 채색) — 퀘스트 개수가 아니라 완료한 퀘스트의
+/// 난이도(reward) 비율로 정해진다([ProgressState.regionSaturation] 참고, KAN-44). 쉬운 퀘스트
+/// 여러 개보다 어려운 퀘스트 하나가 지도를 더 진하게 물들인다.
+({Color background, Color label}) mapFillColors(double saturation) {
+  final t = saturation.clamp(0.0, 1.0);
+  final background = Color.lerp(AppColors.mapEmpty, AppColors.primaryDark, t)!;
+  final label = t >= 0.55 ? Colors.white : AppColors.mapEmptyLabel;
+  return (background: background, label: label);
 }
 
 /// 충북 11개 시·군 색칠 지도. viewBox 원본 좌표계는 "10 10 480 460".
 class ChungbukMap extends StatelessWidget {
   const ChungbukMap({
     super.key,
-    required this.regionProgress,
+    required this.regionSaturation,
     this.onRegionTap,
   });
 
@@ -119,7 +118,7 @@ class ChungbukMap extends StatelessWidget {
   static const double _viewBoxWidth = 480;
   static const double _viewBoxHeight = 460;
 
-  final Map<String, int> regionProgress;
+  final Map<String, double> regionSaturation;
   final ValueChanged<String>? onRegionTap;
 
   @override
@@ -133,7 +132,7 @@ class ChungbukMap extends StatelessWidget {
             onTapUp: (details) => _handleTap(details.localPosition, size),
             child: CustomPaint(
               size: size,
-              painter: _ChungbukMapPainter(regionProgress: regionProgress),
+              painter: _ChungbukMapPainter(regionSaturation: regionSaturation),
             ),
           );
         },
@@ -160,9 +159,9 @@ class ChungbukMap extends StatelessWidget {
 }
 
 class _ChungbukMapPainter extends CustomPainter {
-  _ChungbukMapPainter({required this.regionProgress});
+  _ChungbukMapPainter({required this.regionSaturation});
 
-  final Map<String, int> regionProgress;
+  final Map<String, double> regionSaturation;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -183,13 +182,13 @@ class _ChungbukMapPainter extends CustomPainter {
     // 지역의 라벨을 덮어버릴 수 있다(예: 충주시가 음성군 라벨 위를 가림).
     for (final region in kRegionsInMapOrder) {
       final path = _regionGeometryCache[region.id]!.path;
-      final colors = mapFillColors(regionProgress[region.id] ?? 0);
+      final colors = mapFillColors(regionSaturation[region.id] ?? 0);
       canvas.drawPath(path, Paint()..color = colors.background);
       canvas.drawPath(path, strokePaint);
     }
 
     for (final region in kRegionsInMapOrder) {
-      final colors = mapFillColors(regionProgress[region.id] ?? 0);
+      final colors = mapFillColors(regionSaturation[region.id] ?? 0);
       final centroid = _regionGeometryCache[region.id]!.centroid;
       final textPainter = TextPainter(
         text: TextSpan(
@@ -216,5 +215,5 @@ class _ChungbukMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ChungbukMapPainter oldDelegate) =>
-      oldDelegate.regionProgress != regionProgress;
+      oldDelegate.regionSaturation != regionSaturation;
 }

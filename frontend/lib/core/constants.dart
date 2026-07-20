@@ -16,13 +16,9 @@ class AppColors {
   static const surfaceMuted = Color(0xFFF5F5F0);
   static const background = Color(0xFFFAFAF7);
   static const danger = Color(0xFFE24B4A);
-  // 지도 색칠 3단계(Figma 2026-07-08 "지도" 화면 반영) — 미방문/1개 완료/2개 이상.
+  // 지도 색칠 — 미방문(회색)에서 완료(primaryDark)까지 채도로 연속 보간한다(KAN-44).
   static const mapEmpty = Color(0xFFCCCCCC);
   static const mapEmptyLabel = Color(0xFF9A9A90);
-  static const mapStep1 = Color(0xFF97C459);
-  static const mapStep1Label = Color(0xFF234D12);
-  static const mapStep2 = Color(0xFF378ADD);
-  static const mapStep2Label = Color(0xFFFFFFFF);
 
   // 스플래시(Figma) — color-spring-green-* / color-yellow-50 토큰.
   static const splashCardBackground = Color(0xFFE8EFE4);

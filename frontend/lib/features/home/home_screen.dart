@@ -80,7 +80,10 @@ class HomeScreen extends ConsumerWidget {
                   KeyedSubtree(
                     key: _mapKey,
                     child: ChungbukMap(
-                      regionProgress: progress.regionProgress,
+                      regionSaturation: {
+                        for (final region in kRegions)
+                          region.id: progress.regionSaturation(region.id),
+                      },
                       onRegionTap: (regionId) =>
                           context.push('/region/$regionId'),
                     ),

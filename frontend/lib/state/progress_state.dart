@@ -1,5 +1,8 @@
 import 'dart:typed_data';
 
+import '../data/static/quests_data.dart';
+import '../data/static/regions_data.dart';
+
 /// 닉네임 미설정 시 화면 전반(마이·내 정보 수정)에서 공통으로 쓰는 기본값.
 const kDefaultNickname = '여행자닉네임';
 
@@ -47,7 +50,6 @@ enum RegionTripStatus {
 class ProgressState {
   const ProgressState({
     required this.completedQuestIds,
-    required this.regionProgress,
     required this.timeline,
     required this.dnaType,
     required this.tripQuests,
@@ -56,14 +58,12 @@ class ProgressState {
 
   const ProgressState.empty()
     : completedQuestIds = const {},
-      regionProgress = const {},
       timeline = const [],
       dnaType = null,
       tripQuests = const {},
       nickname = null;
 
   final Set<String> completedQuestIds;
-  final Map<String, int> regionProgress;
   final List<TimelineEntry> timeline;
   final String? dnaType;
 
@@ -83,10 +83,23 @@ class ProgressState {
     return null;
   }
 
-  int progressOf(String regionId) => regionProgress[regionId] ?? 0;
+  /// 지역의 채색 진하기(0.0~1.0) — 퀘스트 개수가 아니라 완료한 퀘스트의 난이도(reward) 합을
+  /// 그 지역 전체 난이도 합으로 나눈 비율이다(KAN-44 — 쉬운 퀘스트 여러 개보다 어려운 퀘스트
+  /// 하나가 지도를 더 진하게 물들인다).
+  double regionSaturation(String regionId) {
+    final regionQuests = questsByRegion(regionId);
+    if (regionQuests.isEmpty) return 0;
+    final totalReward = regionQuests.fold<int>(0, (sum, q) => sum + q.reward);
+    if (totalReward == 0) return 0;
+    final doneReward = regionQuests
+        .where((q) => isCompleted(q.id))
+        .fold<int>(0, (sum, q) => sum + q.reward);
+    return (doneReward / totalReward).clamp(0.0, 1.0);
+  }
 
+  /// 완전히 채색된(채도 100%) 지역 수 — "완료 지역" 통계에서 쓴다.
   int get completedRegionCount =>
-      regionProgress.values.where((count) => count > 0).length;
+      kRegions.where((r) => regionSaturation(r.id) >= 1.0).length;
 
   /// 지역의 여행 시작 시 선택한 퀘스트 목록(없으면 빈 집합).
   Set<String> tripQuestsOf(String regionId) => tripQuests[regionId] ?? const {};
@@ -100,7 +113,6 @@ class ProgressState {
 
   ProgressState copyWith({
     Set<String>? completedQuestIds,
-    Map<String, int>? regionProgress,
     List<TimelineEntry>? timeline,
     String? dnaType,
     Map<String, Set<String>>? tripQuests,
@@ -108,7 +120,6 @@ class ProgressState {
   }) {
     return ProgressState(
       completedQuestIds: completedQuestIds ?? this.completedQuestIds,
-      regionProgress: regionProgress ?? this.regionProgress,
       timeline: timeline ?? this.timeline,
       dnaType: dnaType ?? this.dnaType,
       tripQuests: tripQuests ?? this.tripQuests,
