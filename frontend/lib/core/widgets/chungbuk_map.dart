@@ -101,7 +101,11 @@ final Map<String, ({Path path, Offset centroid})> _regionGeometryCache = {
 ({Color background, Color label}) mapFillColors(double saturation) {
   final t = saturation.clamp(0.0, 1.0);
   final background = Color.lerp(AppColors.mapEmpty, AppColors.primaryDark, t)!;
-  final label = t >= 0.55 ? Colors.white : AppColors.mapEmptyLabel;
+  // 고정 임계값 대신 배경의 실제 명도로 라벨 색을 고른다 — 회색 라벨과 배경의 명도가
+  // 비슷해지는 중간 채도 구간(예: 40%대)에서 글씨가 거의 안 보이던 문제가 있었다.
+  final label = background.computeLuminance() > 0.4
+      ? AppColors.mapEmptyLabel
+      : Colors.white;
   return (background: background, label: label);
 }
 
