@@ -1,4 +1,5 @@
 """quests — 비즈니스 로직 계층."""
+from __future__ import annotations
 
 from uuid import UUID
 
@@ -24,6 +25,7 @@ from app.quests.schemas import (
     RecommendedQuestItem,
     VerifyResultData,
 )
+from app.timeline.service import handle_quest_completion
 
 
 async def list_quests(
@@ -155,6 +157,8 @@ async def verify_quest(
                 session, user_id, quest_id
             ):
                 await journeys_service.recalculate_status(session, journey)
+            # 타임라인 및 지도 색칠 처리 연동
+            await handle_quest_completion(session, user_id, quest_id, progress.id)
         await session.commit()
     except IntegrityError:
         # 동시 중복 요청(진행이 없던 상태에서 병렬 인증): 먼저 만들어진 진행 결과를 반환.

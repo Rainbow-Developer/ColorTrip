@@ -1,11 +1,11 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from app.auth.models import User
-from sqlalchemy import select, update, func
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.auth.models import User
 from app.core.enums import DnaType
 from app.trip_dna.models import TripQuestion, TripQuestionOption, TripReply
 

@@ -7,7 +7,7 @@ from app.auth.models import User
 from app.core.enums import DnaType
 from app.trip_dna import repository
 from app.trip_dna.models import TripQuestion, TripReply
-from app.trip_dna.schemas import ReplySubmitItem, DNAResultResponse
+from app.trip_dna.schemas import DNAResultResponse, ReplySubmitItem
 
 # 동률 점수 발생 시 우선순위 가중치 (낮을수록 더 높은 우선순위)
 TIE_BREAKER_PRIORITY = {

@@ -1,9 +1,9 @@
 """trip_dna — 여행 성향 설문과 DNA 결과 이력."""
+from __future__ import annotations
 
 import uuid
-from typing import Any
 
-from sqlalchemy import ForeignKey, Index, Integer, String, Text, desc
+from sqlalchemy import ForeignKey, Index, Integer, Text, desc
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
