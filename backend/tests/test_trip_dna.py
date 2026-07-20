@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
+
 from app.core.database import AsyncSessionLocal
 from app.trip_dna.models import TripQuestion, TripQuestionOption
 from tests.helpers import auth_headers  # 인증 헤더를 만들어주는 헬퍼 임포트
