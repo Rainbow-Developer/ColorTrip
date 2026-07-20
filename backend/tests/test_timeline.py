@@ -1,8 +1,9 @@
-import datetime
+from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
 
+from app.core.base import now_kst
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
 
@@ -83,8 +84,8 @@ async def test_get_timeline_filtering(client: AsyncClient) -> None:
         headers=headers,
     )
 
-    # 1. 올해 & 이번 달 필터로 조회 시 데이터가 잡혀야 함
-    now = datetime.datetime.now()
+    # 1. 올해 & 이번 달 필터로 조회 시 데이터가 잡혀야 함 (KST 기준)
+    now = now_kst()
     resp_filtered = await client.get(
         "/api/v1/users/me/timeline",
         params={"year": now.year, "month": now.month},

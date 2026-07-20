@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import extract, select
+from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -33,7 +33,7 @@ class TimelineRepository:
         year: int | None = None,
         month: int | None = None,
     ) -> list[TimelineEvent]:
-        """특정 유저의 타임라인을 최신순으로 가져옵니다. (날짜 범위 쿼리로 인덱스 스캔 가속)"""
+        """특정 유저의 타임라인을 최신순으로 가져옵니다. (KST 시간 범위 기반 인덱스 조회)"""
         query = (
             select(TimelineEvent)
             .options(joinedload(TimelineEvent.region))  # 시·군 테이블 조인 로드
@@ -41,17 +41,19 @@ class TimelineRepository:
             .order_by(TimelineEvent.occurred_at.desc())
         )
 
+        # 비즈니스 시간 로직(now_kst)과의 정합성을 위해 KST timezone 객체 사용
+        kst_tz = timezone(timedelta(hours=9))
+
         if year is not None:
-            # 3.9 호환성을 위해 timezone.utc(UP017 비활성화) 유지
             if month is not None:
-                start_date = datetime(year, month, 1, tzinfo=timezone.utc)  # noqa: UP017
+                start_date = datetime(year, month, 1, tzinfo=kst_tz)
                 if month == 12:
-                    end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)  # noqa: UP017
+                    end_date = datetime(year + 1, 1, 1, tzinfo=kst_tz)
                 else:
-                    end_date = datetime(year, month + 1, 1, tzinfo=timezone.utc)  # noqa: UP017
+                    end_date = datetime(year, month + 1, 1, tzinfo=kst_tz)
             else:
-                start_date = datetime(year, 1, 1, tzinfo=timezone.utc)  # noqa: UP017
-                end_date = datetime(year + 1, 1, 1, tzinfo=timezone.utc)  # noqa: UP017
+                start_date = datetime(year, 1, 1, tzinfo=kst_tz)
+                end_date = datetime(year + 1, 1, 1, tzinfo=kst_tz)
 
             query = (
                 query
@@ -59,8 +61,10 @@ class TimelineRepository:
                 .where(TimelineEvent.occurred_at < end_date)
             )
         elif month is not None:
-            # 연도가 없고 월만 있는 이례적인 경우에 한해서만 extract 사용
-            query = query.where(extract("month", TimelineEvent.occurred_at) == month)
+            # 연도 없이 월 단독 필터 시 DB 타임존 차이에 따른 오류 방지를 위해 KST 변환 후 추출
+            query = query.where(
+                extract("month", func.timezone("Asia/Seoul", TimelineEvent.occurred_at)) == month
+            )
 
         result = await session.execute(query)
         return list(result.scalars().all())
