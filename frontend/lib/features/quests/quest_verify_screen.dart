@@ -320,12 +320,41 @@ class _PhotoVerifyBody extends StatefulWidget {
 }
 
 class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
+  // "업로드 가이드"에 안내한 상한과 맞춘다.
+  static const _maxPhotoBytes = 5 * 1024 * 1024;
+
   Uint8List? _photoBytes;
 
   Future<void> _pickPhoto(ImageSource source) async {
-    final picked = await ImagePicker().pickImage(source: source);
-    if (picked == null) return;
-    final bytes = await picked.readAsBytes();
+    final XFile? picked;
+    try {
+      // maxWidth/imageQuality로 대부분의 카메라 사진을 5MB 이하로 미리 줄인다.
+      picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1920,
+        imageQuality: 85,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      showAppToast(context, '사진을 불러오지 못했어요. 카메라·사진 접근 권한을 확인해주세요.');
+      return;
+    }
+    if (picked == null) return; // 사용자가 선택을 취소함 — 에러 아님.
+
+    final Uint8List bytes;
+    try {
+      bytes = await picked.readAsBytes();
+    } catch (_) {
+      if (!mounted) return;
+      showAppToast(context, '사진을 불러오지 못했어요. 다시 시도해주세요.');
+      return;
+    }
+    if (bytes.length > _maxPhotoBytes) {
+      if (!mounted) return;
+      showAppToast(context, '사진 용량은 5MB 이하만 가능해요.');
+      return;
+    }
+
     if (!mounted) return;
     setState(() => _photoBytes = bytes);
   }

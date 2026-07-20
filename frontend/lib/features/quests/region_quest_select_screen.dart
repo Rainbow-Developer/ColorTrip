@@ -223,16 +223,20 @@ class _SelectableQuestCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              locked
-                  ? Icons.lock
-                  : selected
-                  ? Icons.check_circle
-                  : Icons.circle_outlined,
-              color: selected
-                  ? AppColors.primaryDark
-                  : AppColors.timelineDotGrey,
-              size: locked ? 18 : 22,
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: Icon(
+                locked
+                    ? Icons.lock
+                    : selected
+                    ? Icons.check_circle
+                    : Icons.circle_outlined,
+                color: selected
+                    ? AppColors.primaryDark
+                    : AppColors.timelineDotGrey,
+                size: locked ? 18 : 22,
+              ),
             ),
             const SizedBox(width: 8),
             Container(
