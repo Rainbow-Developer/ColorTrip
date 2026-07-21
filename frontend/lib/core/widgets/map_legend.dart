@@ -2,50 +2,41 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 
-/// 지도 색칠 범례 — 미방문/1개 완료/2개 이상([core/widgets/chungbuk_map.dart]의 mapFillColors 대응).
+/// 지도 색칠 범례 — 지역 채색이 완료 개수가 아니라 난이도 비율(0~100%)로 연속적으로
+/// 진해지므로([core/widgets/chungbuk_map.dart]의 mapFillColors 대응, KAN-44), 3단계 스와치 대신
+/// 미방문→완료를 잇는 그라데이션 바로 그 흐름을 그대로 보여준다.
 class MapLegend extends StatelessWidget {
   const MapLegend({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: const [
-        _LegendItem(color: AppColors.mapEmpty, label: '미방문'),
-        SizedBox(width: 12),
-        _LegendItem(color: AppColors.mapStep1, label: '1개 완료'),
-        SizedBox(width: 12),
-        _LegendItem(color: AppColors.mapStep2, label: '2개 이상'),
-      ],
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.color, required this.label});
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
+        const Text(
+          '여행 채도',
+          style: TextStyle(fontSize: 11, color: AppColors.tripMutedBadgeFg),
+        ),
+        const SizedBox(width: 8),
+        const Text(
+          '0%',
+          style: TextStyle(fontSize: 10, color: AppColors.tripMutedBadgeFg),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Container(
+            height: 8,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4),
+              gradient: const LinearGradient(
+                colors: [AppColors.mapEmpty, AppColors.primaryDark],
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppColors.tripMutedBadgeFg,
-          ),
+        const Text(
+          '100%',
+          style: TextStyle(fontSize: 10, color: AppColors.tripMutedBadgeFg),
         ),
       ],
     );
