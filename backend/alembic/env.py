@@ -20,6 +20,7 @@ from app.journeys.models import Journey, JourneyQuest  # noqa: F401
 from app.progress.models import MapProgress  # noqa: F401
 from app.quests.models import Quest, QuestProgress  # noqa: F401
 from app.regions.models import Region  # noqa: F401
+from app.shares.models import Share  # noqa: F401
 from app.timeline.models import TimelineEvent  # noqa: F401
 from app.trip_dna.models import (  # noqa: F401
     TripQuestion,
