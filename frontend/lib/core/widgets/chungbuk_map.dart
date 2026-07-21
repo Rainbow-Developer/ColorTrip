@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/static/regions_data.dart';
@@ -184,10 +185,12 @@ class _ChungbukMapPainter extends CustomPainter {
     // 지역 도형(채우기+테두리)을 먼저 전부 그리고, 라벨은 그 뒤에 별도 패스로 그린다.
     // 한 지역씩 도형+라벨을 번갈아 그리면 나중에 그려지는 인접 지역의 도형이 먼저 그린
     // 지역의 라벨을 덮어버릴 수 있다(예: 충주시가 음성군 라벨 위를 가림).
+    final fillPaint = Paint();
     for (final region in kRegionsInMapOrder) {
       final path = _regionGeometryCache[region.id]!.path;
       final colors = mapFillColors(regionSaturation[region.id] ?? 0);
-      canvas.drawPath(path, Paint()..color = colors.background);
+      fillPaint.color = colors.background;
+      canvas.drawPath(path, fillPaint);
       canvas.drawPath(path, strokePaint);
     }
 
@@ -219,5 +222,5 @@ class _ChungbukMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ChungbukMapPainter oldDelegate) =>
-      oldDelegate.regionSaturation != regionSaturation;
+      !mapEquals(oldDelegate.regionSaturation, regionSaturation);
 }
