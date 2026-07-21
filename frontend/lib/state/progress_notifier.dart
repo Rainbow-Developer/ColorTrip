@@ -33,6 +33,11 @@ class ProgressNotifier extends Notifier<ProgressState> {
 
     final completed = {...state.completedQuestIds, questId};
 
+    // 서버 응답을 기다리지 않고 즉시 +1(낙관적 갱신) — 다음 동기화 때
+    // syncRegionProgressFromServer가 실제 completed_count로 덮어쓴다.
+    final progress = {...state.regionProgress};
+    progress[quest.region] = (progress[quest.region] ?? 0) + 1;
+
     final entry = TimelineEntry(
       questId: questId,
       completedAt: DateTime.now(),
@@ -43,7 +48,11 @@ class ProgressNotifier extends Notifier<ProgressState> {
       ...state.timeline.where((t) => t.questId != questId),
     ];
 
-    state = state.copyWith(completedQuestIds: completed, timeline: timeline);
+    state = state.copyWith(
+      completedQuestIds: completed,
+      regionProgress: progress,
+      timeline: timeline,
+    );
   }
 
   /// 서버(`GET /users/me/map`) 진행도를 로컬 상태에 반영한다([020-frontend-map-sync]).
