@@ -10,5 +10,6 @@ class MapProgressRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     region_id: UUID
+    region_name: str
     completed_count: int
     first_colored_at: datetime | None

@@ -49,8 +49,10 @@ async def test_my_map_returns_all_regions(client: AsyncClient) -> None:
     assert len(items) == 2
 
     by_region = {item["region_id"]: item for item in items}
+    assert by_region[seed["danyang_id"]]["region_name"] == "단양군"
     assert by_region[seed["danyang_id"]]["completed_count"] == 3
     assert by_region[seed["danyang_id"]]["first_colored_at"] is not None
+    assert by_region[seed["cheongju_id"]]["region_name"] == "청주시"
     assert by_region[seed["cheongju_id"]]["completed_count"] == 0
     assert by_region[seed["cheongju_id"]]["first_colored_at"] is None
 

@@ -16,7 +16,7 @@ class DioMapRepository implements MapRepository {
   Future<List<MapRegionProgress>> fetchMyMap() async {
     final response = await _dio.get('/users/me/map');
     final data = response.data as Map<String, dynamic>;
-    final items = (data['data'] as Map<String, dynamic>)['items'] as List;
+    final items = data['data'] as List;
     return items
         .cast<Map<String, dynamic>>()
         .map(MapRegionProgress.fromJson)

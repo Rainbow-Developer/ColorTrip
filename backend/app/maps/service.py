@@ -13,6 +13,7 @@ async def get_my_map(session: AsyncSession, user_id: UUID) -> list[MapProgressRe
     return [
         MapProgressRead(
             region_id=region.id,
+            region_name=region.name,
             completed_count=progress.completed_count if progress else 0,
             first_colored_at=progress.first_colored_at if progress else None,
         )
