@@ -81,6 +81,9 @@ async def test_journey_migration_schema_is_preserved(client: AsyncClient) -> Non
         journey_quests_uniques = await connection.run_sync(
             _unique_constraints_for("journey_quests")
         )
+        quest_progress_uniques = await connection.run_sync(
+            _unique_constraints_for("quest_progress")
+        )
         journey_quests_fks = await connection.run_sync(_foreign_keys_for("journey_quests"))
         quest_progress_columns = await connection.run_sync(_columns_for("quest_progress"))
         quest_progress_fks = await connection.run_sync(_foreign_keys_for("quest_progress"))
@@ -97,6 +100,7 @@ async def test_journey_migration_schema_is_preserved(client: AsyncClient) -> Non
         "completed_at",
     } <= journeys_columns.keys()
     assert journey_quests_uniques >= {("journey_id", "quest_id")}
+    assert quest_progress_uniques >= {("user_id", "quest_id")}
     assert journey_quests_fks["journey_id"] == ("journeys", ("id",), None)
     assert journey_quests_fks["quest_id"] == ("quests", ("id",), None)
     assert {"journey_id", "quiz_answer"} <= quest_progress_columns.keys()
