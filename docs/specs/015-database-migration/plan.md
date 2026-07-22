@@ -102,7 +102,7 @@ flowchart TD
 - [x] 스키마 regression 테스트 추가.
 - [x] ORM 모델 추가/수정.
 - [x] Alembic env import 추가.
-- [x] `d7b712f1a245` 뒤 새 Alembic revision 작성.
+- [x] 기존 Alembic 체인 `f4b2a9c67e18` → `a4f2c8d1e9b0` 검증(중복 Journey revision 미추가).
 - [x] 테스트 fixture DB reset 로직 갱신.
 - [x] Alembic upgrade/downgrade와 품질 게이트 검증.
 - [x] API 후속 GitHub Issue 생성 및 문서 반영.

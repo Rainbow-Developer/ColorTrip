@@ -39,10 +39,15 @@ async def test_existing_tables_are_additively_preserved(client: AsyncClient) -> 
         regions_columns = await connection.run_sync(_columns_for("regions"))
         quests_columns = await connection.run_sync(_columns_for("quests"))
 
-    assert {"dna", "profile_image", "withdrawal_grace_until", "anonymized_at"} <= users_columns
+    assert {
+        "dna",
+        "profile_image",
+        "withdrawal_grace_until",
+        "anonymized_at",
+    } <= users_columns.keys()
     assert refresh_indexes["ix_refresh_tokens_token_hash"]["unique"] is True
-    assert {"center_lat", "center_lng"} <= regions_columns
-    assert {"content_type_id", "lat", "lng", "verify_radius"} <= quests_columns
+    assert {"center_lat", "center_lng"} <= regions_columns.keys()
+    assert {"content_type_id", "lat", "lng", "verify_radius"} <= quests_columns.keys()
 
 
 async def test_new_tables_have_required_constraints(client: AsyncClient) -> None:
@@ -80,15 +85,30 @@ async def test_journey_migration_schema_is_preserved(client: AsyncClient) -> Non
         quest_progress_columns = await connection.run_sync(_columns_for("quest_progress"))
         quest_progress_fks = await connection.run_sync(_foreign_keys_for("quest_progress"))
         journeys_indexes = await connection.run_sync(_indexes_for("journeys"))
+        journeys_fks = await connection.run_sync(_foreign_keys_for("journeys"))
+        quest_progress_indexes = await connection.run_sync(_indexes_for("quest_progress"))
 
     assert {"journeys", "journey_quests"} <= tables
-    assert {"user_id", "region_id", "title", "status", "completed_at"} <= journeys_columns
+    assert {
+        "user_id",
+        "region_id",
+        "title",
+        "status",
+        "completed_at",
+    } <= journeys_columns.keys()
     assert journey_quests_uniques >= {("journey_id", "quest_id")}
     assert journey_quests_fks["journey_id"] == ("journeys", ("id",), None)
     assert journey_quests_fks["quest_id"] == ("quests", ("id",), None)
-    assert {"journey_id", "quiz_answer"} <= quest_progress_columns
+    assert {"journey_id", "quiz_answer"} <= quest_progress_columns.keys()
+    assert quest_progress_columns["journey_id"]["nullable"] is True
     assert quest_progress_fks["journey_id"] == ("journeys", ("id",), None)
+    assert journeys_fks["user_id"] == ("users", ("id",), None)
+    assert journeys_fks["region_id"] == ("regions", ("id",), None)
     assert journeys_indexes["ix_journeys_user_status"] == {
+        "columns": ("user_id", "status"),
+        "unique": False,
+    }
+    assert quest_progress_indexes["ix_quest_progress_user_status"] == {
         "columns": ("user_id", "status"),
         "unique": False,
     }
@@ -128,6 +148,7 @@ async def test_new_models_insert_with_application_defaults(client: AsyncClient) 
     _ = client
 
     from app.auth.models import User
+    from app.core.base import now_kst
     from app.core.database import AsyncSessionLocal
     from app.progress.models import MapProgress
     from app.quests.models import Quest, QuestProgress
@@ -163,6 +184,7 @@ async def test_new_models_insert_with_application_defaults(client: AsyncClient) 
             user_id=user.id,
             quest_progress_id=quest_progress.id,
             event_type="quest_completed",
+            occurred_at=now_kst(),
         )
         question = TripQuestion(question="어떤 여행을 선호하나요?")
         session.add_all([timeline_event, question])
@@ -195,9 +217,9 @@ async def test_new_models_insert_with_application_defaults(client: AsyncClient) 
         assert dna_history.id is not None
 
 
-def _columns_for(table_name: str) -> Callable[[sa.Connection], set[str]]:
-    def inspect_columns(connection: sa.Connection) -> set[str]:
-        return {column["name"] for column in sa.inspect(connection).get_columns(table_name)}
+def _columns_for(table_name: str) -> Callable[[sa.Connection], dict[str, Any]]:
+    def inspect_columns(connection: sa.Connection) -> dict[str, Any]:
+        return {column["name"]: column for column in sa.inspect(connection).get_columns(table_name)}
 
     return inspect_columns
 
