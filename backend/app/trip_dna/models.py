@@ -1,9 +1,9 @@
 """trip_dna — 여행 성향 설문과 DNA 결과 이력."""
+from __future__ import annotations
 
 import uuid
-from typing import Any
 
-from sqlalchemy import ForeignKey, Index, Integer, String, Text, desc
+from sqlalchemy import ForeignKey, Index, Integer, Text, desc
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,7 +17,7 @@ class TripQuestion(UUIDPKMixin, TimestampMixin, Base):
     question: Mapped[str] = mapped_column(Text, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
-    options: Mapped[list["TripQuestionOption"]] = relationship(
+    options: Mapped[list[TripQuestionOption]] = relationship(
         back_populates="question", cascade="all, delete-orphan"
     )
 
@@ -35,7 +35,7 @@ class TripQuestionOption(UUIDPKMixin, TimestampMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # N:1 역관계 정의
-    question: Mapped["TripQuestion"] = relationship(back_populates="options")
+    question: Mapped[TripQuestion] = relationship(back_populates="options")
 
 
 class TripReply(UUIDPKMixin, TimestampMixin, Base):

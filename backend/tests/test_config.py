@@ -47,12 +47,24 @@ def test_non_local_env_rejects_missing_kakao_redirect_uri() -> None:
         )
 
 
+def test_non_local_env_rejects_wildcard_cors() -> None:
+    with pytest.raises(ValueError, match="CORS_ALLOWED_ORIGINS"):
+        _settings(
+            app_env="dev",
+            jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
+            kakao_rest_api_key="test-kakao-rest-api-key",
+            kakao_redirect_uri="https://example.com/auth/kakao/callback",
+            cors_allowed_origins="*",
+        )
+
+
 def test_non_local_env_accepts_required_auth_settings() -> None:
     settings = _settings(
         app_env="dev",
         jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
         kakao_rest_api_key="test-kakao-rest-api-key",
         kakao_redirect_uri="https://example.com/auth/kakao/callback",
+        cors_allowed_origins="https://example.com",
     )
 
     assert settings.app_env == "dev"
