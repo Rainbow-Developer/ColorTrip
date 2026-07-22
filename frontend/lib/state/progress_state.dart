@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import '../data/static/quests_data.dart';
 import '../data/static/regions_data.dart';
 
 /// 닉네임 미설정 시 화면 전반(마이·내 정보 수정)에서 공통으로 쓰는 기본값.
@@ -54,6 +53,7 @@ class ProgressState {
     required this.dnaType,
     required this.tripQuests,
     required this.nickname,
+    required this.regionProgress,
   });
 
   const ProgressState.empty()
@@ -61,7 +61,8 @@ class ProgressState {
       timeline = const [],
       dnaType = null,
       tripQuests = const {},
-      nickname = null;
+      nickname = null,
+      regionProgress = const {};
 
   final Set<String> completedQuestIds;
   final List<TimelineEntry> timeline;
@@ -73,6 +74,11 @@ class ProgressState {
   /// 사용자가 내 정보 수정에서 설정한 닉네임(없으면 [kDefaultNickname] 표시).
   final String? nickname;
 
+  /// 지역별 완료 퀘스트 개수 — 로컬 완료 시 즉시 +1(낙관적 갱신), 앱 진입 시 백엔드
+  /// (`GET /users/me/map`)의 completed_count로 덮어써 동기화한다([020-frontend-map-sync],
+  /// `ProgressNotifier.syncRegionProgressFromServer`).
+  final Map<String, int> regionProgress;
+
   bool isCompleted(String questId) => completedQuestIds.contains(questId);
 
   /// 완료 기록(시각·사진) 조회 — 퀘스트 상세의 "히스토리 보기"에서 사용한다.
@@ -83,18 +89,17 @@ class ProgressState {
     return null;
   }
 
-  /// 지역의 채색 진하기(0.0~1.0) — 퀘스트 개수가 아니라 완료한 퀘스트의 난이도(reward) 합을
-  /// 그 지역 전체 난이도 합으로 나눈 비율이다(KAN-44 — 쉬운 퀘스트 여러 개보다 어려운 퀘스트
-  /// 하나가 지도를 더 진하게 물들인다).
+  /// 완료 개수가 이 값 이상이면 채도 100% — 지역별 퀘스트 개수가 제각각이라(1개~3개)
+  /// 지역 전체 개수 대비 비율로 계산하면 퀘스트가 적은 지역만 쉽게 꽉 차버리는 문제가 있어,
+  /// 모든 지역에 같은 기준선을 쓴다. `completed_count`는 재방문 시 계속 늘어날 수 있어
+  /// 정적 퀘스트 개수와 무관하다(KAN-46).
+  static const _saturationCap = 6;
+
+  /// 지역의 채색 진하기(0.0~1.0) — 그 지역 완료 퀘스트 개수([regionProgress], 백엔드
+  /// completed_count와 동기화)를 [_saturationCap]으로 나눈 비율이다.
   double regionSaturation(String regionId) {
-    final regionQuests = questsByRegion(regionId);
-    if (regionQuests.isEmpty) return 0;
-    final totalReward = regionQuests.fold<int>(0, (sum, q) => sum + q.reward);
-    if (totalReward == 0) return 0;
-    final doneReward = regionQuests
-        .where((q) => isCompleted(q.id))
-        .fold<int>(0, (sum, q) => sum + q.reward);
-    return (doneReward / totalReward).clamp(0.0, 1.0);
+    final completed = regionProgress[regionId] ?? 0;
+    return (completed / _saturationCap).clamp(0.0, 1.0);
   }
 
   /// 완전히 채색된(채도 100%) 지역 수 — "완료 지역" 통계에서 쓴다.
@@ -117,6 +122,7 @@ class ProgressState {
     String? dnaType,
     Map<String, Set<String>>? tripQuests,
     String? nickname,
+    Map<String, int>? regionProgress,
   }) {
     return ProgressState(
       completedQuestIds: completedQuestIds ?? this.completedQuestIds,
@@ -124,6 +130,7 @@ class ProgressState {
       dnaType: dnaType ?? this.dnaType,
       tripQuests: tripQuests ?? this.tripQuests,
       nickname: nickname ?? this.nickname,
+      regionProgress: regionProgress ?? this.regionProgress,
     );
   }
 }

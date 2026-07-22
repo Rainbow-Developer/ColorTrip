@@ -85,6 +85,15 @@ Region? regionById(String id) {
   return null;
 }
 
+/// 백엔드 region_name(예: "청주시") → 로컬 지역 id(예: 'cheongju') 매칭
+/// ([020-frontend-map-sync] 참고). 못 찾으면 null(백엔드에만 있는 지역은 조용히 무시).
+String? regionIdByName(String name) {
+  for (final region in kRegions) {
+    if (region.name == name) return region.id;
+  }
+  return null;
+}
+
 /// "단양군" → "단양 여행" — 여행 목록 카드 제목([Figma] 여행 목록 화면).
 String tripTitleFor(Region region) {
   final shortName = region.name.replaceAll(RegExp(r'(광역시|특별시|시|군)$'), '');

@@ -17,6 +17,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import register_request_logging, setup_logging
 from app.core.response import Envelope, success
 from app.journeys.router import router as journeys_router
+from app.maps.router import router as maps_router
 from app.quests.router import progress_router
 from app.quests.router import router as quests_router
 from app.regions.router import router as regions_router
@@ -29,7 +30,7 @@ setup_logging(app_env=settings.app_env, log_level=settings.log_level)
 app = FastAPI(title="ColorTrip API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_allowed_origins_list,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,6 +44,7 @@ app.include_router(regions_router, prefix="/api/v1")
 app.include_router(quests_router, prefix="/api/v1")
 app.include_router(progress_router, prefix="/api/v1")
 app.include_router(journeys_router, prefix="/api/v1")
+app.include_router(maps_router, prefix="/api/v1")
 app.include_router(uploads_router, prefix="/api/v1")
 app.include_router(trip_dna_router, prefix="/api/v1")
 app.include_router(timeline_router, prefix="/api/v1")
