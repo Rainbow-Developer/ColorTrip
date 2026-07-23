@@ -14,35 +14,38 @@ from app.core.database import AsyncSessionLocal
 from app.quests.models import Quest  # noqa: F401  (Region.quests 관계 매퍼 해소용)
 from app.regions.models import Region
 
-# 충북 시·군 (area_code=TourAPI sigunguCode, center_lat/lng는 추후 매핑)
-CHUNGBUK_REGIONS: Sequence[str] = (
-    "청주시",
-    "충주시",
-    "제천시",
-    "보은군",
-    "옥천군",
-    "영동군",
-    "증평군",
-    "진천군",
-    "괴산군",
-    "음성군",
-    "단양군",
+# 충북 시·군 → TourAPI(KorService2) sigunguCode (areaCode=33 기준, areaCode2로 확인 2026-07-17).
+# 상세: docs/conventions/external-apis.md. center_lat/lng는 추후 매핑.
+CHUNGBUK_REGIONS: Sequence[tuple[str, str]] = (
+    ("청주시", "10"),
+    ("충주시", "11"),
+    ("제천시", "7"),
+    ("보은군", "3"),
+    ("옥천군", "5"),
+    ("영동군", "4"),
+    ("증평군", "12"),
+    ("진천군", "8"),
+    ("괴산군", "1"),
+    ("음성군", "6"),
+    ("단양군", "2"),
 )
 
 
 async def seed_regions(session: AsyncSession) -> int:
-    """name 기준으로 이미 있으면 skip, 없으면 insert. 추가된 개수를 반환."""
-    stmt = select(Region.name)
+    """name 기준으로 없으면 insert, 있는데 area_code가 비어 있으면 채운다. 추가된 개수를 반환."""
+    stmt = select(Region)
     result = await session.execute(stmt)
-    existing = set(result.scalars().all())
+    existing = {region.name: region for region in result.scalars().all()}
 
     added = 0
-    for name in CHUNGBUK_REGIONS:
-        if name in existing:
-            continue
-        # area_code: TourAPI sigunguCode 추후 매핑 / center_lat·lng: 추후
-        session.add(Region(name=name, area_code=None, center_lat=None, center_lng=None))
-        added += 1
+    for name, sigungu_code in CHUNGBUK_REGIONS:
+        region = existing.get(name)
+        if region is None:
+            # center_lat·lng: 추후
+            session.add(Region(name=name, area_code=sigungu_code, center_lat=None, center_lng=None))
+            added += 1
+        elif region.area_code is None:
+            region.area_code = sigungu_code
 
     return added
 

@@ -55,6 +55,8 @@ flowchart LR
 | user_id | UUID | N | FK→users | | 소유 사용자 |
 | region_id | UUID | N | FK→regions | | 여정 지역(1개) |
 | title | VARCHAR(100) | Y | | | 여정 이름(미입력 시 지역명 기반) |
+| start_date | DATE | Y | | | 여행 시작일(생성 시 입력) |
+| end_date | DATE | Y | | | 여행 종료일(start_date ≤ end_date 검증) |
 | status | VARCHAR(20) | N | | 'in_progress' | in_progress / completed |
 | completed_at | TIMESTAMP | Y | | | 완료 시각 |
 
@@ -114,7 +116,8 @@ GCS 사용 시 애플리케이션 SA에 버킷 `roles/storage.objectAdmin`(쓰�
 
 ```http
 POST /api/v1/journeys
-{ "region_id": "0190…", "quest_ids": ["0190…", "0190…"], "title": "단양 힐링 여행" }
+{ "region_id": "0190…", "quest_ids": ["0190…", "0190…"], "title": "단양 힐링 여행",
+  "start_date": "2026-07-20", "end_date": "2026-07-22" }
 ```
 
 ```jsonc

@@ -25,4 +25,5 @@ async def list_regions_with_progress(
         .order_by(Region.name.asc())
     )
     result = await session.execute(stmt)
-    return result.all()
+    # Row를 (Region, MapProgress|None) 튜플로 풀어 반환 타입과 맞춘다(outer join이라 None 가능).
+    return [(row[0], row[1]) for row in result.all()]

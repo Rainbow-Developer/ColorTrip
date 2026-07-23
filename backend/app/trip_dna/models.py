@@ -1,4 +1,5 @@
 """trip_dna — 여행 성향 설문과 DNA 결과 이력."""
+
 from __future__ import annotations
 
 import uuid

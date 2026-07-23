@@ -7,6 +7,7 @@ import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/filter_chip_row.dart';
 import '../../data/models/quest.dart';
+import '../../data/static/regions_data.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
@@ -21,6 +22,7 @@ import '../../state/repository_providers.dart';
 /// 체크 해제로 조용히 지워지면 안 된다(KAN-46 피드백). 대신 카드를 탭하면 퀘스트 상세(완료 표시
 /// 포함)로 이동해 히스토리를 확인할 수 있다.
 /// Figma 스펙(2026-07-09 공유) 반영: 검색·유형 필터, 카드별 "퀘스트 설명"으로 퀘스트 상세(정보만) 진입.
+/// 새 여행이면 시작 전에 이름·기간 입력 시트를 거친다(2026-07-16 KAN-28).
 class RegionQuestSelectScreen extends ConsumerStatefulWidget {
   const RegionQuestSelectScreen({super.key, required this.regionId});
 
@@ -42,6 +44,34 @@ class _RegionQuestSelectScreenState
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// 새 여행이면 이름·기간 입력 시트를 띄운 뒤 등록하고, 이미 시작한 여행이면
+  /// 기존 이름·기간을 유지한 채 선택 퀘스트만 갱신한다.
+  Future<void> _startTrip(String defaultName) async {
+    final notifier = ref.read(progressProvider.notifier);
+    final selected = {..._selectedQuestIds!};
+
+    if (ref.read(progressProvider).tripStatusOf(widget.regionId) !=
+        RegionTripStatus.notStarted) {
+      notifier.setTripQuests(widget.regionId, selected);
+      if (mounted) context.go('/travel');
+      return;
+    }
+
+    final info = await showModalBottomSheet<TripInfo>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _TripSetupSheet(defaultName: defaultName),
+    );
+    if (info == null || !mounted) return;
+
+    notifier.startTrip(widget.regionId, selected, info);
+    context.go('/travel');
   }
 
   @override
@@ -153,17 +183,11 @@ class _RegionQuestSelectScreenState
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: ElevatedButton(
                   key: _startTripButtonKey,
+                  // 새 여행이면 이름·기간 입력 시트(KAN-28), 이미 시작한 여행이면
+                  // 시트 없이 퀘스트만 추가(KAN-46) — 분기는 _startTrip이 담당.
                   onPressed: selectedCount == 0
                       ? null
-                      : () {
-                          ref
-                              .read(progressProvider.notifier)
-                              .setTripQuests(
-                                widget.regionId,
-                                _selectedQuestIds!,
-                              );
-                          context.go('/travel');
-                        },
+                      : () => _startTrip(tripTitleFor(region)),
                   child: Text(
                     selectedCount == 0
                         ? '퀘스트를 선택해주세요'
@@ -290,6 +314,146 @@ class _SelectableQuestCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 여행 이름·기간 입력 시트 — 이름은 "OO 여행"이 기본값, 기간은 [showDateRangePicker]로
+/// 시작일·종료일을 함께 받는다. 둘 다 채워야 시작할 수 있다.
+class _TripSetupSheet extends StatefulWidget {
+  const _TripSetupSheet({required this.defaultName});
+
+  final String defaultName;
+
+  @override
+  State<_TripSetupSheet> createState() => _TripSetupSheetState();
+}
+
+class _TripSetupSheetState extends State<_TripSetupSheet> {
+  late final TextEditingController _nameController = TextEditingController(
+    text: widget.defaultName,
+  );
+  DateTimeRange? _range;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 2, now.month, now.day),
+      initialDateRange: _range,
+      helpText: '여행 기간을 선택해주세요',
+      saveText: '선택',
+    );
+    if (picked != null) setState(() => _range = picked);
+  }
+
+  InputDecoration _fieldDecoration({String? hintText, Widget? suffixIcon}) {
+    return InputDecoration(
+      hintText: hintText,
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.formFieldBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.formFieldBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: AppColors.primaryDark),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final range = _range;
+    final canSubmit = _nameController.text.trim().isNotEmpty && range != null;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            '여행 정보를 입력해주세요',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            '여행 이름',
+            style: TextStyle(fontSize: 12, color: AppColors.formLabel),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _nameController,
+            maxLength: 30,
+            onChanged: (_) => setState(() {}),
+            decoration: _fieldDecoration(
+              hintText: '예) 단양 여행',
+            ).copyWith(counterText: ''),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '여행 날짜',
+            style: TextStyle(fontSize: 12, color: AppColors.formLabel),
+          ),
+          const SizedBox(height: 6),
+          InkWell(
+            onTap: _pickRange,
+            borderRadius: BorderRadius.circular(10),
+            child: InputDecorator(
+              decoration: _fieldDecoration(
+                suffixIcon: const Icon(
+                  Icons.calendar_today_outlined,
+                  size: 18,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              child: Text(
+                range == null
+                    ? '시작일 ~ 종료일 선택'
+                    : TripInfo.formatPeriod(range.start, range.end),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: range == null
+                      ? AppColors.formPlaceholder
+                      : AppColors.textStrong,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: canSubmit
+                ? () => Navigator.pop(
+                    context,
+                    TripInfo(
+                      name: _nameController.text.trim(),
+                      startDate: range.start,
+                      endDate: range.end,
+                    ),
+                  )
+                : null,
+            child: const Text('여행 시작하기'),
+          ),
+        ],
       ),
     );
   }

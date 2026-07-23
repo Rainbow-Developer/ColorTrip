@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | 상태 | 진행 중 (백엔드 구현·테스트 완료 / Notion 역동기화·GCS 버킷 IaC 대기) |
-| 최종 업데이트 | 2026-07-05 |
+| 최종 업데이트 | 2026-07-16 |
 
 ## 구현 규모 / 단위 분할
 
@@ -48,3 +48,4 @@
 | 2026-07-05 | 최초 작성 (계획) — Notion API 명세·테이블 설계(초안) 검토 및 여정 테이블 신설 결정 반영 |
 | 2026-07-05 | 의사결정 확정(PR #13 스택·GCS 저장·nearby 제외) 및 구현 단위 1~5 완료, 테스트 40건 통과 |
 | 2026-07-09 | PR #13 dev 머지에 따라 dev 위로 정리(rebase). CodeRabbit 리뷰 반영 — 이미 완료한 퀘스트로 여정 생성 시 즉시 완료 처리, start/verify 동시요청 `IntegrityError` 멱등 처리, 업로드 크기 사전 차단, conftest DB 가드·override 정리, README 문서 보완. 테스트 46건 통과 |
+| 2026-07-16 | `journeys`에 여행 기간 `start_date`·`end_date`(DATE, NULL 허용) 추가 — 여행 생성 시 이름(title)과 함께 날짜를 받도록 POST /journeys 요청·응답 스키마 확장, `end_date < start_date`면 422(VALIDATION_ERROR). 마이그레이션 `c9d4e7a2b8f3`, 테스트 추가 |

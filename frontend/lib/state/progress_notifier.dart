@@ -27,6 +27,15 @@ class ProgressNotifier extends Notifier<ProgressState> {
     state = state.copyWith(tripQuests: tripQuests);
   }
 
+  /// 새 여행 시작 — 선택 퀘스트와 함께 이름·기간([TripInfo])을 등록한다.
+  /// 이미 시작한 여행에 퀘스트를 더 담을 때는 [setTripQuests]만 호출해 기존 정보를 유지한다.
+  void startTrip(String regionId, Set<String> questIds, TripInfo info) {
+    final tripInfo = {...state.tripInfo};
+    tripInfo[regionId] = info;
+    state = state.copyWith(tripInfo: tripInfo);
+    setTripQuests(regionId, questIds);
+  }
+
   void completeQuest(String questId, {Uint8List? photo}) {
     final quest = questById(questId);
     if (quest == null || state.isCompleted(questId)) return;

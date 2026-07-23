@@ -14,6 +14,17 @@
 | 퀘스트 조회 응답 | `GET /quests`, `GET /quests/{id}` | `quest_progress` | 기존 퀘스트 목록/상세 응답에 사용자별 진행 상태를 포함할지, 인증 필수/선택 인증 정책을 어떻게 둘지 검토 | 이슈 유지 | [#20](https://github.com/Rainbow-Developer/ColorTrip/issues/20) |
 | 지역 목록 응답 | `GET /regions` | `map_progress`, `regions` | 기존 지역 목록 응답에 사용자별 완료 수/최초 색칠 시각을 포함할지, 공개 API 호환성을 어떻게 유지할지 검토 | 이슈 유지 | [#21](https://github.com/Rainbow-Developer/ColorTrip/issues/21) |
 
+## PR #17에서 구현된 Journey API
+
+아래 API는 PR #17에서 `f4b2a9c67e18` migration을 기반으로 이미 구현됐다. 이번 문서 정합화 PR은 API 동작을 변경하지 않는다.
+
+| 구현 API | 관련 DB/컬럼 | 비고 |
+|----------|--------------|------|
+| `POST/GET /journeys`, `POST/DELETE /journeys/{id}/quests` | `journeys`, `journey_quests` | 여정 생성·목록·상세·퀘스트 관리 |
+| `POST /quests/{id}/start`, `POST /quests/{id}/verify`, `GET /users/me/progress` | `quest_progress`, `journey_id`, `quiz_answer` | 퀘스트 진행·GPS/사진/퀴즈 인증 |
+| `GET /quests/recommended` | `quests`, `quest_progress`, 사용자 DNA | DNA 카테고리 우선 추천 |
+| `POST /uploads/photo` | `quest_progress.photo_url` | 인증 사진 업로드 |
+
 ## 기록만 남기는 신규 API 후보
 
 아래 항목은 PR #15 API 문서상 필요할 수 있지만, 현재 `dev`에 구현된 API를 수정하는 성격이 아니므로 이번 migration 후속 GitHub Issue로 유지하지 않는다. 추후 해당 기능을 실제 구현할 때 별도 기능 이슈로 생성한다.
@@ -21,14 +32,12 @@
 | 후보 API | 관련 DB/컬럼 | 비고 |
 |----------|--------------|------|
 | `GET /users/dna`, `GET /surveys`, `POST /surveys/reply` | `users.dna`, `trip_questions`, `trip_question_options`, `trip_replies`, `user_dna_history` | 신규 DNA/설문 API |
-| `POST /quests/{id}/start`, `POST /quests/{id}/verify`, `GET /users/me/progress` | `quest_progress` | 신규 퀘스트 진행/인증 API |
-| `GET /quests/nearby`, `GET /quests/recommended` | `quest_progress`, `users.dna`, `quests` | 신규 퀘스트 탐색/추천 API |
+| `GET /quests/nearby` | `quest_progress`, `quests` | 위치 기반 퀘스트 탐색 API |
 | `GET /users/me/map`, `GET /regions/unvisited` | `map_progress`, `regions` | 신규 지도/지역 진행 API |
 | `GET /users/me/timeline`, `GET /users/me/share-card` | `timeline_events`, `map_progress`, `users.dna` | 신규 타임라인/공유 API |
-| `POST /uploads/photo` | `quest_progress.photo_url` | 신규 업로드 API |
 
 ## 참고 기준
 
 - PR #15 `docs/template/specs/database.md`, `docs/template/specs/api.md`를 우선 기준으로 삼는다.
-- PR #17은 인증/진행 구현 참고 자료로만 사용하고 이번 migration의 기준으로 삼지 않는다.
+- PR #17은 Journey·퀘스트 인증 구현과 `f4b2a9c67e18` migration의 기준이다. 이 문서는 그 구현을 중복 이관하지 않고 PR #15 모델과의 관계를 추적한다.
 - API 응답 형식은 `docs/conventions/api-design.md`의 `code/status/message/data` Envelope를 따른다.

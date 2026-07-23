@@ -18,8 +18,9 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
 
+# README 요구사항(Dart 3.12+)과 동일한 하한 — 컨테이너(flutter:stable=3.44.0, Dart 3.12.0)에서도 해석 가능해야 한다.
 environment:
-  sdk: ^3.12.2
+  sdk: ^3.12.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -29,6 +30,9 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   flutter:
+    sdk: flutter
+  # Material 위젯(날짜 피커 등) 한국어화.
+  flutter_localizations:
     sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.

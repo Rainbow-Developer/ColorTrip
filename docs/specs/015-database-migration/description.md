@@ -2,20 +2,20 @@
 
 ## 개요
 
-이 스펙은 PR #15의 `database.md`에 담긴 ColorTrip 핵심 DB 모델을 현재 백엔드의 Alembic/ORM 구조로 이관하는 작업을 설명한다. 대상은 여행 DNA 설문, 퀘스트 진행/인증, 지역 지도 진행, 타임라인 기록을 위한 데이터 기반이다.
+이 스펙은 PR #15의 `database.md`에 담긴 ColorTrip 핵심 DB 모델과 PR #17의 Journey 스키마를 현재 백엔드의 Alembic/ORM 구조에 맞춰 설명한다. 대상은 여정, 퀘스트 진행/인증, 여행 DNA 설문, 지역 지도 진행, 타임라인 기록을 위한 데이터 기반이다.
 
-이번 범위는 DB 기반 준비에 한정된다. 새 테이블을 사용하는 API는 구현하지 않으며, 필요한 API 작업은 `api-followups.md`에 분리해 GitHub Issue로 연결한다.
+이번 정합화 PR은 DB 기준 문서와 migration 검증에 한정된다. PR #17에서 이미 구현된 Journey API는 변경하지 않으며, 남은 API 작업은 `api-followups.md`에 분리해 추적한다.
 
 ## 동작 방식
 
-마이그레이션은 `backend/alembic`의 기존 revision 체인 뒤에 새 revision을 추가한다. `upgrade head`는 기존 `regions`, `quests`, `users`, `refresh_tokens`를 보존하면서 필요한 컬럼과 신규 테이블을 생성하고, `downgrade d7b712f1a245`는 이번 revision에서 추가한 구조만 되돌린다.
+마이그레이션은 `d7b712f1a245` 뒤에 Journey revision `f4b2a9c67e18`을 적용하고, 그 위에 PR #15 revision `a4f2c8d1e9b0`을 적용하는 단일 체인이다. `upgrade head`는 기존 테이블을 보존하면서 Journey 및 PR #15 모델을 생성하고, `downgrade d7b712f1a245`는 두 revision에서 추가한 구조만 되돌린다.
 
 ```mermaid
 flowchart LR
-    A["d7b712f1a245 auth/member"] --> B["015 database migration revision"]
-    B --> C["users.dna/profile_image"]
-    B --> D["quest_progress/map_progress/timeline_events"]
-    B --> E["trip_questions/options/replies/user_dna_history"]
+    A["d7b712f1a245 auth/member"] --> B["f4b2a9c67e18 Journey"]
+    B --> C["journeys/journey_quests/quest_progress 확장"]
+    B --> D["a4f2c8d1e9b0 PR #15"]
+    D --> E["users.dna/profile_image/map/timeline/DNA 설문"]
 ```
 
 신규 테이블은 모두 UUID v7 PK와 `created_at`, `updated_at`, `deleted_at` 감사 컬럼을 사용한다. 앱 코드에서 직접 생성되는 row는 SQLAlchemy `UUIDPKMixin`과 `TimestampMixin` 기본값을 따른다.
@@ -26,6 +26,7 @@ flowchart LR
 |-----------|------|------|
 | `DnaType` | 여행 DNA 5종 enum | `backend/app/core/enums.py` |
 | `users.dna`, `users.profile_image` | 사용자 현재 DNA와 프로필 이미지 | `backend/app/auth/models.py` |
+| `journeys`, `journey_quests` | 여정과 여정별 퀘스트 묶음 | `backend/app/journeys/models.py` |
 | `quest_progress` | 사용자별 퀘스트 시작/완료/인증 기록 | `backend/app/quests/models.py` |
 | `map_progress` | 사용자별 지역 진행 집계 | `backend/app/progress/models.py` |
 | `timeline_events` | 사용자 활동 타임라인 이벤트 | `backend/app/timeline/models.py` |
@@ -33,7 +34,8 @@ flowchart LR
 | `trip_question_options` | 설문 선택지와 점수 JSON | `backend/app/trip_dna/models.py` |
 | `trip_replies` | 사용자 설문 응답 | `backend/app/trip_dna/models.py` |
 | `user_dna_history` | 사용자 DNA 산출 이력 | `backend/app/trip_dna/models.py` |
-| Alembic revision | DB 스키마 upgrade/downgrade | `backend/alembic/versions/` |
+| `f4b2a9c67e18` | Journey·quest_progress migration | `backend/alembic/versions/f4b2a9c67e18_add_journey_and_quest_progress_tables.py` |
+| `a4f2c8d1e9b0` | PR #15 나머지 DB 모델 migration | `backend/alembic/versions/a4f2c8d1e9b0_add_pr15_database_spec_tables.py` |
 | API 후속 기록 | migration 이후 구현할 API 후보 | `docs/specs/015-database-migration/api-followups.md` |
 
 ## 설정 / 사용법
@@ -53,11 +55,13 @@ uv run pytest
 
 ## 예시
 
-`quest_progress`는 사용자가 퀘스트를 시작하거나 완료할 때 단일 row로 유지된다.
+`quest_progress`는 사용자가 퀘스트를 시작하거나 완료할 때 단일 row로 유지되며, 수행 여정은 선택적으로 연결한다.
 
 ```text
 users.id + quests.id
   -> quest_progress(user_id, quest_id) unique
+  -> journey_id (nullable)로 journeys.id 연결
+  -> quiz 인증이면 quiz_answer 기록
   -> completed 상태가 되면 verified_lat/lng, photo_url, completed_at 기록
   -> 후속 API에서 map_progress와 timeline_events 갱신
 ```
@@ -67,4 +71,5 @@ users.id + quests.id
 - [plan.md](plan.md) · [implementation.md](implementation.md) · [api-followups.md](api-followups.md)
 - PR #15 기준 문서: `origin/feature/KAN-20:docs/template/specs/database.md`
   - 위 값은 PR #15의 원격 브랜치 출처이며, 이번 작업의 Jira 키는 `KAN-24`이다.
+- PR #17 구현: `docs/specs/010-journey/` · Alembic `f4b2a9c67e18`
 - [database.md](../../conventions/database.md) · [backend.md](../../conventions/backend.md) · [api-design.md](../../conventions/api-design.md)

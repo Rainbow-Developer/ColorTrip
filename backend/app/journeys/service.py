@@ -4,6 +4,7 @@
 모든 퀘스트가 완료되면 자동 completed, 미완료 퀘스트가 다시 생기면 in_progress로 복귀.
 """
 
+from datetime import date
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +29,8 @@ async def create_journey(
     region_id: UUID,
     quest_ids: list[UUID],
     title: str | None,
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> JourneyDetail:
     unique_ids = list(dict.fromkeys(quest_ids))  # 중복 제거(순서 유지)
     quests = await repository.get_quests_by_ids(session, unique_ids)
@@ -42,7 +45,13 @@ async def create_journey(
             ErrorCode.VALIDATION_ERROR, "여정 지역에 속하지 않는 퀘스트는 담을 수 없습니다."
         )
 
-    journey = Journey(user_id=user_id, region_id=region_id, title=title)
+    journey = Journey(
+        user_id=user_id,
+        region_id=region_id,
+        title=title,
+        start_date=start_date,
+        end_date=end_date,
+    )
     session.add(journey)
     await session.flush()
     for order, quest_id in enumerate(unique_ids):
@@ -71,6 +80,8 @@ async def list_journeys(
             id=journey.id,
             region_id=journey.region_id,
             title=journey.title,
+            start_date=journey.start_date,
+            end_date=journey.end_date,
             status=JourneyStatus(journey.status),
             progress=_summary(summary.get(journey.id)),
             created_at=journey.created_at,
@@ -106,6 +117,8 @@ async def get_journey_detail(
         id=journey.id,
         region_id=journey.region_id,
         title=journey.title,
+        start_date=journey.start_date,
+        end_date=journey.end_date,
         status=JourneyStatus(journey.status),
         progress=JourneyProgressSummary(completed=completed, total=len(quests)),
         created_at=journey.created_at,

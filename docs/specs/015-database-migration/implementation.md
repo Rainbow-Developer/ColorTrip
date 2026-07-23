@@ -2,8 +2,8 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 구현 완료 / PR 준비 중 |
-| 최종 업데이트 | 2026-07-08 |
+| 상태 | 구현 완료 / Journey 정합화 PR 진행 중 |
+| 최종 업데이트 | 2026-07-16 |
 
 ## 구현 규모 / 단위 분할
 
@@ -17,6 +17,7 @@
   - [x] 6) fixture reset 로직 갱신.
   - [x] 7) Alembic 왕복 검증, Ruff, Pyright, Pytest 실행.
   - [x] 8) API 후속 GitHub Issue 생성 및 문서 반영.
+  - [x] 9) PR #17 Journey 스키마를 PR #15 `database.md`와 migration regression test에 반영.
 
 ## 구현된 항목
 
@@ -31,6 +32,8 @@
 - `timeline_events`, `trip_replies`, `user_dna_history`의 사용자별 시간순 조회 인덱스는 PR #15 조회 의도에 맞춰 시간 컬럼 DESC 정렬을 명시한다.
 - 테스트 DB reset 로직이 현재 schema를 재생성한 뒤 `upgrade head` 하도록 갱신했다.
 - `backend/tests/test_database_spec_schema.py`로 PR #15 스키마 핵심 계약, DB server default, 신규 ORM 모델 insert 기본값을 검증한다.
+- PR #17의 `f4b2a9c67e18`이 `journeys`, `journey_quests`, `quest_progress.journey_id`, `quest_progress.quiz_answer`를 생성하고, PR #24의 `a4f2c8d1e9b0`이 그 위에 이어짐을 문서화했다.
+- `backend/tests/test_database_spec_schema.py`가 Journey 테이블, FK, unique 제약, 진행 확장 컬럼을 회귀 검증한다.
 - 기존 구현된 API 수정 필요 지점만 GitHub Issue로 유지했다:
   - [#18](https://github.com/Rainbow-Developer/ColorTrip/issues/18): 사용자 프로필 응답의 `dna`/`profile_image` 반영 검토.
   - [#20](https://github.com/Rainbow-Developer/ColorTrip/issues/20): 기존 퀘스트 조회 응답의 진행 상태 반영 검토.
@@ -45,7 +48,7 @@
 ## 알려진 한계 / TODO
 
 - 설문 질문/선택지 seed 데이터는 아직 포함하지 않는다.
-- PR #17의 journey 기반 구현과 `quest_progress` 관계는 후속 API 구현 단계에서 재검토한다.
+- Journey migration은 이미 PR #17에서 적용됐다. 같은 테이블을 생성하는 추가 revision은 만들지 않으며, 이후 schema 변경이 필요할 때만 `a4f2c8d1e9b0` 뒤 새 revision을 추가한다.
 - API 구현은 이번 migration PR 범위에서 제외하고 GitHub Issue로 분리한다.
 
 ## 변경 이력
@@ -56,3 +59,4 @@
 | 2026-07-08 | ORM 모델, Alembic revision, schema regression 테스트, API 후속 GitHub Issue 연결 |
 | 2026-07-08 | DB server default, DESC index, ORM insert 기본값 검증 보강 |
 | 2026-07-12 | CodeRabbit 검토 후 enum 중복 제거, 테스트 DB reset 스키마 재생성, quest_progress 상태값 preflight 보강 |
+| 2026-07-16 | PR #17 Journey 스키마를 PR #15 `database.md`에 반영하고 Alembic 체인 회귀 검증 보강 |

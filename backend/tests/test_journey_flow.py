@@ -15,12 +15,16 @@ async def test_create_and_get_journey(client: AsyncClient) -> None:
             "region_id": seed["region_id"],
             "quest_ids": [seed["gps_quest_id"], seed["quiz_quest_id"]],
             "title": "단양 역사 여행",
+            "start_date": "2026-07-20",
+            "end_date": "2026-07-22",
         },
         headers=headers,
     )
     assert response.status_code == 201
     data = response.json()["data"]
     assert data["title"] == "단양 역사 여행"
+    assert data["start_date"] == "2026-07-20"
+    assert data["end_date"] == "2026-07-22"
     assert data["status"] == "in_progress"
     assert data["progress"] == {"completed": 0, "total": 2}
     assert [q["quest_id"] for q in data["quests"]] == [
@@ -65,6 +69,39 @@ async def test_create_journey_with_already_completed_quest_is_completed(
     assert data["status"] == "completed"
     assert data["completed_at"] is not None
     assert data["progress"] == {"completed": 1, "total": 1}
+
+
+async def test_create_journey_without_dates_keeps_them_null(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        headers=headers,
+    )
+    assert response.status_code == 201
+    data = response.json()["data"]
+    assert data["start_date"] is None
+    assert data["end_date"] is None
+
+
+async def test_create_journey_rejects_reversed_dates(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            "start_date": "2026-07-22",
+            "end_date": "2026-07-20",
+        },
+        headers=headers,
+    )
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_ERROR"
 
 
 async def test_create_journey_rejects_cross_region_quest(client: AsyncClient) -> None:
