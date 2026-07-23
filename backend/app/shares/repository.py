@@ -4,6 +4,7 @@ import secrets
 import uuid
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -26,15 +27,21 @@ class ShareRepository:
         self, session: AsyncSession, user_id: uuid.UUID, share_style: str
     ) -> Share:
         """새 공유 숏코드 및 카드를 생성하고 영속화합니다."""
-        share_code = await self._generate_unique_share_code(session)
-        db_obj = Share(
-            user_id=user_id,
-            share_code=share_code,
-            share_style=share_style,
-        )
-        session.add(db_obj)
-        await session.flush()
-        return db_obj
+        for _ in range(10):
+            share_code = await self._generate_unique_share_code(session)
+            try:
+                async with session.begin_nested():
+                    db_obj = Share(
+                        user_id=user_id,
+                        share_code=share_code,
+                        share_style=share_style,
+                    )
+                    session.add(db_obj)
+                    await session.flush()
+            except IntegrityError:
+                continue
+            return db_obj
+        raise RuntimeError("Unable to allocate a unique share code")
 
     async def get_by_code(
         self, session: AsyncSession, share_code: str

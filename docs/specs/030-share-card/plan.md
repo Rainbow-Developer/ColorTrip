@@ -7,7 +7,7 @@
 | 영역 | backend |
 | 작성자 | Antigravity (AI) |
 | 작성일 | 2026-07-21 |
-| 상태 | 계획 |
+| 상태 | 완료 |
 
 ## 배경 / 목적
 * 사용자가 자신이 색칠한 충북 지역 지도와 여행 DNA 상태를 카드로 시각화하고, 이를 외부(카카오톡, SNS 등)로 공유할 수 있는 **공유 카드 시스템**이 필요합니다.
@@ -41,7 +41,7 @@
 * `backend/alembic/versions/`: [NEW] alembic 마이그레이션 파일 추가
 
 ## 작업 단계
-- [ ] 1. Alembic 데이터베이스 마이그레이션 생성 및 `shares` 테이블 스키마 정의
-- [ ] 2. `app/shares/` 모듈 구현 (`models`, `schemas`, `repository`, `service`, `router`)
-- [ ] 3. `GET /users/me/share-summary`, `POST /shares`, `GET /shares/{share_code}` 라우터 구축
-- [ ] 4. 단위 및 통합 테스트 코드 작성 및 검증 (`backend/tests/test_shares.py`)
+- [x] 1. Alembic 데이터베이스 마이그레이션 생성 및 `shares` 테이블 스키마 정의
+- [x] 2. `app/shares/` 모듈 구현 (`models`, `schemas`, `repository`, `service`, `router`)
+- [x] 3. `GET /users/me/share-summary`, `POST /shares`, `GET /shares/{share_code}` 라우터 구축
+- [x] 4. 단위 및 통합 테스트 코드 작성 및 검증 (`backend/tests/test_shares.py`)

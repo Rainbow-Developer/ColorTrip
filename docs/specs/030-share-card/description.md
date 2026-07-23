@@ -32,7 +32,7 @@ sequenceDiagram
 | 구성 요소 | 역할 | 위치 |
 |-----------|------|------|
 | **Share Model** | `shares` 데이터베이스 테이블 매핑 | `backend/app/shares/models.py` |
-| **Share Schemas** | Pydantic 입출력 데이터 규격 (`ShareCreate`, `ShareRead`, `ShareSummaryRead`) | `backend/app/shares/schemas.py` |
+| **Share Schemas** | Pydantic 입출력 데이터 규격 (`ShareCreate`, `ShareRead`, `ShareSummaryResponse`) | `backend/app/shares/schemas.py` |
 | **Share Repository** | 숏코드 생성 및 공유 DB 쿼리 처리 | `backend/app/shares/repository.py` |
 | **Share Service** | 요약 데이터 조립 및 공유 숏링크 비즈니스 로직 | `backend/app/shares/service.py` |
 | **Share Router** | `/shares` 및 `/users/me/share-summary` 라우터 정의 | `backend/app/shares/router.py` |
