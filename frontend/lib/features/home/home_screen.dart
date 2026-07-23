@@ -9,6 +9,7 @@ import '../../core/widgets/map_legend.dart';
 import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
+import '../../state/map_sync_provider.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
@@ -25,6 +26,8 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 진입 시 서버 지도 진행도를 1회 동기화한다(로그인 전이면 조용히 무시, [020-frontend-map-sync]).
+    ref.watch(mapSyncProvider);
     final progress = ref.watch(progressProvider);
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
@@ -80,7 +83,10 @@ class HomeScreen extends ConsumerWidget {
                   KeyedSubtree(
                     key: _mapKey,
                     child: ChungbukMap(
-                      regionProgress: progress.regionProgress,
+                      regionSaturation: {
+                        for (final region in kRegions)
+                          region.id: progress.regionSaturation(region.id),
+                      },
                       onRegionTap: (regionId) =>
                           context.push('/region/$regionId'),
                     ),
