@@ -37,6 +37,7 @@
 
 ## 관련 문서
 
+- [GCP 리소스·접근 정보](../gcp-access.md) — 실제 리소스 값(IP·서비스 계정·연결 이름)·접근 절차(팀 공유용)
 - [`infra/README.md`](../../infra/README.md) — Terraform 사용법·구조
 - [SCM & 협업](./scm-collaboration.md) — 브랜치 전략
 - [인증 & 보안](./auth-security.md) — 시크릿(Secret Manager) SOT

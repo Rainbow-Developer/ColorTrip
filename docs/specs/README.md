@@ -28,3 +28,4 @@ docs/specs/
 | [005-auth-member](005-auth-member/) | Kakao 인증, JWT, 회원 탈퇴/복구             |
 | [010-journey](010-journey/) | 여행 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈) |
 | [015-database-migration](015-database-migration/) | 핵심 데이터 모델 Alembic 마이그레이션            |
+| [020-backend-logging](020-backend-logging/) | 백엔드 공통 JSON 로깅·요청 로깅 |

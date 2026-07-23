@@ -20,6 +20,7 @@ services:
     build: .
     environment:
       APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-}
       DATABASE_URL: postgresql+asyncpg://colortrip:colortrip@db:5432/colortrip
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY is required. Copy .env.example to .env for local dev.}
       ACCESS_TOKEN_TTL_MINUTES: ${ACCESS_TOKEN_TTL_MINUTES:-15}

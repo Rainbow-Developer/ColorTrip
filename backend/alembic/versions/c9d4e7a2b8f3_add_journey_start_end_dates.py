@@ -1,7 +1,7 @@
 """add journey start and end dates
 
 Revision ID: c9d4e7a2b8f3
-Revises: a4f2c8d1e9b0
+Revises: 9c0244355f03
 Create Date: 2026-07-16
 
 여행 생성 시 이름(title)과 함께 여행 기간(start_date·end_date)을 받도록
@@ -16,7 +16,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "c9d4e7a2b8f3"
-down_revision: str | Sequence[str] | None = "a4f2c8d1e9b0"
+down_revision: str | Sequence[str] | None = "9c0244355f03"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

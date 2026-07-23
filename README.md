@@ -61,6 +61,7 @@ flutter pub get
 # 핵심 인프라
 APP_ENV=local       # local/test/dev/prod
 DATABASE_URL=        # PostgreSQL 접속 URL
+LOG_LEVEL=           # 선택: DEBUG/INFO/WARNING/ERROR/CRITICAL (미설정 시 APP_ENV 기준)
 
 # 외부 API 키
 TOUR_API_KEY=        # 한국관광공사 TourAPI
@@ -113,7 +114,7 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 ├── AGENTS.md       # Codex 등 에이전트 진입점 → docs/AGENT_GUIDE.md
 ├── CLAUDE.md       # Claude Code 진입점 → docs/AGENT_GUIDE.md
 ├── README.md       # 프로젝트 개요·구조·실행 (이 문서)
-├── backend/        # 백엔드 — Python (도메인 골격: core·auth·integrations·journeys·quests·regions·uploads)
+├── backend/        # 백엔드 — Python (도메인 골격: core·auth·integrations·journeys·maps·quests·regions·uploads)
 ├── frontend/       # 프론트엔드 — Flutter 앱 (다채로울지도)
 │   ├── lib/
 │   │   ├── main.dart        # 진입점 (ProviderScope)
@@ -168,8 +169,10 @@ flowchart TD
 | **여행 DNA(Travel DNA)** | 여행 성향 질문·선택지 조회, 답변 제출 및 DNA 판정 | `backend/app/trip_dna/` · 스펙 [docs/specs/010-travel-dna/](docs/specs/010-travel-dna/) |
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
+| **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) | `backend/app/maps/` |
 | **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈)·완료 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
 | **DB/데이터 모델 기반** | 여행 DNA 설문·퀘스트 진행·지도 진행·타임라인 기록을 위한 백엔드 데이터 모델 | `backend/app/auth/`, `backend/app/quests/`, `backend/app/progress/`, `backend/app/timeline/`, `backend/app/trip_dna/`, `backend/alembic/` · 스펙 [docs/specs/015-database-migration/](docs/specs/015-database-migration/) |
+| **백엔드 공통 로깅** | JSON 앱 로그, 요청 메타데이터 로깅, request id 전파 | `backend/app/core/` · 스펙 [docs/specs/020-backend-logging/](docs/specs/020-backend-logging/) |
 
 > 위 표는 기능이 **어디 있는지**를 가리킵니다. 개별 기능의 **상세 설명**은 이 README에 중복해 적지 않고, 해당 기능 스펙의 `description.md`를 단일 출처(SOT)로 둡니다. 지도 색칠·공유 등은 별도 도메인으로 진행 예정이며, 스펙이 만들어지면 이 표에 추가합니다.
 
@@ -226,7 +229,7 @@ flutter analyze
 
 ### 자주 쓰는 라이브러리·패턴
 
-- **백엔드**: async/await 전면 적용, 응답 Envelope(`code/status/message/data`), UUID v7 PK, Soft Delete — 상세는 [backend.md](docs/conventions/backend.md) · [database.md](docs/conventions/database.md) · [api-design.md](docs/conventions/api-design.md)
+- **백엔드**: async/await 전면 적용, 응답 Envelope(`code/status/message/data`), UUID v7 PK, Soft Delete, 구조화 JSON 로깅 — 상세는 [backend.md](docs/conventions/backend.md) · [database.md](docs/conventions/database.md) · [api-design.md](docs/conventions/api-design.md) · [logging-monitoring.md](docs/conventions/logging-monitoring.md)
 - **프론트엔드**: Riverpod(상태)·Dio(통신)·GoRouter(라우팅), 지도는 이미지 기반 색칠 — [frontend.md](docs/conventions/frontend.md)
 
 ## 유지 관리 사항

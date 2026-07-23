@@ -9,12 +9,14 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_JWT_SECRET_KEY = "change-me-in-production-32-byte-minimum"
+VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_env: str = "local"
+    log_level: str | None = None
 
     # DB
     database_url: str = "postgresql+asyncpg://colortrip:colortrip@localhost:5432/colortrip"
@@ -38,8 +40,25 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"  # 로컬 스토리지 경로(개발·테스트)
     max_upload_size_mb: int = 10
 
+    # CORS — docs/conventions/auth-security.md (허용 도메인 화이트리스트)
+    # 콤마 구분 도메인 목록. local/test는 "*" 허용, 그 외는 화이트리스트 필수
+    cors_allowed_origins: str = "*"
+
+    @property
+    def cors_allowed_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
+
     @model_validator(mode="after")
     def validate_non_local_security(self) -> Self:
+        if self.log_level is not None:
+            log_level = self.log_level.strip().upper()
+            if not log_level:
+                self.log_level = None
+            elif log_level not in VALID_LOG_LEVELS:
+                raise ValueError("LOG_LEVEL must be one of DEBUG, INFO, WARNING, ERROR, CRITICAL.")
+            else:
+                self.log_level = log_level
+
         env = self.app_env.strip().lower()
         if env in {"local", "test"}:
             return self
@@ -53,6 +72,10 @@ class Settings(BaseSettings):
             raise ValueError("KAKAO_REST_API_KEY must be set outside local/test environments.")
         if not self.kakao_redirect_uri.strip():
             raise ValueError("KAKAO_REDIRECT_URI must be set outside local/test environments.")
+        if self.cors_allowed_origins.strip() == "*":
+            raise ValueError(
+                "CORS_ALLOWED_ORIGINS must be a domain whitelist outside local/test environments."
+            )
         return self
 
 

@@ -4,13 +4,9 @@ class Region {
     required this.id,
     required this.name,
     required this.path,
-    required this.labelX,
-    required this.labelY,
   });
 
   final String id;
   final String name;
   final String path;
-  final double labelX;
-  final double labelY;
 }

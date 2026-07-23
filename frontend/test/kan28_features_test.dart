@@ -13,8 +13,17 @@ import 'package:colortrip/data/static/regions_data.dart';
 import 'package:colortrip/features/home/home_screen.dart';
 import 'package:colortrip/features/quests/region_quest_select_screen.dart';
 import 'package:colortrip/features/travel/travel_list_screen.dart';
+import 'package:colortrip/state/onboarding_tour_notifier.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/progress_state.dart';
+
+/// 온보딩 투어는 main.dart에서 초기값을 주입해야 하는 프로바이더라 테스트에서도 주입한다.
+/// 코치마크가 화면을 덮지 않도록 "완료" 상태로 둔다.
+final _tourDoneOverride = onboardingTourProvider.overrideWith(
+  () => OnboardingTourNotifier(
+    const OnboardingTourState(step: kOnboardingTotalSteps, skipped: true),
+  ),
+);
 
 Widget _wrap(
   Widget child, {
@@ -37,7 +46,7 @@ Widget _wrap(
   if (container != null) {
     return UncontrolledProviderScope(container: container, child: app);
   }
-  return ProviderScope(child: app);
+  return ProviderScope(overrides: [_tourDoneOverride], child: app);
 }
 
 void main() {
@@ -89,7 +98,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final container = ProviderContainer();
+    final container = ProviderContainer(overrides: [_tourDoneOverride]);
     addTearDown(container.dispose);
     await tester.pumpWidget(
       _wrap(

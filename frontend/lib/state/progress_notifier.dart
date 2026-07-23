@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/static/quests_data.dart';
@@ -34,21 +36,21 @@ class ProgressNotifier extends Notifier<ProgressState> {
     setTripQuests(regionId, questIds);
   }
 
-  void completeQuest(String questId) {
+  void completeQuest(String questId, {Uint8List? photo}) {
     final quest = questById(questId);
     if (quest == null || state.isCompleted(questId)) return;
 
     final completed = {...state.completedQuestIds, questId};
+
+    // 서버 응답을 기다리지 않고 즉시 +1(낙관적 갱신) — 다음 동기화 때
+    // syncRegionProgressFromServer가 실제 completed_count로 덮어쓴다.
     final progress = {...state.regionProgress};
     progress[quest.region] = (progress[quest.region] ?? 0) + 1;
 
-    final now = DateTime.now();
-    final month = now.month.toString().padLeft(2, '0');
-    final day = now.day.toString().padLeft(2, '0');
     final entry = TimelineEntry(
       questId: questId,
-      date: '${now.year}.$month.$day',
-      month: '${now.year}년 ${now.month}월',
+      completedAt: DateTime.now(),
+      photo: photo,
     );
     final timeline = [
       entry,
@@ -59,6 +61,15 @@ class ProgressNotifier extends Notifier<ProgressState> {
       completedQuestIds: completed,
       regionProgress: progress,
       timeline: timeline,
+    );
+  }
+
+  /// 서버(`GET /users/me/map`) 진행도를 로컬 상태에 반영한다([020-frontend-map-sync]).
+  /// 서버가 값을 준 지역만 덮어쓰고, 응답에 없는 지역은 기존 로컬 값을 유지한다.
+  void syncRegionProgressFromServer(Map<String, int> serverRegionProgress) {
+    if (serverRegionProgress.isEmpty) return;
+    state = state.copyWith(
+      regionProgress: {...state.regionProgress, ...serverRegionProgress},
     );
   }
 
