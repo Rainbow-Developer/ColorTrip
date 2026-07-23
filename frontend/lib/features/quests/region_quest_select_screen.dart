@@ -347,7 +347,7 @@ class _TripSetupSheetState extends State<_TripSetupSheet> {
     final picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime(now.year, now.month, now.day),
-      lastDate: DateTime(now.year + 2),
+      lastDate: DateTime(now.year + 2, now.month, now.day),
       initialDateRange: _range,
       helpText: '여행 기간을 선택해주세요',
       saveText: '선택',

@@ -50,7 +50,7 @@ Widget _wrap(
 }
 
 void main() {
-  testWidgets('퀘스트 정적 데이터는 11개 시·군 각 20개씩 220개다', (tester) async {
+  test('퀘스트 정적 데이터는 11개 시·군 각 20개씩 220개다', () {
     expect(kQuests.length, 220);
     final byRegion = <String, int>{};
     for (final q in kQuests) {
@@ -151,7 +151,7 @@ void main() {
     expect(find.text('진행중인 여행'), findsOneWidget);
   });
 
-  testWidgets('기간 표기는 같은 해면 연도를 한 번만 쓴다', (tester) async {
+  test('기간 표기는 같은 해면 연도를 한 번만 쓴다', () {
     expect(
       TripInfo.formatPeriod(DateTime(2026, 7, 20), DateTime(2026, 7, 22)),
       '2026.07.20 ~ 07.22',

@@ -40,7 +40,8 @@ async def get_survey_questions(
     ### 📌 정렬 순서
     - 질문과 선택지는 각각 DB에 설정된 `sort_order` 기준으로 정렬되어 반환됩니다.
     """
-    logger.info("[TRIP_DNA] Request questions (User: current_user.id - current_user.username)")
+    # TODO: current_user 연동 시 사용자 식별자를 함께 남긴다.
+    logger.info("[TRIP_DNA] Request questions")
 
     """설문용 질문 및 선택지 리스트를 조회합니다."""
     questions = await service.get_survey_questions(session)
