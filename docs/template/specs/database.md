@@ -1,5 +1,9 @@
 # PostgreSQL DDL
 
+> 이 문서는 PR #15의 데이터 모델 기준과 PR #17의 Journey 확장을 함께 기록한다.
+> 실제 운영 스키마의 단일 출처는 Alembic revision과 SQLAlchemy 모델이며, Journey 관련 PK/FK는
+> 현재 DB 컨벤션에 따라 앱 레벨 UUID v7을 사용한다.
+
 ## ENUM TYPE
 
 ```sql
@@ -109,22 +113,69 @@ CREATE INDEX idx_quests_region_category ON quests (region_id, category);
 
 ---
 
-## 5. quest_progress — 퀘스트 진행/인증
+## 5. journeys — 여정
+- 사용자가 한 지역에서 수행할 퀘스트 묶음을 저장하는 테이블
+- status는 애플리케이션에서 `in_progress`로 시작하며, 담긴 퀘스트를 모두 완료하면 `completed`로 전환
+- user_id, status 인덱스로 진행 중/완료 여정 목록을 조회
+
+```sql
+CREATE TABLE journeys (
+    id            UUID         PRIMARY KEY,
+    user_id       UUID         NOT NULL REFERENCES users (id),
+    region_id     UUID         NOT NULL REFERENCES regions (id),
+    title         VARCHAR(100),
+    status        VARCHAR(20)  NOT NULL,
+    completed_at  TIMESTAMP WITH TIME ZONE,
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at    TIMESTAMP WITH TIME ZONE NOT NULL,
+    deleted_at    TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX ix_journeys_user_status ON journeys (user_id, status);
+```
+
+---
+
+## 6. journey_quests — 여정-퀘스트
+- 여정에 포함된 퀘스트와 표시 순서를 저장하는 연결 테이블
+- UNIQUE (journey_id, quest_id)로 같은 퀘스트의 중복 추가를 방지
+
+```sql
+CREATE TABLE journey_quests (
+    id          UUID    PRIMARY KEY,
+    journey_id  UUID    NOT NULL REFERENCES journeys (id),
+    quest_id    UUID    NOT NULL REFERENCES quests (id),
+    sort_order  INT     NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at  TIMESTAMP WITH TIME ZONE NOT NULL,
+    deleted_at  TIMESTAMP WITH TIME ZONE,
+
+    CONSTRAINT uq_journey_quests_journey_id_quest_id UNIQUE (journey_id, quest_id)
+);
+```
+
+---
+
+## 7. quest_progress — 퀘스트 진행/인증
 - 사용자별 퀘스트 인증 기록을 저장하는 테이블
 - UNIQUE (user_id, quest_id)로 동일 퀘스트 중복 완료 방지
+- journey_id는 인증이 수행된 여정을 선택적으로 연결
+- quiz_answer는 퀴즈 인증에서 제출한 답안을 보관
 - 완료(completed) 시 인증 좌표(verified_lat/lng), 사진(photo_url), 완료 시각(completed_at) 기록
 - map_progress.completed_count 집계와 timeline_events 생성의 트리거가 되는 핵심 테이블
 
 ```sql
 CREATE TABLE quest_progress (
-    id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id       BIGINT        NOT NULL REFERENCES users (id),
-    quest_id      BIGINT        NOT NULL REFERENCES quests (id),
+    id            UUID          PRIMARY KEY,
+    user_id       UUID          NOT NULL REFERENCES users (id),
+    quest_id      UUID          NOT NULL REFERENCES quests (id),
+    journey_id    UUID          REFERENCES journeys (id),
     status        VARCHAR(20)   NOT NULL DEFAULT 'in_progress'
                       CHECK (status IN ('in_progress', 'completed')),
     verified_lat  DECIMAL(10,7),
     verified_lng  DECIMAL(10,7),
     photo_url     VARCHAR(500),
+    quiz_answer   VARCHAR(200),
     completed_at  TIMESTAMP,
     created_at    TIMESTAMP     NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMP     NOT NULL DEFAULT NOW(),
@@ -138,7 +189,7 @@ CREATE INDEX idx_quest_progress_user_status ON quest_progress (user_id, status);
 
 ---
 
-## 6. map_colors — 지역 색칠
+## 8. map_progress — 지역 색칠
 - 사용자가 특정 지역에서 완료한 퀘스트 수를 집계하는 테이블
 - completed_count가 증가할수록 지도상 해당 지역이 더 진하게 색칠되는 시각적 진행도를 표현
 - first_colored_at은 해당 지역에서 첫 퀘스트를 완료한 시각 (지도 색칠 최초 시점)
@@ -161,7 +212,7 @@ CREATE TABLE map_progress (
 
 ---
 
-## 7. timeline_events — 여행 타임라인
+## 9. timeline_events — 여행 타임라인
 - 사용자의 여행 활동 이력을 시계열로 기록하는 테이블
 - quest_progress_id는 퀘스트 완료 이벤트일 때 해당 인증 레코드와 연결 (선택적)
 - event_type으로 퀘스트 완료·지역 첫 방문·DNA 업데이트 등 이벤트 종류를 구분
@@ -185,7 +236,7 @@ CREATE INDEX idx_timeline_events_user_occurred ON timeline_events (user_id, occu
 
 ---
 
-## 9. trip_questions — 여행 성향 질문지
+## 10. trip_questions — 여행 성향 질문지
 - 여행 DNA 설문의 질문 목록을 저장하는 테이블
 - sort_order로 앱에 출제되는 질문 순서를 제어
 
@@ -203,7 +254,7 @@ CREATE TABLE trip_questions (
 
 ---
 
-## 10. trip_question_options — 선택지
+## 11. trip_question_options — 선택지
 - 각 질문의 선택지를 저장하는 테이블
 - score_value JSONB에 DNA 유형별 점수 기여값이 담겨 있어 설문 완료 후 DNA 산출에 사용 (예: `{"nature":3,"food":1,...}`)
 - category는 이 선택지가 주로 대응하는 DNA 유형으로, 결과 해석 참고용
@@ -229,7 +280,7 @@ CREATE INDEX idx_trip_question_options_question_id ON trip_question_options (que
 
 ---
 
-## 11. trip_replies — 여행 성향 사용자 답변
+## 12. trip_replies — 여행 성향 사용자 답변
 - 여행 DNA 설문에 대한 사용자의 문항별 응답을 저장하는 테이블
 - question_id, question_option_id는 각각 trip_questions, trip_question_options 테이블의 id값
 ```sql
@@ -250,7 +301,7 @@ CREATE INDEX idx_trip_replies_user_created ON trip_replies (user_id, created_at 
 
 ---
 
-## 12. user_dna_history — 여행 성향 결과 이력
+## 13. user_dna_history — 여행 성향 결과 이력
 - 여행 DNA 설문에 대한 결과를 저장하는 히스토리성 테이블
 ```sql
 CREATE TABLE user_dna_history (
