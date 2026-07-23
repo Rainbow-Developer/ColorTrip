@@ -55,10 +55,8 @@ class TimelineRepository:
                 start_date = datetime(year, 1, 1, tzinfo=kst_tz)
                 end_date = datetime(year + 1, 1, 1, tzinfo=kst_tz)
 
-            query = (
-                query
-                .where(TimelineEvent.occurred_at >= start_date)
-                .where(TimelineEvent.occurred_at < end_date)
+            query = query.where(TimelineEvent.occurred_at >= start_date).where(
+                TimelineEvent.occurred_at < end_date
             )
         elif month is not None:
             # 연도 없이 월 단독 필터 시 DB 타임존 차이에 따른 오류 방지를 위해 KST 변환 후 추출

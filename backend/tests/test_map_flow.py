@@ -1,6 +1,6 @@
 """지도 진행 API 테스트 (GET /api/v1/users/me/map)."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from httpx import AsyncClient
@@ -24,7 +24,7 @@ async def _seed_map_fixture(user_id: UUID) -> dict[str, str]:
             user_id=user_id,
             region_id=danyang.id,
             completed_count=3,
-            first_colored_at=datetime(2026, 7, 1, 10, 0, 0, tzinfo=timezone.utc),
+            first_colored_at=datetime(2026, 7, 1, 10, 0, 0, tzinfo=UTC),
         )
         session.add(progress)
         await session.commit()

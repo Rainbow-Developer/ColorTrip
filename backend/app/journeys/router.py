@@ -31,7 +31,13 @@ async def create_journey(
     session: AsyncSession = Depends(get_session),
 ) -> Envelope[JourneyDetail]:
     data = await service.create_journey(
-        session, current_user.id, payload.region_id, payload.quest_ids, payload.title
+        session,
+        current_user.id,
+        payload.region_id,
+        payload.quest_ids,
+        payload.title,
+        payload.start_date,
+        payload.end_date,
     )
     return success(data, status=201, message="여정이 생성되었습니다.")
 

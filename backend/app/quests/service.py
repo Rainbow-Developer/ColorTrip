@@ -1,4 +1,5 @@
 """quests — 비즈니스 로직 계층."""
+
 from __future__ import annotations
 
 from uuid import UUID

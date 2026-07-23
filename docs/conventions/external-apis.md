@@ -21,6 +21,40 @@
 - 사진 인증·추천은 초기엔 룰 기반으로 시작하고, 추후 고도화한다.
 - API 키는 환경변수 + GCP Secret Manager로 관리한다.
 
+## TourAPI 활용신청 현황 (공공데이터포털, 2026-07-17 승인 · 2028-07-17 만료)
+
+하나의 data.go.kr 계정 인증키로 아래 서비스가 모두 승인되어 있다.
+키는 로컬 `backend/.env`의 `TOUR_API_KEY`로 주입하고, 운영은 Secret Manager
+`colortrip-dev-tour-api-key`로 관리한다(현재 시크릿 미생성 — 생성 시 dev 서버 배포에 자동 반영,
+[deploy/deploy.sh](../../deploy/deploy.sh) 참고).
+
+| 서비스(활용신청 명) | Base URL (`apis.data.go.kr/B551011/…`) | 상태 |
+|------|------|------|
+| 국문 관광정보 서비스_GW | `KorService2` | **사용 중** — 프론트 퀘스트 데이터 생성 `backend/scripts/generate_frontend_quests.py` · DB 적재 로더 `backend/app/integrations/tour_api/` |
+| 영문/일문/중문간체/중문번체/독어 관광정보서비스_GW | `EngService2` / `JpnService2` / `ChsService2` / `ChtService2` / `GerService2` | 미사용 (다국어 대응 시) |
+| 관광사진 정보_GW | `PhotoGalleryService1` (`gallerySearchList1` 등) | 미사용 (퀘스트 썸네일 후보) |
+| 기초지자체 중심 관광지 정보 | `LocgoHubTarService1` (`areaBasedList1`, `baseYm`·`areaCd`·`signguCd` 필수) | 미사용 (지역 대표 관광지 선정 후보) |
+| 관광지별 연관 관광지 정보 | `TarRlteTarService1` (`areaBasedList1`) | 미사용 (연관 퀘스트 추천 후보) |
+| 지역별 관광 다양성 | data.go.kr 활용가이드 참고 | 미사용 |
+
+### KorService2 사용법 (사용 중)
+
+- **공통 파라미터**: `serviceKey`(인증키)·`MobileOS=ETC`·`MobileApp=ColorTrip`·`_type=json` —
+  백엔드 클라이언트 `backend/app/integrations/tour_api/client.py`가 자동으로 붙인다.
+- **주요 엔드포인트**
+  - `areaCode2?areaCode=33` — 충북 시·군구 코드 목록
+  - `areaBasedList2?areaCode=33&sigunguCode={코드}&contentTypeId={유형}` — 지역 기반 관광정보 목록
+  - `detailCommon2?contentId={id}` — 공통 상세(소개문 `overview` 포함)
+  - `detailIntro2?contentId={id}&contentTypeId={유형}` — 운영시간·휴무 등 소개 정보
+- **contentTypeId**: 12 관광지 · 14 문화시설 · 15 축제공연행사 · 25 여행코스 · 28 레포츠 · 32 숙박 · 38 쇼핑 · 39 음식점
+- **충북(areaCode=33) sigunguCode**: 괴산군 1 · 단양군 2 · 보은군 3 · 영동군 4 · 옥천군 5 · 음성군 6 ·
+  제천시 7 · 진천군 8 · 청주시 10 · 충주시 11 · 증평군 12
+  (9번 청원군은 2014년 청주시 통합 이전 코드 — 사용하지 않음. 백엔드 시드 매핑: `backend/app/regions/seed.py`)
+- **분류코드(cat1) → 앱 퀘스트 유형 매핑**: `A01` 자연→nature · `A02` 인문(`A0201` 역사→history,
+  `A0202` 휴양→healing, `A0203` 체험→active) · `A03` 레포츠→active · `A05` 음식→food
+- **주의**: 발급 직후의 키는 게이트웨이 전파가 끝나기 전까지 간헐적으로 `401 Unauthorized`(본문 비표준)가
+  섞여 온다 — 401도 재시도 대상으로 처리할 것. 개발계정 트래픽은 서비스당 일 1,000건.
+
 ## 관련 문서
 
 - [인증 & 보안 · 개인정보](./auth-security.md)

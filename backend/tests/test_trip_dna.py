@@ -96,18 +96,44 @@ async def test_submit_survey_replies_success_and_grading(client: AsyncClient) ->
         options = []
         # Q1: 힐링(healing)에 3점 가중치
         options.append(
-            TripQuestionOption(question_id=questions[0].id, content="healing opt", score_value={"healing": 3},
-                               category="healing", sort_order=1))
+            TripQuestionOption(
+                question_id=questions[0].id,
+                content="healing opt",
+                score_value={"healing": 3},
+                category="healing",
+                sort_order=1,
+            )
+        )
         # Q2: 자연(nature)에 3점 가중치
-        options.append(TripQuestionOption(question_id=questions[1].id, content="nature opt", score_value={"nature": 3},
-                                          category="nature", sort_order=1))
+        options.append(
+            TripQuestionOption(
+                question_id=questions[1].id,
+                content="nature opt",
+                score_value={"nature": 3},
+                category="nature",
+                sort_order=1,
+            )
+        )
         # Q3: 미식(food)에 3점 가중치
-        options.append(TripQuestionOption(question_id=questions[2].id, content="food opt", score_value={"food": 3},
-                                          category="food", sort_order=1))
+        options.append(
+            TripQuestionOption(
+                question_id=questions[2].id,
+                content="food opt",
+                score_value={"food": 3},
+                category="food",
+                sort_order=1,
+            )
+        )
         # Q4: 힐링(healing)에 3점 가중치
         options.append(
-            TripQuestionOption(question_id=questions[3].id, content="healing opt 2", score_value={"healing": 3},
-                               category="healing", sort_order=1))
+            TripQuestionOption(
+                question_id=questions[3].id,
+                content="healing opt 2",
+                score_value={"healing": 3},
+                category="healing",
+                sort_order=1,
+            )
+        )
 
         session.add_all(options)
         await session.commit()
@@ -159,8 +185,20 @@ async def test_submit_survey_replies_duplicate_question(client: AsyncClient) -> 
         session.add(q)
         await session.flush()
 
-        o1 = TripQuestionOption(question_id=q.id, content="opt 1", score_value={"healing": 3}, category="healing", sort_order=1)
-        o2 = TripQuestionOption(question_id=q.id, content="opt 2", score_value={"nature": 3}, category="nature", sort_order=2)
+        o1 = TripQuestionOption(
+            question_id=q.id,
+            content="opt 1",
+            score_value={"healing": 3},
+            category="healing",
+            sort_order=1,
+        )
+        o2 = TripQuestionOption(
+            question_id=q.id,
+            content="opt 2",
+            score_value={"nature": 3},
+            category="nature",
+            sort_order=2,
+        )
         session.add_all([o1, o2])
         await session.commit()
 
@@ -168,7 +206,7 @@ async def test_submit_survey_replies_duplicate_question(client: AsyncClient) -> 
     payload = {
         "replies": [
             {"question_id": str(q.id), "question_option_id": str(o1.id)},
-            {"question_id": str(q.id), "question_option_id": str(o2.id)}
+            {"question_id": str(q.id), "question_option_id": str(o2.id)},
         ]
     }
     response = await client.post("/api/v1/trip_dna/replies", json=payload, headers=headers)
@@ -179,24 +217,33 @@ async def test_submit_survey_replies_duplicate_question(client: AsyncClient) -> 
 
 @pytest.mark.asyncio
 async def test_submit_survey_replies_invalid_mapping(client: AsyncClient) -> None:
-    """제출된 선택지(question_option_id)가 해당 질문(question_id)에 속하지 않을 때 400 에러를 반환하는지 검증합니다."""
+    """제출된 선택지(question_option_id)가 해당 질문(question_id)에 속하지 않을 때
+    400 에러를 반환하는지 검증합니다."""
     async with AsyncSessionLocal() as session:
         q1 = TripQuestion(question="질문 1", sort_order=1)
         q2 = TripQuestion(question="질문 2", sort_order=2)
         session.add_all([q1, q2])
         await session.flush()
 
-        o1 = TripQuestionOption(question_id=q1.id, content="Q1 선택지", score_value={"healing": 3}, category="healing", sort_order=1)
-        o2 = TripQuestionOption(question_id=q2.id, content="Q2 선택지", score_value={"nature": 3}, category="nature", sort_order=1)
+        o1 = TripQuestionOption(
+            question_id=q1.id,
+            content="Q1 선택지",
+            score_value={"healing": 3},
+            category="healing",
+            sort_order=1,
+        )
+        o2 = TripQuestionOption(
+            question_id=q2.id,
+            content="Q2 선택지",
+            score_value={"nature": 3},
+            category="nature",
+            sort_order=1,
+        )
         session.add_all([o1, o2])
         await session.commit()
 
     headers = await auth_headers(client)
-    payload = {
-        "replies": [
-            {"question_id": str(q1.id), "question_option_id": str(o2.id)}
-        ]
-    }
+    payload = {"replies": [{"question_id": str(q1.id), "question_option_id": str(o2.id)}]}
     response = await client.post("/api/v1/trip_dna/replies", json=payload, headers=headers)
     assert response.status_code == 400
     res_json = response.json()
