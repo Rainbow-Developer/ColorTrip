@@ -71,6 +71,10 @@ merge revision의 `upgrade()`와 `downgrade()`는 DDL을 실행하지 않는다.
 두 migration 분기가 모두 적용됐음을 Alembic version graph에 기록하고, 이후 migration이
 따를 단일 head를 제공한다.
 
+mergepoint에서 `alembic downgrade -1`은 두 부모 중 어느 분기로 내려갈지 결정할 수 없어
+`Ambiguous walk`로 거부된다. 두 sibling을 모두 되돌릴 때는
+`uv run alembic downgrade 9c0244355f03`처럼 공통 부모 revision을 명시한다.
+
 회귀 테스트는 DB에 연결하지 않고 Alembic `ScriptDirectory`에서 head 개수를 읽어
 정확히 하나인지 확인한다. 구현 검증에서는 PostgreSQL 테스트 DB를 공통 부모까지
 내린 뒤 각 sibling만 적용한 상태와 두 sibling을 모두 적용한 상태를 각각 구성하고,

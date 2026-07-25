@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 구현 완료 / KAN-52 Alembic head 정합화 계획 |
+| 상태 | 구현 완료 / KAN-52 Alembic head 정합화 완료 |
 | 최종 업데이트 | 2026-07-25 |
 
 ## 구현 규모 / 단위 분할
@@ -18,9 +18,9 @@
   - [x] 7) Alembic 왕복 검증, Ruff, Pyright, Pytest 실행.
   - [x] 8) API 후속 GitHub Issue 생성 및 문서 반영.
   - [x] 9) PR #17 Journey 스키마를 PR #15 `database.md`와 migration regression test에 반영.
-  - [ ] 10) 단일-head 회귀 테스트를 추가하고 현재 복수 head에서 실패함을 확인.
-  - [ ] 11) KAN-52에서 병렬 생성된 두 Alembic head를 merge revision으로 통합.
-  - [ ] 12) 세 가지 기존 DB head 상태의 전환, 전체 backend 테스트, Ruff, Pyright를 검증.
+  - [x] 10) 단일-head 회귀 테스트를 추가하고 현재 복수 head에서 실패함을 확인.
+  - [x] 11) KAN-52에서 병렬 생성된 두 Alembic head를 merge revision으로 통합.
+  - [x] 12) 세 가지 기존 DB head 상태의 전환, 전체 backend 테스트, Ruff, Pyright를 검증.
 
 ## 구현된 항목
 
@@ -37,6 +37,11 @@
 - `backend/tests/test_database_spec_schema.py`로 PR #15 스키마 핵심 계약, DB server default, 신규 ORM 모델 insert 기본값을 검증한다.
 - PR #17의 `f4b2a9c67e18`이 `journeys`, `journey_quests`, `quest_progress.journey_id`, `quest_progress.quiz_answer`를 생성하고, PR #24의 `a4f2c8d1e9b0`이 그 위에 이어짐을 문서화했다.
 - `backend/tests/test_database_spec_schema.py`가 Journey 테이블, FK, unique 제약, 진행 확장 컬럼을 회귀 검증한다.
+- `backend/tests/test_migration_graph.py`가 Alembic revision graph의 head가 정확히 하나인지 검증한다.
+- `be3e3c52de66_merge_alembic_heads.py`가 `5eab7d8363e0`, `c9d4e7a2b8f3`을 빈 DDL mergepoint로 통합한다.
+- PostgreSQL `colortrip_test`에서 한쪽 sibling만 적용된 두 경우와 두 sibling이 모두 적용된 경우가 `be3e3c52de66` 단일 version row로 수렴함을 검증했다.
+- 공통 부모 `9c0244355f03`까지 downgrade한 뒤 다시 head로 upgrade하는 왕복을 검증했다.
+- 전체 backend 테스트 92개, Ruff check, 변경 파일 format check, Pyright를 통과했다.
 - 기존 구현된 API 수정 필요 지점만 GitHub Issue로 유지했다:
   - [#18](https://github.com/Rainbow-Developer/ColorTrip/issues/18): 사용자 프로필 응답의 `dna`/`profile_image` 반영 검토.
   - [#20](https://github.com/Rainbow-Developer/ColorTrip/issues/20): 기존 퀘스트 조회 응답의 진행 상태 반영 검토.
@@ -47,16 +52,13 @@
 - 이번 migration PR 범위의 DB/ORM/Alembic 구현은 완료했다.
 - PR #15 머지 이후 변경되는 DB/API 요구사항은 후속 revision으로 보정한다.
 - API 구현은 `api-followups.md`에 연결된 GitHub Issue에서 진행한다.
-- KAN-52에서 `5eab7d8363e0`, `c9d4e7a2b8f3`을 부모로 갖는 빈 merge revision을 추가한다.
-- merge 전에 단일-head 회귀 테스트가 두 head를 보고 실패하는지 확인한다.
-- merge 이후 `uv run alembic heads`, 단일-head 회귀 테스트, 전체 backend 테스트와 품질 검사를 실행한다.
-- PostgreSQL 테스트 DB에서 왼쪽 sibling만 적용, 오른쪽 sibling만 적용, 두 sibling 모두 적용된 상태가 각각 merge head로 전환되는지 확인한다.
 
 ## 알려진 한계 / TODO
 
 - 설문 질문/선택지 seed 데이터는 아직 포함하지 않는다.
 - Journey migration은 이미 PR #17에서 적용됐다. 같은 테이블을 생성하는 추가 revision은 만들지 않으며, 이후 schema 변경이 필요할 때만 `a4f2c8d1e9b0` 뒤 새 revision을 추가한다.
 - API 구현은 이번 migration PR 범위에서 제외하고 GitHub Issue로 분리한다.
+- mergepoint에서 상대 단계 `downgrade -1`은 모호하므로, 롤백할 때 공통 부모 등 명시적인 revision을 지정해야 한다.
 - dev 배포 경로는 Alembic migration을 자동 실행하지 않는다. KAN-52에서는 graph만 정합화하고 배포 자동화는 후속 작업으로 분리한다.
 
 ## 변경 이력
@@ -69,3 +71,4 @@
 | 2026-07-12 | CodeRabbit 검토 후 enum 중복 제거, 테스트 DB reset 스키마 재생성, quest_progress 상태값 preflight 보강 |
 | 2026-07-16 | PR #17 Journey 스키마를 PR #15 `database.md`에 반영하고 Alembic 체인 회귀 검증 보강 |
 | 2026-07-25 | KAN-52 복수 Alembic head를 빈 merge revision으로 통합하는 계획 추가 |
+| 2026-07-25 | `be3e3c52de66` merge revision과 단일-head 회귀 테스트 추가, 세 가지 기존 DB 상태 전환 및 전체 품질 검증 완료 |

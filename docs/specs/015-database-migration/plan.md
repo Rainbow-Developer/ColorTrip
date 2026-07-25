@@ -7,7 +7,7 @@
 | 영역 | backend |
 | 작성자 | Database Migration 담당 |
 | 작성일 | 2026-07-08 |
-| 상태 | 구현 완료 / KAN-52 Alembic head 정합화 계획 |
+| 상태 | 구현 완료 / KAN-52 Alembic head 정합화 완료 |
 
 ## 배경 / 목적
 
@@ -96,7 +96,7 @@ flowchart TD
 - `backend/alembic/env.py`: 신규 모델 metadata import 추가.
 - `backend/alembic/versions/f4b2a9c67e18_add_journey_and_quest_progress_tables.py`: Journey schema migration.
 - `backend/alembic/versions/a4f2c8d1e9b0_add_pr15_database_spec_tables.py`: PR #15 migration.
-- `backend/alembic/versions/`: `5eab7d8363e0`, `c9d4e7a2b8f3`을 부모로 갖는 `merge_alembic_heads` revision 추가.
+- `backend/alembic/versions/be3e3c52de66_merge_alembic_heads.py`: `5eab7d8363e0`, `c9d4e7a2b8f3` merge revision.
 - `backend/tests/test_migration_graph.py`: Alembic graph가 항상 단일 head인지 DB 연결 없이 검증.
 - `backend/tests/test_database_spec_schema.py`: Journey migration schema 회귀 검증.
 - `docs/specs/015-database-migration/`: 계획/설명/구현/API 후속 기록.
@@ -116,9 +116,9 @@ flowchart TD
 - [x] API 후속 GitHub Issue 생성 및 문서 반영.
 - [x] PR #17 Journey 테이블과 `quest_progress` 확장 컬럼을 `database.md`에 반영.
 - [x] Journey migration 체인과 FK/unique/index 회귀 검증을 추가.
-- [ ] KAN-52 단일-head 회귀 테스트를 먼저 추가하고 현재 복수 head에서 실패함을 확인.
-- [ ] Alembic CLI로 merge revision을 생성하고 단일 head·전체 backend 테스트를 검증.
-- [ ] PostgreSQL 테스트 DB의 세 가지 기존 head 상태에서 `upgrade head` 전환을 검증.
+- [x] KAN-52 단일-head 회귀 테스트를 먼저 추가하고 현재 복수 head에서 실패함을 확인.
+- [x] Alembic CLI로 merge revision을 생성하고 단일 head·전체 backend 테스트를 검증.
+- [x] PostgreSQL 테스트 DB의 세 가지 기존 head 상태에서 `upgrade head` 전환을 검증.
 
 ## 리스크 / 미해결 질문
 
@@ -127,4 +127,5 @@ flowchart TD
 - 설문 seed 데이터는 아직 확정되지 않았다. 컨벤션상 seed는 migration에 포함할 수 있으나, 이번 작업에서는 구조만 준비한다.
 - 운영 DB에 이미 데이터가 있는 경우 신규 non-null 테이블 생성은 문제가 없지만, 기존 테이블에 non-null 컬럼을 추가하지 않는 원칙을 유지해야 한다.
 - merge revision은 스키마 DDL을 실행하지 않는다. 한쪽 head만 적용된 DB는 `upgrade head` 시 누락된 sibling revision을 먼저 적용하고, 두 head가 모두 적용된 DB는 merge revision만 기록한다.
+- mergepoint는 부모가 두 개라 `alembic downgrade -1` 대상이 모호해 `Ambiguous walk`로 거부된다. 롤백은 `alembic downgrade 9c0244355f03`처럼 공통 부모 revision을 명시한다.
 - 현재 dev 배포 workflow와 `deploy.sh`는 Alembic migration을 자동 실행하지 않는다. KAN-52는 migration graph 수정에 한정하고, dev Cloud SQL 적용은 별도 운영 명령 또는 후속 배포 자동화 작업으로 수행한다.
