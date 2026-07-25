@@ -51,7 +51,7 @@ PR #15의 `docs/template/specs/database.md`에는 여행 DNA, 퀘스트 진행, 
 - 삭제 상태는 `deleted_at`으로 통일하고 `is_deleted`는 추가하지 않는다.
 - 시간 컬럼은 기존 KST 저장 규약과 `TimestampMixin`을 따른다.
 - Alembic upgrade/downgrade가 `d7b712f1a245` 기준으로 `f4b2a9c67e18`과 `a4f2c8d1e9b0`을 포함해 왕복 가능해야 한다.
-- 저장소에는 Alembic head가 항상 하나만 존재해야 하며, 새 migration은 그 단일 head를 부모로 삼아야 한다.
+- 저장소에는 Alembic head가 항상 하나만 존재해야 한다. 일반 신규 migration은 그 단일 head를 부모로 삼아야 하며, 병렬 branch를 수렴시키는 merge revision은 의도적으로 여러 부모를 가질 수 있다.
 
 ## 설계 개요 / 접근 방식
 

@@ -8,7 +8,7 @@
 
 ## 동작 방식
 
-마이그레이션은 `d7b712f1a245` 뒤에 Journey revision `f4b2a9c67e18`을 적용하고, 그 위에 PR #15 revision `a4f2c8d1e9b0`을 적용하는 단일 체인이다. `upgrade head`는 기존 테이블을 보존하면서 Journey 및 PR #15 모델을 생성하고, `downgrade d7b712f1a245`는 두 revision에서 추가한 구조만 되돌린다.
+초기 migration 설명은 `d7b712f1a245` 뒤에 Journey revision `f4b2a9c67e18`과 PR #15 revision `a4f2c8d1e9b0`을 적용하는 흐름을 다룬다. 현재 전체 migration graph에서는 이후 `9c0244355f03`에서 `5eab7d8363e0`(shares)와 `c9d4e7a2b8f3`(journey dates)가 병렬로 분기되었고, KAN-52의 `be3e3c52de66` merge revision에서 다시 합쳐진다. `upgrade head`는 이 분기까지 포함해 기존 테이블을 보존하면서 필요한 구조를 생성한다.
 
 ```mermaid
 flowchart LR
@@ -16,6 +16,11 @@ flowchart LR
     B --> C["journeys/journey_quests/quest_progress 확장"]
     B --> D["a4f2c8d1e9b0 PR #15"]
     D --> E["users.dna/profile_image/map/timeline/DNA 설문"]
+    E --> F["9c0244355f03"]
+    F --> G["5eab7d8363e0 shares"]
+    F --> H["c9d4e7a2b8f3 journey dates"]
+    G --> I["be3e3c52de66 KAN-52 merge"]
+    H --> I
 ```
 
 신규 테이블은 모두 UUID v7 PK와 `created_at`, `updated_at`, `deleted_at` 감사 컬럼을 사용한다. 앱 코드에서 직접 생성되는 row는 SQLAlchemy `UUIDPKMixin`과 `TimestampMixin` 기본값을 따른다.
