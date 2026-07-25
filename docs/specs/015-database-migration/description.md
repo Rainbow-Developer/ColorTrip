@@ -8,7 +8,7 @@
 
 ## 동작 방식
 
-마이그레이션은 `d7b712f1a245` 뒤에 Journey revision `f4b2a9c67e18`을 적용하고, 그 위에 PR #15 revision `a4f2c8d1e9b0`을 적용하는 단일 체인이다. `upgrade head`는 기존 테이블을 보존하면서 Journey 및 PR #15 모델을 생성하고, `downgrade d7b712f1a245`는 두 revision에서 추가한 구조만 되돌린다.
+초기 migration 설명은 `d7b712f1a245` 뒤에 Journey revision `f4b2a9c67e18`과 PR #15 revision `a4f2c8d1e9b0`을 적용하는 흐름을 다룬다. 현재 전체 migration graph에서는 이후 `9c0244355f03`에서 `5eab7d8363e0`(shares)와 `c9d4e7a2b8f3`(journey dates)가 병렬로 분기되었고, KAN-52의 `be3e3c52de66` merge revision에서 다시 합쳐진다. `upgrade head`는 이 분기까지 포함해 기존 테이블을 보존하면서 필요한 구조를 생성한다.
 
 ```mermaid
 flowchart LR
@@ -16,6 +16,11 @@ flowchart LR
     B --> C["journeys/journey_quests/quest_progress 확장"]
     B --> D["a4f2c8d1e9b0 PR #15"]
     D --> E["users.dna/profile_image/map/timeline/DNA 설문"]
+    E --> F["9c0244355f03"]
+    F --> G["5eab7d8363e0 shares"]
+    F --> H["c9d4e7a2b8f3 journey dates"]
+    G --> I["be3e3c52de66 KAN-52 merge"]
+    H --> I
 ```
 
 신규 테이블은 모두 UUID v7 PK와 `created_at`, `updated_at`, `deleted_at` 감사 컬럼을 사용한다. 앱 코드에서 직접 생성되는 row는 SQLAlchemy `UUIDPKMixin`과 `TimestampMixin` 기본값을 따른다.
@@ -52,6 +57,37 @@ uv run pytest
 ```
 
 로컬 검증은 테스트 DB(`colortrip_test`)를 사용해야 한다. `backend/tests/conftest.py`는 테스트 시작 시 Alembic `upgrade head`로 테스트 DB를 재구성한다.
+
+## 복수 head 정합화
+
+`9c0244355f03` 이후 공유 API와 여행 기간 변경 migration이 병렬로 추가되어
+`5eab7d8363e0`, `c9d4e7a2b8f3` 두 head가 생겼다. KAN-52는 기존 revision을
+수정하지 않고 두 revision을 부모로 갖는 빈 merge revision을 추가한다.
+
+```mermaid
+flowchart TD
+    A["9c0244355f03 timeline"] --> B["5eab7d8363e0 shares"]
+    A --> C["c9d4e7a2b8f3 journey dates"]
+    B --> D["KAN-52 merge revision"]
+    C --> D
+```
+
+merge revision의 `upgrade()`와 `downgrade()`는 DDL을 실행하지 않는다. 이 revision은
+두 migration 분기가 모두 적용됐음을 Alembic version graph에 기록하고, 이후 migration이
+따를 단일 head를 제공한다.
+
+mergepoint에서 `alembic downgrade -1`은 두 부모 중 어느 분기로 내려갈지 결정할 수 없어
+`Ambiguous walk`로 거부된다. 두 sibling을 모두 되돌릴 때는
+`uv run alembic downgrade 9c0244355f03`처럼 공통 부모 revision을 명시한다.
+
+회귀 테스트는 DB에 연결하지 않고 Alembic `ScriptDirectory`에서 head 개수를 읽어
+정확히 하나인지 확인한다. 구현 검증에서는 PostgreSQL 테스트 DB를 공통 부모까지
+내린 뒤 각 sibling만 적용한 상태와 두 sibling을 모두 적용한 상태를 각각 구성하고,
+모든 경우 `upgrade head`가 같은 merge revision으로 수렴하는지 확인한다.
+
+현재 dev 배포 스크립트는 migration을 자동 실행하지 않는다. merge revision이 포함된
+이미지가 배포되더라도 dev Cloud SQL 반영에는 별도의 `alembic upgrade head` 실행이 필요하다.
+배포 migration 자동화는 KAN-52 범위에 포함하지 않는다.
 
 ## 예시
 
