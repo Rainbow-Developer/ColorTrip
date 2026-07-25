@@ -2,8 +2,8 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 구현 완료 / Journey 정합화 PR 진행 중 |
-| 최종 업데이트 | 2026-07-16 |
+| 상태 | 구현 완료 / KAN-52 Alembic head 정합화 계획 |
+| 최종 업데이트 | 2026-07-25 |
 
 ## 구현 규모 / 단위 분할
 
@@ -18,6 +18,7 @@
   - [x] 7) Alembic 왕복 검증, Ruff, Pyright, Pytest 실행.
   - [x] 8) API 후속 GitHub Issue 생성 및 문서 반영.
   - [x] 9) PR #17 Journey 스키마를 PR #15 `database.md`와 migration regression test에 반영.
+  - [ ] 10) KAN-52에서 병렬 생성된 두 Alembic head를 merge revision으로 통합하고 전체 backend 테스트를 복구.
 
 ## 구현된 항목
 
@@ -44,6 +45,8 @@
 - 이번 migration PR 범위의 DB/ORM/Alembic 구현은 완료했다.
 - PR #15 머지 이후 변경되는 DB/API 요구사항은 후속 revision으로 보정한다.
 - API 구현은 `api-followups.md`에 연결된 GitHub Issue에서 진행한다.
+- KAN-52에서 `5eab7d8363e0`, `c9d4e7a2b8f3`을 부모로 갖는 빈 merge revision을 추가한다.
+- merge 이후 `uv run alembic heads`, `uv run alembic upgrade head`, 전체 backend 테스트와 품질 검사를 실행한다.
 
 ## 알려진 한계 / TODO
 
@@ -60,3 +63,4 @@
 | 2026-07-08 | DB server default, DESC index, ORM insert 기본값 검증 보강 |
 | 2026-07-12 | CodeRabbit 검토 후 enum 중복 제거, 테스트 DB reset 스키마 재생성, quest_progress 상태값 preflight 보강 |
 | 2026-07-16 | PR #17 Journey 스키마를 PR #15 `database.md`에 반영하고 Alembic 체인 회귀 검증 보강 |
+| 2026-07-25 | KAN-52 복수 Alembic head를 빈 merge revision으로 통합하는 계획 추가 |

@@ -53,6 +53,24 @@ uv run pytest
 
 로컬 검증은 테스트 DB(`colortrip_test`)를 사용해야 한다. `backend/tests/conftest.py`는 테스트 시작 시 Alembic `upgrade head`로 테스트 DB를 재구성한다.
 
+## 복수 head 정합화
+
+`9c0244355f03` 이후 공유 API와 여행 기간 변경 migration이 병렬로 추가되어
+`5eab7d8363e0`, `c9d4e7a2b8f3` 두 head가 생겼다. KAN-52는 기존 revision을
+수정하지 않고 두 revision을 부모로 갖는 빈 merge revision을 추가한다.
+
+```mermaid
+flowchart TD
+    A["9c0244355f03 timeline"] --> B["5eab7d8363e0 shares"]
+    A --> C["c9d4e7a2b8f3 journey dates"]
+    B --> D["KAN-52 merge revision"]
+    C --> D
+```
+
+merge revision의 `upgrade()`와 `downgrade()`는 DDL을 실행하지 않는다. 이 revision은
+두 migration 분기가 모두 적용됐음을 Alembic version graph에 기록하고, 이후 migration이
+따를 단일 head를 제공한다.
+
 ## 예시
 
 `quest_progress`는 사용자가 퀘스트를 시작하거나 완료할 때 단일 row로 유지되며, 수행 여정은 선택적으로 연결한다.
