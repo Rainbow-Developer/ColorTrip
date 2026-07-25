@@ -18,7 +18,9 @@
   - [x] 7) Alembic 왕복 검증, Ruff, Pyright, Pytest 실행.
   - [x] 8) API 후속 GitHub Issue 생성 및 문서 반영.
   - [x] 9) PR #17 Journey 스키마를 PR #15 `database.md`와 migration regression test에 반영.
-  - [ ] 10) KAN-52에서 병렬 생성된 두 Alembic head를 merge revision으로 통합하고 전체 backend 테스트를 복구.
+  - [ ] 10) 단일-head 회귀 테스트를 추가하고 현재 복수 head에서 실패함을 확인.
+  - [ ] 11) KAN-52에서 병렬 생성된 두 Alembic head를 merge revision으로 통합.
+  - [ ] 12) 세 가지 기존 DB head 상태의 전환, 전체 backend 테스트, Ruff, Pyright를 검증.
 
 ## 구현된 항목
 
@@ -46,13 +48,16 @@
 - PR #15 머지 이후 변경되는 DB/API 요구사항은 후속 revision으로 보정한다.
 - API 구현은 `api-followups.md`에 연결된 GitHub Issue에서 진행한다.
 - KAN-52에서 `5eab7d8363e0`, `c9d4e7a2b8f3`을 부모로 갖는 빈 merge revision을 추가한다.
-- merge 이후 `uv run alembic heads`, `uv run alembic upgrade head`, 전체 backend 테스트와 품질 검사를 실행한다.
+- merge 전에 단일-head 회귀 테스트가 두 head를 보고 실패하는지 확인한다.
+- merge 이후 `uv run alembic heads`, 단일-head 회귀 테스트, 전체 backend 테스트와 품질 검사를 실행한다.
+- PostgreSQL 테스트 DB에서 왼쪽 sibling만 적용, 오른쪽 sibling만 적용, 두 sibling 모두 적용된 상태가 각각 merge head로 전환되는지 확인한다.
 
 ## 알려진 한계 / TODO
 
 - 설문 질문/선택지 seed 데이터는 아직 포함하지 않는다.
 - Journey migration은 이미 PR #17에서 적용됐다. 같은 테이블을 생성하는 추가 revision은 만들지 않으며, 이후 schema 변경이 필요할 때만 `a4f2c8d1e9b0` 뒤 새 revision을 추가한다.
 - API 구현은 이번 migration PR 범위에서 제외하고 GitHub Issue로 분리한다.
+- dev 배포 경로는 Alembic migration을 자동 실행하지 않는다. KAN-52에서는 graph만 정합화하고 배포 자동화는 후속 작업으로 분리한다.
 
 ## 변경 이력
 

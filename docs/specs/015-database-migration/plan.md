@@ -19,7 +19,7 @@ PR #15의 `docs/template/specs/database.md`에는 여행 DNA, 퀘스트 진행, 
 
 | ID | 목표 |
 |----|------|
-| DB-01 | Alembic 단일 체인 `d7b712f1a245` → `f4b2a9c67e18` (Journey) → `a4f2c8d1e9b0` (PR #15)를 문서화하고 단일 head를 검증 |
+| DB-01 | 기존 migration graph를 보존하고 모든 분기가 최종적으로 하나의 head로 수렴하는지 검증 |
 | DB-02 | 기존 테이블 `users`, `refresh_tokens`, `regions`, `quests`의 현재 기능 필드를 유지하면서 필요한 컬럼만 보강 |
 | DB-03 | `journeys`, `journey_quests`, `quest_progress.journey_id`, `quest_progress.quiz_answer`를 PR #15 `database.md`에 반영 |
 | DB-04 | `dna_type` PostgreSQL enum 추가 및 관련 ORM 타입 정렬 |
@@ -70,6 +70,8 @@ flowchart TD
 - `trip_questions`, `trip_question_options`, `trip_replies`, `user_dna_history`는 설문과 DNA 산출 API의 기반으로 둔다.
 - API 후속 작업은 이번 PR에서 구현하지 않고, 생성된 DB 기반과 실제 필요 범위를 재검토한 뒤 GitHub Issue로 분리한다.
 - KAN-52에서는 `9c0244355f03`에서 갈라진 `5eab7d8363e0`과 `c9d4e7a2b8f3`을 부모로 갖는 빈 merge revision을 추가한다. 기존 revision의 DDL과 revision ID는 변경하지 않는다.
+- `ScriptDirectory.get_heads()`가 정확히 한 개를 반환하는 회귀 테스트를 추가해 이후 병렬 PR이 복수 head를 다시 만들면 테스트 단계에서 탐지한다.
+- PostgreSQL 테스트 DB에서 `5eab7d8363e0`만 적용, `c9d4e7a2b8f3`만 적용, 두 head 모두 적용된 상태를 각각 만든 뒤 `upgrade head`가 merge revision으로 수렴하는지 검증한다.
 
 ## 의사결정 (함께 논의 · 근거 필수)
 
@@ -95,6 +97,7 @@ flowchart TD
 - `backend/alembic/versions/f4b2a9c67e18_add_journey_and_quest_progress_tables.py`: Journey schema migration.
 - `backend/alembic/versions/a4f2c8d1e9b0_add_pr15_database_spec_tables.py`: PR #15 migration.
 - `backend/alembic/versions/`: `5eab7d8363e0`, `c9d4e7a2b8f3`을 부모로 갖는 `merge_alembic_heads` revision 추가.
+- `backend/tests/test_migration_graph.py`: Alembic graph가 항상 단일 head인지 DB 연결 없이 검증.
 - `backend/tests/test_database_spec_schema.py`: Journey migration schema 회귀 검증.
 - `docs/specs/015-database-migration/`: 계획/설명/구현/API 후속 기록.
 - `docs/specs/README.md`, `README.md`: 새 스펙과 주요 기능 위치 반영.
@@ -113,7 +116,9 @@ flowchart TD
 - [x] API 후속 GitHub Issue 생성 및 문서 반영.
 - [x] PR #17 Journey 테이블과 `quest_progress` 확장 컬럼을 `database.md`에 반영.
 - [x] Journey migration 체인과 FK/unique/index 회귀 검증을 추가.
-- [ ] KAN-52 merge revision을 추가하고 단일 head, upgrade, 전체 backend 테스트를 검증.
+- [ ] KAN-52 단일-head 회귀 테스트를 먼저 추가하고 현재 복수 head에서 실패함을 확인.
+- [ ] Alembic CLI로 merge revision을 생성하고 단일 head·전체 backend 테스트를 검증.
+- [ ] PostgreSQL 테스트 DB의 세 가지 기존 head 상태에서 `upgrade head` 전환을 검증.
 
 ## 리스크 / 미해결 질문
 
@@ -122,3 +127,4 @@ flowchart TD
 - 설문 seed 데이터는 아직 확정되지 않았다. 컨벤션상 seed는 migration에 포함할 수 있으나, 이번 작업에서는 구조만 준비한다.
 - 운영 DB에 이미 데이터가 있는 경우 신규 non-null 테이블 생성은 문제가 없지만, 기존 테이블에 non-null 컬럼을 추가하지 않는 원칙을 유지해야 한다.
 - merge revision은 스키마 DDL을 실행하지 않는다. 한쪽 head만 적용된 DB는 `upgrade head` 시 누락된 sibling revision을 먼저 적용하고, 두 head가 모두 적용된 DB는 merge revision만 기록한다.
+- 현재 dev 배포 workflow와 `deploy.sh`는 Alembic migration을 자동 실행하지 않는다. KAN-52는 migration graph 수정에 한정하고, dev Cloud SQL 적용은 별도 운영 명령 또는 후속 배포 자동화 작업으로 수행한다.

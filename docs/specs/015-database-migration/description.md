@@ -71,6 +71,15 @@ merge revision의 `upgrade()`와 `downgrade()`는 DDL을 실행하지 않는다.
 두 migration 분기가 모두 적용됐음을 Alembic version graph에 기록하고, 이후 migration이
 따를 단일 head를 제공한다.
 
+회귀 테스트는 DB에 연결하지 않고 Alembic `ScriptDirectory`에서 head 개수를 읽어
+정확히 하나인지 확인한다. 구현 검증에서는 PostgreSQL 테스트 DB를 공통 부모까지
+내린 뒤 각 sibling만 적용한 상태와 두 sibling을 모두 적용한 상태를 각각 구성하고,
+모든 경우 `upgrade head`가 같은 merge revision으로 수렴하는지 확인한다.
+
+현재 dev 배포 스크립트는 migration을 자동 실행하지 않는다. merge revision이 포함된
+이미지가 배포되더라도 dev Cloud SQL 반영에는 별도의 `alembic upgrade head` 실행이 필요하다.
+배포 migration 자동화는 KAN-52 범위에 포함하지 않는다.
+
 ## 예시
 
 `quest_progress`는 사용자가 퀘스트를 시작하거나 완료할 때 단일 row로 유지되며, 수행 여정은 선택적으로 연결한다.
