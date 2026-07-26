@@ -96,15 +96,25 @@ final Map<String, ({Path path, Offset centroid})> _regionGeometryCache = {
     ),
 };
 
-/// 지역 채색 진하기(0.0 미완료 ~ 1.0 완전 채색) — 퀘스트 개수가 아니라 완료한 퀘스트의
-/// 난이도(reward) 비율로 정해진다([ProgressState.regionSaturation] 참고, KAN-44). 쉬운 퀘스트
-/// 여러 개보다 어려운 퀘스트 하나가 지도를 더 진하게 물들인다.
-({Color background, Color label}) mapFillColors(double saturation) {
-  final t = saturation.clamp(0.0, 1.0);
-  final background = Color.lerp(AppColors.mapEmpty, AppColors.primaryDark, t)!;
-  // 고정 임계값 대신 배경의 실제 명도로 라벨 색을 고른다 — 회색 라벨과 배경의 명도가
-  // 비슷해지는 중간 채도 구간(예: 40%대)에서 글씨가 거의 안 보이던 문제가 있었다.
-  final label = background.computeLuminance() > 0.4
+/// 채도(0.0 미완료 ~ 1.0 완전 채색)를 5단계 팔레트 인덱스(1~5)로 양자화한다.
+/// 0이면 아직 채색되지 않은 지역이라 회색을 쓴다.
+int _mapColorLevel(double saturation) {
+  if (saturation <= 0) return 0;
+  return (saturation.clamp(0.0, 1.0) * 5).ceil().clamp(1, 5);
+}
+
+/// 지역 채색 색상 — 퀘스트 개수가 아니라 완료한 퀘스트의 난이도(reward) 비율로 정해지는
+/// 채도([ProgressState.regionSaturation] 참고, KAN-44)를 5단계로 양자화해, 지역별 고유
+/// 팔레트([regionMapColors], KAN-51)에서 해당 단계 색을 고른다.
+({Color background, Color label}) mapFillColors(String regionId, double saturation) {
+  final level = _mapColorLevel(saturation);
+  final palette = regionMapColors[regionId];
+  final background =
+      (level == 0 || palette == null) ? AppColors.mapEmpty : palette[level - 1];
+  // 고정 임계값 대신 배경의 실제 명도로 라벨 색을 고른다. regionMapColors 팔레트가
+  // 전 지역 파스텔 톤이라(레벨5도 luminance 최대 0.69) 0.4는 너무 낮아서 레벨5에서도
+  // 회색 글씨가 나오는 지역이 있었다 — 모든 지역이 레벨5에서 흰 글씨가 되도록 0.7로 올렸다.
+  final label = background.computeLuminance() > 0.7
       ? AppColors.mapEmptyLabel
       : Colors.white;
   return (background: background, label: label);
@@ -188,14 +198,14 @@ class _ChungbukMapPainter extends CustomPainter {
     final fillPaint = Paint();
     for (final region in kRegionsInMapOrder) {
       final path = _regionGeometryCache[region.id]!.path;
-      final colors = mapFillColors(regionSaturation[region.id] ?? 0);
+      final colors = mapFillColors(region.id, regionSaturation[region.id] ?? 0);
       fillPaint.color = colors.background;
       canvas.drawPath(path, fillPaint);
       canvas.drawPath(path, strokePaint);
     }
 
     for (final region in kRegionsInMapOrder) {
-      final colors = mapFillColors(regionSaturation[region.id] ?? 0);
+      final colors = mapFillColors(region.id, regionSaturation[region.id] ?? 0);
       final centroid = _regionGeometryCache[region.id]!.centroid;
       final textPainter = TextPainter(
         text: TextSpan(
