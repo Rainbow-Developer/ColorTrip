@@ -4,8 +4,9 @@
 """
 
 from typing import Self
+from urllib.parse import urlparse
 
-from pydantic import model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_JWT_SECRET_KEY = "change-me-in-production-32-byte-minimum"
@@ -26,7 +27,9 @@ class Settings(BaseSettings):
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 14
     kakao_token_url: str = "https://kauth.kakao.com/oauth/token"
+    kakao_token_info_url: str = "https://kapi.kakao.com/v1/user/access_token_info"
     kakao_user_info_url: str = "https://kapi.kakao.com/v2/user/me"
+    kakao_app_id: int = Field(gt=0)
     kakao_rest_api_key: str = ""
     kakao_redirect_uri: str = ""
     kakao_client_secret: str | None = None
@@ -47,6 +50,15 @@ class Settings(BaseSettings):
     @property
     def cors_allowed_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
+
+    @field_validator("kakao_token_info_url")
+    @classmethod
+    def validate_kakao_token_info_url(cls, value: str) -> str:
+        normalized = value.strip()
+        parsed = urlparse(normalized)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("KAKAO_TOKEN_INFO_URL must be a valid HTTP(S) URL.")
+        return normalized
 
     @model_validator(mode="after")
     def validate_non_local_security(self) -> Self:
@@ -79,4 +91,4 @@ class Settings(BaseSettings):
         return self
 
 
-settings = Settings()
+settings = Settings()  # pyright: ignore[reportCallIssue]  # values may come from environment

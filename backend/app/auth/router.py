@@ -4,15 +4,17 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import service
-from app.auth.dependencies import CurrentUser
+from app.auth.dependencies import ActiveUser, CurrentUser
 from app.auth.kakao import KakaoClient, get_kakao_client
 from app.auth.schemas import (
     AuthTokenData,
     AuthTokenRequest,
     LogoutRequest,
+    OnboardingProfileRequest,
     RefreshTokenRenewalData,
     RefreshTokenRenewalRequest,
     UserProfile,
+    UserProfileUpdateRequest,
 )
 from app.core.database import get_session
 from app.core.response import Envelope, success
@@ -54,7 +56,7 @@ async def renew_auth_token(
 @auth_router.post("/logout")
 async def delete_current_auth_token(
     payload: LogoutRequest,
-    current_user: CurrentUser,
+    current_user: ActiveUser,
     session: AsyncSession = Depends(get_session),
 ) -> Envelope[None]:
     await service.logout(
@@ -66,13 +68,44 @@ async def delete_current_auth_token(
 
 
 @users_router.get("/me")
-async def get_my_profile(current_user: CurrentUser) -> Envelope[UserProfile]:
-    return success(UserProfile.model_validate(current_user))
+async def get_my_profile(
+    current_user: ActiveUser,
+    session: AsyncSession = Depends(get_session),
+) -> Envelope[UserProfile]:
+    return success(await service.build_user_profile(session, current_user))
+
+
+@users_router.put("/me/onboarding-profile")
+async def put_my_onboarding_profile(
+    payload: OnboardingProfileRequest,
+    current_user: ActiveUser,
+    session: AsyncSession = Depends(get_session),
+) -> Envelope[UserProfile]:
+    data = await service.save_onboarding_profile(
+        session,
+        current_user=current_user,
+        payload=payload,
+    )
+    return success(data)
+
+
+@users_router.patch("/me")
+async def patch_my_profile(
+    payload: UserProfileUpdateRequest,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_session),
+) -> Envelope[UserProfile]:
+    data = await service.update_current_user_profile(
+        session,
+        current_user=current_user,
+        payload=payload,
+    )
+    return success(data)
 
 
 @users_router.delete("/me")
 async def delete_my_profile(
-    current_user: CurrentUser,
+    current_user: ActiveUser,
     session: AsyncSession = Depends(get_session),
 ) -> Envelope[None]:
     await service.withdraw_current_user(session, current_user=current_user)

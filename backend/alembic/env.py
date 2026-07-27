@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # 모델을 import해야 Base.metadata에 테이블이 등록된다.
-from app.auth.models import RefreshToken, User  # noqa: F401
+from app.auth.models import RefreshToken, User, UserConsent  # noqa: F401
 from app.core.base import Base
 from app.core.config import settings
 from app.journeys.models import Journey, JourneyQuest  # noqa: F401

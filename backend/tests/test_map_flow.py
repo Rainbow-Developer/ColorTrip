@@ -5,7 +5,7 @@ from uuid import UUID
 
 from httpx import AsyncClient
 
-from tests.helpers import login
+from tests.helpers import complete_auth_headers, login
 
 
 async def _seed_map_fixture(user_id: UUID) -> dict[str, str]:
@@ -39,7 +39,7 @@ async def test_my_map_returns_all_regions(client: AsyncClient) -> None:
     """방문한 지역·미방문 지역 모두 반환하고 completed_count가 정확해야 한다."""
     data = await login(client)
     user_id = UUID(data["user"]["id"])
-    headers = {"Authorization": f"Bearer {data['access_token']}"}
+    headers = await complete_auth_headers(client, data)
     seed = await _seed_map_fixture(user_id)
 
     response = await client.get("/api/v1/users/me/map", headers=headers)
@@ -63,8 +63,8 @@ async def test_my_map_only_returns_my_progress(client: AsyncClient) -> None:
     other_data = await login(client, "kakao-token-unknown")
 
     owner_id = UUID(owner_data["user"]["id"])
-    owner_headers = {"Authorization": f"Bearer {owner_data['access_token']}"}
-    other_headers = {"Authorization": f"Bearer {other_data['access_token']}"}
+    owner_headers = await complete_auth_headers(client, owner_data)
+    other_headers = await complete_auth_headers(client, other_data)
 
     seed = await _seed_map_fixture(owner_id)
 

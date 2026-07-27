@@ -23,9 +23,7 @@ class ShareRepository:
         # 예외 상황 대비 UUID 변환 코드
         return uuid.uuid4().hex[:8]
 
-    async def create(
-        self, session: AsyncSession, user_id: uuid.UUID, share_style: str
-    ) -> Share:
+    async def create(self, session: AsyncSession, user_id: uuid.UUID, share_style: str) -> Share:
         """새 공유 숏코드 및 카드를 생성하고 영속화합니다."""
         for _ in range(10):
             share_code = await self._generate_unique_share_code(session)
@@ -43,9 +41,7 @@ class ShareRepository:
             return db_obj
         raise RuntimeError("Unable to allocate a unique share code")
 
-    async def get_by_code(
-        self, session: AsyncSession, share_code: str
-    ) -> Share | None:
+    async def get_by_code(self, session: AsyncSession, share_code: str) -> Share | None:
         """share_code 기반으로 공유 정보 및 생성 사용자 정보를 함께 로드합니다."""
         stmt = (
             select(Share)
