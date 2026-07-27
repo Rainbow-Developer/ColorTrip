@@ -23,7 +23,7 @@ class AppColors {
 
   // 스플래시(Figma) — color-spring-green-* / color-yellow-50 토큰.
   static const splashCardBackground = Color(0xFFE8EFE4);
-  static const splashHeading = Color(0xFF1A3D2B);
+  static const splashHeading = Color(0xFF2E5A47);
   static const splashAccent = Color(0xFF4A7C5F);
   static const kakaoYellow = Color(0xFFFEE500);
   static const kakaoLabel = Color(0xFF191919);
