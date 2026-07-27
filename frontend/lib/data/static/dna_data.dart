@@ -33,8 +33,8 @@ const Map<String, DnaType> kDnaTypes = {
     gradient: [Color(0xFF6A5BB0), Color(0xFF473A8A)],
     tags: ['역사', '문화', '사찰', '박물관'],
   ),
-  'active': DnaType(
-    id: 'active',
+  'activity': DnaType(
+    id: 'activity',
     name: '에너지 탐험가',
     icon: '🧗',
     desc: '몸으로 부딪치며 즐기는 타입이에요. 가만히 있는 여행은 답답하죠.',

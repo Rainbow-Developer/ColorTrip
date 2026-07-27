@@ -99,7 +99,7 @@ const questTypeStyles = <String, QuestTypeStyle>{
     foreground: Color(0xFF5B4A9E),
     emoji: '🏛️',
   ),
-  'active': QuestTypeStyle(
+  'activity': QuestTypeStyle(
     label: '액티비티',
     background: Color(0xFFE6EEF7),
     foreground: Color(0xFF3A6BB0),

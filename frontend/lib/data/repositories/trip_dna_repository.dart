@@ -19,15 +19,17 @@ class StaticTripDnaRepository implements TripDnaRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> submitReplies(List<Map<String, String>> replies) async {
+  Future<Map<String, dynamic>> submitReplies(
+    List<Map<String, String>> replies,
+  ) async {
     await Future.delayed(const Duration(milliseconds: 300));
-    
+
     // 로컬 Mock 연산: 기존 로직처럼 최다 선택 유형 집계
     final tally = <String, int>{};
     for (final reply in replies) {
       final qId = reply['question_id'];
       final oId = reply['question_option_id'];
-      
+
       try {
         final q = kTripDnaQuestions.firstWhere((element) => element.id == qId);
         final opt = q.options.firstWhere((element) => element.id == oId);
@@ -38,7 +40,7 @@ class StaticTripDnaRepository implements TripDnaRepository {
         // 찾을 수 없는 경우 무시
       }
     }
-    
+
     var best = 'nature';
     var max = -1;
     tally.forEach((type, count) {
@@ -66,16 +68,18 @@ class ApiTripDnaRepository implements TripDnaRepository {
     final response = await _dio.get('/trip_dna/questions');
     // Envelope 포맷: {code: SUCCESS, status: 200, message: ..., data: [...]}
     final data = response.data['data'] as List<dynamic>;
-    return data.map((json) => TripDnaQuestion.fromJson(json as Map<String, dynamic>)).toList();
+    return data
+        .map((json) => TripDnaQuestion.fromJson(json as Map<String, dynamic>))
+        .toList();
   }
 
   @override
-  Future<Map<String, dynamic>> submitReplies(List<Map<String, String>> replies) async {
+  Future<Map<String, dynamic>> submitReplies(
+    List<Map<String, String>> replies,
+  ) async {
     final response = await _dio.post(
       '/trip_dna/replies',
-      data: {
-        'replies': replies,
-      },
+      data: {'replies': replies},
     );
     // Envelope 포맷: {code: SUCCESS, status: 201, message: ..., data: {...}}
     return response.data['data'] as Map<String, dynamic>;

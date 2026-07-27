@@ -14,7 +14,7 @@ const _filters = [
   FilterChipOption(key: 'nature', label: '🌲 자연탐험'),
   FilterChipOption(key: 'food', label: '🍜 미식방문'),
   FilterChipOption(key: 'history', label: '🏛️ 역사문화'),
-  FilterChipOption(key: 'active', label: '🧗 액티비티'),
+  FilterChipOption(key: 'activity', label: '🧗 액티비티'),
   FilterChipOption(key: 'healing', label: '☕ 힐링'),
 ];
 

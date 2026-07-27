@@ -11,6 +11,7 @@ import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/map_sync_provider.dart';
+import '../../state/auth_controller.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
@@ -31,12 +32,17 @@ class HomeScreen extends ConsumerWidget {
     // 진입 시 서버 지도 진행도를 1회 동기화한다(로그인 전이면 조용히 무시, [020-frontend-map-sync]).
     ref.watch(mapSyncProvider);
     final progress = ref.watch(progressProvider);
+    final user = ref.watch(currentUserProvider);
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
     final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('다채로울지도')),
+      appBar: AppBar(
+        title: Text(
+          user?.nickname == null ? '다채로울지도' : '${user!.nickname}님의 지도',
+        ),
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -228,7 +234,8 @@ class _RecommendedRegionBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(progressProvider);
-    final dnaId = progress.dnaType ?? 'nature';
+    final dnaId =
+        ref.watch(currentUserProvider)?.dna ?? progress.dnaType ?? 'nature';
     final dna = ref.watch(dnaRepositoryProvider).byId(dnaId);
     final questRepo = ref.watch(questRepositoryProvider);
 
@@ -322,9 +329,10 @@ class _InProgressDnaCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(progressProvider);
+    final user = ref.watch(currentUserProvider);
     final dna = ref
         .watch(dnaRepositoryProvider)
-        .byId(progress.dnaType ?? 'nature');
+        .byId(user?.dna ?? progress.dnaType ?? 'nature');
 
     String? inProgressLabel;
     for (final region in kRegionsInMapOrder) {

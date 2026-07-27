@@ -6,6 +6,7 @@ import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/progress_notifier.dart';
+import '../../state/auth_controller.dart';
 import '../../state/repository_providers.dart';
 
 /// 공유 카드 만들기 — Figma 스펙(2026-07-08 공유) 반영. 이미지 저장·링크 복사·공유는
@@ -25,9 +26,10 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
   @override
   Widget build(BuildContext context) {
     final progress = ref.watch(progressProvider);
+    final user = ref.watch(currentUserProvider);
     final dna = ref
         .watch(dnaRepositoryProvider)
-        .byId(progress.dnaType ?? 'nature');
+        .byId(user?.dna ?? progress.dnaType ?? 'nature');
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
 
@@ -49,8 +51,10 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
               ),
               child: Column(
                 children: [
-                  const Text(
-                    '나의 여행 지도',
+                  Text(
+                    user?.nickname == null
+                        ? '나의 여행 지도'
+                        : '${user!.nickname}님의 여행 지도',
                     style: TextStyle(
                       color: AppColors.tripActiveBadgeFg,
                       fontWeight: FontWeight.w700,

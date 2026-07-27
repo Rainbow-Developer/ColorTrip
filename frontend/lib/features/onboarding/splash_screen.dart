@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
-import '../../state/repository_providers.dart';
+import '../../state/auth_controller.dart';
 
 /// 스플래시 — Figma 스펙(2026-07-06 공유) 반영: 민트 카드 히어로 + 카카오 브랜드 버튼.
 /// 카드 상단 일러스트는 에셋 미확보 상태라 아이콘 placeholder로 대체([implementation.md] 참고).
@@ -12,6 +12,7 @@ class SplashScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authControllerProvider);
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -73,27 +74,71 @@ class SplashScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.kakaoYellow,
-                    foregroundColor: AppColors.kakaoLabel,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+              if (auth.errorMessage case final error?) ...[
+                Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.danger),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (auth.status == AuthStatus.checking)
+                const SizedBox(
+                  height: 48,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.kakaoYellow,
+                      foregroundColor: AppColors.kakaoLabel,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                  ),
-                  onPressed: () async {
-                    await ref.read(authRepositoryProvider).loginWithKakao();
-                    if (context.mounted) context.go('/signup');
-                  },
-                  child: const Text(
-                    '카카오로 시작하기',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    onPressed: auth.isBusy
+                        ? null
+                        : () async {
+                            final controller = ref.read(
+                              authControllerProvider.notifier,
+                            );
+                            if (auth.status == AuthStatus.failure) {
+                              await controller.bootstrap();
+                            } else {
+                              await controller.login();
+                            }
+                            if (!context.mounted) return;
+                            switch (ref.read(authControllerProvider).status) {
+                              case AuthStatus.profileRequired:
+                                context.go('/signup');
+                              case AuthStatus.tripDnaRequired:
+                                context.go('/trip-dna');
+                              case AuthStatus.authenticated:
+                                context.go('/home');
+                              case AuthStatus.checking:
+                              case AuthStatus.unauthenticated:
+                              case AuthStatus.failure:
+                              case AuthStatus.withdrawalPending:
+                                break;
+                            }
+                          },
+                    child: auth.isBusy
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            auth.status == AuthStatus.failure
+                                ? '다시 시도'
+                                : '카카오로 시작하기',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                   ),
                 ),
-              ),
             ],
           ),
         ),

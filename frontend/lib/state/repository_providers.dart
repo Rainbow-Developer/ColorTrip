@@ -21,15 +21,17 @@ final dnaRepositoryProvider = Provider<DnaRepository>(
   (ref) => const StaticDnaRepository(),
 );
 
-final tripDnaRepositoryProvider = Provider<TripDnaRepository>(
-  (ref) {
-    final dio = ref.watch(dioProvider);
-    return ApiTripDnaRepository(dio);
-  },
-);
+final tripDnaRepositoryProvider = Provider<TripDnaRepository>((ref) {
+  final dio = ref.watch(dioProvider);
+  return ApiTripDnaRepository(dio);
+});
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => const StubAuthRepository(),
+  (ref) => DioAuthRepository(
+    dio: ref.watch(dioProvider),
+    kakao: ref.watch(kakaoAuthGatewayProvider),
+    storage: ref.watch(secureTokenStorageProvider),
+  ),
 );
 
 /// 지도 진행도(`GET /users/me/map`)는 실제로 백엔드를 호출한다([020-frontend-map-sync]).
