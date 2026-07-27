@@ -25,7 +25,8 @@ docs/specs/
 |------|-------------------------------------|
 | [000-frontend-app](000-frontend-app/) | Flutter 앱 프로토타입/프론트엔드               |
 | [000-quest](000-quest/) | 충북 시·군 퀘스트 조회 기반                    |
-| [005-auth-member](005-auth-member/) | Kakao 인증, JWT, 회원 탈퇴/복구             |
+| [005-auth-member](005-auth-member/) | 이전 Kakao 인증·JWT·7일 복구 정책 구현 기록 (035가 대체) |
 | [010-journey](010-journey/) | 여행 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈) |
 | [015-database-migration](015-database-migration/) | 핵심 데이터 모델 Alembic 마이그레이션            |
 | [020-backend-logging](020-backend-logging/) | 백엔드 공통 JSON 로깅·요청 로깅 |
+| [035-kakao-auth-integration](035-kakao-auth-integration/) | Kakao Flutter SDK·JWT·온보딩·탈퇴 통합 인증 |

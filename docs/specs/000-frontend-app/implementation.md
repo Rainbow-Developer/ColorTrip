@@ -1,9 +1,13 @@
 # [구현 수준] 다채로울지도 프론트엔드 앱 (Flutter)
 
+> 이 문서는 Flutter 프로토타입과 화면 개발의 구현 기록이다. Kakao SDK, ColorTrip JWT,
+> 서버 온보딩, secure storage와 Android 실제 E2E는
+> [035 Kakao 통합 인증](../035-kakao-auth-integration/implementation.md)에서 완료했다.
+
 | 항목 | 내용 |
 |------|------|
-| 상태 | 진행 중 (U0~U4 1차 구현 완료 — 최소 버전, Figma 기반 화면 정합 진행 중, 추적 티켓 KAN-021) |
-| 최종 업데이트 | 2026-07-23 |
+| 상태 | 진행 중 (U0~U4 1차 구현 완료, 인증 통합은 035에서 완료) |
+| 최종 업데이트 | 2026-07-27 |
 
 ## 코드 유실 (중요 — 2026-07-05 재구현으로 해소)
 
@@ -34,12 +38,12 @@
 - [ ] 공유 카드의 실제 이미지 내보내기·링크 생성·OS 공유 시트 연동 — 지금은 버튼 탭 시 토스트만 표시
 - [ ] 퀘스트 선택 화면의 검색은 제목 부분 일치 필터만 구현(간단한 클라이언트 필터, 실 검색엔진 아님)
 - [ ] dev PR
-- [ ] iOS/Android 실기기·시뮬레이터 빌드 검증(Xcode/Android 툴체인 미설치, 웹으로만 검증함)
+- [ ] iOS 실제 로그인·실기기 검증. Android emulator release build와 실제 Kakao E2E는 [035 구현 결과](../035-kakao-auth-integration/implementation.md)에서 통과했다.
 - [ ] `pre-commit` 프레임워크·git 훅 설치(`uv tool install pre-commit && pre-commit install --install-hooks`) — Claude Code 자체 훅은 별개로 이미 동작 중
 
 ## 알려진 한계 / TODO
 
-- **임시 구현 예정(후속 교체 대상)**: 카카오 로그인은 UI 스텁, 데이터는 정적 mock, 진행 상태는 메모리(앱 재실행 시 초기화), 사진/GPS 인증은 모의 동작. 실제 [Kakao+JWT](../../conventions/auth-security.md)·백엔드 API·[TourAPI](../../conventions/external-apis.md) 연동은 후속 스펙으로 분리.
+- **후속 교체 대상**: Kakao 로그인·JWT·프로필·DNA 온보딩은 [035](../035-kakao-auth-integration/)에서 실제 연동했다. 퀘스트 데이터와 일부 진행 상태, 사진/GPS 인증은 여전히 정적·모의 구현이며 해당 도메인 API 연동은 별도 범위다.
 - **커밋 전 검사는 네이티브 유지**: 프론트엔드 검사는 기존처럼 **pre-commit 프레임워크의 `dart format`·`flutter analyze` 훅**을 그대로 쓴다(백엔드가 `uv run`으로 네이티브 실행하는 것과 동일한 패턴). 이 훅은 flutter/dart가 시스템 PATH(brew `/opt/homebrew/bin` 등)에 있어야 동작하므로, 작업 전 Flutter SDK를 네이티브로 설치한다(Docker는 웹 빌드/테스트 보조용으로만 `frontend/Dockerfile`·`frontend/docker-compose.yml`에 남겨둠).
 - **반응형 범위**: KAN-021 티켓에 "600px 브레이크포인트 웹 반응형"이 언급됐으나, 이 앱은 Flutter 모바일 앱이 SOT이므로 기존 `plan.md`의 **모바일 단일 폼팩터(392×812 기준, 상대 단위로 확장 가능하게 구현)** 요구사항을 그대로 따른다. 별도의 웹 브레이크포인트 전략은 도입하지 않는다.
 - ~~**프로토타입 버전 차이**: 원본 zip의 `다채로울지도.dc.html`은 travel 화면을 "진행 중/지난 여행"으로 재설계하다 만 미완성본이라, 일관된 `다채로울지도-standalone-src.dc.html`(travel = 유형 필터 퀘스트 목록)을 채택했다.~~ → **2026-07-08 해결**: 사용자가 공유한 Figma 와이어프레임이 정확히 이 "진행 중/지난 여행" 구조였음이 확인되어, `features/travel/travel_list_screen.dart`로 구현하고 하단 탭 순서도 여행/홈/마이로 변경함(아래 변경 이력 참고). 유형 필터 평면 목록(`quest_list_screen.dart`)은 폐기하지 않고 여행 목록 화면의 "전체 퀘스트" 버튼으로 보조 진입점을 남겼다.
@@ -68,3 +72,4 @@
 | 2026-07-21 | 지도 색칠을 3단계(0/1/2+, 2+는 파랑 `#378ADD`)에서 **연속 채도**로 변경(KAN-44, dev 브랜치 반영분 — 이 문서에는 그동안 미기록). `ProgressState.regionSaturation(regionId)`가 그 지역 완료 퀘스트 개수를 전체 퀘스트 개수로 나눈 비율(0.0~1.0)을 반환하고, `mapFillColors`가 회색(`mapEmpty`)→진초록(`primaryDark`) 사이를 `Color.lerp`로 보간한다. 완료 개수(`ProgressState.regionProgress`)는 `ProgressNotifier.completeQuest`에서 즉시 +1(낙관적 갱신)되고, 앱 진입 시 백엔드 `GET /users/me/map`의 `completed_count`로 동기화된다(`syncRegionProgressFromServer`, [020-frontend-map-sync]) — KAN-31의 지도 API 연동과 KAN-44의 연속 채도를 이번에 재정합함. `MapLegend`도 3단계 스와치 대신 0%~100% 그라데이션 바로 변경 |
 | 2026-07-21 | `regionSaturation` 계산 기준 변경(사용자 요청) — 지역 전체 퀘스트 개수 대비 비율 대신, **완료 개수 ÷ 6(고정값)**, 6개 이상이면 100%로 클램프. 지역마다 정적 퀘스트 개수가 1~3개로 제각각이라 비율 기준으로는 퀘스트가 적은 지역만 완료 1~2개로 바로 100%가 돼버리는 문제가 있었음(테스트로 확인). 고정 기준선 6은 `ProgressState._saturationCap`. `completed_count`가 재방문(KAN-46)으로 정적 퀘스트 개수를 넘어 계속 늘 수 있다는 점과도 더 맞음 |
 | 2026-07-23 | KAN-28 브랜치와 dev 병합 정합: 홈 추천 여행지 배너를 코치마크(KAN-040)·연속 채도 지도(KAN-44) 구조의 새 홈 레이아웃(스탯 아래) 위치에 유지, 퀘스트 선택의 "여행 시작하기/퀘스트 추가하기" 버튼(KAN-42·46)이 새 여행일 때만 이름·기간 입력 시트(KAN-28)를 거치도록 `_startTrip`으로 연결(이미 시작·완료된 지역은 시트 없이 추가). 참고: KAN-44의 채도 기준선(`_saturationCap`=6) 논의 당시 지역별 퀘스트가 1~3개였으나 현재는 TourAPI 확장으로 지역당 20개 |
+| 2026-07-27 | Kakao SDK·JWT·서버 온보딩·secure storage·Android 실제 E2E가 035에서 완료되어 초기 UI 스텁 설명과 플랫폼 검증 상태를 현재 범위에 맞게 정리 |
