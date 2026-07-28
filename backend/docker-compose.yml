@@ -27,7 +27,9 @@ services:
       REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-14}
       KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY:-}
       KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI:-}
+      KAKAO_APP_ID: ${KAKAO_APP_ID:?KAKAO_APP_ID is required. Copy .env.example to .env for local dev.}
       KAKAO_TOKEN_URL: ${KAKAO_TOKEN_URL:-https://kauth.kakao.com/oauth/token}
+      KAKAO_TOKEN_INFO_URL: ${KAKAO_TOKEN_INFO_URL:-https://kapi.kakao.com/v1/user/access_token_info}
       KAKAO_USER_INFO_URL: ${KAKAO_USER_INFO_URL:-https://kapi.kakao.com/v2/user/me}
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
       TOUR_API_KEY: ${TOUR_API_KEY:-}

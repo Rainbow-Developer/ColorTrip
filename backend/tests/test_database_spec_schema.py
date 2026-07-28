@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import timedelta
 from typing import Any
+from uuid import uuid4
 
 import sqlalchemy as sa
+from alembic.config import Config
 from httpx import AsyncClient
 
+from alembic import command
+from app.core.base import now_kst
 from app.core.database import engine
 
 
@@ -26,6 +31,7 @@ async def test_pr15_database_tables_and_enum_exist(client: AsyncClient) -> None:
         "trip_question_options",
         "trip_replies",
         "user_dna_history",
+        "user_consents",
     } <= tables
     assert dna_type_labels == ["nature", "food", "history", "activity", "healing"]
 
@@ -50,6 +56,183 @@ async def test_existing_tables_are_additively_preserved(client: AsyncClient) -> 
     assert {"content_type_id", "lat", "lng", "verify_radius"} <= quests_columns.keys()
 
 
+async def test_auth_migration_finishes_anonymizing_legacy_soft_deleted_users(
+    client: AsyncClient,
+) -> None:
+    _ = client
+    user_id = uuid4()
+    refresh_id = uuid4()
+    overlap_user_id = uuid4()
+    now = now_kst()
+
+    async with engine.begin() as connection:
+        await connection.run_sync(_downgrade_to_pre_consent_head)
+        await connection.execute(
+            sa.text(
+                """
+                INSERT INTO users (
+                    social_provider, social_id, email, nickname, birth_date, dna,
+                    profile_image, withdrawal_grace_until, anonymized_at, id,
+                    created_at, updated_at, deleted_at
+                ) VALUES (
+                    'kakao', :social_id, :email, :nickname, :birth_date, :dna,
+                    :profile_image, :withdrawal_grace_until, NULL, :id,
+                    :created_at, :updated_at, :deleted_at
+                )
+                """
+            ),
+            {
+                "social_id": "legacy-kakao-social-id",
+                "email": "legacy@example.com",
+                "nickname": "레거시 사용자",
+                "birth_date": now.date() - timedelta(days=10_000),
+                "dna": "nature",
+                "profile_image": "https://example.com/profile.png",
+                "withdrawal_grace_until": now + timedelta(days=7),
+                "id": user_id,
+                "created_at": now,
+                "updated_at": now,
+                "deleted_at": now,
+            },
+        )
+        await connection.execute(
+            sa.text(
+                """
+                INSERT INTO refresh_tokens (
+                    user_id, token_hash, expires_at, id, created_at, updated_at, deleted_at
+                ) VALUES (
+                    :user_id, 'legacy-active-refresh', :expires_at, :id,
+                    :created_at, :updated_at, NULL
+                )
+                """
+            ),
+            {
+                "user_id": user_id,
+                "expires_at": now + timedelta(days=14),
+                "id": refresh_id,
+                "created_at": now,
+                "updated_at": now,
+            },
+        )
+
+    async with engine.begin() as connection:
+        await connection.run_sync(_upgrade_to_head)
+        legacy_user = (
+            await connection.execute(
+                sa.text(
+                    """
+                    SELECT social_id, withdrawal_grace_until, email, nickname, birth_date,
+                           profile_image, dna, anonymized_at
+                    FROM users
+                    WHERE id = :id
+                    """
+                ),
+                {"id": user_id},
+            )
+        ).one()
+        refresh_deleted_at = await connection.scalar(
+            sa.text("SELECT deleted_at FROM refresh_tokens WHERE id = :id"),
+            {"id": refresh_id},
+        )
+        await connection.execute(
+            sa.text(
+                """
+                INSERT INTO users (
+                    social_provider, social_id, email, nickname, birth_date, dna,
+                    profile_image, withdrawal_grace_until, anonymized_at, id,
+                    created_at, updated_at, deleted_at
+                ) VALUES (
+                    'kakao', 'deployment-overlap-social-id', 'overlap@example.com',
+                    '배포 중 사용자', :birth_date, 'food',
+                    'https://example.com/overlap.png', NULL, NULL, :id,
+                    :created_at, :updated_at, NULL
+                )
+                """
+            ),
+            {
+                "birth_date": now.date() - timedelta(days=9_000),
+                "id": overlap_user_id,
+                "created_at": now,
+                "updated_at": now,
+            },
+        )
+        # Simulate the old API's seven-day withdrawal write while the new
+        # migration has completed but the old container is still serving.
+        await connection.execute(
+            sa.text(
+                """
+                UPDATE users
+                SET deleted_at = :deleted_at,
+                    withdrawal_grace_until = :withdrawal_grace_until
+                WHERE id = :id
+                """
+            ),
+            {
+                "deleted_at": now,
+                "withdrawal_grace_until": now + timedelta(days=7),
+                "id": overlap_user_id,
+            },
+        )
+        overlap_user = (
+            await connection.execute(
+                sa.text(
+                    """
+                    SELECT social_id, withdrawal_grace_until, email, nickname, birth_date,
+                           profile_image, dna, anonymized_at
+                    FROM users
+                    WHERE id = :id
+                    """
+                ),
+                {"id": overlap_user_id},
+            )
+        ).one()
+
+    assert legacy_user.social_id == f"deleted:{user_id}"
+    assert legacy_user.withdrawal_grace_until is None
+    assert legacy_user.email is None
+    assert legacy_user.nickname is None
+    assert legacy_user.birth_date is None
+    assert legacy_user.profile_image is None
+    assert legacy_user.dna is None
+    assert legacy_user.anonymized_at is not None
+    assert refresh_deleted_at is not None
+    assert overlap_user.social_id == f"deleted:{overlap_user_id}"
+    assert overlap_user.withdrawal_grace_until is None
+    assert overlap_user.email is None
+    assert overlap_user.nickname is None
+    assert overlap_user.birth_date is None
+    assert overlap_user.profile_image is None
+    assert overlap_user.dna is None
+    assert overlap_user.anonymized_at is not None
+
+    async with engine.begin() as connection:
+        await connection.run_sync(_downgrade_to_pre_consent_head)
+        tables_after_downgrade = await connection.run_sync(
+            lambda sync_connection: set(sa.inspect(sync_connection).get_table_names())
+        )
+        downgraded_user = (
+            await connection.execute(
+                sa.text(
+                    """
+                    SELECT social_id, email, nickname, birth_date, profile_image, dna
+                    FROM users
+                    WHERE id = :id
+                    """
+                ),
+                {"id": user_id},
+            )
+        ).one()
+        await connection.run_sync(_upgrade_to_head)
+
+    assert "user_consents" not in tables_after_downgrade
+    assert downgraded_user.social_id == f"deleted:{user_id}"
+    assert downgraded_user.email is None
+    assert downgraded_user.nickname is None
+    assert downgraded_user.birth_date is None
+    assert downgraded_user.profile_image is None
+    assert downgraded_user.dna is None
+
+
 async def test_new_tables_have_required_constraints(client: AsyncClient) -> None:
     _ = client
 
@@ -61,6 +244,9 @@ async def test_new_tables_have_required_constraints(client: AsyncClient) -> None
         timeline_fks = await connection.run_sync(_foreign_keys_for("timeline_events"))
         trip_replies_fks = await connection.run_sync(_foreign_keys_for("trip_replies"))
         dna_history_fks = await connection.run_sync(_foreign_keys_for("user_dna_history"))
+        consent_uniques = await connection.run_sync(_unique_constraints_for("user_consents"))
+        consent_indexes = await connection.run_sync(_indexes_for("user_consents"))
+        consent_columns = await connection.run_sync(_columns_for("user_consents"))
 
     assert ("user_id", "quest_id") in quest_progress_uniques
     assert ("user_id", "region_id") in map_progress_uniques
@@ -68,6 +254,9 @@ async def test_new_tables_have_required_constraints(client: AsyncClient) -> None
     assert trip_replies_fks["question_id"] == ("trip_questions", ("id",), None)
     assert trip_replies_fks["question_option_id"] == ("trip_question_options", ("id",), None)
     assert dna_history_fks["user_id"] == ("users", ("id",), None)
+    assert ("user_id", "consent_type", "version") in consent_uniques
+    assert consent_indexes["ix_user_consents_user_id"]["columns"] == ("user_id",)
+    assert "deleted_at" not in consent_columns
 
 
 async def test_journey_migration_schema_is_preserved(client: AsyncClient) -> None:
@@ -328,3 +517,15 @@ def _foreign_keys_for(
         }
 
     return inspect_foreign_keys
+
+
+def _downgrade_to_pre_consent_head(connection: sa.Connection) -> None:
+    config = Config("alembic.ini")
+    config.attributes["connection"] = connection
+    command.downgrade(config, "be3e3c52de66")
+
+
+def _upgrade_to_head(connection: sa.Connection) -> None:
+    config = Config("alembic.ini")
+    config.attributes["connection"] = connection
+    command.upgrade(config, "head")

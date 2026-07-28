@@ -1,8 +1,10 @@
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import service as auth_service
 from app.auth.models import User
 from app.core.enums import DnaType
+from app.core.exceptions import AppException, ErrorCode
 from app.trip_dna import repository
 from app.trip_dna.models import TripReply
 from app.trip_dna.schemas import DNAResultResponse, QuestionRead, ReplySubmitItem
@@ -29,6 +31,10 @@ async def submit_survey_replies(
     """사용자가 제출한 설문 답변을 기반으로 점수를 연산하고,
     이전 답변 Soft Delete 및 유저 대표 DNA 결과를 데이터베이스에 기록합니다.
     """
+    user = await auth_service.require_active_user_for_update(session, user.id)
+    if not await auth_service.is_profiled_user(session, user):
+        raise AppException(ErrorCode.ONBOARDING_REQUIRED)
+
     # 중복 질문 제출 검증
     question_ids = [item.question_id for item in replies_data]
     if len(question_ids) != len(set(question_ids)):
@@ -43,6 +49,10 @@ async def submit_survey_replies(
         option = option_map.get(item.question_option_id)
         if option is None or option.question_id != item.question_id:
             raise HTTPException(status_code=400, detail="유효하지 않은 답변 조합입니다.")
+
+    active_question_ids = set(await repository.list_active_question_ids(session))
+    if set(question_ids) != active_question_ids:
+        raise HTTPException(status_code=400, detail="모든 활성 질문에 답변해야 합니다.")
 
     # 1. 5대 카테고리 점수판 초기화 (eat -> food 변경)
     scores = {"nature": 0, "food": 0, "history": 0, "activity": 0, "healing": 0}
@@ -76,5 +86,6 @@ async def submit_survey_replies(
 
     # 7. User 테이블의 dna 컬럼 갱신
     await repository.update_user_dna(session, user, main_dna_type)
+    await session.commit()
 
     return DNAResultResponse(user_id=user.id, main_dna_type=main_dna_type.value, scores=scores)
