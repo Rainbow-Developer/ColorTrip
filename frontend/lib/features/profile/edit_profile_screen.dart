@@ -6,8 +6,10 @@ import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_form_field.dart';
 import '../../core/widgets/app_toast.dart';
+import '../../data/models/auth_models.dart';
+import '../../features/onboarding/profile_validation.dart';
+import '../../state/auth_controller.dart';
 import '../../state/progress_notifier.dart';
-import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
 
 /// 내 정보 수정 — Figma 스펙(2026-07-08 공유) 반영: 프로필 아이콘, 닉네임/이름/생년월일/이메일(변경불가)
@@ -20,19 +22,25 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
-  late final _nicknameController = TextEditingController(
-    text: ref.read(progressProvider).nickname ?? kDefaultNickname,
-  );
-  final _nameController = TextEditingController();
-  final _birthdateController = TextEditingController();
-  final _emailController = TextEditingController(
-    text: 'example@email.com (변경불가)',
-  );
+  late final TextEditingController _nicknameController;
+  late final TextEditingController _birthdateController;
+  late final TextEditingController _emailController;
+  Map<String, String> _errors = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    final user = ref.read(currentUserProvider)!;
+    _nicknameController = TextEditingController(text: user.nickname ?? '');
+    _birthdateController = TextEditingController(
+      text: user.birthDate == null ? '' : _date(user.birthDate!),
+    );
+    _emailController = TextEditingController(text: user.email ?? '');
+  }
 
   @override
   void dispose() {
     _nicknameController.dispose();
-    _nameController.dispose();
     _birthdateController.dispose();
     _emailController.dispose();
     super.dispose();
@@ -41,7 +49,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final dnaType = ref.watch(progressProvider).dnaType ?? 'nature';
-    final dna = ref.watch(dnaRepositoryProvider).byId(dnaType);
+    final user = ref.watch(currentUserProvider);
+    final dna = ref.watch(dnaRepositoryProvider).byId(user?.dna ?? dnaType);
+    final auth = ref.watch(authControllerProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -50,15 +60,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         titleSpacing: 0,
         actions: [
           TextButton(
-            onPressed: () {
-              final nickname = _nicknameController.text.trim();
-              if (nickname.isNotEmpty) {
-                ref.read(progressProvider.notifier).setNickname(nickname);
-              }
-              showAppToast(context, '변경사항이 저장되었어요');
-              context.pop();
-            },
-            child: const Text('저장'),
+            onPressed: auth.isBusy ? null : _save,
+            child: auth.isBusy ? const Text('저장 중') : const Text('저장'),
           ),
         ],
       ),
@@ -85,22 +88,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               label: '닉네임',
               controller: _nicknameController,
               hint: '닉네임을 입력해주세요',
+              enabled: !auth.isBusy,
+              textInputAction: TextInputAction.next,
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 14),
-            AppFormField(
-              label: '이름',
-              controller: _nameController,
-              hint: '홍길동',
-              onChanged: (_) => setState(() {}),
-            ),
+            if (_errors['nickname'] case final error?) _ErrorText(error),
             const SizedBox(height: 14),
             AppFormField(
               label: '생년월일',
               controller: _birthdateController,
-              hint: '1990.01.01',
+              hint: '2000-01-01',
+              enabled: !auth.isBusy,
+              readOnly: true,
+              onTap: _pickBirthDate,
               onChanged: (_) => setState(() {}),
             ),
+            if (_errors['birthDate'] case final error?) _ErrorText(error),
             const SizedBox(height: 14),
             AppFormField(
               label: '이메일',
@@ -109,10 +112,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               enabled: false,
             ),
             const SizedBox(height: 14),
-            _DnaTypeField(
-              label: dna.name,
-              onTap: () => context.push('/survey'),
-            ),
+            _DnaTypeField(label: dna.name, onTap: null),
+            if (auth.errorMessage case final error?) ...[
+              const SizedBox(height: 16),
+              Text(
+                error,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.danger),
+              ),
+            ],
             const SizedBox(height: 28),
             OutlinedButton(
               onPressed: () => _confirmWithdraw(context),
@@ -131,19 +139,73 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
+  Future<void> _save() async {
+    final validation = validateOnboardingProfile(
+      nickname: _nicknameController.text,
+      email: _emailController.text,
+      birthDate: _birthdateController.text,
+      today: DateTime.now(),
+    );
+    final relevantErrors = Map<String, String>.from(validation.errors)
+      ..remove('email');
+    if (relevantErrors.isNotEmpty) {
+      setState(() => _errors = relevantErrors);
+      return;
+    }
+    setState(() => _errors = const {});
+    final nickname = _nicknameController.text.trim();
+    final success = await ref
+        .read(authControllerProvider.notifier)
+        .updateProfile(
+          ProfileUpdateInput(
+            nickname: nickname,
+            birthDate: validation.birthDate!,
+          ),
+        );
+    if (!mounted) return;
+    if (success) {
+      ref.read(progressProvider.notifier).setNickname(nickname);
+      showAppToast(context, '변경사항이 저장되었어요');
+      context.pop();
+    }
+  }
+
+  Future<void> _pickBirthDate() async {
+    final today = DateTime.now();
+    final parsed = DateTime.tryParse(_birthdateController.text);
+    final initial = parsed != null && !parsed.isAfter(today)
+        ? parsed
+        : DateTime(2000, 1, 1);
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(today.year - 120),
+      lastDate: today,
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _birthdateController.text = _date(selected));
+  }
+
   void _confirmWithdraw(BuildContext context) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('정말 탈퇴하시겠어요?'),
-        content: const Text('탈퇴 시 모든 퀘스트 기록과 지도 데이터가 삭제됩니다.'),
+        content: const Text(
+          '계정 개인정보는 즉시 익명화되며 복구할 수 없습니다. 여행 기록은 익명 상태로 보존됩니다.',
+        ),
         actions: [
           TextButton(onPressed: () => context.pop(), child: const Text('취소')),
           TextButton(
-            onPressed: () {
-              ref.read(progressProvider.notifier).reset();
+            onPressed: () async {
               context.pop();
-              context.go('/splash');
+              await ref.read(authControllerProvider.notifier).withdraw();
+              if (!context.mounted) return;
+              if (ref.read(authControllerProvider).status ==
+                  AuthStatus.unauthenticated) {
+                ref.read(progressProvider.notifier).reset();
+                context.go('/splash');
+              }
             },
             child: const Text(
               '탈퇴하기',
@@ -154,13 +216,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       ),
     );
   }
+
+  String _date(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
 }
 
 class _DnaTypeField extends StatelessWidget {
   const _DnaTypeField({required this.label, required this.onTap});
 
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -206,4 +273,19 @@ class _DnaTypeField extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ErrorText extends StatelessWidget {
+  const _ErrorText(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 4),
+    child: Text(
+      message,
+      style: const TextStyle(color: AppColors.danger, fontSize: 12),
+    ),
+  );
 }

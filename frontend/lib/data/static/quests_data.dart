@@ -50,7 +50,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'dy4',
     region: 'danyang',
-    type: 'active',
+    type: 'activity',
     title: '만천하스카이워크 하늘길 걷기',
     place: '만천하스카이워크',
     verify: 'gps',
@@ -280,7 +280,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'dy19',
     region: 'danyang',
-    type: 'active',
+    type: 'activity',
     title: '양방산활공장 체험 인증',
     place: '양방산활공장',
     verify: 'gps',
@@ -296,7 +296,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'dy20',
     region: 'danyang',
-    type: 'active',
+    type: 'activity',
     title: '도깨비 양조장에서 액티비티',
     place: '도깨비 양조장',
     verify: 'gps',
@@ -358,7 +358,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'cj4',
     region: 'cheongju',
-    type: 'active',
+    type: 'activity',
     title: '상당산성 성곽길 한 바퀴',
     place: '상당산성',
     verify: 'gps',
@@ -585,7 +585,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'cj19',
     region: 'cheongju',
-    type: 'active',
+    type: 'activity',
     title: '멍글멍글 펫 글램핑 체험 인증',
     place: '멍글멍글 펫 글램핑',
     verify: 'gps',
@@ -598,7 +598,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'cj20',
     region: 'cheongju',
-    type: 'active',
+    type: 'activity',
     title: '벨루아에서 액티비티',
     place: '벨루아',
     verify: 'gps',
@@ -628,7 +628,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'be2',
     region: 'boeun',
-    type: 'active',
+    type: 'activity',
     title: '속리산 문장대 등반',
     place: '속리산 문장대',
     verify: 'gps',
@@ -884,7 +884,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'be19',
     region: 'boeun',
-    type: 'active',
+    type: 'activity',
     title: '보은길 체험 인증',
     place: '보은길',
     verify: 'gps',
@@ -899,7 +899,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'be20',
     region: 'boeun',
-    type: 'active',
+    type: 'activity',
     title: '구병리아름마을에서 액티비티',
     place: '구병리아름마을',
     verify: 'gps',
@@ -944,7 +944,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'cu3',
     region: 'chungju',
-    type: 'active',
+    type: 'activity',
     title: '활옥동굴 동굴 탐험',
     place: '활옥동굴',
     verify: 'photo',
@@ -1186,7 +1186,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'cu19',
     region: 'chungju',
-    type: 'active',
+    type: 'activity',
     title: '수주팔봉 야영지 체험 인증',
     place: '수주팔봉 야영지',
     verify: 'gps',
@@ -1201,7 +1201,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'cu20',
     region: 'chungju',
-    type: 'active',
+    type: 'activity',
     title: '펫 트리파크에서 액티비티',
     place: '펫 트리파크',
     verify: 'gps',
@@ -1246,7 +1246,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jc3',
     region: 'jecheon',
-    type: 'active',
+    type: 'activity',
     title: '옥순봉 출렁다리 건너기',
     place: '옥순봉 출렁다리',
     verify: 'gps',
@@ -1484,7 +1484,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jc19',
     region: 'jecheon',
-    type: 'active',
+    type: 'activity',
     title: '백운일출캠핑장 체험 인증',
     place: '백운일출캠핑장',
     verify: 'gps',
@@ -1499,7 +1499,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jc20',
     region: 'jecheon',
-    type: 'active',
+    type: 'activity',
     title: '무도글램핑에서 액티비티',
     place: '무도글램핑',
     verify: 'gps',
@@ -1770,7 +1770,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'es18',
     region: 'eumseong',
-    type: 'active',
+    type: 'activity',
     title: '백야자연휴양림 오토캠핑장 도전하기',
     place: '백야자연휴양림 오토캠핑장',
     verify: 'gps',
@@ -1785,7 +1785,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'es19',
     region: 'eumseong',
-    type: 'active',
+    type: 'activity',
     title: '수레의산자연휴양림 캠핑장 체험 인증',
     place: '수레의산자연휴양림 캠핑장',
     verify: 'gps',
@@ -1800,7 +1800,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'es20',
     region: 'eumseong',
-    type: 'active',
+    type: 'activity',
     title: '매산마을 담장벽화에서 액티비티',
     place: '매산마을 담장벽화',
     verify: 'photo',
@@ -1830,7 +1830,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jh2',
     region: 'jincheon',
-    type: 'active',
+    type: 'activity',
     title: '초평호 미르309 출렁다리 건너기',
     place: '초평호',
     verify: 'gps',
@@ -2057,7 +2057,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jh17',
     region: 'jincheon',
-    type: 'active',
+    type: 'activity',
     title: '아빠캠핑가 오토캠핑장에서 액티비티',
     place: '아빠캠핑가 오토캠핑장',
     verify: 'gps',
@@ -2072,7 +2072,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jh18',
     region: 'jincheon',
-    type: 'active',
+    type: 'activity',
     title: '충북대학교천문대천문체험학교 도전하기',
     place: '충북대학교천문대천문체험학교',
     verify: 'gps',
@@ -2087,7 +2087,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jh19',
     region: 'jincheon',
-    type: 'active',
+    type: 'activity',
     title: '물안뜰체험관 체험 인증',
     place: '물안뜰체험관',
     verify: 'photo',
@@ -2103,7 +2103,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jh20',
     region: 'jincheon',
-    type: 'active',
+    type: 'activity',
     title: '진천공예마을에서 액티비티',
     place: '진천공예마을',
     verify: 'photo',
@@ -2119,7 +2119,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jp1',
     region: 'jeungpyeong',
-    type: 'active',
+    type: 'activity',
     title: '좌구산 천문대 별 관측',
     place: '좌구산천문대',
     verify: 'gps',
@@ -2355,7 +2355,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jp17',
     region: 'jeungpyeong',
-    type: 'active',
+    type: 'activity',
     title: '블랙스톤벨포레CC에서 액티비티',
     place: '블랙스톤벨포레CC',
     verify: 'gps',
@@ -2370,7 +2370,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'jp18',
     region: 'jeungpyeong',
-    type: 'active',
+    type: 'activity',
     title: '증평 장이익어가는마을 도전하기',
     place: '증평 장이익어가는마을',
     verify: 'gps',
@@ -2668,7 +2668,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'gs18',
     region: 'goesan',
-    type: 'active',
+    type: 'activity',
     title: '청소년수련마을보람원 도전하기',
     place: '청소년수련마을보람원',
     verify: 'gps',
@@ -2684,7 +2684,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'gs19',
     region: 'goesan',
-    type: 'active',
+    type: 'activity',
     title: '루파니애견캠핑장 체험 인증',
     place: '루파니애견캠핑장',
     verify: 'gps',
@@ -2699,7 +2699,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'gs20',
     region: 'goesan',
-    type: 'active',
+    type: 'activity',
     title: '충청도양반길 2코스에서 액티비티',
     place: '충청도양반길 2코스',
     verify: 'photo',
@@ -2955,7 +2955,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'oc17',
     region: 'okcheon',
-    type: 'active',
+    type: 'activity',
     title: '옥천 구읍벽화마을에서 액티비티',
     place: '옥천 구읍벽화마을',
     verify: 'gps',
@@ -2971,7 +2971,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'oc18',
     region: 'okcheon',
-    type: 'active',
+    type: 'activity',
     title: '팔음산마을 도전하기',
     place: '팔음산마을',
     verify: 'gps',
@@ -2986,7 +2986,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'oc19',
     region: 'okcheon',
-    type: 'active',
+    type: 'activity',
     title: '배바우청정마을 체험 인증',
     place: '배바우청정마을',
     verify: 'photo',
@@ -3072,7 +3072,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'yd5',
     region: 'yeongdong',
-    type: 'active',
+    type: 'activity',
     title: '난계 국악기 체험',
     place: '난계국악박물관',
     verify: 'photo',
@@ -3253,7 +3253,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'yd17',
     region: 'yeongdong',
-    type: 'active',
+    type: 'activity',
     title: '사계절 야영장에서 액티비티',
     place: '사계절 야영장',
     verify: 'gps',
@@ -3268,7 +3268,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'yd18',
     region: 'yeongdong',
-    type: 'active',
+    type: 'activity',
     title: '달이머무는집 도전하기',
     place: '달이머무는집',
     verify: 'gps',
@@ -3283,7 +3283,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'yd19',
     region: 'yeongdong',
-    type: 'active',
+    type: 'activity',
     title: '맑은누리캠핑장 체험 인증',
     place: '맑은누리캠핑장',
     verify: 'photo',
@@ -3298,7 +3298,7 @@ const List<Quest> kQuests = [
   Quest(
     id: 'yd20',
     region: 'yeongdong',
-    type: 'active',
+    type: 'activity',
     title: '리앤파크캠핑장에서 액티비티',
     place: '리앤파크캠핑장',
     verify: 'photo',

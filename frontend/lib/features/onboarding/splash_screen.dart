@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
-import '../../state/repository_providers.dart';
+import '../../state/auth_controller.dart';
 
 /// 스플래시 — Figma 스펙(2026-07-06 공유) 반영: 전체 화면 사진 배경 + 카카오 브랜드 버튼.
 /// main_background_image 에셋(충북 산·호수 전경)을 화면 전체에 깔고, 텍스트·버튼은
@@ -15,6 +15,7 @@ class SplashScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final screenSize = MediaQuery.of(context).size;
     final screenHeight = screenSize.height;
+    final auth = ref.watch(authControllerProvider);
 
     return Scaffold(
       body: Stack(
@@ -90,14 +91,21 @@ class SplashScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      onPressed: () async {
-                        await ref.read(authRepositoryProvider).loginWithKakao();
-                        if (context.mounted) context.go('/signup');
-                      },
-                      child: const Text(
-                        '카카오로 시작하기',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                      onPressed: auth.isBusy
+                          ? null
+                          : () => ref
+                                .read(authControllerProvider.notifier)
+                                .login(),
+                      child: auth.isBusy
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text(
+                              '카카오로 시작하기',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
                     ),
                   ),
                 ],

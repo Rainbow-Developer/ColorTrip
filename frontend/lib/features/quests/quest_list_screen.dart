@@ -41,7 +41,7 @@ const _typeOptions = [
     iconAsset: 'assets/images/quest_type_history.svg',
   ),
   _QuestTypeOption(
-    key: 'active',
+    key: 'activity',
     label: '액티비티형',
     iconAsset: 'assets/images/quest_type_active.svg',
   ),

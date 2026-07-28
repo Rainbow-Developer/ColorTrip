@@ -7,6 +7,7 @@ import '../../core/widgets/app_toast.dart';
 import '../../data/models/category_vocabulary.dart';
 import '../../data/models/trip_dna_question.dart';
 import '../../state/progress_notifier.dart';
+import '../../state/auth_controller.dart';
 import '../../state/repository_providers.dart';
 
 /// 초기 설문(동적 문항) — 백엔드 API로부터 불러와 답변을 제출하고 DNA 결과를 받아옵니다.
@@ -162,6 +163,7 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
       );
 
       ref.read(progressProvider.notifier).setDnaType(mainDnaType);
+      await ref.read(authControllerProvider.notifier).refreshCurrentUser();
 
       if (mounted) {
         context.go('/trip-dna/result');

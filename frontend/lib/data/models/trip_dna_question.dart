@@ -1,10 +1,6 @@
 /// 초기 설문(4문항). 각 선택지가 여행 DNA 유형에 매핑된다.
 class TripDnaOption {
-  const TripDnaOption({
-    required this.id,
-    required this.label,
-    this.dnaType,
-  });
+  const TripDnaOption({required this.id, required this.label, this.dnaType});
 
   final String id;
   final String label;
