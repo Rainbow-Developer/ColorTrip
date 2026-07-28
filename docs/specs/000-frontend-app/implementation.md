@@ -1,5 +1,11 @@
 # [구현 수준] 다채로울지도 프론트엔드 앱 (Flutter)
 
+> 이 문서는 Flutter 프로토타입과 화면 개발의 구현 기록이다. Kakao SDK, ColorTrip JWT,
+> 서버 온보딩, secure storage와 Android 실제 E2E는
+> [035 Kakao 통합 인증](../035-kakao-auth-integration/implementation.md)에서 완료했다.
+> 여행·퀘스트·지도·타임라인의 메모리 상태 교체는
+> [040 서버 영속화](../040-domain-state-persistence/implementation.md)에서 추적한다.
+
 | 항목 | 내용 |
 |------|------|
 | 상태 | 진행 중 (U0~U4 1차 구현 완료 — 최소 버전, Figma 기반 화면 정합 진행 중, 추적 티켓 KAN-021) |
@@ -34,12 +40,16 @@
 - [ ] 공유 카드의 실제 이미지 내보내기·링크 생성·OS 공유 시트 연동 — 지금은 버튼 탭 시 토스트만 표시
 - [ ] 퀘스트 선택 화면의 검색은 제목 부분 일치 필터만 구현(간단한 클라이언트 필터, 실 검색엔진 아님)
 - [ ] dev PR
-- [ ] iOS/Android 실기기·시뮬레이터 빌드 검증(Xcode/Android 툴체인 미설치, 웹으로만 검증함)
+- [ ] iOS 실제 로그인·실기기 검증. Android emulator release build와 실제 Kakao E2E는 [035 구현 결과](../035-kakao-auth-integration/implementation.md)에서 통과했다.
+- [ ] 여행·퀘스트·타임라인 서버 영속화와 앱 재시작 복원 — [040](../040-domain-state-persistence/)
 - [ ] `pre-commit` 프레임워크·git 훅 설치(`uv tool install pre-commit && pre-commit install --install-hooks`) — Claude Code 자체 훅은 별개로 이미 동작 중
 
 ## 알려진 한계 / TODO
 
-- **임시 구현 예정(후속 교체 대상)**: 카카오 로그인은 UI 스텁, 데이터는 정적 mock, 진행 상태는 메모리(앱 재실행 시 초기화), 사진/GPS 인증은 모의 동작. 실제 [Kakao+JWT](../../conventions/auth-security.md)·백엔드 API·[TourAPI](../../conventions/external-apis.md) 연동은 후속 스펙으로 분리.
+- **후속 교체 대상**: Kakao 로그인·JWT·프로필·DNA 온보딩은 [035](../035-kakao-auth-integration/)에서 실제 연동했다. 퀘스트 데이터와 일부 진행 상태, 사진/GPS 인증은 여전히 정적·모의 구현이며 해당 도메인 API 연동은 별도 범위다.
+- **서버 영속화 계획**: 여행 선택·완료 퀘스트·타임라인은 현재 `ProgressState` 메모리 상태라
+  앱 재시작 시 초기화된다. [040](../040-domain-state-persistence/)에서 기존 여정·진행·지도·타임라인
+  API에 연결하고 메모리 SOT를 제거한다.
 - **커밋 전 검사는 네이티브 유지**: 프론트엔드 검사는 기존처럼 **pre-commit 프레임워크의 `dart format`·`flutter analyze` 훅**을 그대로 쓴다(백엔드가 `uv run`으로 네이티브 실행하는 것과 동일한 패턴). 이 훅은 flutter/dart가 시스템 PATH(brew `/opt/homebrew/bin` 등)에 있어야 동작하므로, 작업 전 Flutter SDK를 네이티브로 설치한다(Docker는 웹 빌드/테스트 보조용으로만 `frontend/Dockerfile`·`frontend/docker-compose.yml`에 남겨둠).
 - **반응형 범위**: KAN-021 티켓에 "600px 브레이크포인트 웹 반응형"이 언급됐으나, 이 앱은 Flutter 모바일 앱이 SOT이므로 기존 `plan.md`의 **모바일 단일 폼팩터(392×812 기준, 상대 단위로 확장 가능하게 구현)** 요구사항을 그대로 따른다. 별도의 웹 브레이크포인트 전략은 도입하지 않는다.
 - ~~**프로토타입 버전 차이**: 원본 zip의 `다채로울지도.dc.html`은 travel 화면을 "진행 중/지난 여행"으로 재설계하다 만 미완성본이라, 일관된 `다채로울지도-standalone-src.dc.html`(travel = 유형 필터 퀘스트 목록)을 채택했다.~~ → **2026-07-08 해결**: 사용자가 공유한 Figma 와이어프레임이 정확히 이 "진행 중/지난 여행" 구조였음이 확인되어, `features/travel/travel_list_screen.dart`로 구현하고 하단 탭 순서도 여행/홈/마이로 변경함(아래 변경 이력 참고). 유형 필터 평면 목록(`quest_list_screen.dart`)은 폐기하지 않고 여행 목록 화면의 "전체 퀘스트" 버튼으로 보조 진입점을 남겼다.

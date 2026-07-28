@@ -19,7 +19,7 @@
 ### 🏗️ 아키텍처 특징
 
 - **모노레포**: backend(Python)와 frontend(Flutter)를 한 저장소에서 관리
-- **프론트엔드 단독 구동(현재)**: 백엔드 연동 전까지 프론트엔드는 정적 데이터 + 메모리 상태로 동작(Repository 인터페이스로 후속 API 교체 seam 확보). 자세한 결정은 [docs/specs/000-frontend-app/plan.md](docs/specs/000-frontend-app/plan.md).
+- **인증 상태의 서버 단일 출처**: Flutter는 서버의 `onboarding_step`에 따라 회원정보·여행 DNA·홈을 라우팅하고, 인증 토큰은 secure storage에 보관한다. 여행·퀘스트·타임라인은 현재 일부 메모리 상태를 사용하며, 앱 재시작 복원은 [040 서버 영속화](docs/specs/040-domain-state-persistence/)에서 진행한다.
 
 ## 요구사항
 
@@ -182,6 +182,7 @@ flowchart TD
 | **퀘스트·지역 이미지** | TourAPI 이미지 표시·정적 데이터 보강 | `backend/scripts/enrich_frontend_quests.py`, `frontend/lib/core/widgets/app_network_image.dart` · 스펙 [docs/specs/045-quest-region-images/](docs/specs/045-quest-region-images/) |
 | **DB/데이터 모델 기반** | 여행 DNA 설문·퀘스트 진행·지도 진행·타임라인 기록을 위한 백엔드 데이터 모델 | `backend/app/auth/`, `backend/app/quests/`, `backend/app/progress/`, `backend/app/timeline/`, `backend/app/trip_dna/`, `backend/alembic/` · 스펙 [docs/specs/015-database-migration/](docs/specs/015-database-migration/) |
 | **백엔드 공통 로깅** | JSON 앱 로그, 요청 메타데이터 로깅, request id 전파 | `backend/app/core/` · 스펙 [docs/specs/020-backend-logging/](docs/specs/020-backend-logging/) |
+| **도메인 상태 영속화(KAN-55)** | 여행·퀘스트 완료·지도·타임라인을 서버 SOT로 연결하고 앱 재시작 시 복원 | 계획 [docs/specs/040-domain-state-persistence/](docs/specs/040-domain-state-persistence/) |
 
 > 위 표는 기능이 **어디 있는지**를 가리킵니다. 개별 기능의 **상세 설명**은 이 README에 중복해 적지 않고, 해당 기능 스펙의 `description.md`를 단일 출처(SOT)로 둡니다. 지도 색칠·공유 등은 별도 도메인으로 진행 예정이며, 스펙이 만들어지면 이 표에 추가합니다.
 
