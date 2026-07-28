@@ -32,12 +32,18 @@
   불변 migration snapshot. 기존 동일 데이터는 재사용하고 모호한 충돌은 migration을 중단한다.
 - 사용자별 `client_request_id`를 이용한 여정 멱등 생성, 여정 퀘스트 최종 집합의 원자적
   교체, row lock과 PostgreSQL upsert를 이용한 동시 인증 중복 방지
+- stable key가 없는 기존 TourAPI 지역·퀘스트도 조회 API에서 계속 반환하고,
+  Flutter 매핑에서만 제외해 additive 하위 호환 유지
+- 여정 목록의 `quest_client_keys` bulk 응답으로 앱 부팅 시 여정별 상세 N+1 제거,
+  여행 카드에서 선택한 `journeyId`를 지역·선택·인증 화면까지 전달
 - `photo`·`gps`·`gps_photo`·`quiz`별 서버 검증과 완료 트랜잭션의 지도·타임라인 반영
 - 타임라인 응답의 `quest_id`·`quest_client_key`·`photo_url` 복원 식별자
+- 제약 추가 전에 기존 중복 완료 타임라인을 가장 이른 이벤트 하나로 수렴시켜
+  기존 dev DB migration 실패 방지
 - Flutter `DioDomainRepository`·`DomainController`·`DomainStateGate`, 인증 수명주기와
   도메인 상태 초기화, 여행·퀘스트·지도·타임라인 화면 서버 연동
 - 사진 multipart 업로드와 Android/iOS 위치 권한 설정, 실제 현재 위치 기반 GPS 인증
-- 백엔드 KAN-55 집중 테스트 46건·전체 147건, Flutter 전체 테스트 80건,
+- 백엔드 KAN-55 집중 테스트·전체 149건, Flutter 전체 테스트 82건,
   Ruff·Pyright·Dart format·Flutter analyze와 Android debug build 통과
 
 ## 미구현 / 남은 항목

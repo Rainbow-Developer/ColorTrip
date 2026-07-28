@@ -101,6 +101,7 @@ flowchart TD
 | `QuestListItem` 및 파생 응답 | `client_key: str` 추가 |
 | `MissionType` | `photo`, `gps` 추가, 기존 `gps_photo`, `quiz` 유지 |
 | `JourneyCreateRequest` | `client_request_id: UUID` 추가 |
+| `JourneyListItem` | `quest_client_keys: list[str]` 추가 — 목록 복원 시 여정별 상세 N+1 방지 |
 | `PUT /journeys/{id}/quests` | `{ "quest_ids": [UUID, ...] }` → 최신 `JourneyDetail` |
 
 인증 규칙은 `photo=허용된 업로드 경로`, `gps=목표 반경 내 위치`,
@@ -109,8 +110,8 @@ flowchart TD
 
 여행 목록은 서버의 여정 레코드 단위로 표시한다. 지도에서 지역으로 진입할 때는
 그 지역의 최신 여정을 기본 대상으로 사용하되, 여행 목록에서 선택한 경우 route의
-`journey_id`가 우선한다. 모든 여정을 앱 부팅 시 미리 가져오지 않고 각 화면에서
-필요한 목록·상세만 조회한다.
+`journey_id`가 우선한다. 앱 부팅 snapshot은 페이지네이션된 여정 요약의
+`quest_client_keys`를 사용하며, 여정마다 상세 API를 다시 호출하지 않는다.
 
 ## 의사결정 (함께 논의 · 근거 필수)
 

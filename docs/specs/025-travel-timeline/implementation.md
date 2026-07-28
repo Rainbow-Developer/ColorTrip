@@ -19,6 +19,7 @@
 - 퀘스트 완료 시 `quest_completed`, 최초 지역 색칠 시 `region_colored` 이벤트 생성
 - `GET /api/v1/users/me/timeline?year=&month=` 최신순 조회
 - 복원용 `quest_id`·`quest_client_key`·`photo_url` 응답과 완료 이벤트 중복 방지 제약
+- migration에서 기존 중복 완료 이벤트를 가장 이른 한 건으로 수렴한 뒤 유일 제약 적용
 - Flutter 서버 snapshot 조회와 `TimelineScreen` 호환 projection
 - `backend/tests/test_timeline.py` 통합 테스트
 
