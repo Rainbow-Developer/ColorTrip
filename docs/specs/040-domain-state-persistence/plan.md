@@ -7,11 +7,11 @@
 | 영역 | backend / frontend / 공통 |
 | 작성자 | Codex |
 | 작성일 | 2026-07-28 |
-| 상태 | 계획 |
+| 상태 | 구현 중 |
 
 ## 배경 / 목적
 
-현재 Flutter의 여행 선택, 완료 퀘스트, 타임라인은 `ProgressNotifier`의 메모리 상태를
+작업 전 Flutter의 여행 선택, 완료 퀘스트, 타임라인은 `ProgressNotifier`의 메모리 상태를
 단일 출처로 사용한다. 앱 프로세스를 종료하면 `ProgressState.empty()`로 다시 시작하므로,
 사용자가 만든 여행과 완료 기록이 모두 사라진다. 반면 백엔드에는 이미 여정,
 퀘스트 진행, 지도 진행도, 타임라인 테이블과 보호 API가 구현되어 있지만 Flutter가
@@ -56,7 +56,9 @@ PR #47(KAN-53)의 Kakao/JWT 세션과 `CurrentUser` 접근 단계를 전제로 �
 ### Flutter
 
 - 기존 Dio/JWT refresh interceptor를 모든 신규 Repository에서 재사용한다.
-- 여행·진행·타임라인·지도 서버 상태는 분리된 Riverpod Provider로 관리한다.
+- 여행·진행·타임라인·지도 응답은 하나의 `DomainSnapshot`으로 묶어
+  `DomainController`에서 갱신하고, 화면별 파생 상태만 분리한다. 서버 쓰기 성공 뒤 전체를
+  다시 조회해 서로 다른 화면이 서로 다른 갱신 시점의 상태를 표시하지 않게 한다.
 - 화면은 서버 성공 전에 완료 또는 저장 성공으로 표시하지 않는다.
 - 네트워크 실패를 빈 목록으로 위장하지 않고 loading/empty/error/retry를 구분한다.
 - 로그아웃·탈퇴·계정 전환 시 사용자별 Provider를 폐기한다.
@@ -118,7 +120,7 @@ flowchart TD
 | 카탈로그 표시 | 서버 전면 전환 / Flutter 정적 유지 | **정적 유지**. 220개 화면 콘텐츠 재설계를 피하고 stable key 계약만 추가해 범위를 제한한다. | 합의됨 |
 | 오프라인 | 쓰기 큐 / 오류+재시도 | **오류+재시도**. 충돌 해결과 보안 검증을 추가하지 않고 서버 확정 상태만 표시한다. | 합의됨 |
 | 선택 변경 | 기존 단건 API 반복 / 원자적 PUT | **원자적 PUT**. 현재 UI가 최종 선택 집합을 한 번에 제출하므로 부분 성공을 허용하면 화면과 DB가 어긋난다. | 합의됨 |
-| Provider 구조 | 거대 전역 상태 / 도메인별 서버 상태 | **도메인별 Provider**. 실패·재조회 범위를 분리하고 KAN-53 사용자 상태와 중복하지 않는다. | 합의됨 |
+| Provider 구조 | 화면별 독립 조회 / 도메인 snapshot controller | **도메인 snapshot controller**. 여행·진행·지도·타임라인은 한 쓰기 결과에 함께 변하므로 한 번에 재조회하고, 기존 `ProgressState`는 화면 호환 projection으로만 유지한다. 인증 사용자 상태는 KAN-53 Provider와 분리한다. | 구현 반영 |
 | PR 전략 | PR #47 대기 후 시작 / KAN-53 위 stacked 작업 | **stacked 작업**. KAN-53 HEAD에서 격리 개발하고 #47 squash merge 후 KAN-55 커밋만 `dev`로 옮긴다. | 합의됨 |
 
 ## 영향 범위
@@ -135,9 +137,9 @@ flowchart TD
 
 - [x] KAN-53 HEAD에서 KAN-55 전용 worktree 생성 및 기준선 테스트
 - [x] 040 스펙과 관련 문서 갱신 후 사용자 승인
-- [ ] 카탈로그 식별자·snapshot migration을 테스트 우선으로 구현
-- [ ] 여정 멱등 생성·원자적 선택 변경·동시 인증 안전성 구현
-- [ ] Flutter Repository·Provider·화면 연동
+- [x] 카탈로그 식별자·snapshot migration을 테스트 우선으로 구현
+- [x] 여정 멱등 생성·원자적 선택 변경·동시 인증 안전성 구현
+- [x] Flutter Repository·Provider·화면 연동
 - [ ] 백엔드·Flutter 전체 품질 검사와 Android E2E
 - [ ] PR #47 병합 후 KAN-55 커밋만 최신 `dev`로 재배치
 - [ ] `dev` 대상 Draft PR 생성

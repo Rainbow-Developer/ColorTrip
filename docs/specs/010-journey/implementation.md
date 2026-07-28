@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 진행 중 (백엔드 구현·테스트 완료 / Flutter 연동은 040 계획) |
+| 상태 | 진행 중 (백엔드·Flutter 연동 완료 / KAN-55 실제 E2E 진행 중) |
 | 최종 업데이트 | 2026-07-28 |
 
 ## 구현 규모 / 단위 분할
@@ -33,8 +33,8 @@
 - **GCS 버킷 IaC**: 버킷 생성·앱 SA `roles/storage.objectAdmin`·공개 읽기(또는 서빙 방식) — infra/ 후속 작업
 - **LLM 사진 판정**: `mission_meta.judgement_prompt` 데이터만 준비됨 (후속)
 - **DNA 연동**: `app/quests/dna.py` seam을 DNA 도메인 완성 시 교체
-- **Flutter 연동**: 여정 생성·선택 변경·인증·재시작 복원은
-  [040 서버 영속화](../040-domain-state-persistence/)에서 진행
+- **Flutter 실제 E2E**: 여정 생성·인증 후 앱 재시작 복원 시나리오는
+  [040 서버 영속화](../040-domain-state-persistence/)에서 최종 확인 중
 
 ## 알려진 한계 / TODO
 
@@ -42,8 +42,9 @@
 - **퀘스트 조회 공개 여부**: Notion API 명세는 QST 조회(목록·상세·지역)도 인증 Y이나, 000-quest 구현은 공개로 되어 있음. 본 spec 범위(추천·진행·인증·여정·업로드)는 전부 보호 API로 구현 — 조회 API 보호 여부는 000-quest와 함께 팀 결정 필요.
 - **재도전(재인증) 정책**: 완료한 퀘스트 재인증은 409. 완료 취소/재도전이 필요해지면 별도 결정.
 - **의존**: PR #13(005-auth-member) 머지 전까지 본 브랜치는 그 위에 스택됨.
-- **현재 클라이언트 한계**: Flutter는 이 API 대신 `ProgressState` 메모리 상태를 사용한다.
-  앱 재시작 초기화 문제와 stable key 계약은 040에서 해결한다.
+- **클라이언트 상태**: Flutter는 `DioDomainRepository`로 여정 생성·선택 일괄 변경·
+  업로드·인증 API를 호출하고 서버 snapshot을 `ProgressState` 호환 projection으로
+  반영한다. stable key·재시작 복원 계약은 040에서 관리한다.
 
 ## 변경 이력
 
@@ -54,3 +55,4 @@
 | 2026-07-09 | PR #13 dev 머지에 따라 dev 위로 정리(rebase). CodeRabbit 리뷰 반영 — 이미 완료한 퀘스트로 여정 생성 시 즉시 완료 처리, start/verify 동시요청 `IntegrityError` 멱등 처리, 업로드 크기 사전 차단, conftest DB 가드·override 정리, README 문서 보완. 테스트 46건 통과 |
 | 2026-07-16 | `journeys`에 여행 기간 `start_date`·`end_date`(DATE, NULL 허용) 추가 — 여행 생성 시 이름(title)과 함께 날짜를 받도록 POST /journeys 요청·응답 스키마 확장, `end_date < start_date`면 422(VALIDATION_ERROR). 마이그레이션 `c9d4e7a2b8f3`, 테스트 추가 |
 | 2026-07-28 | 실제 Flutter 미연동 상태와 KAN-55의 040 서버 영속화 후속 범위를 명시 |
+| 2026-07-28 | KAN-55에서 stable key·멱등 생성·선택 일괄 변경·사진/GPS/퀴즈 Flutter 연동 완료. 실제 계정 재시작 복원 E2E는 진행 중 |

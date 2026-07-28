@@ -13,14 +13,14 @@
   - [x] 1) 작업 격리·기준선 — KAN-53 `b6ad051`에서
     `fix/KAN-55-domain-state-persistence` worktree 생성. backend 133건, Flutter 72건 통과.
   - [x] 2) 문서 우선 — 040 스펙 3종과 관련 스펙·README 갱신, 사용자 승인.
-  - [ ] 3) 카탈로그 계약 — `regions.slug`, `quests.client_key`, 220개 snapshot migration,
+  - [x] 3) 카탈로그 계약 — `regions.slug`, `quests.client_key`, 220개 snapshot migration,
     정적 Dart 계약 테스트. 빈 DB와 기존 head upgrade 완료.
-  - [ ] 4) 백엔드 쓰기 안전성 — 여정 멱등 생성, 선택 일괄 교체, 미션 타입 정렬,
+  - [x] 4) 백엔드 쓰기 안전성 — 여정 멱등 생성, 선택 일괄 교체, 미션 타입 정렬,
     동시 인증 중복 방지. PostgreSQL 통합 테스트 완료.
-  - [ ] 5) Flutter 서버 상태 — Repository·Provider와 여행/퀘스트/지도/타임라인 화면 연결,
+  - [x] 5) Flutter 서버 상태 — Repository·Provider와 여행/퀘스트/지도/타임라인 화면 연결,
     계정 전환과 오류·재시도 위젯 테스트 완료.
-  - [ ] 6) 플랫폼 인증 — 사진 업로드와 Android 실제 위치 권한·현재 위치 연동,
-    emulator 시나리오 완료.
+  - [~] 6) 플랫폼 인증 — 사진 업로드와 Android 실제 위치 권한·현재 위치 연동,
+    debug APK 설치·Kakao Account 로그인 화면 진입 완료. 실제 계정 복원 시나리오 확인 중.
   - [ ] 7) 최종 검증·문서 완료 — 전체 품질 검사, Android E2E, 보안 검색,
     README·구현 상태·변경 이력 갱신.
   - [ ] 8) 브랜치 마무리 — PR #47 병합 후 KAN-55 커밋만 최신 `dev`에 재배치하고
@@ -28,22 +28,30 @@
 
 ## 구현된 항목
 
-- KAN-55 전용 worktree와 팀 규칙에 맞는 `fix/KAN-55-domain-state-persistence` 브랜치
-- 변경 전 기준선: PostgreSQL backend pytest 133건, Flutter test 72건 통과
-- 040 계획·설명·구현 수준 문서 초안
+- `regions.slug`·`quests.client_key` 고유 stable key와 11개 지역·220개 퀘스트
+  불변 migration snapshot. 기존 동일 데이터는 재사용하고 모호한 충돌은 migration을 중단한다.
+- 사용자별 `client_request_id`를 이용한 여정 멱등 생성, 여정 퀘스트 최종 집합의 원자적
+  교체, row lock과 PostgreSQL upsert를 이용한 동시 인증 중복 방지
+- `photo`·`gps`·`gps_photo`·`quiz`별 서버 검증과 완료 트랜잭션의 지도·타임라인 반영
+- 타임라인 응답의 `quest_id`·`quest_client_key`·`photo_url` 복원 식별자
+- Flutter `DioDomainRepository`·`DomainController`·`DomainStateGate`, 인증 수명주기와
+  도메인 상태 초기화, 여행·퀘스트·지도·타임라인 화면 서버 연동
+- 사진 multipart 업로드와 Android/iOS 위치 권한 설정, 실제 현재 위치 기반 GPS 인증
+- 백엔드 KAN-55 집중 테스트 46건·전체 147건, Flutter 전체 테스트 80건,
+  Ruff·Pyright·Dart format·Flutter analyze와 Android debug build 통과
 
 ## 미구현 / 남은 항목
 
-- 카탈로그 식별자·snapshot migration과 API additive contract
-- 여정 멱등성·원자적 선택 변경·동시 인증 중복 방지
-- Flutter 여행·진행·지도·타임라인 서버 상태 연동
-- 사진/GPS/퀴즈 실제 서버 인증
-- 전체 자동 검사, Android E2E, PR #47 이후 재배치와 Draft PR
+- 실제 Kakao 계정으로 여행 생성→퀴즈 완료→앱 강제 종료·재시작 후 여행·지도·
+  타임라인 복원 확인
+- 최종 보안·diff 검토
+- PR #47 병합 후 최신 `dev` 재배치·재검증·Draft PR
 
 ## 알려진 한계 / TODO
 
 - PR #47이 아직 `dev`에 병합되지 않아 이 브랜치는 KAN-53 위에 쌓여 있다.
-- 구현 완료 전까지 기존 Flutter 메모리 상태는 앱 재시작 시 초기화된다.
+- `ProgressState`는 기존 화면 호환 projection으로 남아 있지만 앱 부팅과 서버 쓰기
+  성공 후 `DomainController`의 최신 snapshot으로 다시 채워진다.
 - 과거에 서버로 전송되지 않은 메모리 기록은 소급 복구하지 않는다.
 - Notion API·테이블 명세는 저장소 문서·Swagger 확정 후 수동 역동기화한다.
 
@@ -53,3 +61,4 @@
 |------|------|
 | 2026-07-28 | KAN-55 worktree·기준선 검증 후 문서 우선 계획 작성 |
 | 2026-07-28 | 사용자 승인 후 구현 상태를 진행 중으로 전환 |
+| 2026-07-28 | stable catalog·멱등 여정·동시 인증 안전성·Flutter 서버 상태·실제 위치/사진 연동 완료. 실제 계정 재시작 복원 E2E와 브랜치 마무리는 진행 중 |
