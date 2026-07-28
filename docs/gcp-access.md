@@ -54,12 +54,15 @@ gcloud auth application-default login      # ADC (Terraform·Cloud SQL Proxy 용
 
 GitHub Actions 가 키 없이 GCP 에 인증하도록 Workload Identity Federation 을 씁니다. 신뢰 대상 저장소는 **`Rainbow-Developer/ColorTrip`** 이며, 이 repo 에서 발급된 OIDC 토큰만 허용됩니다.
 
-GitHub repo Actions secrets 에 넣을 값:
+GitHub repo Actions variables 에 넣을 값:
 
-| Secret 이름(GitHub) | 값 |
+| Variable 이름(GitHub) | 값 |
 |------|------|
 | `WIF_PROVIDER` | `projects/190304972522/locations/global/workloadIdentityPools/colortrip-dev-gh-pool/providers/github` |
 | `DEPLOY_SA` | `colortrip-dev-deployer@colortrip.iam.gserviceaccount.com` |
+| `KAKAO_APP_ID` | Kakao token info의 `app_id`와 일치하는 양의 정수 앱 ID |
+
+세 값은 인증 비밀값이 아니라 WIF provider·서비스 계정·Kakao 앱을 가리키는 식별자이므로 GitHub repository variables 로 관리합니다. Actions 는 OIDC 토큰으로 단기 자격 증명을 발급받으며, 서비스 계정 키나 앱 시크릿을 GitHub 에 저장하지 않습니다. 실제 앱 시크릿은 아래 GCP Secret Manager 에서 관리합니다.
 
 ## 시크릿 (Secret Manager)
 
@@ -75,6 +78,7 @@ gcloud secrets versions access latest --secret=<시크릿-이름>
 | `colortrip-dev-jwt-secret-key` | Access JWT 서명 · refresh token hash | 필수 |
 | `colortrip-dev-kakao-rest-api-key` | Kakao 로그인 REST API 키 | 필수 |
 | `colortrip-dev-kakao-redirect-uri` | Kakao authorization code 교환 redirect URI | 필수 |
+| `colortrip-dev-kakao-client-secret` | Kakao client secret을 활성화한 경우 authorization code 교환 | 선택 |
 | `colortrip-dev-tour-api-key` | 한국관광공사 TourAPI | 선택 |
 
 ## 접근 방법
@@ -110,8 +114,8 @@ cp backend/.env.example backend/.env       # 템플릿 복사 후 값 채우기
 docker compose up                          # PostgreSQL + FastAPI 로컬 구동
 ```
 
-- `APP_ENV=local` 이면 Kakao/JWT 미설정이어도 부팅됩니다(Kakao 로그인만 비활성).
-- 실제 Kakao 로그인·TourAPI 를 로컬에서 테스트하려면 위 [시크릿](#시크릿-secret-manager) 명령으로 값을 받아 `.env` 에 채웁니다.
+- `APP_ENV=local`에서는 JWT 기본값과 빈 REST key·redirect URI를 허용하지만, `KAKAO_APP_ID`는 모든 환경에서 필요한 양의 정수 설정입니다.
+- 실제 Kakao 로그인·TourAPI 를 로컬에서 테스트하려면 위 [시크릿](#시크릿-secret-manager) 명령으로 값을 받아 `.env` 에 채웁니다. `KAKAO_APP_ID`는 시크릿이 아니므로 Kakao Developers 앱 정보의 숫자 앱 ID를 직접 설정합니다.
 - 운영 인스턴스용 `.env` 생성 절차는 [deploy/README.md](../deploy/README.md) 참고(Secret Manager 에서 DB 비밀번호 주입).
 
 ## 관련 문서
