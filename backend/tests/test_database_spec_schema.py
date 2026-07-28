@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -12,6 +13,8 @@ from httpx import AsyncClient
 from alembic import command
 from app.core.base import now_kst
 from app.core.database import engine
+
+_ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
 
 async def test_pr15_database_tables_and_enum_exist(client: AsyncClient) -> None:
@@ -520,12 +523,14 @@ def _foreign_keys_for(
 
 
 def _downgrade_to_pre_consent_head(connection: sa.Connection) -> None:
-    config = Config("alembic.ini")
-    config.attributes["connection"] = connection
-    command.downgrade(config, "be3e3c52de66")
+    command.downgrade(_alembic_config(connection), "be3e3c52de66")
 
 
 def _upgrade_to_head(connection: sa.Connection) -> None:
-    config = Config("alembic.ini")
+    command.upgrade(_alembic_config(connection), "head")
+
+
+def _alembic_config(connection: sa.Connection) -> Config:
+    config = Config(str(_ALEMBIC_INI))
     config.attributes["connection"] = connection
-    command.upgrade(config, "head")
+    return config

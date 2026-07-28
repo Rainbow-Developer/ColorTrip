@@ -44,10 +44,9 @@ def upgrade() -> None:
     )
     op.create_index("ix_user_consents_user_id", "user_consents", ["user_id"])
 
-    # The old API remains live while this migration runs. Its seven-day
-    # withdrawal writer can set only deleted_at/grace after the one-time
-    # backfill snapshot. Keep a database invariant so that write is still
-    # anonymized immediately during the deployment overlap.
+    # The old API can remain live while this migration runs, but this is a
+    # permanent database invariant rather than a deployment-only safeguard:
+    # every future write that marks a user deleted is anonymized immediately.
     op.execute(
         sa.text(
             """

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from collections.abc import Callable
 from typing import Any
 from uuid import UUID
@@ -47,16 +48,24 @@ async def _assert_mutation_holds_user_lock_until_commit(
 ) -> tuple[Response, Response]:
     await asyncio.wait_for(paused.wait(), timeout=2)
     withdrawal_task = asyncio.create_task(client.delete("/api/v1/users/me", headers=headers))
+    results: tuple[Response, Response] | None = None
     try:
         await asyncio.sleep(0.1)
         assert not withdrawal_task.done()
     finally:
         resume.set()
-        mutation_result, withdrawal_result = await asyncio.gather(
-            mutation_task,
-            withdrawal_task,
-        )
-    return mutation_result, withdrawal_result
+        active_exception = sys.exc_info()[0] is not None
+        try:
+            results = await asyncio.wait_for(
+                asyncio.gather(mutation_task, withdrawal_task),
+                timeout=10,
+            )
+        except BaseException:
+            if not active_exception:
+                raise
+
+    assert results is not None
+    return results
 
 
 @pytest.mark.asyncio
