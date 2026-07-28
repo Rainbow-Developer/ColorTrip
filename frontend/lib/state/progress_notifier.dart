@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/repositories/domain_repository.dart';
 import '../data/static/quests_data.dart';
 import 'progress_state.dart';
 
@@ -92,6 +93,37 @@ class ProgressNotifier extends Notifier<ProgressState> {
     state = state.copyWith(
       regionProgress: {...state.regionProgress, ...serverRegionProgress},
       regionTripCount: {...state.regionTripCount, ...serverRegionTripCount},
+    );
+  }
+
+  /// 서버 스냅샷을 화면 호환 상태에 투영한다. 서버에 없는 과거 메모리 값은 유지하지 않는다.
+  void replaceFromServer(DomainSnapshot snapshot) {
+    final tripQuests = <String, Set<String>>{};
+    final tripInfo = <String, TripInfo>{};
+    for (final journey in snapshot.journeys) {
+      if (tripQuests.containsKey(journey.regionKey)) continue;
+      tripQuests[journey.regionKey] = journey.questKeys.toSet();
+      if (journey.startDate != null && journey.endDate != null) {
+        tripInfo[journey.regionKey] = TripInfo(
+          name: journey.title ?? '${journey.regionKey} 여행',
+          startDate: journey.startDate!,
+          endDate: journey.endDate!,
+        );
+      }
+    }
+    state = state.copyWith(
+      completedQuestIds: {...snapshot.completedQuestKeys},
+      timeline: [
+        for (final entry in snapshot.timeline)
+          TimelineEntry(
+            questId: entry.questKey,
+            completedAt: entry.occurredAt,
+            photoUrl: entry.photoUrl,
+          ),
+      ],
+      tripQuests: tripQuests,
+      tripInfo: tripInfo,
+      regionProgress: {...snapshot.regionProgress},
     );
   }
 

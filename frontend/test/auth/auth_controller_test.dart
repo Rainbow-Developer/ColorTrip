@@ -4,6 +4,7 @@ import 'package:colortrip/data/auth/kakao_auth_gateway.dart';
 import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/repositories/auth_repository.dart';
 import 'package:colortrip/state/auth_controller.dart';
+import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/repository_providers.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
@@ -253,6 +254,25 @@ void main() {
     completion.completeError(StateError('late failure'));
     await submission;
 
+    expect(
+      container.read(authControllerProvider).status,
+      AuthStatus.unauthenticated,
+    );
+  });
+
+  test('session expiry clears the previous account domain state', () {
+    final container = ProviderContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(_Repository()),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(progressProvider.notifier).completeQuest('dy1');
+    expect(container.read(progressProvider).completedQuestIds, {'dy1'});
+
+    container.read(authControllerProvider.notifier).sessionExpired();
+
+    expect(container.read(progressProvider).completedQuestIds, isEmpty);
     expect(
       container.read(authControllerProvider).status,
       AuthStatus.unauthenticated,

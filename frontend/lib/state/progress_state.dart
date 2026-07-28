@@ -14,6 +14,7 @@ class TimelineEntry {
     required this.questId,
     required this.completedAt,
     this.photo,
+    this.photoUrl,
   });
 
   final String questId;
@@ -22,6 +23,7 @@ class TimelineEntry {
   /// 사진 인증 퀘스트를 완료할 때 사용자가 실제로 선택한 사진(세션 동안만 메모리에 보관 —
   /// 백엔드 연동 전까지는 서버에 저장되지 않는다, KAN-46 히스토리 피드백).
   final Uint8List? photo;
+  final String? photoUrl;
 
   static String _two(int n) => n.toString().padLeft(2, '0');
 

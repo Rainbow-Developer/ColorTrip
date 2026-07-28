@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
+import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/quest_type_badge.dart';
@@ -39,6 +40,12 @@ class QuestDetailScreen extends ConsumerWidget {
     final progress = ref.watch(progressProvider);
     final done = progress.isCompleted(quest.id);
     final completedEntry = done ? progress.timelineEntryFor(quest.id) : null;
+    final photoUrl = completedEntry?.photoUrl;
+    final resolvedPhotoUrl = photoUrl == null
+        ? null
+        : Uri.parse(
+            ref.watch(appConfigProvider).apiBaseUrl,
+          ).resolve(photoUrl).toString();
     final conditionEmoji = _conditionEmoji[quest.verify] ?? '📍';
 
     return Scaffold(
@@ -60,6 +67,12 @@ class QuestDetailScreen extends ConsumerWidget {
                 // 그마저 없으면 기존 placeholder.
                 child: completedEntry?.photo != null
                     ? Image.memory(completedEntry!.photo!, fit: BoxFit.cover)
+                    : resolvedPhotoUrl != null
+                    ? Image.network(
+                        resolvedPhotoUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const _ImagePlaceholder(),
+                      )
                     : AppNetworkImage(
                         url: quest.imageUrl,
                         placeholderText: '관광지 이미지',
@@ -142,6 +155,23 @@ class QuestDetailScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(color: AppColors.imagePlaceholderBg),
+      child: const Center(
+        child: Text(
+          '관광지 이미지',
+          style: TextStyle(color: AppColors.formPlaceholder),
         ),
       ),
     );

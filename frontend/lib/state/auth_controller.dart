@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/auth/kakao_auth_gateway.dart';
 import '../data/models/auth_models.dart';
+import 'domain_controller.dart';
+import 'progress_notifier.dart';
 import 'repository_providers.dart';
 
 enum AuthStatus {
@@ -39,6 +41,7 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> bootstrap() async {
     final epoch = ++_epoch;
+    _clearDomainState();
     state = const AuthState(status: AuthStatus.checking);
     final repository = ref.read(authRepositoryProvider);
     try {
@@ -66,6 +69,7 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> login() async {
     final epoch = ++_epoch;
+    _clearDomainState();
     state = const AuthState(status: AuthStatus.unauthenticated, isBusy: true);
     try {
       final session = await ref.read(authRepositoryProvider).loginWithKakao();
@@ -167,6 +171,7 @@ class AuthController extends Notifier<AuthState> {
     await ref.read(authRepositoryProvider).logout();
     if (epoch != _epoch) return;
     state = const AuthState(status: AuthStatus.unauthenticated);
+    _clearDomainState();
   }
 
   Future<void> withdraw() async {
@@ -181,6 +186,7 @@ class AuthController extends Notifier<AuthState> {
       await ref.read(authRepositoryProvider).withdraw();
       if (epoch != _epoch) return;
       state = const AuthState(status: AuthStatus.unauthenticated);
+      _clearDomainState();
     } on Object {
       if (epoch != _epoch) return;
       bool pending = false;
@@ -203,6 +209,12 @@ class AuthController extends Notifier<AuthState> {
   void sessionExpired() {
     _epoch++;
     state = const AuthState(status: AuthStatus.unauthenticated);
+    _clearDomainState();
+  }
+
+  void _clearDomainState() {
+    ref.invalidate(domainControllerProvider);
+    ref.read(progressProvider.notifier).reset();
   }
 
   AuthState _stateForUser(UserProfile user) => AuthState(

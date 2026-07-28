@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/constants.dart';
+import '../state/domain_state_gate.dart';
 
 /// 여행/홈/마이 탭바 — 선택된 탭 아이콘에 원형 배지를 얹는 스타일([Figma] 여행 목록 화면 하단 nav).
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
@@ -16,9 +18,9 @@ class AppShell extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      body: navigationShell,
+      body: DomainStateGate(child: navigationShell),
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
           color: Colors.white,

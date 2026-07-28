@@ -1,6 +1,9 @@
 /// KAN-28 기능 검증 — 홈 추천 배너 · 여행 시작 이름/날짜 입력 시트 · 여행 목록 표시.
 library;
 
+import 'dart:typed_data';
+
+import 'package:colortrip/data/repositories/domain_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +20,7 @@ import 'package:colortrip/features/travel/travel_list_screen.dart';
 import 'package:colortrip/state/onboarding_tour_notifier.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/progress_state.dart';
+import 'package:colortrip/state/repository_providers.dart';
 
 /// 온보딩 투어는 main.dart에서 초기값을 주입해야 하는 프로바이더라 테스트에서도 주입한다.
 /// 코치마크가 화면을 덮지 않도록 "완료" 상태로 둔다.
@@ -25,6 +29,72 @@ final _tourDoneOverride = onboardingTourProvider.overrideWith(
     const OnboardingTourState(step: kOnboardingTotalSteps, skipped: true),
   ),
 );
+
+class _DomainRepository implements DomainRepository {
+  DomainSnapshot snapshot = const DomainSnapshot(
+    catalog: DomainCatalog(
+      regionIdsByKey: {'danyang': 'region-uuid'},
+      regionKeysById: {'region-uuid': 'danyang'},
+      questIdsByKey: {'dy1': 'quest-uuid'},
+      questKeysById: {'quest-uuid': 'dy1'},
+    ),
+    journeys: [],
+    completedQuestKeys: {},
+    regionProgress: {},
+    timeline: [],
+  );
+
+  @override
+  Future<DomainSnapshot> fetchSnapshot() async => snapshot;
+
+  @override
+  Future<DomainJourney> createJourney({
+    required String clientRequestId,
+    required String regionKey,
+    required List<String> questKeys,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final journey = DomainJourney(
+      id: 'journey-uuid',
+      regionKey: regionKey,
+      questKeys: questKeys,
+      title: title,
+      startDate: startDate,
+      endDate: endDate,
+      status: 'in_progress',
+      createdAt: DateTime.now(),
+    );
+    snapshot = DomainSnapshot(
+      catalog: snapshot.catalog,
+      journeys: [journey],
+      completedQuestKeys: const {},
+      regionProgress: const {},
+      timeline: const [],
+    );
+    return journey;
+  }
+
+  @override
+  Future<DomainJourney> replaceJourneyQuests({
+    required String journeyId,
+    required List<String> questKeys,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<String> uploadPhoto(Uint8List bytes) => throw UnimplementedError();
+
+  @override
+  Future<QuestVerification> verifyQuest({
+    required String questKey,
+    String? journeyId,
+    double? latitude,
+    double? longitude,
+    String? photoUrl,
+    String? answer,
+  }) => throw UnimplementedError();
+}
 
 Widget _wrap(
   Widget child, {
@@ -117,7 +187,12 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final container = ProviderContainer(overrides: [_tourDoneOverride]);
+    final container = ProviderContainer(
+      overrides: [
+        _tourDoneOverride,
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
     addTearDown(container.dispose);
     await tester.pumpWidget(
       _wrap(

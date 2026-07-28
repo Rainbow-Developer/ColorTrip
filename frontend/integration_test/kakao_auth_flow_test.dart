@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/models/map_region_progress.dart';
 import 'package:colortrip/data/models/trip_dna_question.dart';
 import 'package:colortrip/data/repositories/auth_repository.dart';
+import 'package:colortrip/data/repositories/domain_repository.dart';
 import 'package:colortrip/data/repositories/map_repository.dart';
 import 'package:colortrip/data/repositories/trip_dna_repository.dart';
 import 'package:colortrip/main.dart';
@@ -94,12 +97,58 @@ class _MapRepository implements MapRepository {
   Future<List<MapRegionProgress>> fetchMyMap() async => const [];
 }
 
+class _DomainRepository implements DomainRepository {
+  @override
+  Future<DomainSnapshot> fetchSnapshot() async => const DomainSnapshot(
+    catalog: DomainCatalog(
+      regionIdsByKey: {},
+      regionKeysById: {},
+      questIdsByKey: {},
+      questKeysById: {},
+    ),
+    journeys: [],
+    completedQuestKeys: {},
+    regionProgress: {},
+    timeline: [],
+  );
+
+  @override
+  Future<DomainJourney> createJourney({
+    required String clientRequestId,
+    required String regionKey,
+    required List<String> questKeys,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<DomainJourney> replaceJourneyQuests({
+    required String journeyId,
+    required List<String> questKeys,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<String> uploadPhoto(Uint8List bytes) => throw UnimplementedError();
+
+  @override
+  Future<QuestVerification> verifyQuest({
+    required String questKey,
+    String? journeyId,
+    double? latitude,
+    double? longitude,
+    String? photoUrl,
+    String? answer,
+  }) => throw UnimplementedError();
+}
+
 Future<ProviderContainer> _container(_AuthRepository auth) async {
   final container = ProviderContainer(
     overrides: [
       authRepositoryProvider.overrideWithValue(auth),
       tripDnaRepositoryProvider.overrideWithValue(_TripDnaRepository(auth)),
       mapRepositoryProvider.overrideWithValue(_MapRepository()),
+      domainRepositoryProvider.overrideWithValue(_DomainRepository()),
       onboardingTourProvider.overrideWith(
         () => OnboardingTourNotifier(
           const OnboardingTourState(step: 4, skipped: true),
