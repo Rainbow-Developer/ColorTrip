@@ -7,7 +7,7 @@
 | 영역 | backend / frontend / 공통 |
 | 작성자 | Codex |
 | 작성일 | 2026-07-28 |
-| 상태 | 구현·검증 완료 / Draft PR 준비 |
+| 상태 | 구현·검증 완료 / Draft PR #50 검토 중 |
 
 ## 배경 / 목적
 
@@ -142,7 +142,7 @@ flowchart TD
 - [x] 여정 멱등 생성·원자적 선택 변경·동시 인증 안전성 구현
 - [x] Flutter Repository·Provider·화면 연동
 - [x] 백엔드·Flutter 전체 품질 검사와 Android E2E
-- [ ] #48·#49 의존성을 명시한 `dev` 대상 Draft PR 생성
+- [x] #48·#49 의존성을 명시한 `dev` 대상 Draft PR #50 생성
 - [ ] #48·#49 병합 후 KAN-55 커밋만 최신 `dev`로 재배치·재검증
 - [ ] 분할 과정의 Trip DNA 접근 제어 차이를 선별 반영한 뒤 Ready 전환
 
