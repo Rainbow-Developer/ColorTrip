@@ -7,7 +7,7 @@
 | 영역 | backend / frontend / 공통 |
 | 작성자 | Codex |
 | 작성일 | 2026-07-28 |
-| 상태 | 구현 중 |
+| 상태 | 구현·검증 완료 / 브랜치 마무리 대기 |
 
 ## 배경 / 목적
 
@@ -122,7 +122,7 @@ flowchart TD
 | 오프라인 | 쓰기 큐 / 오류+재시도 | **오류+재시도**. 충돌 해결과 보안 검증을 추가하지 않고 서버 확정 상태만 표시한다. | 합의됨 |
 | 선택 변경 | 기존 단건 API 반복 / 원자적 PUT | **원자적 PUT**. 현재 UI가 최종 선택 집합을 한 번에 제출하므로 부분 성공을 허용하면 화면과 DB가 어긋난다. | 합의됨 |
 | Provider 구조 | 화면별 독립 조회 / 도메인 snapshot controller | **도메인 snapshot controller**. 여행·진행·지도·타임라인은 한 쓰기 결과에 함께 변하므로 한 번에 재조회하고, 기존 `ProgressState`는 화면 호환 projection으로만 유지한다. 인증 사용자 상태는 KAN-53 Provider와 분리한다. | 구현 반영 |
-| PR 전략 | PR #47 대기 후 시작 / KAN-53 위 stacked 작업 | **stacked 작업**. KAN-53 HEAD에서 격리 개발하고 #47 squash merge 후 KAN-55 커밋만 `dev`로 옮긴다. | 합의됨 |
+| PR 전략 | PR #47 대기 후 시작 / KAN-53 위 stacked 작업 | **stacked 작업**. KAN-53 HEAD에서 격리 개발한다. #47이 미병합 상태로 닫혔으므로 대체 통합 경로가 확정된 뒤 KAN-55 커밋만 최신 `dev`로 옮긴다. | 전제 변경 반영 |
 
 ## 영향 범위
 
@@ -141,13 +141,14 @@ flowchart TD
 - [x] 카탈로그 식별자·snapshot migration을 테스트 우선으로 구현
 - [x] 여정 멱등 생성·원자적 선택 변경·동시 인증 안전성 구현
 - [x] Flutter Repository·Provider·화면 연동
-- [ ] 백엔드·Flutter 전체 품질 검사와 Android E2E
-- [ ] PR #47 병합 후 KAN-55 커밋만 최신 `dev`로 재배치
+- [x] 백엔드·Flutter 전체 품질 검사와 Android E2E
+- [ ] KAN-53 통합 경로 확정 후 KAN-55 커밋만 최신 `dev`로 재배치
 - [ ] `dev` 대상 Draft PR 생성
 
 ## 리스크 / 미해결 질문
 
-- PR #47이 변경되면 KAN-55를 최신 KAN-53 HEAD에 먼저 맞춘 뒤 재배치한다.
+- 닫힌 미병합 PR #47의 KAN-53 변경을 어떤 경로로 `dev`에 반영할지 확정되기 전에는
+  KAN-55 브랜치를 재배치하거나 PR로 게시하지 않는다.
 - 기존 환경에 동일 지역·제목의 TourAPI 행이 있으면 자동 추정 병합하지 않고 migration
   preflight로 중단해 잘못된 UUID 연결을 방지한다.
 - Android 위치 권한 거부·영구 거부·서비스 비활성화는 각각 복구 안내를 제공한다.
