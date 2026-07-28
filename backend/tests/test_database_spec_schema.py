@@ -13,6 +13,7 @@ from httpx import AsyncClient
 from alembic import command
 from app.core.base import now_kst
 from app.core.database import engine
+from tests.helpers import auth_headers, seed_quest_fixture
 
 _ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
@@ -425,6 +426,74 @@ async def test_domain_catalog_migration_reuses_matching_legacy_rows(
     assert migrated_quest == (quest_id, "dy1")
     assert region_count == 11
     assert quest_count == 220
+
+
+async def test_domain_catalog_migration_deduplicates_legacy_timeline_events(
+    client: AsyncClient,
+) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    verified = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": "/uploads/photos/legacy.jpg"},
+        headers=headers,
+    )
+    assert verified.status_code == 200
+
+    async with engine.begin() as connection:
+        await connection.run_sync(_downgrade_to_pre_domain_catalog_head)
+        original = (
+            await connection.execute(
+                sa.text(
+                    """
+                    SELECT user_id, region_id, quest_progress_id, event_type,
+                           title, occurred_at, created_at, updated_at
+                    FROM timelines
+                    WHERE quest_progress_id IS NOT NULL
+                      AND event_type = 'quest_completed'
+                    """
+                )
+            )
+        ).one()
+        await connection.execute(
+            sa.text(
+                """
+                INSERT INTO timelines (
+                    id, user_id, region_id, quest_progress_id, event_type,
+                    title, occurred_at, created_at, updated_at, deleted_at
+                ) VALUES (
+                    :id, :user_id, :region_id, :quest_progress_id, :event_type,
+                    :title, :occurred_at, :created_at, :updated_at, NULL
+                )
+                """
+            ),
+            {
+                "id": uuid4(),
+                "user_id": original.user_id,
+                "region_id": original.region_id,
+                "quest_progress_id": original.quest_progress_id,
+                "event_type": original.event_type,
+                "title": original.title,
+                "occurred_at": original.occurred_at,
+                "created_at": original.created_at,
+                "updated_at": original.updated_at,
+            },
+        )
+
+        await connection.run_sync(_upgrade_to_head)
+        remaining = await connection.scalar(
+            sa.text(
+                """
+                SELECT count(*)
+                FROM timelines
+                WHERE quest_progress_id = :quest_progress_id
+                  AND event_type = 'quest_completed'
+                """
+            ),
+            {"quest_progress_id": original.quest_progress_id},
+        )
+
+    assert remaining == 1
 
 
 async def test_new_tables_have_database_defaults_and_sort_indexes(

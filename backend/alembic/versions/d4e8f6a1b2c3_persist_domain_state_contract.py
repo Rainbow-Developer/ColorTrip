@@ -52,6 +52,29 @@ def upgrade() -> None:
         ["user_id", "client_request_id"],
     )
 
+    # 구버전 API에서 같은 완료 요청이 겹쳐 생성됐을 수 있는 중복 이벤트를
+    # 가장 이른 기록 하나로 수렴시킨 뒤 제약을 건다. 그렇지 않으면 기존 dev DB의
+    # 정상적인 upgrade가 UniqueViolation으로 중단될 수 있다.
+    op.execute(
+        sa.text(
+            """
+            WITH ranked AS (
+                SELECT
+                    id,
+                    row_number() OVER (
+                        PARTITION BY quest_progress_id, event_type
+                        ORDER BY occurred_at, created_at, id
+                    ) AS duplicate_order
+                FROM timelines
+                WHERE quest_progress_id IS NOT NULL
+            )
+            DELETE FROM timelines
+            USING ranked
+            WHERE timelines.id = ranked.id
+              AND ranked.duplicate_order > 1
+            """
+        )
+    )
     op.create_unique_constraint(
         "uq_timelines_quest_progress_id_event_type",
         "timelines",
