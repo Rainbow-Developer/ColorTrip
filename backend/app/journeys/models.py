@@ -22,9 +22,17 @@ if TYPE_CHECKING:
 
 class Journey(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "journeys"
-    __table_args__ = (Index("ix_journeys_user_status", "user_id", "status"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "client_request_id",
+            name="uq_journeys_user_id_client_request_id",
+        ),
+        Index("ix_journeys_user_status", "user_id", "status"),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    client_request_id: Mapped[uuid.UUID | None]
     region_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("regions.id"))
     title: Mapped[str | None] = mapped_column(String(100))
     start_date: Mapped[date | None] = mapped_column(Date)

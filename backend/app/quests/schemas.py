@@ -15,6 +15,7 @@ class QuestListItem(BaseModel):
 
     id: UUID
     region_id: UUID
+    client_key: str
     title: str
     category: Category
     mission_type: MissionType
