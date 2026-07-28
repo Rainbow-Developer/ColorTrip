@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +9,7 @@ import '../features/onboarding/signup_screen.dart';
 import '../features/onboarding/splash_screen.dart';
 import '../features/profile/edit_profile_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/profile/withdrawal_pending_screen.dart';
 import '../features/quests/photo_verify_result_screen.dart';
 import '../features/quests/quest_detail_screen.dart';
 import '../features/quests/quest_list_screen.dart';
@@ -18,11 +20,17 @@ import '../features/trip_dna/dna_result_screen.dart';
 import '../features/trip_dna/trip_dna_screen.dart';
 import '../features/timeline/timeline_screen.dart';
 import '../features/travel/travel_list_screen.dart';
+import '../state/auth_controller.dart';
 import 'app_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
+  final refresh = _RouterRefresh();
+  ref.listen(authControllerProvider, (_, _) => refresh.notify());
+  final router = GoRouter(
     initialLocation: '/splash',
+    refreshListenable: refresh,
+    redirect: (context, state) =>
+        authRedirect(ref.read(authControllerProvider), state.matchedLocation),
     routes: [
       GoRoute(
         path: '/splash',
@@ -47,6 +55,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/edit',
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/withdrawal-pending',
+        builder: (context, state) => const WithdrawalPendingScreen(),
       ),
       GoRoute(
         path: '/region/:id',
@@ -125,4 +137,31 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
+  return router;
 });
+
+class _RouterRefresh extends ChangeNotifier {
+  void notify() => notifyListeners();
+}
+
+String? authRedirect(AuthState auth, String location) {
+  final authenticatedOnlyExit =
+      location == '/splash' ||
+      location == '/signup' ||
+      location == '/trip-dna' ||
+      location == '/withdrawal-pending';
+  return switch (auth.status) {
+    AuthStatus.checking => location == '/splash' ? null : '/splash',
+    AuthStatus.unauthenticated => location == '/splash' ? null : '/splash',
+    AuthStatus.failure => location == '/splash' ? null : '/splash',
+    AuthStatus.profileRequired => location == '/signup' ? null : '/signup',
+    AuthStatus.tripDnaRequired => location == '/trip-dna' ? null : '/trip-dna',
+    AuthStatus.authenticated => authenticatedOnlyExit ? '/home' : null,
+    AuthStatus.withdrawalPending =>
+      location == '/withdrawal-pending' ? null : '/withdrawal-pending',
+  };
+}
