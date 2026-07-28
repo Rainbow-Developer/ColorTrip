@@ -39,11 +39,6 @@ async def list_active_questions(session: AsyncSession) -> Sequence[TripQuestion]
     return questions
 
 
-async def list_active_question_ids(session: AsyncSession) -> Sequence[UUID]:
-    stmt = select(TripQuestion.id).where(TripQuestion.deleted_at.is_(None))
-    return (await session.scalars(stmt)).all()
-
-
 async def soft_delete_user_replies(session: AsyncSession, user_id: UUID) -> None:
     """사용자가 이전에 제출하여 활성화(deleted_at IS NULL)되어 있던 답변들을
     Soft Delete 처리합니다."""

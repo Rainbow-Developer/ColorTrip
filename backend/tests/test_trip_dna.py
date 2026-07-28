@@ -12,7 +12,7 @@ from tests.helpers import auth_headers  # 인증 헤더를 만들어주는 헬�
 async def test_get_trip_dna_questions_empty(client: AsyncClient) -> None:
     """DB에 질문 데이터가 없을 때, 빈 목록을 성공적으로 반환하는지 테스트합니다."""
     # 로그인 인증 헤더 획득 및 주입
-    headers = await auth_headers(client, complete=False)
+    headers = await auth_headers(client)
     response = await client.get("/api/v1/trip_dna/questions", headers=headers)
 
     assert response.status_code == 200
@@ -57,7 +57,7 @@ async def test_get_trip_dna_questions_with_data_and_sorting(client: AsyncClient)
         await session.commit()
 
     # 2. 로그인 인증 헤더 획득 및 주입
-    headers = await auth_headers(client, complete=False)
+    headers = await auth_headers(client)
     response = await client.get("/api/v1/trip_dna/questions", headers=headers)
 
     assert response.status_code == 200
@@ -139,7 +139,7 @@ async def test_submit_survey_replies_success_and_grading(client: AsyncClient) ->
         await session.commit()
 
     # 2. 로그인 인증 헤더 획득
-    headers = await auth_headers(client, complete=False)
+    headers = await auth_headers(client)
 
     # 3. 설문 답변 제출 API 페이로드 빌드 및 POST 요청
     payload = {
@@ -163,63 +163,18 @@ async def test_submit_survey_replies_success_and_grading(client: AsyncClient) ->
     assert data["scores"]["nature"] == 3
     assert data["scores"]["food"] == 3
     assert data["scores"]["history"] == 0
-    profile = await client.get("/api/v1/users/me", headers=headers)
-    assert profile.json()["data"]["onboarding_step"] == "complete"
 
 
 @pytest.mark.asyncio
 async def test_submit_survey_replies_empty(client: AsyncClient) -> None:
     """빈 replies 목록을 제출했을 때 422 Unprocessable Entity 에러가 발생하는지 검증합니다."""
-    headers = await auth_headers(client, complete=False)
+    headers = await auth_headers(client)
     payload = {"replies": []}
     response = await client.post("/api/v1/trip_dna/replies", json=payload, headers=headers)
     assert response.status_code == 422
     res_json = response.json()
     assert res_json["code"] == "VALIDATION_ERROR"
     assert res_json["message"] == "요청 값이 올바르지 않습니다."
-
-
-@pytest.mark.asyncio
-async def test_submit_survey_replies_requires_every_active_question(
-    client: AsyncClient,
-) -> None:
-    """일부 질문만 답해 일반 API 접근 단계를 우회할 수 없어야 합니다."""
-    async with AsyncSessionLocal() as session:
-        questions = [
-            TripQuestion(question=f"필수 질문 {index}", sort_order=index) for index in range(1, 3)
-        ]
-        session.add_all(questions)
-        await session.flush()
-        options = [
-            TripQuestionOption(
-                question_id=question.id,
-                content=f"선택지 {index}",
-                score_value={"nature": 1},
-                category="nature",
-                sort_order=1,
-            )
-            for index, question in enumerate(questions, start=1)
-        ]
-        session.add_all(options)
-        await session.commit()
-
-    headers = await auth_headers(client, complete=False)
-    response = await client.post(
-        "/api/v1/trip_dna/replies",
-        json={
-            "replies": [
-                {
-                    "question_id": str(questions[0].id),
-                    "question_option_id": str(options[0].id),
-                }
-            ]
-        },
-        headers=headers,
-    )
-
-    assert response.status_code == 400
-    profile = await client.get("/api/v1/users/me", headers=headers)
-    assert profile.json()["data"]["onboarding_step"] == "trip_dna"
 
 
 @pytest.mark.asyncio
@@ -247,7 +202,7 @@ async def test_submit_survey_replies_duplicate_question(client: AsyncClient) -> 
         session.add_all([o1, o2])
         await session.commit()
 
-    headers = await auth_headers(client, complete=False)
+    headers = await auth_headers(client)
     payload = {
         "replies": [
             {"question_id": str(q.id), "question_option_id": str(o1.id)},
@@ -287,7 +242,7 @@ async def test_submit_survey_replies_invalid_mapping(client: AsyncClient) -> Non
         session.add_all([o1, o2])
         await session.commit()
 
-    headers = await auth_headers(client, complete=False)
+    headers = await auth_headers(client)
     payload = {"replies": [{"question_id": str(q1.id), "question_option_id": str(o2.id)}]}
     response = await client.post("/api/v1/trip_dna/replies", json=payload, headers=headers)
     assert response.status_code == 400

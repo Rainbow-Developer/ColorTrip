@@ -101,8 +101,8 @@ backend/
 | PUT | `/api/v1/users/me/onboarding-profile` | 프로필·현재 버전 약관 동의 저장 |
 | PATCH | `/api/v1/users/me` | 닉네임·생년월일 수정 |
 | DELETE | `/api/v1/users/me` | 회원 탈퇴 |
-| GET | `/api/v1/trip_dna/questions` | 여행 DNA 질문 조회 (`ProfiledUser`) |
-| POST | `/api/v1/trip_dna/replies` | 여행 DNA 답변 제출 (`ProfiledUser`) |
+| GET | `/api/v1/trip_dna/questions` | 여행 DNA 질문 조회 (KAN-54에서 `ProfiledUser` 적용) |
+| POST | `/api/v1/trip_dna/replies` | 여행 DNA 답변 제출 (KAN-54에서 `ProfiledUser` 적용) |
 
 응답은 공통 Envelope `{ code, status, message, data }`로 감싼다([api-design.md](../docs/conventions/api-design.md)).
 
@@ -121,7 +121,7 @@ user 조회는 dependency에서 끝내고, service에는 이미 식별된 사용
 | Dependency | 조건 | 대표 API |
 |------------|------|----------|
 | `ActiveUser` | 유효한 access JWT, 탈퇴·익명화되지 않은 사용자 | 내 정보 조회, 온보딩 저장, 로그아웃, 탈퇴 |
-| `ProfiledUser` | `ActiveUser` + 프로필 + 현재 필수 동의 완료 | 여행 DNA 질문·답변 |
+| `ProfiledUser` | `ActiveUser` + 프로필 + 현재 필수 동의 완료 | KAN-54에서 여행 DNA 질문·답변에 적용 |
 | `CurrentUser` | `ProfiledUser` + 여행 DNA 완료 | 여행·퀘스트·지도·타임라인·공유·업로드 |
 
 필요 단계가 부족하면 HTTP 403 `ONBOARDING_REQUIRED`를 반환한다. 단계 판정과

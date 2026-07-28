@@ -15,6 +15,8 @@
 
 이 기능은 기존 백엔드 인증 기반을 폐기하지 않고 통합 경로로 확장한다. Android emulator에서 Kakao Flutter SDK로 받은 access token을 백엔드가 Kakao `app_id`까지 검증하고, 프로필·현재 필수 동의·여행 DNA를 모두 마친 사용자만 일반 도메인 API에 접근하게 한다. 또한 JWT refresh, 로그아웃, 프로필, 즉시 익명화 탈퇴까지 Flutter와 백엔드에서 한 흐름으로 연결하고 dev 배포 시 Alembic을 자동 적용한다.
 
+> 분리 적용: KAN-53은 백엔드 인증·프로필·동의·탈퇴·migration·배포를 제공한다. 기존 Flutter 설문 흐름의 회귀를 막기 위해 Trip DNA API의 `ProfiledUser` 전환은 Flutter 세션 연동과 함께 KAN-54에서 적용한다.
+
 ## 목표 (Goals)
 
 | ID | 목표 |

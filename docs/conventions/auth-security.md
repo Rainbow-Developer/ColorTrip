@@ -27,7 +27,7 @@
 
 ## 적용 상태
 
-- 위 표의 Kakao 앱 검증, versioned consent, 단계별 접근, 즉시 익명화 탈퇴, Flutter secure storage 통합은 [035-kakao-auth-integration](../specs/035-kakao-auth-integration/)에서 구현했다.
+- KAN-53은 Kakao 앱 검증, versioned consent, `ActiveUser` 기반 온보딩 경계, 즉시 익명화 탈퇴를 구현한다. Flutter secure storage와 Trip DNA의 `ProfiledUser` 경계는 KAN-54에서 함께 적용한다.
 - [005-auth-member](../specs/005-auth-member/)는 이전 백엔드 기반의 구현 기록으로 유지한다. 035가 이를 통합 확장하고 7일 복구 정책을 대체했으며, 기존 authorization code 경로는 제거하지 않았다.
 - 구현 여부는 각 spec의 `implementation.md`를 따른다. 정책의 목표값은 이 문서의 결정 사항 표를 따른다.
 
@@ -51,7 +51,7 @@
 - 동의 version은 클라이언트 입력이 아니라 서버 상수 `terms-v1`, `privacy-v1`, `marketing-v1`를 사용한다.
 - 이용약관과 개인정보 동의는 필수이고 마케팅 동의는 선택이다. 현재 필수 version 동의가 없으면 일반 도메인 API 접근을 허용하지 않는다.
 - `ActiveUser`는 access JWT 검증 후 active user(`deleted_at IS NULL`, `anonymized_at IS NULL`)를 DB에서 조회한다. 프로필·동의 온보딩, 로그아웃, 탈퇴처럼 유효한 access JWT가 필요한 API에 사용한다.
-- `ProfiledUser`는 `ActiveUser`에 닉네임·이메일·생년월일과 현재 이용약관·개인정보 필수 동의 완료 조건을 더한다. 여행 DNA 질문·답변 API에 사용한다.
+- `ProfiledUser`는 `ActiveUser`에 닉네임·이메일·생년월일과 현재 이용약관·개인정보 필수 동의 완료 조건을 더한다. 여행 DNA 질문·답변 API 적용은 Flutter 세션 연동을 포함한 KAN-54에서 수행한다.
 - `CurrentUser`는 `ProfiledUser`에 DNA 완료 조건을 더한다. 여행·퀘스트·지도·타임라인·공유·업로드 등 일반 보호 API에 사용한다.
 - 단계가 부족하면 HTTP 403 `ONBOARDING_REQUIRED`를 반환하고, 클라이언트는 `/users/me`의 계산된 `onboarding_step`을 다시 조회한다.
 - endpoint는 필요한 최소 단계의 dependency를 받고, service에는 식별된 user 또는 user id만 전달한다.

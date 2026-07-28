@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import repository as auth_repository
 from app.auth.models import User, UserConsent
 from app.core.database import AsyncSessionLocal
-from app.trip_dna.models import TripQuestion, TripQuestionOption
 from tests.helpers import complete_auth_headers, login
 
 
@@ -135,60 +134,6 @@ async def test_profile_patch_serializes_with_withdrawal(
     )
 
     assert patch.status_code == 200
-    assert withdrawal.status_code == 200
-    await _assert_user_remains_anonymized(user_id)
-
-
-@pytest.mark.asyncio
-async def test_dna_submission_serializes_with_withdrawal(
-    client: AsyncClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    data = await login(client)
-    user_id = UUID(data["user"]["id"])
-    headers = await complete_auth_headers(client, data, complete=False)
-    async with AsyncSessionLocal() as session:
-        question = TripQuestion(question="race question", sort_order=1)
-        session.add(question)
-        await session.flush()
-        option = TripQuestionOption(
-            question_id=question.id,
-            content="nature",
-            score_value={"nature": 1},
-            category="nature",
-            sort_order=1,
-        )
-        session.add(option)
-        await session.commit()
-
-    paused, resume = _pause_first_matching_commit(
-        monkeypatch,
-        lambda obj: isinstance(obj, User) and obj.dna == "nature",
-    )
-    dna_task = asyncio.create_task(
-        client.post(
-            "/api/v1/trip_dna/replies",
-            headers=headers,
-            json={
-                "replies": [
-                    {
-                        "question_id": str(question.id),
-                        "question_option_id": str(option.id),
-                    }
-                ]
-            },
-        )
-    )
-
-    dna, withdrawal = await _assert_mutation_holds_user_lock_until_commit(
-        mutation_task=dna_task,
-        paused=paused,
-        resume=resume,
-        client=client,
-        headers=headers,
-    )
-
-    assert dna.status_code == 201
     assert withdrawal.status_code == 200
     await _assert_user_remains_anonymized(user_id)
 

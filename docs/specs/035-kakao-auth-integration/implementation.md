@@ -21,7 +21,8 @@
 - [x] 사용자 프로필과 현재 version의 terms/privacy/marketing consent를 한 트랜잭션으로 멱등 저장한다.
 - [x] 프로필 완료 후 온보딩 endpoint를 다시 호출해 이메일을 변경하는 우회도 차단하되, 같은 이메일을 사용한 재동의는 허용한다.
 - [x] 프로필·필수 동의·DNA로 `profile → trip_dna → complete`를 계산한다.
-- [x] `ActiveUser`·`ProfiledUser`·`CurrentUser` dependency로 온보딩 단계 우회를 서버에서 차단한다.
+- [x] `ActiveUser`·`ProfiledUser`·`CurrentUser` dependency와 일반 보호 API의 온보딩 단계 차단을 제공한다.
+- [ ] Trip DNA 질문·답변 API의 `ProfiledUser` 적용은 기존 Flutter 설문 흐름과 함께 KAN-54에서 전환한다.
 - [x] DNA 제출은 유효한 질문–선택지 조합뿐 아니라 모든 활성 질문에 정확히 한 번씩 답했을 때만 완료한다.
 - [x] refresh token HMAC hash, rotation, row lock, 이전 token 재사용 거부, logout/withdraw revoke를 유지한다.
 - [x] 탈퇴 즉시 PII·DNA를 제거하고 social ID를 익명화하며 consent·refresh token을 삭제한다. 도메인 기록은 보존한다.
