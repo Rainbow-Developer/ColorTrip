@@ -120,7 +120,8 @@ class _TripCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
-        onTap: () => context.push('/region/${region.id}'),
+        onTap: () =>
+            context.push('/region/${region.id}?journeyId=${journey.id}'),
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(14),

@@ -95,7 +95,12 @@ async def list_journeys(
     journeys, total = await repository.list_journeys(
         session, user_id, status.value if status else None, page, size
     )
-    summary = await repository.progress_summary_map(session, user_id, [j.id for j in journeys])
+    journey_ids = [journey.id for journey in journeys]
+    summary = await repository.progress_summary_map(session, user_id, journey_ids)
+    quest_keys: dict[UUID, list[str]] = {journey_id: [] for journey_id in journey_ids}
+    for link in await repository.list_journey_quests_for_journeys(session, journey_ids):
+        if link.quest.client_key is not None:
+            quest_keys[link.journey_id].append(link.quest.client_key)
     items = [
         JourneyListItem(
             id=journey.id,
@@ -105,6 +110,7 @@ async def list_journeys(
             end_date=journey.end_date,
             status=JourneyStatus(journey.status),
             progress=_summary(summary.get(journey.id)),
+            quest_client_keys=quest_keys[journey.id],
             created_at=journey.created_at,
             completed_at=journey.completed_at,
         )
@@ -143,6 +149,7 @@ async def get_journey_detail(
         end_date=journey.end_date,
         status=JourneyStatus(journey.status),
         progress=JourneyProgressSummary(completed=completed, total=len(quests)),
+        quest_client_keys=[item.client_key for item in quests if item.client_key is not None],
         created_at=journey.created_at,
         completed_at=journey.completed_at,
         quests=quests,

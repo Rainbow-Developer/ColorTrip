@@ -65,7 +65,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/region/:id',
         builder: (context, state) => DomainStateGate(
-          child: RegionOverviewScreen(regionId: state.pathParameters['id']!),
+          child: RegionOverviewScreen(
+            regionId: state.pathParameters['id']!,
+            journeyId: state.uri.queryParameters['journeyId'],
+          ),
         ),
         routes: [
           GoRoute(
@@ -73,6 +76,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => DomainStateGate(
               child: RegionQuestSelectScreen(
                 regionId: state.pathParameters['id']!,
+                journeyId: state.uri.queryParameters['journeyId'],
               ),
             ),
           ),
@@ -87,7 +91,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'verify',
             builder: (context, state) => DomainStateGate(
-              child: QuestVerifyScreen(questId: state.pathParameters['id']!),
+              child: QuestVerifyScreen(
+                questId: state.pathParameters['id']!,
+                journeyId: state.uri.queryParameters['journeyId'],
+              ),
             ),
             routes: [
               GoRoute(

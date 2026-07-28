@@ -16,12 +16,12 @@ import '../../state/repository_providers.dart';
 /// 퀘스트 수행(인증) 화면 — 여행 시작하기로 담은 퀘스트를 지역 개요("여행하기")의
 /// "내 여행 퀘스트" 목록에서 탭하면 여기로 온다(2026-07-09 사용자 확정 — 퀘스트 상세에는
 /// 더 이상 수행 버튼이 없다). 사진/GPS/OX퀴즈 유형별 UI는 Figma 스펙(2026-07-08 공유) 반영.
-/// 실제 카메라/GPS 연동은 없고, 선택·인증 상호작용만 흉내 낸 최소 버전이다
-/// ([implementation.md] 참고 — 스캔 애니메이션·실연동은 후속 작업).
+/// 사진은 실제 업로드하고 GPS는 현재 위치를 조회해 서버 검증을 수행한다.
 class QuestVerifyScreen extends ConsumerWidget {
-  const QuestVerifyScreen({super.key, required this.questId});
+  const QuestVerifyScreen({super.key, required this.questId, this.journeyId});
 
   final String questId;
+  final String? journeyId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,13 +30,15 @@ class QuestVerifyScreen extends ConsumerWidget {
       return const Scaffold(body: Center(child: Text('퀘스트를 찾을 수 없어요')));
     }
 
-    final journeyId = ref
-        .watch(domainControllerProvider)
-        .value
-        ?.journeys
-        .where((journey) => journey.regionKey == quest.region)
-        .firstOrNull
-        ?.id;
+    final journeyId =
+        this.journeyId ??
+        ref
+            .watch(domainControllerProvider)
+            .value
+            ?.journeys
+            .where((journey) => journey.regionKey == quest.region)
+            .firstOrNull
+            ?.id;
 
     switch (quest.verify) {
       case 'gps':
@@ -335,7 +337,7 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
             ),
             const SizedBox(height: 4),
             const Text(
-              '반경 500m 이내여야 합니다.',
+              '퀘스트에 설정된 인증 반경 안에서 시도해주세요.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 13),
             ),
             const SizedBox(height: 16),
@@ -418,7 +420,7 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
                         ),
                       ),
                       const Text(
-                        '위치 확인 중...',
+                        '인증 버튼을 누르면 확인해요',
                         style: TextStyle(
                           color: AppColors.primaryDark,
                           fontWeight: FontWeight.w700,
@@ -426,26 +428,6 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    '목적지까지 약 120m',
-                    style: TextStyle(
-                      color: AppColors.timelineDateText,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(
-                      value: 0.69,
-                      minHeight: 4,
-                      backgroundColor: AppColors.verifyProgressTrack,
-                      valueColor: const AlwaysStoppedAnimation(
-                        AppColors.primaryDark,
-                      ),
-                    ),
                   ),
                 ],
               ),

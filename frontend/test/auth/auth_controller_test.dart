@@ -262,9 +262,7 @@ void main() {
 
   test('session expiry clears the previous account domain state', () {
     final container = ProviderContainer(
-      overrides: [
-        authRepositoryProvider.overrideWithValue(_Repository()),
-      ],
+      overrides: [authRepositoryProvider.overrideWithValue(_Repository())],
     );
     addTearDown(container.dispose);
     container.read(progressProvider.notifier).completeQuest('dy1');

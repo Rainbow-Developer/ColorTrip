@@ -10,10 +10,6 @@ from app.regions.models import Region
 
 async def list_regions(session: AsyncSession) -> Sequence[Region]:
     """삭제되지 않은 지역을 name 오름차순으로 조회."""
-    stmt = (
-        select(Region)
-        .where(Region.deleted_at.is_(None), Region.slug.is_not(None))
-        .order_by(Region.name.asc())
-    )
+    stmt = select(Region).where(Region.deleted_at.is_(None)).order_by(Region.name.asc())
     result = await session.execute(stmt)
     return result.scalars().all()

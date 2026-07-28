@@ -55,19 +55,12 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
   }
 
   Future<void> replaceJourneyQuests({
-    required String regionKey,
+    required String journeyId,
     required List<String> questKeys,
   }) async {
-    final snapshot = state.requireValue;
-    final journey = snapshot.journeys
-        .where((item) => item.regionKey == regionKey)
-        .firstOrNull;
-    if (journey == null) {
-      throw StateError('수정할 여행을 찾을 수 없습니다.');
-    }
     await ref
         .read(domainRepositoryProvider)
-        .replaceJourneyQuests(journeyId: journey.id, questKeys: questKeys);
+        .replaceJourneyQuests(journeyId: journeyId, questKeys: questKeys);
     await refresh();
   }
 

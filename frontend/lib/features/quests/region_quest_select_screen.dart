@@ -9,6 +9,7 @@ import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/filter_chip_row.dart';
 import '../../data/models/quest.dart';
+import '../../data/repositories/domain_repository.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/domain_controller.dart';
@@ -27,9 +28,14 @@ import '../../state/repository_providers.dart';
 /// Figma 스펙(2026-07-09 공유) 반영: 검색·유형 필터, 카드별 "퀘스트 설명"으로 퀘스트 상세(정보만) 진입.
 /// 새 여행이면 시작 전에 이름·기간 입력 시트를 거친다(2026-07-16 KAN-28).
 class RegionQuestSelectScreen extends ConsumerStatefulWidget {
-  const RegionQuestSelectScreen({super.key, required this.regionId});
+  const RegionQuestSelectScreen({
+    super.key,
+    required this.regionId,
+    this.journeyId,
+  });
 
   final String regionId;
+  final String? journeyId;
 
   @override
   ConsumerState<RegionQuestSelectScreen> createState() =>
@@ -55,15 +61,24 @@ class _RegionQuestSelectScreenState
   Future<void> _startTrip(String defaultName) async {
     if (_saving) return;
     final selected = {..._selectedQuestIds!};
+    final journeys =
+        ref.read(domainControllerProvider).value?.journeys ??
+        const <DomainJourney>[];
+    final existingJourney = widget.journeyId == null
+        ? journeys
+              .where((journey) => journey.regionKey == widget.regionId)
+              .firstOrNull
+        : journeys
+              .where((journey) => journey.id == widget.journeyId)
+              .firstOrNull;
 
-    if (ref.read(progressProvider).tripStatusOf(widget.regionId) !=
-        RegionTripStatus.notStarted) {
+    if (existingJourney != null) {
       setState(() => _saving = true);
       try {
         await ref
             .read(domainControllerProvider.notifier)
             .replaceJourneyQuests(
-              regionKey: widget.regionId,
+              journeyId: existingJourney.id,
               questKeys: selected.toList(),
             );
         if (mounted) context.go('/travel');
@@ -120,11 +135,22 @@ class _RegionQuestSelectScreenState
         .byRegion(widget.regionId);
 
     final progress = ref.watch(progressProvider);
+    final journeys =
+        ref.watch(domainControllerProvider).value?.journeys ??
+        const <DomainJourney>[];
+    final selectedJourney = widget.journeyId == null
+        ? journeys
+              .where((journey) => journey.regionKey == widget.regionId)
+              .firstOrNull
+        : journeys
+              .where((journey) => journey.id == widget.journeyId)
+              .firstOrNull;
 
     // 기존에 이 지역 여행에서 이미 고른 퀘스트가 있으면 그 상태로 시작한다(추가 선택 지원).
-    final tripAlreadyStarted =
-        progress.tripStatusOf(widget.regionId) != RegionTripStatus.notStarted;
-    _selectedQuestIds ??= {...progress.tripQuestsOf(widget.regionId)};
+    final tripAlreadyStarted = selectedJourney != null;
+    _selectedQuestIds ??= {
+      ...(selectedJourney?.questKeys ?? progress.tripQuestsOf(widget.regionId)),
+    };
 
     final availableTypes = <String>{for (final q in allRegionQuests) q.type};
     final filters = [

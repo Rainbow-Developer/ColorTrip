@@ -231,7 +231,8 @@ class DioDomainRepository implements DomainRepository {
     final regionKeysById = <String, String>{};
     for (final raw in regionItems.cast<Map<String, dynamic>>()) {
       final id = raw['id'] as String;
-      final key = raw['slug'] as String;
+      final key = raw['slug'] as String?;
+      if (key == null) continue;
       if (regionIdsByKey.containsKey(key) || regionKeysById.containsKey(id)) {
         throw StateError(
           'Server region catalog contains duplicate stable keys.',
@@ -246,7 +247,8 @@ class DioDomainRepository implements DomainRepository {
     final questKeysById = <String, String>{};
     for (final raw in questItems) {
       final id = raw['id'] as String;
-      final key = raw['client_key'] as String;
+      final key = raw['client_key'] as String?;
+      if (key == null) continue;
       if (questIdsByKey.containsKey(key) || questKeysById.containsKey(id)) {
         throw StateError(
           'Server quest catalog contains duplicate stable keys.',
@@ -268,14 +270,11 @@ class DioDomainRepository implements DomainRepository {
 
   Future<List<DomainJourney>> _fetchJourneys(DomainCatalog catalog) async {
     final items = await _fetchPaged('/journeys');
-    final details = await Future.wait(
-      items.map((item) async {
-        final response = await _dio.get('/journeys/${item['id']}');
-        return _journeyFromDetail(_data(response), catalog);
-      }),
-    );
-    details.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return details;
+    final journeys = items
+        .map((item) => _journeyFromList(item, catalog))
+        .toList();
+    journeys.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return journeys;
   }
 
   Future<Set<String>> _fetchCompletedQuestKeys(DomainCatalog catalog) async {
@@ -355,6 +354,31 @@ class DioDomainRepository implements DomainRepository {
         throw StateError('Journey references an unknown server quest.');
       }
       questKeys.add(key);
+    }
+    return DomainJourney(
+      id: data['id'] as String,
+      regionKey: regionKey,
+      questKeys: questKeys,
+      title: data['title'] as String?,
+      startDate: _optionalDate(data['start_date']),
+      endDate: _optionalDate(data['end_date']),
+      status: data['status'] as String,
+      createdAt: DateTime.parse(data['created_at'] as String),
+    );
+  }
+
+  DomainJourney _journeyFromList(
+    Map<String, dynamic> data,
+    DomainCatalog catalog,
+  ) {
+    final regionId = data['region_id'] as String;
+    final regionKey = catalog.regionKeysById[regionId];
+    if (regionKey == null) {
+      throw StateError('Journey references an unknown server region.');
+    }
+    final questKeys = (data['quest_client_keys'] as List).cast<String>();
+    for (final key in questKeys) {
+      catalog.questId(key);
     }
     return DomainJourney(
       id: data['id'] as String,

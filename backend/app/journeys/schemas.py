@@ -56,6 +56,7 @@ class JourneyListItem(BaseModel):
     end_date: date | None
     status: JourneyStatus
     progress: JourneyProgressSummary
+    quest_client_keys: list[str]
     created_at: datetime
     completed_at: datetime | None
 

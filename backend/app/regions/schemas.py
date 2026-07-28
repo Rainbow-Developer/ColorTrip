@@ -11,7 +11,7 @@ class RegionRead(BaseModel):
 
     id: UUID
     name: str
-    slug: str
+    slug: str | None
     area_code: str | None
     center_lat: Decimal | None
     center_lng: Decimal | None

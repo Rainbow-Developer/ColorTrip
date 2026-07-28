@@ -23,10 +23,7 @@ async def list_quests(
 
     soft delete(deleted_at IS NULL) 항목만 포함하며, total은 동일 필터의 전체 개수다.
     """
-    filters: list[ColumnElement[bool]] = [
-        Quest.deleted_at.is_(None),
-        Quest.client_key.is_not(None),
-    ]
+    filters: list[ColumnElement[bool]] = [Quest.deleted_at.is_(None)]
     if region_id is not None:
         filters.append(Quest.region_id == region_id)
     if category is not None:
@@ -71,7 +68,6 @@ async def list_recommended(
     """
     filters: list[ColumnElement[bool]] = [
         Quest.deleted_at.is_(None),
-        Quest.client_key.is_not(None),
         ~_completed_by_user(user_id),
     ]
     if region_id is not None:

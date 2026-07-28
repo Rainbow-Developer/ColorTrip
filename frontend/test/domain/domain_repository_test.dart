@@ -35,33 +35,29 @@ void main() {
       switch (options.path) {
         case '/regions':
           return _json(
-            '{"data":[{"id":"region-uuid","name":"단양군","slug":"danyang",'
+            '{"data":[{"id":"legacy-region","name":"기존 지역","slug":null,'
+            '"area_code":null,"center_lat":null,"center_lng":null},'
+            '{"id":"region-uuid","name":"단양군","slug":"danyang",'
             '"area_code":"2","center_lat":null,"center_lng":null}]}',
           );
         case '/quests':
           return _json(
-            '{"data":{"items":[{"id":"quest-uuid","region_id":"region-uuid",'
+            '{"data":{"items":[{"id":"legacy-quest","region_id":"legacy-region",'
+            '"client_key":null,"title":"기존 퀘스트","category":"nature",'
+            '"mission_type":"quiz","lat":null,"lng":null,"thumbnail_url":null},'
+            '{"id":"quest-uuid","region_id":"region-uuid",'
             '"client_key":"dy1","title":"퀘스트","category":"nature",'
             '"mission_type":"photo","lat":null,"lng":null,"thumbnail_url":null}],'
-            '"page":1,"size":100,"total":1}}',
+            '"page":1,"size":100,"total":2}}',
           );
         case '/journeys':
           return _json(
             '{"data":{"items":[{"id":"journey-uuid","region_id":"region-uuid",'
             '"title":"단양 여행","start_date":"2026-07-20","end_date":"2026-07-22",'
             '"status":"completed","progress":{"completed":1,"total":1},'
+            '"quest_client_keys":["dy1"],'
             '"created_at":"2026-07-20T09:00:00+09:00","completed_at":"2026-07-21T10:00:00+09:00"}],'
             '"page":1,"size":100,"total":1}}',
-          );
-        case '/journeys/journey-uuid':
-          return _json(
-            '{"data":{"id":"journey-uuid","region_id":"region-uuid",'
-            '"title":"단양 여행","start_date":"2026-07-20","end_date":"2026-07-22",'
-            '"status":"completed","progress":{"completed":1,"total":1},'
-            '"created_at":"2026-07-20T09:00:00+09:00","completed_at":"2026-07-21T10:00:00+09:00",'
-            '"quests":[{"quest_id":"quest-uuid","client_key":"dy1","title":"퀘스트",'
-            '"category":"nature","mission_type":"photo","thumbnail_url":null,'
-            '"sort_order":0,"progress_status":"completed"}]}}',
           );
         case '/users/me/progress':
           return _json(
@@ -91,6 +87,8 @@ void main() {
     final snapshot = await DioDomainRepository(dio).fetchSnapshot();
 
     expect(snapshot.completedQuestKeys, {'dy1'});
+    expect(snapshot.catalog.regionIdsByKey, {'danyang': 'region-uuid'});
+    expect(snapshot.catalog.questIdsByKey, {'dy1': 'quest-uuid'});
     expect(snapshot.regionProgress, {'danyang': 1});
     expect(snapshot.journeys.single.questKeys, ['dy1']);
     expect(snapshot.timeline.single.questKey, 'dy1');
@@ -197,27 +195,30 @@ void main() {
     });
   });
 
-  test('uploads photo bytes as an authenticated JPEG multipart request', () async {
-    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
-    late RequestOptions uploadRequest;
-    dio.httpClientAdapter = _Adapter((options) {
-      uploadRequest = options;
-      return _json(
-        '{"data":{"photo_url":"/uploads/photos/2026/07/uploaded.jpg"}}',
-        status: 201,
-      );
-    });
+  test(
+    'uploads photo bytes as an authenticated JPEG multipart request',
+    () async {
+      final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+      late RequestOptions uploadRequest;
+      dio.httpClientAdapter = _Adapter((options) {
+        uploadRequest = options;
+        return _json(
+          '{"data":{"photo_url":"/uploads/photos/2026/07/uploaded.jpg"}}',
+          status: 201,
+        );
+      });
 
-    final photoUrl = await DioDomainRepository(
-      dio,
-    ).uploadPhoto(Uint8List.fromList([0xff, 0xd8, 0xff]));
+      final photoUrl = await DioDomainRepository(
+        dio,
+      ).uploadPhoto(Uint8List.fromList([0xff, 0xd8, 0xff]));
 
-    expect(uploadRequest.path, '/uploads/photo');
-    expect(uploadRequest.method, 'POST');
-    final form = uploadRequest.data as FormData;
-    expect(form.files.single.key, 'file');
-    expect(form.files.single.value.filename, 'quest.jpg');
-    expect(form.files.single.value.contentType.toString(), 'image/jpeg');
-    expect(photoUrl, '/uploads/photos/2026/07/uploaded.jpg');
-  });
+      expect(uploadRequest.path, '/uploads/photo');
+      expect(uploadRequest.method, 'POST');
+      final form = uploadRequest.data as FormData;
+      expect(form.files.single.key, 'file');
+      expect(form.files.single.value.filename, 'quest.jpg');
+      expect(form.files.single.value.contentType.toString(), 'image/jpeg');
+      expect(photoUrl, '/uploads/photos/2026/07/uploaded.jpg');
+    },
+  );
 }

@@ -47,6 +47,7 @@ class _Repository implements DomainRepository {
   int fetchCalls = 0;
   int createCalls = 0;
   final createRequestIds = <String>[];
+  String? replacedJourneyId;
 
   @override
   Future<DomainSnapshot> fetchSnapshot() async {
@@ -74,7 +75,10 @@ class _Repository implements DomainRepository {
   Future<DomainJourney> replaceJourneyQuests({
     required String journeyId,
     required List<String> questKeys,
-  }) async => snapshot.journeys.single;
+  }) async {
+    replacedJourneyId = journeyId;
+    return snapshot.journeys.firstWhere((journey) => journey.id == journeyId);
+  }
 
   @override
   Future<String> uploadPhoto(Uint8List bytes) async => '/uploads/photos/x.jpg';
@@ -160,5 +164,42 @@ void main() {
 
     expect(repository.createRequestIds, hasLength(2));
     expect(repository.createRequestIds.toSet(), hasLength(1));
+  });
+
+  test('quest replacement targets the explicitly selected journey', () async {
+    final repository = _Repository();
+    repository.snapshot = DomainSnapshot(
+      catalog: _catalog,
+      journeys: [
+        ...repository.snapshot.journeys,
+        DomainJourney(
+          id: 'older-journey',
+          regionKey: 'danyang',
+          questKeys: const ['dy1'],
+          title: '이전 단양 여행',
+          startDate: DateTime(2026, 6, 1),
+          endDate: DateTime(2026, 6, 2),
+          status: 'completed',
+          createdAt: DateTime(2026, 6, 1),
+        ),
+      ],
+      completedQuestKeys: repository.snapshot.completedQuestKeys,
+      regionProgress: repository.snapshot.regionProgress,
+      timeline: repository.snapshot.timeline,
+    );
+    final container = ProviderContainer(
+      overrides: [domainRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    await container.read(domainControllerProvider.future);
+
+    await container
+        .read(domainControllerProvider.notifier)
+        .replaceJourneyQuests(
+          journeyId: 'older-journey',
+          questKeys: const ['dy1'],
+        );
+
+    expect(repository.replacedJourneyId, 'older-journey');
   });
 }

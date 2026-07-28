@@ -45,6 +45,10 @@ async def test_create_and_get_journey(client: AsyncClient) -> None:
     list_data = list_response.json()["data"]
     assert list_data["total"] == 1
     assert list_data["items"][0]["id"] == data["id"]
+    assert list_data["items"][0]["quest_client_keys"] == [
+        "test-gps-quest",
+        "test-quiz-quest",
+    ]
 
     detail_response = await client.get(f"/api/v1/journeys/{data['id']}", headers=headers)
     assert detail_response.status_code == 200

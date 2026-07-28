@@ -1,6 +1,8 @@
 """퀘스트 인증 판정 — 룰 기반 MVP.
 
 규칙(docs/specs/010-journey/plan.md · docs/specs/050-quest-verification/):
+- photo: ColorTrip 업로드 경로의 인증 사진 필요.
+- gps: 퀘스트 좌표 기준 verify_radius(m) 이내.
 - gps_photo: 퀘스트 좌표 기준 verify_radius(m) 이내 + 인증 사진 존재.
   사진 내용(LLM) 판정은 후속 — 프롬프트는 mission_meta["judgement_prompt"]에 보관만 한다.
 - quiz: 제출 답안과 mission_meta["quiz"]["answer"]를 정규화(공백·대소문자) 비교.
@@ -54,13 +56,6 @@ def judge(
         _require_uploaded_photo(photo_url)
         return _judge_gps(quest, lat, lng)
     raise AppException(ErrorCode.VALIDATION_ERROR, "지원하지 않는 미션 유형입니다.")
-
-
-def _judge_gps_photo(
-    quest: Quest, lat: Decimal | None, lng: Decimal | None, photo_url: str | None
-) -> tuple[bool, str | None]:
-    _require_uploaded_photo(photo_url)
-    return _judge_gps(quest, lat, lng)
 
 
 def _judge_gps(

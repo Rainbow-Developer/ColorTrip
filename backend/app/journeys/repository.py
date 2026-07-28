@@ -92,6 +92,24 @@ async def list_journey_quests(session: AsyncSession, journey_id: UUID) -> Sequen
     return (await session.execute(stmt)).scalars().all()
 
 
+async def list_journey_quests_for_journeys(
+    session: AsyncSession,
+    journey_ids: list[UUID],
+) -> Sequence[JourneyQuest]:
+    if not journey_ids:
+        return []
+    stmt = (
+        select(JourneyQuest)
+        .where(
+            JourneyQuest.journey_id.in_(journey_ids),
+            JourneyQuest.deleted_at.is_(None),
+        )
+        .options(selectinload(JourneyQuest.quest))
+        .order_by(JourneyQuest.journey_id, JourneyQuest.sort_order)
+    )
+    return (await session.execute(stmt)).scalars().all()
+
+
 async def get_journey_quest(
     session: AsyncSession, journey_id: UUID, quest_id: UUID
 ) -> JourneyQuest | None:
