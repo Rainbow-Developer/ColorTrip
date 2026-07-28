@@ -7,6 +7,7 @@ from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.quests.models import QuestProgress
 from app.timeline.models import TimelineEvent
 from app.timeline.schemas import TimelineCreate
 
@@ -36,7 +37,10 @@ class TimelineRepository:
         """특정 유저의 타임라인을 최신순으로 가져옵니다. (KST 시간 범위 기반 인덱스 조회)"""
         query = (
             select(TimelineEvent)
-            .options(joinedload(TimelineEvent.region))  # 시·군 테이블 조인 로드
+            .options(
+                joinedload(TimelineEvent.region),
+                joinedload(TimelineEvent.quest_progress).joinedload(QuestProgress.quest),
+            )
             .where(TimelineEvent.user_id == user_id)
             .order_by(TimelineEvent.occurred_at.desc())
         )

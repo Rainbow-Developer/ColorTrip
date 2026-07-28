@@ -58,6 +58,13 @@ async def get_user_timeline(
             event_type=item.event_type,
             title=item.title,
             region_name=item.region.name if item.region else None,
+            quest_id=item.quest_progress.quest_id if item.quest_progress else None,
+            quest_client_key=(
+                item.quest_progress.quest.client_key
+                if item.quest_progress and item.quest_progress.quest
+                else None
+            ),
+            photo_url=item.quest_progress.photo_url if item.quest_progress else None,
             occurred_at=item.occurred_at,
         )
         for item in db_items
