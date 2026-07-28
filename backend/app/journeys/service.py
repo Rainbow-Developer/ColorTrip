@@ -7,6 +7,7 @@
 from datetime import date
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.base import now_kst
@@ -31,7 +32,15 @@ async def create_journey(
     title: str | None,
     start_date: date | None = None,
     end_date: date | None = None,
+    client_request_id: UUID | None = None,
 ) -> JourneyDetail:
+    if client_request_id is not None:
+        existing = await repository.get_journey_by_client_request_id(
+            session, user_id, client_request_id
+        )
+        if existing is not None:
+            return await get_journey_detail(session, user_id, existing.id)
+
     unique_ids = list(dict.fromkeys(quest_ids))  # 중복 제거(순서 유지)
     quests = await repository.get_quests_by_ids(session, unique_ids)
     found = {quest.id for quest in quests}
@@ -51,15 +60,27 @@ async def create_journey(
         title=title,
         start_date=start_date,
         end_date=end_date,
+        client_request_id=client_request_id,
     )
     session.add(journey)
-    await session.flush()
-    for order, quest_id in enumerate(unique_ids):
-        session.add(JourneyQuest(journey_id=journey.id, quest_id=quest_id, sort_order=order))
-    await session.flush()
-    # 담은 퀘스트를 이미 완료한 사용자라면 생성 즉시 완료 상태가 되어야 한다(진행도는 user 기준).
-    await recalculate_status(session, journey)
-    await session.commit()
+    try:
+        await session.flush()
+        for order, quest_id in enumerate(unique_ids):
+            session.add(JourneyQuest(journey_id=journey.id, quest_id=quest_id, sort_order=order))
+        await session.flush()
+        # 담은 퀘스트를 이미 완료한 사용자라면 생성 즉시 완료 상태가 되어야 한다.
+        await recalculate_status(session, journey)
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        if client_request_id is None:
+            raise
+        existing = await repository.get_journey_by_client_request_id(
+            session, user_id, client_request_id
+        )
+        if existing is None:
+            raise
+        return await get_journey_detail(session, user_id, existing.id)
 
     return await get_journey_detail(session, user_id, journey.id)
 
@@ -103,6 +124,7 @@ async def get_journey_detail(
     quests = [
         JourneyQuestItem(
             quest_id=jq.quest_id,
+            client_key=jq.quest.client_key,
             title=jq.quest.title,
             category=jq.quest.category,  # type: ignore[arg-type]
             mission_type=jq.quest.mission_type,  # type: ignore[arg-type]
@@ -171,6 +193,61 @@ async def remove_quest(
     await recalculate_status(session, journey)
     await session.commit()
 
+    return await get_journey_detail(session, user_id, journey_id)
+
+
+async def replace_quests(
+    session: AsyncSession,
+    user_id: UUID,
+    journey_id: UUID,
+    quest_ids: list[UUID],
+) -> JourneyDetail:
+    journey = await repository.get_journey_for_update(session, journey_id, user_id)
+    if journey is None:
+        raise AppException(ErrorCode.NOT_FOUND_ERROR, "여정을 찾을 수 없습니다.")
+
+    unique_ids = list(dict.fromkeys(quest_ids))
+    quests = await repository.get_quests_by_ids(session, unique_ids)
+    found = {quest.id for quest in quests}
+    missing = [str(quest_id) for quest_id in unique_ids if quest_id not in found]
+    if missing:
+        raise AppException(
+            ErrorCode.NOT_FOUND_ERROR,
+            f"존재하지 않는 퀘스트: {', '.join(missing)}",
+        )
+    if any(quest.region_id != journey.region_id for quest in quests):
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR,
+            "여정 지역에 속하지 않는 퀘스트는 담을 수 없습니다.",
+        )
+
+    selected = set(unique_ids)
+    links = {
+        link.quest_id: link
+        for link in await repository.list_all_journey_quests(session, journey_id)
+    }
+    removed_at = now_kst()
+    for quest_id, link in links.items():
+        if quest_id not in selected:
+            link.deleted_at = removed_at
+
+    for order, quest_id in enumerate(unique_ids):
+        link = links.get(quest_id)
+        if link is None:
+            session.add(
+                JourneyQuest(
+                    journey_id=journey_id,
+                    quest_id=quest_id,
+                    sort_order=order,
+                )
+            )
+        else:
+            link.deleted_at = None
+            link.sort_order = order
+
+    await session.flush()
+    await recalculate_status(session, journey)
+    await session.commit()
     return await get_journey_detail(session, user_id, journey_id)
 
 

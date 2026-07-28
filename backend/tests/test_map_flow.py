@@ -16,16 +16,20 @@ from tests.helpers import (
 
 
 async def _seed_map_fixture(user_id: UUID) -> dict[str, str]:
-    """지역 2개를 심고, 그 중 하나에만 map_progress 레코드를 생성한다."""
+    """표준 지역 중 단양군에만 map_progress 레코드를 생성한다."""
+    from sqlalchemy import select
+
     from app.core.database import AsyncSessionLocal
     from app.progress.models import MapProgress
     from app.regions.models import Region
 
     async with AsyncSessionLocal() as session:
-        danyang = Region(name="단양군", area_code="21")
-        cheongju = Region(name="청주시", area_code="1")
-        session.add_all([danyang, cheongju])
-        await session.flush()
+        danyang = (
+            await session.execute(select(Region).where(Region.slug == "danyang"))
+        ).scalar_one()
+        cheongju = (
+            await session.execute(select(Region).where(Region.slug == "cheongju"))
+        ).scalar_one()
 
         progress = MapProgress(
             user_id=user_id,
@@ -53,7 +57,7 @@ async def test_my_map_returns_all_regions(client: AsyncClient) -> None:
     assert response.status_code == 200
     items = response.json()["data"]
 
-    assert len(items) == 2
+    assert len(items) == 11
 
     by_region = {item["region_id"]: item for item in items}
     assert by_region[seed["danyang_id"]]["region_name"] == "단양군"

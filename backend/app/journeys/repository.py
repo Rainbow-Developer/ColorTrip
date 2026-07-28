@@ -22,6 +22,36 @@ async def get_journey(session: AsyncSession, journey_id: UUID, user_id: UUID) ->
     return await session.scalar(stmt)
 
 
+async def get_journey_by_client_request_id(
+    session: AsyncSession,
+    user_id: UUID,
+    client_request_id: UUID,
+) -> Journey | None:
+    stmt = select(Journey).where(
+        Journey.user_id == user_id,
+        Journey.client_request_id == client_request_id,
+        Journey.deleted_at.is_(None),
+    )
+    return await session.scalar(stmt)
+
+
+async def get_journey_for_update(
+    session: AsyncSession,
+    journey_id: UUID,
+    user_id: UUID,
+) -> Journey | None:
+    stmt = (
+        select(Journey)
+        .where(
+            Journey.id == journey_id,
+            Journey.user_id == user_id,
+            Journey.deleted_at.is_(None),
+        )
+        .with_for_update()
+    )
+    return await session.scalar(stmt)
+
+
 async def list_journeys(
     session: AsyncSession,
     user_id: UUID,
@@ -71,6 +101,14 @@ async def get_journey_quest(
         JourneyQuest.quest_id == quest_id,
     )
     return await session.scalar(stmt)
+
+
+async def list_all_journey_quests(
+    session: AsyncSession,
+    journey_id: UUID,
+) -> Sequence[JourneyQuest]:
+    stmt = select(JourneyQuest).where(JourneyQuest.journey_id == journey_id)
+    return (await session.execute(stmt)).scalars().all()
 
 
 async def max_sort_order(session: AsyncSession, journey_id: UUID) -> int:

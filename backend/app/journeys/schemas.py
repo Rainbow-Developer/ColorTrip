@@ -10,6 +10,7 @@ from app.core.enums import Category, JourneyStatus, MissionType, ProgressStatus
 
 
 class JourneyCreateRequest(BaseModel):
+    client_request_id: UUID | None = None
     region_id: UUID
     quest_ids: list[UUID] = Field(min_length=1)
     title: str | None = Field(default=None, max_length=100)
@@ -27,6 +28,10 @@ class JourneyQuestAddRequest(BaseModel):
     quest_id: UUID
 
 
+class JourneyQuestReplaceRequest(BaseModel):
+    quest_ids: list[UUID] = Field(min_length=1)
+
+
 class JourneyProgressSummary(BaseModel):
     completed: int
     total: int
@@ -34,6 +39,7 @@ class JourneyProgressSummary(BaseModel):
 
 class JourneyQuestItem(BaseModel):
     quest_id: UUID
+    client_key: str | None
     title: str
     category: Category
     mission_type: MissionType
