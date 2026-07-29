@@ -1,21 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/filter_chip_row.dart';
 import '../../core/widgets/quest_type_badge.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
-const _filters = [
-  FilterChipOption(key: 'all', label: '전체'),
-  FilterChipOption(key: 'nature', label: '🌲 자연탐험'),
-  FilterChipOption(key: 'food', label: '🍜 미식방문'),
-  FilterChipOption(key: 'history', label: '🏛️ 역사문화'),
-  FilterChipOption(key: 'active', label: '🧗 액티비티'),
-  FilterChipOption(key: 'healing', label: '☕ 힐링'),
+class _QuestTypeOption {
+  const _QuestTypeOption({required this.key, required this.label, this.iconAsset});
+
+  final String key;
+  final String label;
+  final String? iconAsset;
+}
+
+const _typeOptions = [
+  _QuestTypeOption(key: 'all', label: '전체'),
+  _QuestTypeOption(
+    key: 'nature',
+    label: '자연탐험형',
+    iconAsset: 'assets/images/quest_type_nature.svg',
+  ),
+  _QuestTypeOption(
+    key: 'food',
+    label: '미식탐방형',
+    iconAsset: 'assets/images/quest_type_food.svg',
+  ),
+  _QuestTypeOption(
+    key: 'history',
+    label: '역사문화형',
+    iconAsset: 'assets/images/quest_type_history.svg',
+  ),
+  _QuestTypeOption(
+    key: 'active',
+    label: '액티비티형',
+    iconAsset: 'assets/images/quest_type_active.svg',
+  ),
+  _QuestTypeOption(
+    key: 'healing',
+    label: '힐링형',
+    iconAsset: 'assets/images/quest_type_healing.svg',
+  ),
 ];
 
 class QuestListScreen extends ConsumerStatefulWidget {
@@ -39,11 +67,23 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: FilterChipRow(
-              options: _filters,
-              selectedKey: _filter,
-              onSelected: (key) => setState(() => _filter = key),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: SizedBox(
+              height: 104,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _typeOptions.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 16),
+                itemBuilder: (context, index) {
+                  final option = _typeOptions[index];
+                  return _QuestTypeOptionTile(
+                    option: option,
+                    selected: _filter == option.key,
+                    onTap: () => setState(() => _filter = option.key),
+                  );
+                },
+              ),
             ),
           ),
           Expanded(
@@ -84,6 +124,65 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuestTypeOptionTile extends StatelessWidget {
+  const _QuestTypeOptionTile({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _QuestTypeOption option;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 64,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: option.iconAsset == null
+                    ? AppColors.surfaceMuted
+                    : Colors.white,
+                border: Border.all(
+                  color: selected ? AppColors.primaryDark : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: option.iconAsset != null
+                  ? SvgPicture.asset(option.iconAsset!, fit: BoxFit.cover)
+                  : const Icon(Icons.apps, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              option.label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppColors.primaryDark : AppColors.textMuted,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -46,6 +46,7 @@ dependencies:
   flutter_secure_storage: ^10.3.1
   shared_preferences: ^2.5.5
   image_picker: ^1.2.3
+  flutter_svg: ^2.2.1
 
 dev_dependencies:
   flutter_test:
@@ -81,6 +82,11 @@ flutter:
   assets:
     - assets/images/main_background_image.png
     - assets/images/gps_mountain_icon.png
+    - assets/images/quest_type_nature.svg
+    - assets/images/quest_type_food.svg
+    - assets/images/quest_type_history.svg
+    - assets/images/quest_type_active.svg
+    - assets/images/quest_type_healing.svg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
