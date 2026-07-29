@@ -10,7 +10,7 @@ final dioProvider = Provider<Dio>((ref) {
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTlmNTVkMS1iMTMyLTc2YjItOWE0Mi02OTM0YzU2NGJiNWEiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzg0MDM4NTI4LCJleHAiOjE3ODQ2NDMzMjh9.yQEQowCBtwJaRZg3MgfZAkrtY9DgP6BFM4s2BjHm33Q',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTlmNTVkMS1iMTMyLTc2YjItOWE0Mi02OTM0YzU2NGJiNWEiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzg1MzMwOTIxLCJleHAiOjE3ODU5MzU3MjF9.zQxaDz9upLqDzeaWgfJOEiEFh1z4blK2eALvkx7WXkA',
       },
     ),
   );

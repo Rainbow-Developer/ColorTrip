@@ -112,7 +112,7 @@ class _RegionQuestSelectScreenState
     final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: const Text('퀘스트')),
+      appBar: AppBar(leading: const AppBackButton(), title: const Text('퀘스트'), titleSpacing: 0),
       body: Stack(
         children: [
           Column(

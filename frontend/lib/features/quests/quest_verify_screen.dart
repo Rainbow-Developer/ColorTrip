@@ -77,6 +77,7 @@ class _QuizVerifyBodyState extends State<_QuizVerifyBody> {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('OX 퀴즈'),
+        titleSpacing: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -151,6 +152,7 @@ class _GpsVerifyBody extends StatelessWidget {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('GPS 인증'),
+        titleSpacing: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -366,6 +368,7 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('사진 인증'),
+        titleSpacing: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),

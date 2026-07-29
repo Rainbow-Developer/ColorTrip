@@ -59,7 +59,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: const Text('여행하기')),
+      appBar: AppBar(leading: const AppBackButton(), title: const Text('여행하기'), titleSpacing: 0),
       body: Stack(
         children: [
           SingleChildScrollView(

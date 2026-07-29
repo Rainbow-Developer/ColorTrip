@@ -58,6 +58,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('여행 타임라인'),
+        titleSpacing: 0,
       ),
       body: Column(
         children: [

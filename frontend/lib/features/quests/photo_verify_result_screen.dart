@@ -25,6 +25,7 @@ class PhotoVerifyResultScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('사진 검증 결과'),
+        titleSpacing: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
