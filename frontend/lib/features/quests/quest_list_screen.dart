@@ -35,7 +35,7 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
     final progress = ref.watch(progressProvider);
 
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: const Text('퀘스트')),
+      appBar: AppBar(leading: const AppBackButton(), title: const Text('퀘스트'), titleSpacing: 0),
       body: Column(
         children: [
           Padding(

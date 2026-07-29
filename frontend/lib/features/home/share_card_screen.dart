@@ -35,6 +35,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('공유 카드 만들기'),
+        titleSpacing: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),

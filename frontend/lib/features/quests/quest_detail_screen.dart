@@ -39,6 +39,7 @@ class QuestDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('퀘스트 상세'),
+        titleSpacing: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

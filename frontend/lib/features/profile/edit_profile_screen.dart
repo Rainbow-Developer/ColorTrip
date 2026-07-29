@@ -47,6 +47,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('내 정보 수정'),
+        titleSpacing: 0,
         actions: [
           TextButton(
             onPressed: () {
