@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
@@ -344,15 +345,70 @@ class _TripSetupSheetState extends State<_TripSetupSheet> {
 
   Future<void> _pickRange() async {
     final now = DateTime.now();
-    final picked = await showDateRangePicker(
+    List<DateTime?> tempRange = _range != null ? [_range!.start, _range!.end] : [];
+
+    final picked = await showModalBottomSheet<DateTimeRange>(
       context: context,
-      firstDate: DateTime(now.year, now.month, now.day),
-      lastDate: DateTime(now.year + 2, now.month, now.day),
-      initialDateRange: _range,
-      helpText: '여행 기간을 선택해주세요',
-      saveText: '선택',
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final isValid = tempRange.length == 2 && tempRange[0] != null && tempRange[1] != null;
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      '여행 기간을 선택해주세요',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    CalendarDatePicker2(
+                      config: CalendarDatePicker2Config(
+                        calendarType: CalendarDatePicker2Type.range,
+                        firstDate: DateTime(now.year, now.month, now.day),
+                        lastDate: DateTime(now.year + 2, now.month, now.day),
+                        selectedDayHighlightColor: AppColors.primaryDark,
+                      ),
+                      value: tempRange,
+                      onValueChanged: (dates) {
+                        setSheetState(() {
+                          tempRange = dates;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: isValid
+                          ? () {
+                              Navigator.pop(
+                                context,
+                                DateTimeRange(start: tempRange[0]!, end: tempRange[1]!),
+                              );
+                            }
+                          : null,
+                      child: const Text('선택 완료'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
-    if (picked != null) setState(() => _range = picked);
+
+    if (picked != null) {
+      setState(() => _range = picked);
+    }
   }
 
   InputDecoration _fieldDecoration({String? hintText, Widget? suffixIcon}) {
