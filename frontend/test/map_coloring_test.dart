@@ -17,17 +17,17 @@ void main() {
       expect(state.completedRegionCount, 0);
     });
 
-    test('완료 여행 1회부터 채색이 시작되고(1/3) 완료 지역으로 센다', () {
+    test('완료 여행 1회부터 채색이 시작되고(1/5) 완료 지역으로 센다', () {
       final state = const ProgressState.empty().copyWith(
         regionTripCount: {'cheongju': 1},
       );
-      expect(state.regionSaturation('cheongju'), closeTo(1 / 3, 1e-9));
+      expect(state.regionSaturation('cheongju'), closeTo(1 / 5, 1e-9));
       expect(state.completedRegionCount, 1);
     });
 
-    test('기준선(3회) 이상이면 최대 채도(1.0)로 고정된다', () {
+    test('기준선(5회) 이상이면 최대 채도(1.0)로 고정된다', () {
       final state = const ProgressState.empty().copyWith(
-        regionTripCount: {'cheongju': 3, 'danyang': 5},
+        regionTripCount: {'cheongju': 5, 'danyang': 7},
       );
       expect(state.regionSaturation('cheongju'), 1.0);
       expect(state.regionSaturation('danyang'), 1.0);
@@ -40,7 +40,7 @@ void main() {
         regionTripCount: {'danyang': 2},
       );
       expect(state.completedTripCountOf('danyang'), 2);
-      expect(state.regionSaturation('danyang'), closeTo(2 / 3, 1e-9));
+      expect(state.regionSaturation('danyang'), closeTo(2 / 5, 1e-9));
     });
 
     test('진행 중(미완주) 여행은 서버 값이 없으면 채색하지 않는다', () {
@@ -82,7 +82,7 @@ void main() {
       final state = container.read(progressProvider);
       expect(state.localTripCompletions['danyang'], 1);
       expect(state.completedTripCountOf('danyang'), 1);
-      expect(state.regionSaturation('danyang'), closeTo(1 / 3, 1e-9));
+      expect(state.regionSaturation('danyang'), closeTo(1 / 5, 1e-9));
       expect(state.completedRegionCount, 1);
     });
 
@@ -97,14 +97,14 @@ void main() {
       final afterAdd = container.read(progressProvider);
       expect(afterAdd.tripStatusOf('danyang'), RegionTripStatus.inProgress);
       expect(afterAdd.completedTripCountOf('danyang'), 1);
-      expect(afterAdd.regionSaturation('danyang'), closeTo(1 / 3, 1e-9));
+      expect(afterAdd.regionSaturation('danyang'), closeTo(1 / 5, 1e-9));
       expect(afterAdd.completedRegionCount, 1);
 
       // 추가한 퀘스트까지 완료하면 재방문 완주로 1회 더 누적된다.
       notifier.completeQuest('dy2');
       final afterSecond = container.read(progressProvider);
       expect(afterSecond.completedTripCountOf('danyang'), 2);
-      expect(afterSecond.regionSaturation('danyang'), closeTo(2 / 3, 1e-9));
+      expect(afterSecond.regionSaturation('danyang'), closeTo(2 / 5, 1e-9));
     });
 
     test('여행을 시작하지 않은 채 완료한 퀘스트는 완주로 세지 않는다', () {
@@ -138,7 +138,7 @@ void main() {
       expect(state.regionProgress['cheongju'], 4);
       expect(state.regionTripCount['cheongju'], 2);
       expect(state.regionTripCount['danyang'], 1);
-      expect(state.regionSaturation('cheongju'), closeTo(2 / 3, 1e-9));
+      expect(state.regionSaturation('cheongju'), closeTo(2 / 5, 1e-9));
       expect(state.completedRegionCount, 2);
     });
   });

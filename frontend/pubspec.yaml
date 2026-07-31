@@ -46,6 +46,7 @@ dependencies:
   flutter_secure_storage: ^10.3.1
   shared_preferences: ^2.5.5
   image_picker: ^1.2.3
+  flutter_svg: ^2.2.1
   # 퀘스트·지역 이미지 표시 (docs/specs/045-quest-region-images)
   cached_network_image: ^3.4.1
   # 위치 기반 인증 — 온디바이스 거리 검증, 좌표 서버 미전송 (docs/specs/050-quest-verification)
@@ -84,6 +85,15 @@ flutter:
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/images/main_background_image.png
+    - assets/images/gps_mountain_icon.png
+    - assets/images/top_bar_logo.png
+    - assets/images/quest_type_nature.svg
+    - assets/images/quest_type_food.svg
+    - assets/images/quest_type_history.svg
+    - assets/images/quest_type_active.svg
+    - assets/images/quest_type_healing.svg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

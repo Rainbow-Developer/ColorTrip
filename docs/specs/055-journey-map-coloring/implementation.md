@@ -12,7 +12,7 @@
 ## 구현된 항목
 
 - [x] BE 완료 여정 집계(`count_completed_journeys_by_region`) + `MapProgressRead.completed_journey_count` 응답
-- [x] FE 채도·통계 로직 전환 — `completedTripCountOf`(서버·로컬 max 병합), cap=3, `completedRegionCount`=1회 이상
+- [x] FE 채도·통계 로직 전환 — `completedTripCountOf`(서버·로컬 max 병합), cap=5, `completedRegionCount`=1회 이상
 - [x] FE 로컬 완주 카운터 — 완주 시점에 지역별로 누적해, 완료 지역에 퀘스트를 추가해도 채색이 되돌아가지 않는다
 - [x] 테스트 — BE `tests/test_map_flow.py`(여정 0/1/2회·타 유저 격리), FE `test/map_coloring_test.dart`
 

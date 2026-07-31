@@ -19,6 +19,7 @@ class AppNetworkImage extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.borderRadius,
     this.placeholderEmoji,
+    this.placeholderEmojiSize = 24,
     this.placeholderText,
   });
 
@@ -35,13 +36,19 @@ class AppNetworkImage extends StatelessWidget {
   /// placeholder 가운데에 표시할 이모지(예: 퀘스트 유형 이모지). [placeholderText]보다 우선.
   final String? placeholderEmoji;
 
+  /// 이모지 크기 — 썸네일 크기에 맞춘다(작은 원형 48px는 기본값, 카드 4:3은 32 등).
+  final double placeholderEmojiSize;
+
   /// placeholder 가운데에 표시할 안내 텍스트(예: '관광지 이미지').
   final String? placeholderText;
 
   Widget _buildPlaceholder() {
     Widget? child;
     if (placeholderEmoji != null) {
-      child = Text(placeholderEmoji!, style: const TextStyle(fontSize: 24));
+      child = Text(
+        placeholderEmoji!,
+        style: TextStyle(fontSize: placeholderEmojiSize),
+      );
     } else if (placeholderText != null) {
       child = Text(
         placeholderText!,

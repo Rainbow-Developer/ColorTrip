@@ -2,42 +2,42 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 
-/// 지도 색칠 범례 — 지역 채색이 완료한 여행(여정) 수에 따라 연속적으로 진해지므로
-/// ([ProgressState.regionSaturation]·[core/widgets/chungbuk_map.dart]의 mapFillColors 대응,
-/// [055-journey-map-coloring]), 3단계 스와치 대신 미방문→완료를 잇는 그라데이션 바로
-/// 그 흐름을 그대로 보여준다.
+/// 지도 색칠 범례 — 지도는 채도를 5단계로 양자화해서 칠하므로
+/// ([core/widgets/chungbuk_map.dart]의 mapFillColors, KAN-51) 그 5단계를 스와치로 보여준다.
+/// 실제 지역 팔레트는 지역마다 색조가 달라 대표색으로 쓸 수 없어, 범례 전용 파스텔 그린
+/// 톤([mapLegendColors])을 쓴다.
+///
+/// 스와치가 나타내는 값은 그 지역에서 **완료한 여행(여정) 수**다
+/// ([ProgressState.regionSaturation], [055-journey-map-coloring]) — 여행 1회가 한 단계씩
+/// 진해져 5회에 최대 채도가 되므로, 오른쪽 표기도 "5회+"로 맞춘다.
 class MapLegend extends StatelessWidget {
   const MapLegend({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
         const Text(
           '여행 완료 횟수',
-          style: TextStyle(fontSize: 11, color: AppColors.tripMutedBadgeFg),
-        ),
-        const SizedBox(width: 8),
-        const Text(
-          '0회',
           style: TextStyle(fontSize: 10, color: AppColors.tripMutedBadgeFg),
         ),
         const SizedBox(width: 4),
-        Expanded(
-          child: Container(
-            height: 8,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              gradient: const LinearGradient(
-                colors: [AppColors.mapEmpty, AppColors.primaryDark],
+        for (final color in mapLegendColors)
+          Padding(
+            padding: const EdgeInsets.only(right: 3),
+            child: Container(
+              width: 16,
+              height: 8,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 4),
-        // 3회 = 채도 100% 기준선(ProgressState._tripSaturationCap)과 맞춘 표기.
+        const SizedBox(width: 1),
         const Text(
-          '3회+',
+          '5회+',
           style: TextStyle(fontSize: 10, color: AppColors.tripMutedBadgeFg),
         ),
       ],

@@ -139,9 +139,10 @@ class ProgressState {
   }
 
   /// 완료 여행 수가 이 값 이상이면 채도 100% — 퀘스트 기준(6개)일 때와 같은 이유로 모든
-  /// 지역에 같은 기준선을 쓰고, 여행 1회 ≈ 퀘스트 여러 개이므로 체감 진행 속도가 비슷하게
-  /// 6보다 낮은 3을 쓴다([055-journey-map-coloring] 의사결정).
-  static const _tripSaturationCap = 3;
+  /// 지역에 같은 기준선을 쓴다. 지도가 채도를 **5단계**로 양자화해 칠하므로
+  /// (`mapFillColors`, KAN-51) cap도 5로 맞춰 여행 1회가 정확히 한 단계씩 진해지게 한다 —
+  /// cap이 3이면 5단계 중 2개가 쓰이지 않는다([055-journey-map-coloring] 의사결정).
+  static const _tripSaturationCap = 5;
 
   /// 지역에서 완료한 여행 수(표시용) — 서버 동기화 값([regionTripCount])과 로컬 누적
   /// 완주 횟수([localTripCompletions])의 max 병합이다. FE 정적 퀘스트 완료는 서버에

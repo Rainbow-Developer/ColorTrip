@@ -63,17 +63,23 @@ Flutter SDK가 없어도 됩니다. **빌드는 Docker 컨테이너, 실행·설
 
 ### 1-3. APK 빌드 후 설치
 
-저장소 루트에서:
+저장소 루트에서 **debug 빌드**로 만듭니다 — 로컬 백엔드에 붙으려면 debug여야 합니다(아래 주의 참고).
 
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release"
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug"
 ```
 
 ```bash
-adb install -r frontend/build/app/outputs/flutter-apk/app-release.apk
+adb install -r frontend/build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-앱 서랍에서 **colortrip** 실행. 에뮬레이터는 호스트를 `10.0.2.2`로 보므로 로컬 백엔드에 자동 연결됩니다(추가 설정 없음).
+앱 서랍에서 **colortrip** 실행. debug 빌드는 Android에서 기본값이 `10.0.2.2`(에뮬레이터가 보는 호스트 머신)라 로컬 백엔드에 그대로 연결됩니다.
+
+> **주의**: `--release`로 빌드하면 기본 주소가 **팀 dev 서버**입니다([dio_client.dart](../frontend/lib/core/network/dio_client.dart)). 릴리스 APK로 로컬 백엔드를 보려면 주소를 직접 넣으세요.
+>
+> ```bash
+> flutter build apk --release --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
+> ```
 
 ---
 
@@ -152,9 +158,9 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 | 기능 | 방법 |
 |------|------|
 | **위치 인증** | 에뮬레이터: 우측 툴바 **⋯(Extended Controls) → Location**에 퀘스트 좌표 입력 후 *Set location*. 좌표는 [quests_data.dart](../frontend/lib/data/static/quests_data.dart)의 `lat`/`lng`. 실기기: 실제로 그 장소에 있어야 통과(반경 500m) |
-| **사진 AI 인증** | 에뮬레이터: `adb push <사진> /sdcard/Pictures/` 후 미디어 스캔(`adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Pictures/<파일>`) → 앱에서 갤러리 선택. `GEMINI_API_KEY`가 없으면 스텁 판정(항상 통과 + "AI 미설정" 사유)이 표시됩니다 |
+| **사진 AI 인증** | 에뮬레이터: `adb push <사진> /sdcard/Pictures/` 후 미디어 스캔(`adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Pictures/<파일>`) → 앱에서 갤러리 선택. `GEMINI_API_KEY`가 없으면 **APP_ENV=local/test에서만** 스텁 판정(항상 통과 + "AI 미설정" 사유)이 뜹니다. dev·운영에서는 거부됩니다(fail-closed) |
 | **QR 인증** | `cd backend && uv run python scripts/generate_quest_qr.py` 로 QR PNG 생성 → 모니터에 띄우고 **실기기**로 스캔. 에뮬레이터 가상 카메라로는 인식할 수 없습니다 |
-| **지도 채색** | 한 지역의 선택 퀘스트를 **전부** 완료해 여행을 완주하면 그 지역이 칠해집니다(3회 완주 시 최대 채도). 퀘스트를 몇 개 완료해도 여행을 완주하지 않으면 칠해지지 않습니다 |
+| **지도 채색** | 한 지역의 선택 퀘스트를 **전부** 완료해 여행을 완주하면 그 지역이 칠해집니다(5회 완주 시 최대 채도 — 1회마다 한 단계씩 진해집니다). 퀘스트를 몇 개 완료해도 여행을 완주하지 않으면 칠해지지 않습니다 |
 
 ---
 
@@ -184,7 +190,7 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 
 - **앱을 종료하면 진행 상태(완료 퀘스트·여행·DNA)가 초기화됩니다.** 전역 상태를 메모리에만 두고 있어서이며, 서버 영속화는 후속 작업입니다. 시연 중에는 앱을 닫지 마세요.
 - **QR 실제 코드 인식은 실기기에서만** 확인 가능합니다(에뮬레이터 가상 카메라 한계).
-- `GEMINI_API_KEY` 미설정 시 사진 판정은 스텁(항상 통과)입니다. 실제 판정은 키 발급 후 동작합니다.
+- `GEMINI_API_KEY` 미설정 시 사진 판정은 **local/test에서만** 스텁(항상 통과)이고, dev·운영에서는 거부됩니다. 실제 판정은 키 발급 후 동작합니다.
 - 릴리스 APK는 **debug 키로 서명**되어 내부 테스트 설치용입니다. 스토어 업로드는 [release.md](conventions/release.md) 경로를 따릅니다.
 
 ## 관련 문서

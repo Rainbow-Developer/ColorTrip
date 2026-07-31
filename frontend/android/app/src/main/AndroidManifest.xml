@@ -11,7 +11,7 @@
         android:label="colortrip"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"><!-- KAN-60: dev 서버·로컬 백엔드가 http라 임시 허용. TLS 전환 시 제거 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
