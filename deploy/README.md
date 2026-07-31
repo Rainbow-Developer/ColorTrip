@@ -2,15 +2,15 @@
 
 운영 인스턴스(`colortrip-dev-app`)에서 Docker Compose로 앱을 구동한다. 인프라 SOT는 [docs/conventions/infra-deploy.md](../docs/conventions/infra-deploy.md).
 
-## 구성 (현재: BE 중심)
+## 구성 (현재: API 배포)
 
 | 서비스 | 역할 |
 |--------|------|
 | `cloudsql-proxy` | Cloud SQL Auth Proxy. 인스턴스 서비스 계정(`roles/cloudsql.client`)으로 인증, `:5432` 노출 |
 | `api` | FastAPI (`backend/Dockerfile`). `cloudsql-proxy:5432`로 DB 접속 |
-| `web` *(예정)* | nginx + Flutter Web. **`frontend/lib` 소스가 repo에 커밋된 뒤** 추가 |
 
-> FE 소스(`frontend/lib`)가 아직 repo에 없어 `web`은 보류 중이다. 현재는 `api`를 80포트로 직접 노출해 검증한다. FE가 들어오면 nginx가 80/443을 맡고 `/api`를 백엔드로 프록시한다.
+Flutter 클라이언트 소스는 `frontend/`에 있지만 모바일 앱으로 별도 빌드·배포한다.
+현재 Compute Engine compose는 백엔드 API만 운영하며 `api`를 80포트로 노출한다.
 
 ## 환경변수
 
@@ -46,6 +46,9 @@ PY
 | Secret | 용도 |
 |--------|------|
 | `colortrip-dev-tour-api-key` | 한국관광공사 TourAPI |
+| `colortrip-dev-kakao-client-secret` | Kakao client secret을 활성화한 경우 |
+
+`KAKAO_APP_ID`는 비밀이 아니며 GitHub Actions repository variable로 주입한다.
 
 ## 실행 (인스턴스에서)
 
@@ -58,4 +61,19 @@ docker compose logs -f api
 
 ## 자동화
 
-이미지 빌드 → Artifact Registry 푸시 → 인스턴스 배포는 **GitHub Actions(CI/CD)** 에서 수행한다(구축 예정). 이 디렉토리의 compose·env 템플릿을 그대로 사용한다.
+이미지 빌드 → Artifact Registry 푸시 → 인스턴스 배포는
+[deploy-dev.yml](../.github/workflows/deploy-dev.yml) GitHub Actions에서 수행한다.
+이 디렉토리의 compose·env 템플릿과 `deploy.sh`를 사용한다.
+
+배포는 다음 순서를 강제한다.
+
+1. 새 API 이미지 pull
+2. Cloud SQL Proxy 시작 및 TCP 준비 확인
+3. 기존 API를 유지한 상태에서 새 이미지로 `alembic upgrade head`
+4. migration 성공 시에만 API 컨테이너 교체
+5. 제한 시간 동안 `/health` 확인
+
+Migration 실패 시 기존 API를 교체하지 않으며 자동 downgrade하지 않는다. API 교체 후
+수동 복구가 필요하면 이전 SHA 이미지 태그를 `API_IMAGE`로 지정하고 `docker compose
+up -d --no-deps api`를 실행한다. 이미 적용된 개인정보 익명화 migration은 복구되지
+않는다.

@@ -1,10 +1,14 @@
 """auth — API schemas."""
 
+import re
 from datetime import date
 from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
+
+from app.core.base import now_kst
+from app.core.enums import DnaType
 
 
 class AuthTokenRequest(BaseModel):
@@ -32,7 +36,11 @@ class UserProfile(BaseModel):
     email: str | None
     nickname: str | None
     birth_date: date | None
+    profile_image: str | None
+    dna: DnaType | None
     social_provider: Literal["kakao"]
+    onboarding_step: Literal["profile", "trip_dna", "complete"] = "profile"
+    is_restored: bool = False
 
 
 class AuthTokenData(BaseModel):
@@ -66,4 +74,72 @@ class LogoutRequest(BaseModel):
     def validate_refresh_token(self) -> Self:
         if not self.refresh_token.strip():
             raise ValueError("refresh_token must not be blank.")
+        return self
+
+
+_EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _normalize_nickname(value: object) -> object:
+    return value.strip() if isinstance(value, str) else value
+
+
+def _normalize_email(value: object) -> object:
+    return value.strip().lower() if isinstance(value, str) else value
+
+
+def _validate_email(value: str) -> str:
+    if not _EMAIL_PATTERN.fullmatch(value):
+        raise ValueError("email must be valid.")
+    return value
+
+
+def _validate_birth_date(value: date) -> date:
+    if value > now_kst().date():
+        raise ValueError("birth_date must not be in the future.")
+    return value
+
+
+class OnboardingProfileRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    nickname: str = Field(min_length=1, max_length=30)
+    email: str = Field(min_length=3, max_length=255)
+    birth_date: date
+    terms_agreed: StrictBool
+    privacy_agreed: StrictBool
+    marketing_agreed: StrictBool
+
+    _strip_nickname = field_validator("nickname", mode="before")(_normalize_nickname)
+    _normalize_email = field_validator("email", mode="before")(_normalize_email)
+    _valid_email = field_validator("email")(_validate_email)
+    _valid_birth_date = field_validator("birth_date")(_validate_birth_date)
+
+
+class UserProfileUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    nickname: str | None = Field(default=None, min_length=1, max_length=30)
+    birth_date: date | None = None
+
+    _strip_nickname = field_validator("nickname", mode="before")(_normalize_nickname)
+
+    @field_validator("nickname")
+    @classmethod
+    def reject_null_nickname(cls, value: str | None) -> str | None:
+        if value is None:
+            raise ValueError("nickname must not be null.")
+        return value
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_optional_birth_date(cls, value: date | None) -> date | None:
+        if value is None:
+            raise ValueError("birth_date must not be null.")
+        return _validate_birth_date(value)
+
+    @model_validator(mode="after")
+    def require_update(self) -> Self:
+        if not self.model_fields_set:
+            raise ValueError("Provide at least one profile field.")
         return self

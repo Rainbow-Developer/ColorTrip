@@ -10,7 +10,7 @@
 
 <!-- 사용자/도메인 관점의 핵심 기능. 상세 동작은 각 기능 스펙의 description.md를 SOT로 둔다. -->
 - **여행 퀘스트·지도 색칠**: 카카오로 시작 → 여행 DNA 진단(초기 설문) → 시·군별 퀘스트를 사진·GPS·OX퀴즈로 인증 → 완료할수록 지도가 진하게 칠해짐. 타임라인·공유 카드로 기록. (상세: [docs/specs/000-frontend-app/description.md](docs/specs/000-frontend-app/description.md))
-- **Kakao 인증·회원**: Kakao 로그인으로 user를 만들고 JWT로 보호 API를 호출한다. 탈퇴 후 7일 이내 동일 Kakao 계정 재로그인은 복구하고, 이후에는 기존 계정을 익명화한 뒤 새 user를 만든다. (상세: [docs/specs/005-auth-member/description.md](docs/specs/005-auth-member/description.md))
+- **Kakao 인증·회원**: 백엔드는 Kakao access token의 발급 앱을 검증하고 JWT·프로필·버전 동의·즉시 익명화 탈퇴를 제공한다. Flutter SDK·세션·설문 연동은 후속 KAN-54에서 제공한다. (상세: [docs/specs/035-kakao-auth-integration/](docs/specs/035-kakao-auth-integration/))
 - **여행 DNA별 퀘스트**: 설문으로 파악한 여행 성향(자연탐험·미식·역사문화·액티비티·힐링 5종)에 맞춰 충북 11개 시·군의 퀘스트를 추천
 - **GPS·사진 기반 퀘스트 인증**: 퀘스트 완료 시 GPS로 현재 위치를 확인하고, 사진 인증으로 실제 방문 여부를 검증
 - **지도 색칠 / 방문 기록 시각화**: 퀘스트를 완료한 지역을 지도에 색칠하고, 방문 깊이에 따라 색의 채도가 진해지는 수집형 경험
@@ -66,12 +66,14 @@ LOG_LEVEL=           # 선택: DEBUG/INFO/WARNING/ERROR/CRITICAL (미설정 시 
 # 외부 API 키
 TOUR_API_KEY=        # 한국관광공사 TourAPI
 NAVER_API_KEY=       # Naver 지도/지역 API
-KAKAO_API_KEY=       # Kakao 로그인
 
 # 인증
 JWT_SECRET_KEY=      # JWT(Access/Refresh) 서명 키
 KAKAO_REST_API_KEY=  # Kakao REST API 키
 KAKAO_REDIRECT_URI=  # Kakao authorization code 교환용 redirect URI
+KAKAO_APP_ID=        # Kakao access token 발급 앱 검증용 숫자 ID
+KAKAO_TOKEN_INFO_URL= # Kakao access token 검증 URL
+KAKAO_CLIENT_SECRET= # client secret 활성화 시 authorization code 교환용
 
 # 업로드 (퀘스트 인증 사진)
 GCS_UPLOAD_BUCKET=   # 설정 시 GCS 사용(운영), 미설정 시 로컬 디스크(개발·테스트)
@@ -165,7 +167,7 @@ flowchart TD
 | **퀘스트·인증** | 지역별·상세·인증(사진/GPS/OX퀴즈), 유형별 전체 목록(보조) | `frontend/lib/features/quests/` |
 | **타임라인·프로필·공유** | 완료 기록·마이·내정보수정·공유 카드 | `frontend/lib/features/timeline/`, `frontend/lib/features/profile/` |
 | **도메인 데이터·상태** | 지역·퀘스트·DNA·설문 정적 데이터, 전역 상태 | `frontend/lib/data/`, `frontend/lib/state/` |
-| **인증·회원(Auth/Member)** | Kakao 로그인·JWT·내 정보·탈퇴/복구 | `backend/app/auth/` · 스펙 [docs/specs/005-auth-member/](docs/specs/005-auth-member/) |
+| **인증·회원(Auth/Member)** | Kakao 앱 소유권 검증·JWT·프로필/동의·즉시 익명화 탈퇴 | `backend/app/auth/` · 스펙 [docs/specs/035-kakao-auth-integration/](docs/specs/035-kakao-auth-integration/) |
 | **여행 DNA(Travel DNA)** | 여행 성향 질문·선택지 조회, 답변 제출 및 DNA 판정 | `backend/app/trip_dna/` · 스펙 [docs/specs/010-travel-dna/](docs/specs/010-travel-dna/) |
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |

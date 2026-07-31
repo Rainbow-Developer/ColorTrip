@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # 인스턴스에서 실행되는 배포 스크립트. GitHub Actions가 IAP SSH로 호출한다.
-# 필수 env: API_IMAGE, CLOUD_SQL_CONNECTION_NAME
+# 필수 env: API_IMAGE, CLOUD_SQL_CONNECTION_NAME, KAKAO_APP_ID
 # 시크릿(DB 비번 등)은 인스턴스 서비스 계정으로 Secret Manager에서 직접 읽는다(키 없음).
 set -euo pipefail
 
 : "${API_IMAGE:?API_IMAGE 필요}"
 : "${CLOUD_SQL_CONNECTION_NAME:?CLOUD_SQL_CONNECTION_NAME 필요}"
+: "${KAKAO_APP_ID:?KAKAO_APP_ID 필요}"
 
 PROJECT="colortrip"
 REGION="asia-northeast3"
@@ -14,6 +15,7 @@ JWT_SECRET="colortrip-dev-jwt-secret-key"
 TOUR_SECRET="colortrip-dev-tour-api-key" # 없으면 빈 값
 KAKAO_REST_SECRET="colortrip-dev-kakao-rest-api-key"
 KAKAO_REDIRECT_SECRET="colortrip-dev-kakao-redirect-uri"
+KAKAO_CLIENT_SECRET_NAME="colortrip-dev-kakao-client-secret"
 
 # 인스턴스 서비스 계정 액세스 토큰(메타데이터 서버)
 TOKEN="$(curl -s -H 'Metadata-Flavor: Google' \
@@ -38,6 +40,7 @@ KAKAO_REST_KEY="$(read_secret "${KAKAO_REST_SECRET}")"
 [ -n "${KAKAO_REST_KEY}" ] || { echo "ERROR: Kakao REST API 키(${KAKAO_REST_SECRET}) 조회 실패"; exit 1; }
 KAKAO_REDIRECT_URI="$(read_secret "${KAKAO_REDIRECT_SECRET}")"
 [ -n "${KAKAO_REDIRECT_URI}" ] || { echo "ERROR: Kakao redirect URI(${KAKAO_REDIRECT_SECRET}) 조회 실패"; exit 1; }
+KAKAO_CLIENT_SECRET="$(read_secret "${KAKAO_CLIENT_SECRET_NAME}")"
 DB_PW_ENCODED="$(DB_PW="${DB_PW}" python3 - <<'PY'
 import os
 from urllib.parse import quote
@@ -62,12 +65,47 @@ ACCESS_TOKEN_TTL_MINUTES=15
 REFRESH_TOKEN_TTL_DAYS=14
 KAKAO_REST_API_KEY=${KAKAO_REST_KEY}
 KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
+KAKAO_APP_ID=${KAKAO_APP_ID}
+KAKAO_TOKEN_INFO_URL=https://kapi.kakao.com/v1/user/access_token_info
+KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
 TOUR_API_KEY=${TOUR_KEY}
 TOUR_API_BASE_URL=https://apis.data.go.kr/B551011/KorService2
 EOF
 chmod 600 .env
 
 sudo docker compose pull
-sudo docker compose up -d
+sudo docker compose up -d cloudsql-proxy
+
+echo "Cloud SQL Proxy 준비 확인"
+database_ready=0
+for _ in $(seq 1 30); do
+  if sudo docker compose run --rm --no-deps api \
+    python -c 'import socket; socket.create_connection(("cloudsql-proxy", 5432), timeout=2).close()'
+  then
+    database_ready=1
+    break
+  fi
+  sleep 2
+done
+[ "${database_ready}" -eq 1 ] || { echo "ERROR: Cloud SQL Proxy 준비 시간 초과"; exit 1; }
+
+echo "Alembic migration 적용"
+# migration 실패 시 set -e에 의해 기존 API를 교체하기 전에 종료한다.
+# 개인정보 익명화는 되돌릴 수 없으므로 자동 downgrade하지 않는다.
+sudo docker compose run --rm --no-deps api uv run alembic upgrade head
+
+sudo docker compose up -d --no-deps api
+
+echo "API health 확인"
+api_healthy=0
+for _ in $(seq 1 30); do
+  if curl --fail --silent --show-error http://localhost/health >/dev/null; then
+    api_healthy=1
+    break
+  fi
+  sleep 2
+done
+[ "${api_healthy}" -eq 1 ] || { echo "ERROR: API health 확인 실패"; exit 1; }
+
 sudo docker image prune -f
 echo "deploy 완료: ${API_IMAGE}"

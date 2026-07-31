@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 from httpx import AsyncClient
 
@@ -15,9 +16,47 @@ async def login(client: AsyncClient, token: str = "kakao-token-1") -> dict[str, 
     return response.json()["data"]
 
 
-async def auth_headers(client: AsyncClient, token: str = "kakao-token-1") -> dict[str, str]:
+async def auth_headers(
+    client: AsyncClient,
+    token: str = "kakao-token-1",
+    *,
+    complete: bool = True,
+) -> dict[str, str]:
     data = await login(client, token)
-    return {"Authorization": f"Bearer {data['access_token']}"}
+    return await complete_auth_headers(client, data, complete=complete)
+
+
+async def complete_auth_headers(
+    client: AsyncClient,
+    data: dict[str, Any],
+    *,
+    complete: bool = True,
+) -> dict[str, str]:
+    headers = {"Authorization": f"Bearer {data['access_token']}"}
+    response = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers=headers,
+        json={
+            "nickname": data["user"]["nickname"] or "테스트 사용자",
+            "email": data["user"]["email"] or "test@example.com",
+            "birth_date": "2000-01-01",
+            "terms_agreed": True,
+            "privacy_agreed": True,
+            "marketing_agreed": False,
+        },
+    )
+    assert response.status_code == 200
+
+    if complete:
+        from app.auth.models import User
+        from app.core.database import AsyncSessionLocal
+
+        async with AsyncSessionLocal() as session:
+            user = await session.get(User, UUID(data["user"]["id"]))
+            assert user is not None
+            user.dna = "nature"
+            await session.commit()
+    return headers
 
 
 # 도담삼봉 기준 좌표 — GPS 인증 테스트용
