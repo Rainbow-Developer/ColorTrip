@@ -16,9 +16,10 @@ class AppColors {
   static const surfaceMuted = Color(0xFFF5F5F0);
   static const background = Color(0xFFFAFAFA);
   static const danger = Color(0xFFE24B4A);
-  // 지도 색칠 — 미방문 지역은 회색, 방문한 지역은 지역별 팔레트(regionMapColors)를
-  // 5단계로 양자화해서 쓴다(KAN-51).
-  static const mapEmpty = Color(0xFFCCCCCC);
+  // 지도 색칠 — 미방문 지역은 연한 회색, 방문한 지역은 지역별 팔레트(regionMapColors)를
+  // 5단계로 양자화해서 쓴다(KAN-51). 지역 경계선은 기존 미방문 회색(mapLine)을 그대로 쓴다.
+  static const mapLine = Color(0xFFCCCCCC);
+  static const mapEmpty = Color(0xFFF0F0F0);
   static const mapEmptyLabel = Color(0xFF9A9A90);
 
   // 스플래시(Figma) — color-spring-green-* / color-yellow-50 토큰.

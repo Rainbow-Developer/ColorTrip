@@ -188,7 +188,7 @@ class _ChungbukMapPainter extends CustomPainter {
     canvas.translate(-ChungbukMap._viewBoxMinX, -ChungbukMap._viewBoxMinY);
 
     final strokePaint = Paint()
-      ..color = Colors.white
+      ..color = AppColors.mapLine
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4;
 
