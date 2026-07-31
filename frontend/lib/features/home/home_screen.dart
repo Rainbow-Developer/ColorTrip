@@ -36,7 +36,9 @@ class HomeScreen extends ConsumerWidget {
     final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('다채로울지도')),
+      appBar: AppBar(
+        title: Image.asset('assets/images/top_bar_logo.png', height: 28),
+      ),
       body: SafeArea(
         child: Stack(
           children: [
