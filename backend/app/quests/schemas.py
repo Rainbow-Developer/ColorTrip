@@ -63,6 +63,8 @@ class QuestVerifyRequest(BaseModel):
     photo_url: str | None = None
     # quiz
     answer: str | None = None
+    # qr — 현장 QR 스캔 페이로드 (docs/specs/050-quest-verification/)
+    qr_payload: str | None = None
 
 
 class ProgressItem(BaseModel):

@@ -35,6 +35,15 @@ class Settings(BaseSettings):
     tour_api_key: str = ""
     tour_api_base_url: str = "https://apis.data.go.kr/B551011/KorService2"
 
+    # 사진 AI 인증 비전 판정 — docs/specs/050-quest-verification/
+    # 키 미설정 시 스텁 판정(항상 통과 + "AI 미설정" 사유)으로 동작한다.
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_base_url: str = "https://generativelanguage.googleapis.com"
+
+    # QR 인증 페이로드 서명 키 — 미설정 시 JWT_SECRET_KEY에서 파생한다.
+    qr_secret_key: str = ""
+
     # 업로드(인증 사진) — docs/specs/010-journey/
     gcs_upload_bucket: str = ""  # 설정 시 GCS 사용(운영 기본), 미설정 시 로컬 디스크
     upload_dir: str = "./uploads"  # 로컬 스토리지 경로(개발·테스트)

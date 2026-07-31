@@ -227,3 +227,6 @@ __marimo__/
 #   팀 공유 설정(.claude/settings.json)·hooks·skills는 커밋한다.
 #   개인 로컬 설정만 무시한다.
 .claude/settings.local.json
+
+# 퀘스트 현장 QR 생성 산출물 (backend/scripts/generate_quest_qr.py)
+backend/qr_output/

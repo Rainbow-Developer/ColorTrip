@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import register_request_logging, setup_logging
 from app.core.response import Envelope, success
+from app.home.router import router as home_router
 from app.journeys.router import router as journeys_router
 from app.maps.router import router as maps_router
 from app.quests.router import progress_router
@@ -25,6 +26,7 @@ from app.shares.router import router as shares_router
 from app.timeline.router import router as timeline_router
 from app.trip_dna.router import router as trip_dna_router
 from app.uploads.router import router as uploads_router
+from app.verifications.router import router as verifications_router
 
 setup_logging(app_env=settings.app_env, log_level=settings.log_level)
 
@@ -50,6 +52,8 @@ app.include_router(uploads_router, prefix="/api/v1")
 app.include_router(trip_dna_router, prefix="/api/v1")
 app.include_router(timeline_router, prefix="/api/v1")
 app.include_router(shares_router, prefix="/api/v1")
+app.include_router(home_router, prefix="/api/v1")
+app.include_router(verifications_router, prefix="/api/v1")
 
 # 로컬 스토리지 사용 시 업로드 파일 정적 서빙 (GCS 사용 시 불필요)
 if not settings.gcs_upload_bucket:
