@@ -11,7 +11,7 @@ fi
 api_base_url="${API_BASE_URL:-http://10.0.2.2:8000/api/v1}"
 device_id="${FLUTTER_DEVICE_ID:-emulator-5554}"
 
-if ! flutter devices --machine | grep -q '"id":"'"${device_id}"'"'; then
+if ! flutter devices --machine | grep -q "\"id\": \"${device_id}\""; then
   echo "Android emulator '${device_id}' is not connected." >&2
   echo 'Start one with Flutter/Android Studio, or set FLUTTER_DEVICE_ID.' >&2
   exit 1
