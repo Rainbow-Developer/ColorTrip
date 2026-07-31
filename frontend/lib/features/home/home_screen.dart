@@ -66,7 +66,6 @@ class HomeScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const _RecommendedRegionBanner(),
                   const _InProgressDnaCard(),
                   const SizedBox(height: 16),
                   Align(
@@ -96,6 +95,8 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   const MapLegend(),
+                  const SizedBox(height: 20),
+                  const _RecommendedRegionBanner(),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
