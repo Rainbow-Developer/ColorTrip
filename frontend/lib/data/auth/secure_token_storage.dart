@@ -49,6 +49,8 @@ class JsonSecureTokenStorage implements SecureTokenStorage {
 
   static const _sessionKey = 'colortrip.auth.token-pair.v1';
   static const _withdrawalStageKey = 'withdrawal_stage';
+  static const _withdrawalStageStorageKey =
+      'colortrip.auth.withdrawal-stage.v1';
 
   final SecureKeyValueStore _store;
   Future<void> _operationTail = Future<void>.value();
@@ -62,9 +64,10 @@ class JsonSecureTokenStorage implements SecureTokenStorage {
     TokenPair tokens, {
     bool preserveWithdrawalState = true,
   }) => _exclusive(() async {
-    final current = preserveWithdrawalState
-        ? await _readStoredSession()
-        : const _StoredSession();
+    if (!preserveWithdrawalState) {
+      await _store.delete(key: _withdrawalStageStorageKey);
+    }
+    final current = await _readStoredSession();
     await _write(tokens, current.stage);
   });
 
@@ -97,23 +100,40 @@ class JsonSecureTokenStorage implements SecureTokenStorage {
       _setWithdrawalStage(WithdrawalStage.backendPending);
 
   @override
-  Future<WithdrawalStage> withdrawalStage() =>
-      _exclusive(() async => (await _readStoredSession()).stage);
+  Future<WithdrawalStage> withdrawalStage() => _exclusive(() async {
+    final stored = await _store.read(key: _withdrawalStageStorageKey);
+    final stage = _stageFromValue(stored);
+    return stage ?? (await _readStoredSession()).stage;
+  });
 
   @override
   Future<bool> isWithdrawalPending() async =>
       await withdrawalStage() != WithdrawalStage.none;
 
   @override
-  Future<void> clear() => _exclusive(() => _store.delete(key: _sessionKey));
+  Future<void> clear() => _exclusive(() async {
+    await _store.delete(key: _sessionKey);
+    await _store.delete(key: _withdrawalStageStorageKey);
+  });
 
   Future<void> _setWithdrawalStage(WithdrawalStage stage) =>
-      _exclusive(() async {
-        final current = await _readStoredSession();
-        final tokens = current.tokens;
-        if (tokens == null) return;
-        await _write(tokens, stage);
+    _exclusive(() async {
+        await _store.write(
+          key: _withdrawalStageStorageKey,
+          value: switch (stage) {
+            WithdrawalStage.none => 'none',
+            WithdrawalStage.unlinkPending => 'unlink_pending',
+            WithdrawalStage.backendPending => 'backend_pending',
+          },
+        );
       });
+
+  WithdrawalStage? _stageFromValue(String? value) => switch (value) {
+    'unlink_pending' => WithdrawalStage.unlinkPending,
+    'backend_pending' => WithdrawalStage.backendPending,
+    'none' => WithdrawalStage.none,
+    _ => null,
+  };
 
   Future<_StoredSession> _readStoredSession() async {
     final encoded = await _store.read(key: _sessionKey);

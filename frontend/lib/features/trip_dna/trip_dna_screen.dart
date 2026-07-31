@@ -32,104 +32,151 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('여행 DNA 설문'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-          onPressed: () {
-            if (_step == 0) {
-              context.go('/signup');
-            } else {
-              setState(() => _step -= 1);
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('여행 DNA 설문'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+            onPressed: _handleBack,
+          ),
+        ),
+        body: FutureBuilder<List<TripDnaQuestion>>(
+          future: _questionsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
             }
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        '설문 질문지를 불러오지 못했습니다.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.redAccent, fontSize: 15),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _retryQuestions,
+                        child: const Text('다시 시도'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            final questions = snapshot.data;
+            if (questions == null || questions.isEmpty) {
+              return const Center(child: Text('진행 가능한 설문 질문지가 없습니다.'));
+            }
+
+            // 질문 개수가 확인된 후 _picks 리스트 최초 1회 초기화
+            _picks ??= List<String?>.filled(questions.length, null);
+
+            final question = questions[_step];
+            final isLast = _step >= questions.length - 1;
+
+            return Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Q${_step + 1}. ${question.question}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          for (final option in question.options)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _OptionTile(
+                                label: option.label,
+                                selected: _picks![_step] == option.id,
+                                onTap: () =>
+                                    setState(() => _picks![_step] = option.id),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _submitting
+                        ? null
+                        : () => _next(isLast, questions),
+                    child: _submitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Text(isLast ? '결과 보기' : '다음'),
+                  ),
+                ],
+              ),
+            );
           },
         ),
       ),
-      body: FutureBuilder<List<TripDnaQuestion>>(
-        future: _questionsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Text(
-                  '설문 질문지를 불러오지 못했습니다.\n${snapshot.error}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 15),
-                ),
-              ),
-            );
-          }
-          final questions = snapshot.data;
-          if (questions == null || questions.isEmpty) {
-            return const Center(child: Text('진행 가능한 설문 질문지가 없습니다.'));
-          }
+    );
+  }
 
-          // 질문 개수가 확인된 후 _picks 리스트 최초 1회 초기화
-          _picks ??= List<String?>.filled(questions.length, null);
+  void _retryQuestions() {
+    setState(() {
+      _step = 0;
+      _picks = null;
+      _questionsFuture = ref.read(tripDnaRepositoryProvider).questions();
+    });
+  }
 
-          final question = questions[_step];
-          final isLast = _step >= questions.length - 1;
-
-          return Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Q${_step + 1}. ${question.question}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        for (final option in question.options)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _OptionTile(
-                              label: option.label,
-                              selected: _picks![_step] == option.id,
-                              onTap: () =>
-                                  setState(() => _picks![_step] = option.id),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _submitting
-                      ? null
-                      : () => _next(isLast, questions),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : Text(isLast ? '결과 보기' : '다음'),
-                ),
-              ],
-            ),
-          );
-        },
+  Future<void> _handleBack() async {
+    if (_step > 0) {
+      setState(() => _step -= 1);
+      return;
+    }
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('여행 DNA 진단을 중단할까요?'),
+        content: const Text('진단을 중단하면 로그아웃되며 다음 로그인 때 다시 진행할 수 있습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('계속 진행'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('로그아웃'),
+          ),
+        ],
       ),
     );
+    if (shouldLogout != true || !mounted) return;
+    await ref.read(authControllerProvider.notifier).logout();
+    if (!mounted) return;
+    ref.read(progressProvider.notifier).reset();
+    context.go('/splash');
   }
 
   Future<void> _next(bool isLast, List<TripDnaQuestion> questions) async {
@@ -156,21 +203,27 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
       final result = await ref
           .read(tripDnaRepositoryProvider)
           .submitReplies(replies);
-      // 서버 어휘(activity) → 앱 어휘(active). 변환하지 않으면 액티비티 판정 사용자의
-      // DNA 조회가 실패해 자연 탐험으로 조용히 대체된다([category_vocabulary.dart]).
-      final String mainDnaType = toAppCategory(
-        result['main_dna_type'] as String,
-      );
+      // 서버의 `activity` 분류를 기존 앱 화면이 사용하는 `active` 분류로
+      // 일관되게 변환한다.
+      final mainDnaType = toAppCategory(result['main_dna_type'] as String);
 
       ref.read(progressProvider.notifier).setDnaType(mainDnaType);
-      await ref.read(authControllerProvider.notifier).refreshCurrentUser();
+      final refreshed = await ref
+          .read(authControllerProvider.notifier)
+          .refreshCurrentUser();
+      if (!refreshed) {
+        if (mounted) {
+          showAppToast(context, '결과를 확인하지 못했습니다. 다시 시도해주세요.');
+        }
+        return;
+      }
 
       if (mounted) {
         context.go('/trip-dna/result');
       }
-    } catch (e) {
+    } on Object {
       if (mounted) {
-        showAppToast(context, '답변 제출에 실패했습니다: $e');
+        showAppToast(context, '답변 제출에 실패했습니다. 다시 시도해주세요.');
       }
     } finally {
       if (mounted) {
@@ -180,7 +233,7 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
   }
 }
 
-class _OptionTile extends StatelessWidget {
+class _OptionTile extends StatefulWidget {
   const _OptionTile({
     required this.label,
     required this.selected,
@@ -192,25 +245,55 @@ class _OptionTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_OptionTile> createState() => _OptionTileState();
+}
+
+class _OptionTileState extends State<_OptionTile> {
+  var _showFocus = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(13),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFF1F7EC) : Colors.white,
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(
-            color: selected ? AppColors.primaryDark : AppColors.border,
-            width: 1.5,
+    return Semantics(
+      container: true,
+      label: widget.label,
+      selected: widget.selected,
+      button: true,
+      excludeSemantics: true,
+      child: FocusableActionDetector(
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              widget.onTap();
+              return null;
+            },
           ),
-        ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        },
+        onShowFocusHighlight: (value) => setState(() => _showFocus = value),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(13),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: widget.selected ? const Color(0xFFF1F7EC) : Colors.white,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(
+                color: widget.selected || _showFocus
+                    ? AppColors.primaryDark
+                    : AppColors.border,
+                width: _showFocus ? 2 : 1.5,
+              ),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                widget.label,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ),
       ),

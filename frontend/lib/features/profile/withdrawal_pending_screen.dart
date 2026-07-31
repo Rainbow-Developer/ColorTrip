@@ -57,6 +57,15 @@ class WithdrawalPendingScreen extends ConsumerWidget {
                         )
                       : const Text('탈퇴 다시 시도'),
                 ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: auth.isBusy
+                      ? null
+                      : () => ref
+                            .read(authControllerProvider.notifier)
+                            .logout(),
+                  child: const Text('지금은 로그아웃'),
+                ),
               ],
             ),
           ),

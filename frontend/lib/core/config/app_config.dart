@@ -35,6 +35,7 @@ class AppConfig {
     final uri = Uri.tryParse(baseUrl);
     if (uri == null ||
         !uri.hasAuthority ||
+        uri.host.isEmpty ||
         (uri.scheme != 'http' && uri.scheme != 'https')) {
       throw StateError('API_BASE_URL must be an absolute HTTP(S) URL.');
     }

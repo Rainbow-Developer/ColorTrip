@@ -267,6 +267,7 @@ void main() {
     await tester.tap(find.text('[필수] 이용약관 동의'));
     await tester.tap(find.text('[필수] 개인정보 처리방침'));
     await tester.pump();
+    await tester.ensureVisible(find.text('다음'));
     await tester.tap(find.text('다음'));
     await tester.pumpAndSettle();
 

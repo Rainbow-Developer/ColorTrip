@@ -79,7 +79,7 @@ class AuthSessionInterceptor extends Interceptor {
       return;
     }
 
-    if (options.data is FormData) {
+    if (options.data is FormData || options.data is Stream) {
       handler.next(
         DioException(
           requestOptions: options,
@@ -99,6 +99,7 @@ class AuthSessionInterceptor extends Interceptor {
       }
       options.extra[_retriedKey] = true;
       options.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
+      // The retried marker guarantees this request cannot start another refresh.
       handler.resolve(await client.fetch<dynamic>(options));
     } on DioException catch (retryError) {
       if (retryError.response?.statusCode == 401) {
@@ -156,6 +157,12 @@ class AuthSessionInterceptor extends Interceptor {
         _lastReplacementAccessToken = replacement.accessToken;
       }
       return replaced;
+    } on DioException catch (error) {
+      final status = error.response?.statusCode;
+      if (status == 401 || status == 403 || status == 422) {
+        await _expireSession(current.refreshToken);
+      }
+      return false;
     } on Object {
       await _expireSession(current.refreshToken);
       return false;

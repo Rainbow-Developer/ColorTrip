@@ -53,4 +53,5 @@ const Map<String, DnaType> kDnaTypes = {
   ),
 };
 
-DnaType dnaTypeById(String id) => kDnaTypes[id] ?? kDnaTypes['nature']!;
+DnaType dnaTypeById(String id) =>
+    kDnaTypes[id == 'active' ? 'activity' : id] ?? kDnaTypes['nature']!;

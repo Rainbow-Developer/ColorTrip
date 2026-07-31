@@ -25,7 +25,13 @@ final kakaoAuthGatewayProvider = Provider<KakaoAuthGateway>(
 
 final secureTokenStorageProvider = Provider<SecureTokenStorage>(
   (ref) => JsonSecureTokenStorage(
-    FlutterSecureKeyValueStore(FlutterSecureStorage()),
+    FlutterSecureKeyValueStore(
+      FlutterSecureStorage(
+        iOptions: IOSOptions(
+          accessibility: KeychainAccessibility.first_unlock_this_device,
+        ),
+      ),
+    ),
   ),
 );
 
@@ -51,8 +57,9 @@ final dioProvider = Provider<Dio>((ref) {
       client: dio,
       refreshClient: refreshDio,
       storage: storage,
-      onSessionExpired: ref.watch(sessionExpiredCallbackProvider),
-      onOnboardingRequired: ref.watch(onboardingRequiredCallbackProvider),
+      onSessionExpired: () => ref.read(sessionExpiredCallbackProvider)(),
+      onOnboardingRequired: () =>
+          ref.read(onboardingRequiredCallbackProvider)(),
     ),
   );
   ref.onDispose(() {

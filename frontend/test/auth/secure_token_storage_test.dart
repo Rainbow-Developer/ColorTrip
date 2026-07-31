@@ -3,23 +3,23 @@ import 'package:colortrip/data/models/auth_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _MemorySecureStore implements SecureKeyValueStore {
-  String? value;
+  final values = <String, String>{};
   int writes = 0;
   int deletes = 0;
 
   @override
   Future<void> delete({required String key}) async {
     deletes++;
-    value = null;
+    values.remove(key);
   }
 
   @override
-  Future<String?> read({required String key}) async => value;
+  Future<String?> read({required String key}) async => values[key];
 
   @override
   Future<void> write({required String key, required String value}) async {
     writes++;
-    this.value = value;
+    values[key] = value;
   }
 }
 
@@ -41,7 +41,8 @@ void main() {
   });
 
   test('clears corrupted partial token state', () async {
-    final store = _MemorySecureStore()..value = '{"access_token":"only"}';
+    final store = _MemorySecureStore()
+      ..values['colortrip.auth.token-pair.v1'] = '{"access_token":"only"}';
     final storage = JsonSecureTokenStorage(store);
 
     expect(await storage.read(), isNull);

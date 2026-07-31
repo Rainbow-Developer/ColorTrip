@@ -16,6 +16,7 @@ class AppFormField extends StatelessWidget {
     this.onTap,
     this.keyboardType,
     this.textInputAction,
+    this.suffixIcon,
   });
 
   final String label;
@@ -27,6 +28,7 @@ class AppFormField extends StatelessWidget {
   final VoidCallback? onTap;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -61,9 +63,7 @@ class AppFormField extends StatelessWidget {
             ),
             decoration: InputDecoration(
               hintText: hint,
-              suffixIcon: readOnly
-                  ? const Icon(Icons.calendar_today_outlined, size: 18)
-                  : null,
+              suffixIcon: suffixIcon,
               hintStyle: TextStyle(
                 color: enabled
                     ? AppColors.formPlaceholder

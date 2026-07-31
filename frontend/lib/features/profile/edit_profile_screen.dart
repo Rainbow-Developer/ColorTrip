@@ -30,12 +30,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    final user = ref.read(currentUserProvider)!;
-    _nicknameController = TextEditingController(text: user.nickname ?? '');
+    final user = ref.read(currentUserProvider);
+    _nicknameController = TextEditingController(text: user?.nickname ?? '');
     _birthdateController = TextEditingController(
-      text: user.birthDate == null ? '' : _date(user.birthDate!),
+      text: user?.birthDate == null ? '' : _date(user!.birthDate!),
     );
-    _emailController = TextEditingController(text: user.email ?? '');
+    _emailController = TextEditingController(text: user?.email ?? '');
   }
 
   @override
@@ -101,6 +101,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               enabled: !auth.isBusy,
               readOnly: true,
               onTap: _pickBirthDate,
+              suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18),
               onChanged: (_) => setState(() {}),
             ),
             if (_errors['birthDate'] case final error?) _ErrorText(error),
@@ -187,6 +188,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   void _confirmWithdraw(BuildContext context) {
+    final screenContext = context;
+    final controller = ref.read(authControllerProvider.notifier);
+    final progress = ref.read(progressProvider.notifier);
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -199,12 +203,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           TextButton(
             onPressed: () async {
               context.pop();
-              await ref.read(authControllerProvider.notifier).withdraw();
-              if (!context.mounted) return;
+              await controller.withdraw();
+              if (!screenContext.mounted) return;
               if (ref.read(authControllerProvider).status ==
                   AuthStatus.unauthenticated) {
-                ref.read(progressProvider.notifier).reset();
-                context.go('/splash');
+                progress.reset();
+                screenContext.go('/splash');
               }
             },
             child: const Text(

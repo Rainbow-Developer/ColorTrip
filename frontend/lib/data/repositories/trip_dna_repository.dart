@@ -82,6 +82,11 @@ class ApiTripDnaRepository implements TripDnaRepository {
       data: {'replies': replies},
     );
     // Envelope 포맷: {code: SUCCESS, status: 201, message: ..., data: {...}}
-    return response.data['data'] as Map<String, dynamic>;
+    final data = response.data['data'] as Map<String, dynamic>;
+    final mainDnaType = data['main_dna_type'];
+    return {
+      ...data,
+      if (mainDnaType == 'active') 'main_dna_type': 'activity',
+    };
   }
 }

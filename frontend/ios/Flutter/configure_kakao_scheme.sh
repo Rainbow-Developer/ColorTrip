@@ -14,10 +14,12 @@ for encoded_define in ${DART_DEFINES:-}; do
 done
 IFS="$old_ifs"
 
-# A missing key is handled by ConfigErrorApp at runtime. Keep debug builds
-# possible so developers see that actionable error instead of an Xcode failure.
 if [ -z "$kakao_native_app_key" ]; then
-  exit 0
+  if [ "${CONFIGURATION:-Debug}" = "Debug" ]; then
+    exit 0
+  fi
+  echo "error: KAKAO_NATIVE_APP_KEY is required for ${CONFIGURATION} builds." >&2
+  exit 1
 fi
 
 built_info_plist="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"

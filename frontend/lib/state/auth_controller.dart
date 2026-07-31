@@ -143,19 +143,21 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> refreshCurrentUser() async {
+  Future<bool> refreshCurrentUser() async {
     final epoch = _epoch;
     try {
       final user = await ref.read(authRepositoryProvider).fetchCurrentUser();
-      if (epoch != _epoch) return;
+      if (epoch != _epoch) return false;
       state = _stateForUser(user);
+      return true;
     } on Object {
-      if (epoch != _epoch) return;
+      if (epoch != _epoch) return false;
       state = AuthState(
         status: state.status,
         user: state.user,
         errorMessage: '사용자 정보를 새로고침하지 못했습니다.',
       );
+      return false;
     }
   }
 
@@ -181,9 +183,12 @@ class AuthController extends Notifier<AuthState> {
       state = const AuthState(status: AuthStatus.unauthenticated);
     } on Object {
       if (epoch != _epoch) return;
-      final pending = await ref
-          .read(authRepositoryProvider)
-          .isWithdrawalPending();
+      bool pending = false;
+      try {
+        pending = await ref.read(authRepositoryProvider).isWithdrawalPending();
+      } on Object {
+        // A storage read failure must not leave the controller in its busy state.
+      }
       if (epoch != _epoch) return;
       state = AuthState(
         status: pending ? AuthStatus.withdrawalPending : previous.status,

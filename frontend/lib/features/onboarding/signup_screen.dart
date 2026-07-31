@@ -93,8 +93,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   controller: _birthdateController,
                   hint: '2000-01-01',
                   enabled: !auth.isBusy,
-                  readOnly: true,
-                  onTap: _pickBirthDate,
+              readOnly: true,
+              onTap: _pickBirthDate,
+              suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18),
                   onChanged: (_) => setState(() {}),
                 ),
                 if (_errors['birthDate'] case final error?) _FieldError(error),
@@ -187,9 +188,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             marketingAgreed: _agreeMarketing,
           ),
         );
+    if (!mounted) return;
     if (success) {
       ref.read(progressProvider.notifier).setNickname(nickname);
-      if (mounted) context.go('/trip-dna');
+      context.go('/trip-dna');
     }
   }
 
@@ -229,8 +231,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
     if (shouldLogout != true || !mounted) return;
     await ref.read(authControllerProvider.notifier).logout();
+    if (!mounted) return;
     ref.read(progressProvider.notifier).reset();
-    if (mounted) context.go('/splash');
+    context.go('/splash');
   }
 
   String _date(DateTime value) =>
@@ -286,7 +289,7 @@ class _StepProgress extends StatelessWidget {
   }
 }
 
-class _AgreementCheckbox extends StatelessWidget {
+class _AgreementCheckbox extends StatefulWidget {
   const _AgreementCheckbox({
     required this.label,
     required this.value,
@@ -298,17 +301,26 @@ class _AgreementCheckbox extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
 
   @override
+  State<_AgreementCheckbox> createState() => _AgreementCheckboxState();
+}
+
+class _AgreementCheckboxState extends State<_AgreementCheckbox> {
+  var _showFocus = false;
+
+  @override
   Widget build(BuildContext context) {
-    final toggle = onChanged == null ? null : () => onChanged!(!value);
+    final toggle = widget.onChanged == null
+        ? null
+        : () => widget.onChanged!(!widget.value);
     return Semantics(
       container: true,
-      label: label,
-      checked: value,
+      label: widget.label,
+      checked: widget.value,
       button: true,
-      enabled: onChanged != null,
+      enabled: widget.onChanged != null,
       excludeSemantics: true,
       child: FocusableActionDetector(
-        enabled: onChanged != null,
+        enabled: widget.onChanged != null,
         actions: {
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) {
@@ -317,6 +329,7 @@ class _AgreementCheckbox extends StatelessWidget {
             },
           ),
         },
+        onShowFocusHighlight: (value) => setState(() => _showFocus = value),
         child: InkWell(
           onTap: toggle,
           child: Row(
@@ -325,21 +338,23 @@ class _AgreementCheckbox extends StatelessWidget {
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: value ? AppColors.primaryDark : Colors.transparent,
+                  color: widget.value
+                      ? AppColors.primaryDark
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(5),
                   border: Border.all(
-                    color: value
+                    color: widget.value || _showFocus
                         ? AppColors.primaryDark
                         : AppColors.checkboxBorder,
                   ),
                 ),
-                child: value
+                child: widget.value
                     ? const Icon(Icons.check, size: 14, color: Colors.white)
                     : null,
               ),
               const SizedBox(width: 8),
               Text(
-                label,
+                widget.label,
                 style: const TextStyle(fontSize: 13, color: Color(0xFF888888)),
               ),
             ],

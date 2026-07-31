@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../state/auth_controller.dart';
@@ -93,18 +92,27 @@ class SplashScreen extends ConsumerWidget {
                       ),
                       onPressed: auth.isBusy
                           ? null
-                          : () => ref
-                                .read(authControllerProvider.notifier)
-                                .login(),
+                          : () async {
+                              final controller = ref.read(
+                                authControllerProvider.notifier,
+                              );
+                              if (auth.status == AuthStatus.failure) {
+                                await controller.bootstrap();
+                              } else {
+                                await controller.login();
+                              }
+                            },
                       child: auth.isBusy
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text(
-                              '카카오로 시작하기',
-                              style: TextStyle(fontWeight: FontWeight.w600),
+                          : Text(
+                              auth.status == AuthStatus.failure
+                                  ? '다시 시도'
+                                  : '카카오로 시작하기',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
                             ),
                     ),
                   ),

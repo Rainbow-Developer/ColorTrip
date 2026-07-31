@@ -21,6 +21,15 @@ fun dartDefine(name: String): String? {
         ?.takeIf { it.isNotBlank() }
 }
 
+val kakaoNativeAppKey = dartDefine("KAKAO_NATIVE_APP_KEY")
+val buildsRelease = gradle.startParameter.taskNames.any {
+    it.contains("release", ignoreCase = true)
+}
+
+if (buildsRelease && kakaoNativeAppKey == null) {
+    throw GradleException("KAKAO_NATIVE_APP_KEY is required for release builds.")
+}
+
 android {
     namespace = "io.vmonster.colortrip"
     compileSdk = flutter.compileSdkVersion
@@ -41,7 +50,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] =
-            dartDefine("KAKAO_NATIVE_APP_KEY") ?: ""
+            kakaoNativeAppKey ?: ""
     }
 
     buildTypes {
