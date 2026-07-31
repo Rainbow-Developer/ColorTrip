@@ -117,4 +117,5 @@ const verifyLabels = <String, String>{
   'photo': '사진 인증',
   'gps': 'GPS 인증',
   'quiz': 'OX 퀴즈',
+  'qr': 'QR 인증',
 };

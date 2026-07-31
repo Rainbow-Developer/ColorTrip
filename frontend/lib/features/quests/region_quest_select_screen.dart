@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/filter_chip_row.dart';
 import '../../data/models/quest.dart';
@@ -112,7 +113,11 @@ class _RegionQuestSelectScreenState
     final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: const Text('퀘스트'), titleSpacing: 0),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('퀘스트'),
+        titleSpacing: 0,
+      ),
       body: Stack(
         children: [
           Column(
@@ -263,13 +268,11 @@ class _SelectableQuestCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Container(
+            AppNetworkImage(
+              url: quest.imageUrl,
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.imagePlaceholderBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              borderRadius: BorderRadius.circular(8),
             ),
             const SizedBox(width: 10),
             Expanded(

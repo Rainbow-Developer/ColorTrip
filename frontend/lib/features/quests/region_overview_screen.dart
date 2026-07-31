@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../data/models/quest.dart';
 import '../../state/onboarding_tour_notifier.dart';
@@ -59,7 +60,11 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: const Text('여행하기'), titleSpacing: 0),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('여행하기'),
+        titleSpacing: 0,
+      ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
@@ -82,17 +87,12 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
+                // 지역 대표 이미지(TourAPI) — 없으면 기존 placeholder 그대로.
+                AppNetworkImage(
+                  url: region.imageUrl,
                   height: 140,
-                  decoration: BoxDecoration(
-                    color: AppColors.imagePlaceholderBg,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '${region.name} 이미지',
-                    style: const TextStyle(color: AppColors.formPlaceholder),
-                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  placeholderText: '${region.name} 이미지',
                 ),
                 const SizedBox(height: 14),
                 Container(
@@ -242,13 +242,11 @@ class _TripQuestTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
+            AppNetworkImage(
+              url: quest.imageUrl,
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.imagePlaceholderBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              borderRadius: BorderRadius.circular(8),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -316,13 +314,11 @@ class _RecommendedQuestTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
+            AppNetworkImage(
+              url: quest.imageUrl,
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.imagePlaceholderBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              borderRadius: BorderRadius.circular(8),
             ),
             const SizedBox(width: 10),
             Expanded(

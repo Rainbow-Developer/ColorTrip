@@ -46,6 +46,12 @@ dependencies:
   flutter_secure_storage: ^10.3.1
   shared_preferences: ^2.5.5
   image_picker: ^1.2.3
+  # 퀘스트·지역 이미지 표시 (docs/specs/045-quest-region-images)
+  cached_network_image: ^3.4.1
+  # 위치 기반 인증 — 온디바이스 거리 검증, 좌표 서버 미전송 (docs/specs/050-quest-verification)
+  geolocator: ^14.0.2
+  # QR 인증 스캔 (docs/specs/050-quest-verification)
+  mobile_scanner: ^7.0.1
 
 dev_dependencies:
   flutter_test:

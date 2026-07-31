@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/filter_chip_row.dart';
 import '../../core/widgets/quest_type_badge.dart';
 import '../../state/progress_notifier.dart';
@@ -35,7 +36,11 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
     final progress = ref.watch(progressProvider);
 
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: const Text('퀘스트'), titleSpacing: 0),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('퀘스트'),
+        titleSpacing: 0,
+      ),
       body: Column(
         children: [
           Padding(
@@ -57,15 +62,20 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
                     .read(regionRepositoryProvider)
                     .byId(quest.region);
                 final done = progress.isCompleted(quest.id);
+                final typeEmoji = questTypeStyles[quest.type]?.emoji ?? '📍';
                 return ListTile(
                   onTap: () => context.push('/quest/${quest.id}'),
                   tileColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  leading: Text(
-                    questTypeStyles[quest.type]?.emoji ?? '📍',
-                    style: const TextStyle(fontSize: 24),
+                  // 관광지 썸네일(TourAPI) — 이미지가 없으면 기존 유형 이모지 원형 그대로.
+                  leading: AppNetworkImage(
+                    url: quest.imageUrl,
+                    width: 48,
+                    height: 48,
+                    borderRadius: BorderRadius.circular(24),
+                    placeholderEmoji: typeEmoji,
                   ),
                   title: Text(
                     quest.title,

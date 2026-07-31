@@ -67,6 +67,9 @@ LOG_LEVEL=           # 선택: DEBUG/INFO/WARNING/ERROR/CRITICAL (미설정 시 
 TOUR_API_KEY=        # 한국관광공사 TourAPI
 NAVER_API_KEY=       # Naver 지도/지역 API
 KAKAO_API_KEY=       # Kakao 로그인
+GEMINI_API_KEY=      # 사진 AI 인증(Gemini) — 비우면 스텁 판정 (docs/specs/050-quest-verification)
+GEMINI_MODEL=        # 선택: 기본 gemini-2.5-flash
+QR_SECRET_KEY=       # QR 인증 서명 키 — 비우면 JWT_SECRET_KEY에서 파생
 
 # 인증
 JWT_SECRET_KEY=      # JWT(Access/Refresh) 서명 키
@@ -96,7 +99,7 @@ flutter run -d chrome       # 웹(빠른 확인용)
 ```
 
 - **용도**: 다채로울지도 앱 구동. iOS/Android 실행은 각 플랫폼 툴체인(Xcode/Android SDK) 필요. 빠른 확인은 웹(Chrome)으로 가능.
-- **Flutter SDK 미설치 환경(Docker)**: iOS/Android 툴체인 없이 웹 빌드·테스트만 필요할 때 사용합니다.
+- **Flutter SDK 미설치 환경(Docker)**: 컨테이너 이미지(cirruslabs/flutter)에 Android SDK가 포함되어 웹 빌드·테스트뿐 아니라 **APK 빌드**도 가능합니다.
   ```bash
   cd frontend
   docker compose run --rm frontend flutter analyze
@@ -104,6 +107,7 @@ flutter run -d chrome       # 웹(빠른 확인용)
   docker compose run --rm frontend flutter build web
   docker compose run --rm --service-ports frontend flutter run -d web-server --web-hostname=0.0.0.0 --web-port=5000
   ```
+- **Android 에뮬레이터 실행·APK 빌드**: 절차·데모 팁(위치/QR 인증 등)은 [frontend/README.md](frontend/README.md)를 보세요.
 
 ## 프로젝트 구조
 
@@ -169,8 +173,11 @@ flowchart TD
 | **여행 DNA(Travel DNA)** | 여행 성향 질문·선택지 조회, 답변 제출 및 DNA 판정 | `backend/app/trip_dna/` · 스펙 [docs/specs/010-travel-dna/](docs/specs/010-travel-dna/) |
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
-| **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) | `backend/app/maps/` |
+| **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) — 채색 기준: 완료 여행 수 | `backend/app/maps/` · 스펙 [docs/specs/035-journey-map-coloring/](docs/specs/035-journey-map-coloring/) |
+| **홈 추천(home)** | DNA 기반 지역 추천 + 퀘스트 요약 (`GET /home/recommendation`) | `backend/app/home/`, `frontend/lib/features/home/` · 스펙 [docs/specs/040-home-region-recommendation/](docs/specs/040-home-region-recommendation/) |
 | **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈)·완료 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
+| **퀘스트 인증 3종** | 사진 AI(Gemini)·온디바이스 위치·QR 인증 | `backend/app/verifications/`, `backend/app/integrations/vision/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/050-quest-verification/](docs/specs/050-quest-verification/) |
+| **퀘스트·지역 이미지** | TourAPI 이미지 표시·정적 데이터 보강 | `backend/scripts/enrich_frontend_quests.py`, `frontend/lib/core/widgets/app_network_image.dart` · 스펙 [docs/specs/045-quest-region-images/](docs/specs/045-quest-region-images/) |
 | **DB/데이터 모델 기반** | 여행 DNA 설문·퀘스트 진행·지도 진행·타임라인 기록을 위한 백엔드 데이터 모델 | `backend/app/auth/`, `backend/app/quests/`, `backend/app/progress/`, `backend/app/timeline/`, `backend/app/trip_dna/`, `backend/alembic/` · 스펙 [docs/specs/015-database-migration/](docs/specs/015-database-migration/) |
 | **백엔드 공통 로깅** | JSON 앱 로그, 요청 메타데이터 로깅, request id 전파 | `backend/app/core/` · 스펙 [docs/specs/020-backend-logging/](docs/specs/020-backend-logging/) |
 
@@ -201,9 +208,13 @@ flowchart TD
 | `go_router` | `^17.3.0` | 라우팅 |
 | `flutter_riverpod` | `^3.3.2` | 상태관리(전역·서버) |
 | `flutter_localizations` | Flutter SDK | Material 위젯 한국어화(날짜 피커 등) |
-| `dio` | `^5.9.2` | HTTP 클라이언트(현재 설정만) |
+| `dio` | `^5.9.2` | HTTP 클라이언트 |
 | `flutter_form_builder` · `form_builder_validators` | `^10.3.0` · `^11.3.0` | 폼 |
 | `flutter_secure_storage` | `^10.3.1` | 토큰 저장(인증 연동 시) |
+| `image_picker` | `^1.2.3` | 사진 인증(갤러리·카메라) |
+| `cached_network_image` | `^3.4.1` | 퀘스트·지역 이미지(TourAPI) 캐시 표시 |
+| `geolocator` | `^14.0.2` | 위치 인증 — 온디바이스 거리 계산(좌표 비전송) |
+| `mobile_scanner` | `^7.0.1` | QR 인증 스캔 |
 
 ## 코드 스타일
 

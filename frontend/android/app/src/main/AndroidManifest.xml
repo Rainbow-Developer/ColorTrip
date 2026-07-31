@@ -1,8 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 백엔드 API·TourAPI 이미지 로드 (release 빌드에도 필요) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- QR 스캔(mobile_scanner). image_picker 카메라는 인텐트 방식이라 권한 불필요 -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- 위치 기반 퀘스트 인증 — 반경 판정용 정밀 위치. 좌표는 단말 내에서만 사용하고
+         서버로 전송하지 않는다 (docs/specs/050-quest-verification/location-law-review.md) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="colortrip"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

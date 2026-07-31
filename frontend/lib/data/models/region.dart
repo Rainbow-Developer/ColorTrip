@@ -4,9 +4,14 @@ class Region {
     required this.id,
     required this.name,
     required this.path,
+    this.imageUrl,
   });
 
   final String id;
   final String name;
   final String path;
+
+  /// 지역 대표 이미지(TourAPI) — 없으면 placeholder 표시
+  /// (docs/specs/045-quest-region-images).
+  final String? imageUrl;
 }
