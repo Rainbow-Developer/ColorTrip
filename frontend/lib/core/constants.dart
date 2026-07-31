@@ -114,6 +114,19 @@ const questTypeStyles = <String, QuestTypeStyle>{
   ),
 };
 
+/// 퀘스트 유형 태그 배색 — 원형 아이콘([quest_type_*.svg])에 쓴 연한 배경/선 색 그대로.
+/// 퀘스트 목록·여행 목록 카드에서 공용으로 쓴다.
+const questTypeIconColors = <String, ({Color background, Color foreground})>{
+  'nature': (background: Color(0xFFE8F5E9), foreground: Color(0xFF43A047)),
+  'food': (background: Color(0xFFFFF3E0), foreground: Color(0xFFFB8C00)),
+  'history': (background: Color(0xFFEDE7F6), foreground: Color(0xFF7E57C2)),
+  'active': (background: Color(0xFFE3F2FD), foreground: Color(0xFF1E88E5)),
+  'healing': (background: Color(0xFFFCE4EC), foreground: Color(0xFFD81B60)),
+};
+
+/// 퀘스트/여행 목록 카드 고정 높이 — 값을 바꾸면 카드·좌측 썸네일(4:3) 크기가 같이 바뀐다.
+const double questCardHeight = 100;
+
 const verifyLabels = <String, String>{
   'photo': '사진 인증',
   'gps': 'GPS 인증',

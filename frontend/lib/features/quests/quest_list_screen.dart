@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/quest_type_badge.dart';
+import '../../core/widgets/chungbuk_map.dart';
+import '../../data/models/quest.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
@@ -69,7 +70,7 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: SizedBox(
-              height: 104,
+              height: 110,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -90,35 +91,18 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: quests.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
+              separatorBuilder: (_, _) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 final quest = quests[index];
                 final region = ref
                     .read(regionRepositoryProvider)
                     .byId(quest.region);
                 final done = progress.isCompleted(quest.id);
-                return ListTile(
+                return _QuestCard(
+                  quest: quest,
+                  regionName: region?.name ?? quest.region,
+                  done: done,
                   onTap: () => context.push('/quest/${quest.id}'),
-                  tileColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  leading: Text(
-                    questTypeStyles[quest.type]?.emoji ?? '📍',
-                    style: const TextStyle(fontSize: 24),
-                  ),
-                  title: Text(
-                    quest.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text('📍 ${region?.name ?? quest.region}'),
-                  trailing: done
-                      ? const Icon(
-                          Icons.check_circle,
-                          color: AppColors.primaryDark,
-                        )
-                      : QuestTypeBadge(type: quest.type),
                 );
               },
             ),
@@ -182,6 +166,148 @@ class _QuestTypeOptionTile extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuestCard extends StatelessWidget {
+  const _QuestCard({
+    required this.quest,
+    required this.regionName,
+    required this.done,
+    required this.onTap,
+  });
+
+  final Quest quest;
+  final String regionName;
+  final bool done;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final typeStyle = questTypeStyles[quest.type];
+    final tagColors = questTypeIconColors[quest.type];
+    final regionColor = mapFillColors(quest.region, 1);
+
+    return SizedBox(
+      height: questCardHeight,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            onTap: onTap,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  child: AspectRatio(
+                    aspectRatio: 4 / 3,
+                    child: Container(
+                      color: AppColors.imagePlaceholderBg,
+                      alignment: Alignment.center,
+                      child: Text(
+                        typeStyle?.emoji ?? '📍',
+                        style: const TextStyle(fontSize: 32),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          quest.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _Tag(
+                              label: regionName,
+                              background: regionColor.background,
+                              foreground: regionColor.label,
+                            ),
+                            if (tagColors != null && typeStyle != null) ...[
+                              const SizedBox(width: 6),
+                              _Tag(
+                                label: typeStyle.label,
+                                background: tagColors.background,
+                                foreground: tagColors.foreground,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (done)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 14),
+                    child: Center(
+                      child: Icon(Icons.check_circle, color: AppColors.primaryDark),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag({
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: foreground,
         ),
       ),
     );
