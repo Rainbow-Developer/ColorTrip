@@ -67,7 +67,7 @@ class ProgressNotifier extends Notifier<ProgressState> {
     );
 
     // 이 퀘스트로 지역 여행을 방금 완주했다면 로컬 완주 횟수를 1 올린다 — 지도 채색 기준
-    // ([035-journey-map-coloring]). 완주 "시점"에 누적해야, 완료한 지역에 퀘스트를 더 담아
+    // ([055-journey-map-coloring]). 완주 "시점"에 누적해야, 완료한 지역에 퀘스트를 더 담아
     // (KAN-46 재방문) 선택 집합이 다시 미완료가 되어도 이미 칠한 채색이 사라지지 않는다.
     if (!wasTripCompleted &&
         next.tripStatusOf(quest.region) == RegionTripStatus.completed) {
@@ -82,7 +82,7 @@ class ProgressNotifier extends Notifier<ProgressState> {
   /// 서버(`GET /users/me/map`) 진행도를 로컬 상태에 반영한다([020-frontend-map-sync]).
   /// 서버가 값을 준 지역만 덮어쓰고, 응답에 없는 지역은 기존 로컬 값을 유지한다.
   /// [serverRegionTripCount]는 지역별 완료 여행 수(completed_journey_count) — 지도 채색
-  /// 기준이다([035-journey-map-coloring]). 로컬 파생값과의 max 병합은 저장 시점이 아니라
+  /// 기준이다([055-journey-map-coloring]). 로컬 파생값과의 max 병합은 저장 시점이 아니라
   /// 조회 시점([ProgressState.completedTripCountOf])에 하므로 여기서는 그대로 담는다.
   void syncRegionProgressFromServer(
     Map<String, int> serverRegionProgress, {

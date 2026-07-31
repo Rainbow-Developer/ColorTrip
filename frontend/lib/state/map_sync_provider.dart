@@ -17,7 +17,7 @@ final mapSyncProvider = FutureProvider.autoDispose<void>((ref) async {
       final id = regionIdByName(item.regionName);
       if (id != null) {
         serverRegionProgress[id] = item.completedCount;
-        // 완료 여행 수는 지도 채색 기준([035-journey-map-coloring]).
+        // 완료 여행 수는 지도 채색 기준([055-journey-map-coloring]).
         serverRegionTripCount[id] = item.completedJourneyCount;
       }
     }

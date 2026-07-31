@@ -114,18 +114,18 @@ class ProgressState {
   /// 지역별 완료 퀘스트 개수 — 로컬 완료 시 즉시 +1(낙관적 갱신), 앱 진입 시 백엔드
   /// (`GET /users/me/map`)의 completed_count로 덮어써 동기화한다([020-frontend-map-sync],
   /// `ProgressNotifier.syncRegionProgressFromServer`). 지도 채색 기준에서는 빠졌지만
-  /// ([035-journey-map-coloring]) 다른 통계·동기화에 그대로 쓰여 유지한다.
+  /// ([055-journey-map-coloring]) 다른 통계·동기화에 그대로 쓰여 유지한다.
   final Map<String, int> regionProgress;
 
   /// 지역별 완료 여행(여정) 수 — 백엔드(`GET /users/me/map`)의 completed_journey_count와
-  /// 동기화한 서버 값이다([035-journey-map-coloring]). 로컬에서 막 완주한 여행은
+  /// 동기화한 서버 값이다([055-journey-map-coloring]). 로컬에서 막 완주한 여행은
   /// [completedTripCountOf]가 max 병합으로 반영하므로 여기에는 서버 값만 담는다.
   final Map<String, int> regionTripCount;
 
   /// 지역별 로컬 누적 완주 횟수 — 여행을 완주한 **시점에** 1씩 늘린다
   /// (`ProgressNotifier.completeQuest`). 현재 선택 집합의 완주 여부로 파생하지 않는 이유:
   /// 완료한 지역에 퀘스트를 더 담으면(KAN-46 재방문) 선택 집합이 다시 미완료가 되어
-  /// 이미 칠해진 채색이 사라지기 때문이다([035-journey-map-coloring]).
+  /// 이미 칠해진 채색이 사라지기 때문이다([055-journey-map-coloring]).
   final Map<String, int> localTripCompletions;
 
   bool isCompleted(String questId) => completedQuestIds.contains(questId);
@@ -140,13 +140,13 @@ class ProgressState {
 
   /// 완료 여행 수가 이 값 이상이면 채도 100% — 퀘스트 기준(6개)일 때와 같은 이유로 모든
   /// 지역에 같은 기준선을 쓰고, 여행 1회 ≈ 퀘스트 여러 개이므로 체감 진행 속도가 비슷하게
-  /// 6보다 낮은 3을 쓴다([035-journey-map-coloring] 의사결정).
+  /// 6보다 낮은 3을 쓴다([055-journey-map-coloring] 의사결정).
   static const _tripSaturationCap = 3;
 
   /// 지역에서 완료한 여행 수(표시용) — 서버 동기화 값([regionTripCount])과 로컬 누적
   /// 완주 횟수([localTripCompletions])의 max 병합이다. FE 정적 퀘스트 완료는 서버에
   /// 기록되지 않아 서버 값으로 덮어쓰면 로컬 채색이 사라지기 때문이다
-  /// ([035-journey-map-coloring] 의사결정).
+  /// ([055-journey-map-coloring] 의사결정).
   int completedTripCountOf(String regionId) {
     return math.max(
       regionTripCount[regionId] ?? 0,
@@ -156,7 +156,7 @@ class ProgressState {
 
   /// 지역의 채색 진하기(0.0~1.0) — 그 지역에서 완료한 여행 수([completedTripCountOf])를
   /// [_tripSaturationCap]으로 나눈 비율이다. "여행을 완주할수록 지역이 진해지는" 경험을
-  /// 위해 완료 퀘스트 개수 기준에서 전환했다([035-journey-map-coloring]).
+  /// 위해 완료 퀘스트 개수 기준에서 전환했다([055-journey-map-coloring]).
   double regionSaturation(String regionId) {
     return (completedTripCountOf(regionId) / _tripSaturationCap).clamp(
       0.0,
@@ -166,7 +166,7 @@ class ProgressState {
 
   /// 여행을 1회 이상 완료한 지역 수 — "완료 지역" 통계에서 쓴다. 채도 100%(cap회) 기준은
   /// "한 번이라도 완주한 지역"이라는 직관에 비해 과도하게 엄격해 1회 이상으로 정의한다
-  /// ([035-journey-map-coloring] 의사결정).
+  /// ([055-journey-map-coloring] 의사결정).
   int get completedRegionCount =>
       kRegions.where((r) => completedTripCountOf(r.id) >= 1).length;
 

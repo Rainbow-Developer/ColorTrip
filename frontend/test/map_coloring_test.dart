@@ -1,5 +1,5 @@
 /// 지도 채색 기준 전환(완료 퀘스트 개수 → 완료 여행 수) 검증
-/// ([docs/specs/035-journey-map-coloring]).
+/// ([docs/specs/055-journey-map-coloring]).
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';

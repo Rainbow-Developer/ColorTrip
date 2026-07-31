@@ -25,6 +25,7 @@ os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-at-least-32-bytes-long")
 os.environ.setdefault("KAKAO_REST_API_KEY", "test-kakao-rest-api-key")
 os.environ.setdefault("KAKAO_REDIRECT_URI", "http://localhost:3000/auth/kakao/callback")
+os.environ.setdefault("KAKAO_APP_ID", "12345")
 os.environ.setdefault("UPLOAD_DIR", os.path.join(tempfile.gettempdir(), "colortrip-test-uploads"))
 
 
@@ -37,6 +38,7 @@ class MockKakaoClient:
     ) -> None:
         self._token_users = token_users
         self._code_tokens = code_tokens or {}
+        self.validated_tokens: list[str] = []
         self.requested_tokens: list[str] = []
         self.exchanged_codes: list[str] = []
 
@@ -52,6 +54,13 @@ class MockKakaoClient:
             )
         return token
 
+    async def validate_access_token(self, access_token: str) -> None:
+        self.validated_tokens.append(access_token)
+        if access_token not in self._token_users:
+            from app.core.exceptions import AppException, ErrorCode
+
+            raise AppException(ErrorCode.SOCIAL_AUTH_ERROR, "Kakao token is invalid.")
+
     async def get_user_info(self, access_token: str) -> Any:
         self.requested_tokens.append(access_token)
         user = self._token_users.get(access_token)
@@ -66,6 +75,7 @@ class MockKakaoClient:
             social_id=user["social_id"] or "",
             email=user.get("email"),
             nickname=user.get("nickname"),
+            profile_image=user.get("profile_image"),
         )
 
 
@@ -77,16 +87,19 @@ def mock_kakao_client() -> MockKakaoClient:
                 "social_id": "kakao-user-1",
                 "email": "one@example.com",
                 "nickname": "one",
+                "profile_image": "https://example.com/one.png",
             },
             "kakao-token-2": {
                 "social_id": "kakao-user-1",
                 "email": "one@example.com",
                 "nickname": "one-restored",
+                "profile_image": "https://example.com/two.png",
             },
             "kakao-token-unknown": {
                 "social_id": "kakao-user-unknown",
                 "email": "unknown@example.com",
                 "nickname": "unknown",
+                "profile_image": None,
             },
         },
         code_tokens={"valid-code": "kakao-token-1"},

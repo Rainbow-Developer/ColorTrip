@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | 기능명 | 지도 채색 기준 전환 (완료 퀘스트 개수 → 완료 여행 수) |
-| Spec 폴더 | `docs/specs/035-journey-map-coloring/` |
+| Spec 폴더 | `docs/specs/055-journey-map-coloring/` |
 | 영역 | 공통 (backend + frontend) |
 | 작성자 | Claude Code (KAN-58) |
 | 작성일 | 2026-07-30 |

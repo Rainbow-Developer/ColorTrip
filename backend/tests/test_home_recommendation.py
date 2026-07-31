@@ -10,9 +10,10 @@ from httpx import AsyncClient
 
 from app.auth.models import User
 from app.core.database import AsyncSessionLocal
+from app.home import service as home_service
 from app.quests.models import Quest
 from app.regions.models import Region
-from tests.helpers import auth_headers, login
+from tests.helpers import auth_headers, complete_auth_headers, login
 
 GUGYEONG_THUMB = "https://img.example.com/gugyeong.jpg"
 CHEONGNAMDAE_THUMB = "https://img.example.com/cheongnamdae.jpg"
@@ -92,9 +93,15 @@ async def _set_user_dna(user_id: UUID, dna: str) -> None:
 
 
 async def _login_with_dna(client: AsyncClient, dna: str) -> dict[str, str]:
+    """온보딩까지 마친 헤더를 만들고 대표 DNA를 원하는 값으로 덮어쓴다.
+
+    도메인 API는 온보딩 완료 전 403(ONBOARDING_REQUIRED)이므로 온보딩을 거쳐야 한다
+    (KAN-53). `complete_auth_headers`가 dna를 nature로 세팅하니 그 뒤에 덮어쓴다.
+    """
     data = await login(client)
+    headers = await complete_auth_headers(client, data)
     await _set_user_dna(UUID(data["user"]["id"]), dna)
-    return {"Authorization": f"Bearer {data['access_token']}"}
+    return headers
 
 
 async def _complete_journey(
@@ -153,20 +160,26 @@ async def test_recommendation_uses_user_dna(client: AsyncClient) -> None:
 
 
 async def test_recommendation_defaults_to_nature_without_dna(client: AsyncClient) -> None:
-    """DNA 미판정 유저는 기본 카테고리(nature) 기준으로 추천받는다."""
+    """DNA 미판정 유저는 기본 카테고리(nature) 기준으로 추천받는다.
+
+    DNA가 없는 유저는 온보딩 게이트(`app/auth/dependencies.py`, KAN-53)에 막혀 HTTP로
+    도달할 수 없으므로 서비스 계층에서 직접 검증한다.
+    """
     seed = await _seed_home_fixture()
-    headers = await auth_headers(client)  # dna 미설정 유저
+    data = await login(client)
+    user_id = UUID(data["user"]["id"])
 
-    data = await _get_recommendation(client, headers)
+    async with AsyncSessionLocal() as session:
+        result = await home_service.get_home_recommendation(session, user_id=user_id)
 
-    assert data["dna_category"] == "nature"
-    assert data["region"]["id"] == seed["cheongju_id"]
-    assert data["region"]["image_url"] == CHEONGNAMDAE_THUMB
+    assert result.dna_category == "nature"
+    assert str(result.region.id) == seed["cheongju_id"]
+    assert result.region.image_url == CHEONGNAMDAE_THUMB
 
     # 지역 퀘스트가 5개여도 요약은 최대 3개, 전부 DNA 일치(nature)로 채워진다.
-    assert len(data["quests"]) == 3
-    assert all(q["category"] == "nature" for q in data["quests"])
-    assert data["quests"][0]["title"] == "청남대 산책"  # 썸네일 보유 우선
+    assert len(result.quests) == 3
+    assert all(q.category == "nature" for q in result.quests)
+    assert result.quests[0].title == "청남대 산책"  # 썸네일 보유 우선
 
 
 async def test_recommendation_deprioritizes_completed_regions(client: AsyncClient) -> None:

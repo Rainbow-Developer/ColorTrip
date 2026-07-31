@@ -36,7 +36,7 @@ async def count_completed_journeys_by_region(
 ) -> dict[UUID, int]:
     """사용자가 완료한 여정 수를 region_id별로 집계한다 (soft delete 제외).
 
-    지도 채색 기준(완료 여행 수) — docs/specs/035-journey-map-coloring/plan.md
+    지도 채색 기준(완료 여행 수) — docs/specs/055-journey-map-coloring/plan.md
     """
     stmt = (
         select(Journey.region_id, func.count(Journey.id))

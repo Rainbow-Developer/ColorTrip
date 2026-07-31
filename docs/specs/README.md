@@ -25,14 +25,15 @@ docs/specs/
 |------|-------------------------------------|
 | [000-frontend-app](000-frontend-app/) | Flutter 앱 프로토타입/프론트엔드               |
 | [000-quest](000-quest/) | 충북 시·군 퀘스트 조회 기반                    |
-| [005-auth-member](005-auth-member/) | Kakao 인증, JWT, 회원 탈퇴/복구             |
+| [005-auth-member](005-auth-member/) | 이전 Kakao 인증·JWT·7일 복구 정책 구현 기록 (035가 대체) |
 | [010-journey](010-journey/) | 여행 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈) |
 | [010-travel-dna](010-travel-dna/) | 여행 DNA 설문·판정 |
 | [015-database-migration](015-database-migration/) | 핵심 데이터 모델 Alembic 마이그레이션            |
 | [020-backend-logging](020-backend-logging/) | 백엔드 공통 JSON 로깅·요청 로깅 |
 | [025-travel-timeline](025-travel-timeline/) | 여행 타임라인 조회 API |
 | [030-share-card](030-share-card/) | 여행 공유 카드 API |
-| [035-journey-map-coloring](035-journey-map-coloring/) | 지도 채색 기준 전환(완료 여행 수) |
+| [035-kakao-auth-integration](035-kakao-auth-integration/) | Kakao Flutter SDK·JWT·온보딩·탈퇴 통합 인증 |
 | [040-home-region-recommendation](040-home-region-recommendation/) | 홈 DNA 지역 추천 + 퀘스트 요약 |
 | [045-quest-region-images](045-quest-region-images/) | 퀘스트·지역 이미지(TourAPI) |
 | [050-quest-verification](050-quest-verification/) | 퀘스트 인증 3종(사진 AI·위치·QR) + 위치정보법 검토 |
+| [055-journey-map-coloring](055-journey-map-coloring/) | 지도 채색 기준 전환(완료 여행 수) |

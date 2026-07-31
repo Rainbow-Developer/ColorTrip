@@ -5,7 +5,14 @@ from uuid import UUID
 
 from httpx import AsyncClient
 
-from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, login, seed_quest_fixture
+from tests.helpers import (
+    DODAM_LAT,
+    DODAM_LNG,
+    auth_headers,
+    complete_auth_headers,
+    login,
+    seed_quest_fixture,
+)
 
 
 async def _seed_map_fixture(user_id: UUID) -> dict[str, str]:
@@ -39,7 +46,7 @@ async def test_my_map_returns_all_regions(client: AsyncClient) -> None:
     """방문한 지역·미방문 지역 모두 반환하고 completed_count가 정확해야 한다."""
     data = await login(client)
     user_id = UUID(data["user"]["id"])
-    headers = {"Authorization": f"Bearer {data['access_token']}"}
+    headers = await complete_auth_headers(client, data)
     seed = await _seed_map_fixture(user_id)
 
     response = await client.get("/api/v1/users/me/map", headers=headers)
@@ -56,7 +63,7 @@ async def test_my_map_returns_all_regions(client: AsyncClient) -> None:
     assert by_region[seed["cheongju_id"]]["completed_count"] == 0
     assert by_region[seed["cheongju_id"]]["first_colored_at"] is None
 
-    # 완료한 여정이 없으므로 채색 기준값은 모두 0이다 (035-journey-map-coloring).
+    # 완료한 여정이 없으므로 채색 기준값은 모두 0이다 (055-journey-map-coloring).
     assert all(item["completed_journey_count"] == 0 for item in items)
 
 
@@ -66,8 +73,8 @@ async def test_my_map_only_returns_my_progress(client: AsyncClient) -> None:
     other_data = await login(client, "kakao-token-unknown")
 
     owner_id = UUID(owner_data["user"]["id"])
-    owner_headers = {"Authorization": f"Bearer {owner_data['access_token']}"}
-    other_headers = {"Authorization": f"Bearer {other_data['access_token']}"}
+    owner_headers = await complete_auth_headers(client, owner_data)
+    other_headers = await complete_auth_headers(client, other_data)
 
     seed = await _seed_map_fixture(owner_id)
 
