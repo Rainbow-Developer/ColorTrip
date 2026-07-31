@@ -3,13 +3,13 @@
 > 이 문서는 Flutter 프로토타입과 화면 개발의 구현 기록이다. Kakao SDK, ColorTrip JWT,
 > 서버 온보딩, secure storage와 Android 실제 E2E는
 > [035 Kakao 통합 인증](../035-kakao-auth-integration/implementation.md)에서 완료했다.
-> 여행·퀘스트·지도·타임라인의 메모리 상태 교체는
+> 여행·퀘스트·지도·타임라인의 서버 상태 연동과 실제 E2E는
 > [040 서버 영속화](../040-domain-state-persistence/implementation.md)에서 추적한다.
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 진행 중 (U0~U4 1차 구현 완료 — 최소 버전, Figma 기반 화면 정합 진행 중, 추적 티켓 KAN-021) |
-| 최종 업데이트 | 2026-07-23 |
+| 상태 | 진행 중 (U0~U4·인증·도메인 서버 연동 완료, KAN-55 실제 E2E 진행 중) |
+| 최종 업데이트 | 2026-07-28 |
 
 ## 코드 유실 (중요 — 2026-07-05 재구현으로 해소)
 
@@ -36,20 +36,21 @@
 
 - [ ] 나머지 화면(마이 등)의 Figma 대조 — 스플래시·여행 목록·회원가입·퀘스트 상세·여행 타임라인·사진/GPS 인증·내 정보 수정·홈(지도)·공유 카드·지역 개요/퀘스트 선택은 Figma 스펙으로 교정 완료, 나머지는 여전히 프로토타입(`prototype.dc.html`) 기준 1차 버전
 - [ ] 퀘스트 상세의 보상(P) 표시 — 2026-07-08 Figma 스펙엔 보상 노출이 없어 화면에서 제거함. 노출 위치를 다시 정하면 복원 필요
-- [ ] 퀘스트 인증 실제 카메라/GPS 연동 — 사진 선택·GPS 위치 확인은 UI만 흉내(사진은 탭하면 바로 "선택됨" 처리, GPS는 정적 진행바), 실제 센서/권한 연동은 후속 작업
+- [x] 퀘스트 인증 사진 선택·업로드와 GPS 실제 위치·권한 연동 — 서버 검증 성공 후에만 완료 상태 반영
 - [ ] 공유 카드의 실제 이미지 내보내기·링크 생성·OS 공유 시트 연동 — 지금은 버튼 탭 시 토스트만 표시
 - [ ] 퀘스트 선택 화면의 검색은 제목 부분 일치 필터만 구현(간단한 클라이언트 필터, 실 검색엔진 아님)
 - [ ] dev PR
 - [ ] iOS 실제 로그인·실기기 검증. Android emulator release build와 실제 Kakao E2E는 [035 구현 결과](../035-kakao-auth-integration/implementation.md)에서 통과했다.
-- [ ] 여행·퀘스트·타임라인 서버 영속화와 앱 재시작 복원 — [040](../040-domain-state-persistence/)
+- [ ] 여행·퀘스트·타임라인 서버 연동 구현 완료, 실제 계정 앱 재시작 복원 E2E 확인 — [040](../040-domain-state-persistence/)
 - [ ] `pre-commit` 프레임워크·git 훅 설치(`uv tool install pre-commit && pre-commit install --install-hooks`) — Claude Code 자체 훅은 별개로 이미 동작 중
 
 ## 알려진 한계 / TODO
 
-- **후속 교체 대상**: Kakao 로그인·JWT·프로필·DNA 온보딩은 [035](../035-kakao-auth-integration/)에서 실제 연동했다. 퀘스트 데이터와 일부 진행 상태, 사진/GPS 인증은 여전히 정적·모의 구현이며 해당 도메인 API 연동은 별도 범위다.
-- **서버 영속화 계획**: 여행 선택·완료 퀘스트·타임라인은 현재 `ProgressState` 메모리 상태라
-  앱 재시작 시 초기화된다. [040](../040-domain-state-persistence/)에서 기존 여정·진행·지도·타임라인
-  API에 연결하고 메모리 SOT를 제거한다.
+- **정적 표시 카탈로그**: 220개 퀘스트의 문구·배치는 Flutter 정적 데이터를 유지한다.
+  `slug`·`client_key`로 서버 UUID에 매핑하며 migration snapshot과 계약 테스트로 불일치를 막는다.
+- **서버 상태와 호환 projection**: 여행 선택·완료 퀘스트·지도·타임라인의 SOT는 서버다.
+  `DomainController`가 앱 부팅과 쓰기 성공 후 snapshot을 조회해 기존 화면이 소비하는
+  `ProgressState`에 투영한다. 네트워크 오류는 빈 목록으로 바꾸지 않고 재시도 화면을 표시한다.
 - **커밋 전 검사는 네이티브 유지**: 프론트엔드 검사는 기존처럼 **pre-commit 프레임워크의 `dart format`·`flutter analyze` 훅**을 그대로 쓴다(백엔드가 `uv run`으로 네이티브 실행하는 것과 동일한 패턴). 이 훅은 flutter/dart가 시스템 PATH(brew `/opt/homebrew/bin` 등)에 있어야 동작하므로, 작업 전 Flutter SDK를 네이티브로 설치한다(Docker는 웹 빌드/테스트 보조용으로만 `frontend/Dockerfile`·`frontend/docker-compose.yml`에 남겨둠).
 - **반응형 범위**: KAN-021 티켓에 "600px 브레이크포인트 웹 반응형"이 언급됐으나, 이 앱은 Flutter 모바일 앱이 SOT이므로 기존 `plan.md`의 **모바일 단일 폼팩터(392×812 기준, 상대 단위로 확장 가능하게 구현)** 요구사항을 그대로 따른다. 별도의 웹 브레이크포인트 전략은 도입하지 않는다.
 - ~~**프로토타입 버전 차이**: 원본 zip의 `다채로울지도.dc.html`은 travel 화면을 "진행 중/지난 여행"으로 재설계하다 만 미완성본이라, 일관된 `다채로울지도-standalone-src.dc.html`(travel = 유형 필터 퀘스트 목록)을 채택했다.~~ → **2026-07-08 해결**: 사용자가 공유한 Figma 와이어프레임이 정확히 이 "진행 중/지난 여행" 구조였음이 확인되어, `features/travel/travel_list_screen.dart`로 구현하고 하단 탭 순서도 여행/홈/마이로 변경함(아래 변경 이력 참고). 유형 필터 평면 목록(`quest_list_screen.dart`)은 폐기하지 않고 여행 목록 화면의 "전체 퀘스트" 버튼으로 보조 진입점을 남겼다.
@@ -78,3 +79,7 @@
 | 2026-07-21 | 지도 색칠을 3단계(0/1/2+, 2+는 파랑 `#378ADD`)에서 **연속 채도**로 변경(KAN-44, dev 브랜치 반영분 — 이 문서에는 그동안 미기록). `ProgressState.regionSaturation(regionId)`가 그 지역 완료 퀘스트 개수를 전체 퀘스트 개수로 나눈 비율(0.0~1.0)을 반환하고, `mapFillColors`가 회색(`mapEmpty`)→진초록(`primaryDark`) 사이를 `Color.lerp`로 보간한다. 완료 개수(`ProgressState.regionProgress`)는 `ProgressNotifier.completeQuest`에서 즉시 +1(낙관적 갱신)되고, 앱 진입 시 백엔드 `GET /users/me/map`의 `completed_count`로 동기화된다(`syncRegionProgressFromServer`, [020-frontend-map-sync]) — KAN-31의 지도 API 연동과 KAN-44의 연속 채도를 이번에 재정합함. `MapLegend`도 3단계 스와치 대신 0%~100% 그라데이션 바로 변경 |
 | 2026-07-21 | `regionSaturation` 계산 기준 변경(사용자 요청) — 지역 전체 퀘스트 개수 대비 비율 대신, **완료 개수 ÷ 6(고정값)**, 6개 이상이면 100%로 클램프. 지역마다 정적 퀘스트 개수가 1~3개로 제각각이라 비율 기준으로는 퀘스트가 적은 지역만 완료 1~2개로 바로 100%가 돼버리는 문제가 있었음(테스트로 확인). 고정 기준선 6은 `ProgressState._saturationCap`. `completed_count`가 재방문(KAN-46)으로 정적 퀘스트 개수를 넘어 계속 늘 수 있다는 점과도 더 맞음 |
 | 2026-07-23 | KAN-28 브랜치와 dev 병합 정합: 홈 추천 여행지 배너를 코치마크(KAN-040)·연속 채도 지도(KAN-44) 구조의 새 홈 레이아웃(스탯 아래) 위치에 유지, 퀘스트 선택의 "여행 시작하기/퀘스트 추가하기" 버튼(KAN-42·46)이 새 여행일 때만 이름·기간 입력 시트(KAN-28)를 거치도록 `_startTrip`으로 연결(이미 시작·완료된 지역은 시트 없이 추가). 참고: KAN-44의 채도 기준선(`_saturationCap`=6) 논의 당시 지역별 퀘스트가 1~3개였으나 현재는 TourAPI 확장으로 지역당 20개 |
+| 2026-07-31 | KAN-59 추천 서버 연동: 홈은 `GET /regions/unvisited`의 첫 후보를 표시하고, 로딩 시 숨김·오류 시 재시도를 제공한다. 여행 시작 전 지역 개요는 `GET /quests/recommended?region_id=…&size=2` 결과를 기존 `client_key` 상세 라우트로 연결한다. 여정 생성/수정/완료 뒤 KAN-55의 서버 스냅샷 갱신에 종속해 추천도 재조회한다. |
+| 2026-07-31 | Android emulator E2E 회귀 수정: 지역 개요의 추천 조회는 전체 페이지 수집기가 아니라 `size=2` 단일 응답을 사용한다. 따라서 화면에는 서버 추천 2건만 표시되고 추가 페이지 요청이 발생하지 않는다. |
+| 2026-07-27 | Kakao SDK·JWT·서버 온보딩·secure storage·Android 실제 E2E가 035에서 완료되어 초기 UI 스텁 설명과 플랫폼 검증 상태를 현재 범위에 맞게 정리 |
+| 2026-07-28 | KAN-55에서 stable catalog·여정/퀘스트/지도/타임라인 서버 snapshot·사진 업로드·실제 GPS 위치를 Flutter에 연결. 실제 계정 재시작 복원 E2E는 진행 중 |

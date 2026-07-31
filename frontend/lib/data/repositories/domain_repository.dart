@@ -188,11 +188,16 @@ class DioDomainRepository implements DomainRepository {
     int size = 2,
   }) async {
     final catalog = await _loadCatalog();
-    final items = await _fetchPaged(
+    final response = await _dio.get(
       '/quests/recommended',
-      query: {'region_id': catalog.regionId(regionKey)},
-      size: size,
+      queryParameters: {
+        'region_id': catalog.regionId(regionKey),
+        'page': 1,
+        'size': size,
+      },
     );
+    final items = (_data(response)['items'] as List)
+        .cast<Map<String, dynamic>>();
     return items
         .map((item) => item['client_key'] as String?)
         .whereType<String>()

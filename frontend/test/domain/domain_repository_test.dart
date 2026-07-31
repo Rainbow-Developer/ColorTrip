@@ -203,6 +203,59 @@ void main() {
     expect(quests, ['dy1']);
   });
 
+  test(
+    'keeps the requested recommendation size instead of fetching later pages',
+    () async {
+      final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+      var recommendedCalls = 0;
+      dio.httpClientAdapter = _Adapter((options) {
+        if (options.path == '/regions') {
+          return _json(
+            '{"data":[{"id":"region-uuid","name":"단양군","slug":"danyang",'
+            '"area_code":"2","center_lat":null,"center_lng":null}]}',
+          );
+        }
+        if (options.path == '/quests') {
+          return _json(
+            '{"data":{"items":[{"id":"quest-1","region_id":"region-uuid",'
+            '"client_key":"dy1","title":"첫 퀘스트","category":"nature",'
+            '"mission_type":"photo","lat":null,"lng":null,"thumbnail_url":null},'
+            '{"id":"quest-2","region_id":"region-uuid",'
+            '"client_key":"dy2","title":"둘째 퀘스트","category":"nature",'
+            '"mission_type":"photo","lat":null,"lng":null,"thumbnail_url":null}],'
+            '"page":1,"size":100,"total":2}}',
+          );
+        }
+        if (options.path == '/quests/recommended') {
+          recommendedCalls++;
+          expect(options.queryParameters, {
+            'region_id': 'region-uuid',
+            'page': 1,
+            'size': 2,
+          });
+          return _json(
+            '{"data":{"items":[{"id":"quest-1","region_id":"region-uuid",'
+            '"client_key":"dy1","title":"첫 퀘스트","category":"nature",'
+            '"mission_type":"photo","lat":null,"lng":null,"thumbnail_url":null,'
+            '"is_dna_match":true},{"id":"quest-2","region_id":"region-uuid",'
+            '"client_key":"dy2","title":"둘째 퀘스트","category":"nature",'
+            '"mission_type":"photo","lat":null,"lng":null,"thumbnail_url":null,'
+            '"is_dna_match":true}],"applied_category":"nature",'
+            '"page":1,"size":2,"total":3}}',
+          );
+        }
+        throw StateError('unexpected ${options.method} ${options.path}');
+      });
+
+      final quests = await DioDomainRepository(
+        dio,
+      ).fetchRecommendedQuestKeys(regionKey: 'danyang', size: 2);
+
+      expect(quests, ['dy1', 'dy2']);
+      expect(recommendedCalls, 1);
+    },
+  );
+
   test('submits server quest UUID and real verification evidence', () async {
     final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
     late RequestOptions verificationRequest;
