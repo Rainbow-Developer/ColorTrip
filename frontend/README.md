@@ -61,6 +61,47 @@ adb install -r frontend/build/app/outputs/flutter-apk/app-debug.apk
 
 > 실기기 테스트: 같은 Wi-Fi에서 로컬 API에 붙는 방법은 [docs/conventions/infra-deploy.md](../docs/conventions/infra-deploy.md) 결정(LAN IP) 참고 — dio_client의 호스트를 LAN IP로 바꿔야 합니다.
 
+## 실기기(내 핸드폰)에 설치
+
+에뮬레이터용 기본 주소(`10.0.2.2`)는 **실기기에서 접속되지 않습니다.** 실기기는 아래 중 하나로 API 주소를 정해 빌드하세요.
+
+| 상황 | `API_BASE_URL` |
+|------|----------------|
+| 내 PC의 로컬 백엔드에 붙이기 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` (예: `http://192.168.0.3:8000/api/v1`) |
+| 팀 dev 서버에 붙이기 | `http://34.64.226.70/api/v1` |
+| 서버 없이 화면만 보기 | 지정 안 해도 됩니다 — API 호출은 실패하고 정적 데이터로 동작합니다 |
+
+```bash
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=API_BASE_URL=http://192.168.0.3:8000/api/v1"
+```
+
+1. **PC의 LAN IP 확인** (Windows PowerShell): `Get-NetIPAddress -AddressFamily IPv4` — `192.168.x.x` 항목.
+2. **방화벽 허용** — 처음엔 PC 방화벽이 8000 포트를 막습니다. 관리자 PowerShell에서 한 번만:
+   ```bash
+   New-NetFirewallRule -DisplayName "ColorTrip API 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+   ```
+3. **APK를 핸드폰으로 전송** — USB(`adb install -r <apk>`), 또는 카카오톡/구글 드라이브로 파일 전송 후 핸드폰에서 열기.
+4. **알 수 없는 앱 설치 허용** — 안드로이드가 차단하면 안내에 따라 해당 앱(파일 관리자/카톡)의 설치 권한을 허용합니다.
+5. 앱을 열어 권한 요청(위치·카메라)을 허용하면 위치·QR 인증을 실제로 쓸 수 있습니다.
+
+> iOS(아이폰)는 개발자 계정 서명이 필요해 이 방식으로 설치할 수 없습니다 — 출시 경로는 [release.md](../docs/conventions/release.md).
+
+## Mac에서 실행
+
+Mac에는 Flutter를 직접 설치하는 편이 가장 간단합니다(Docker도 위 명령 그대로 동작합니다).
+
+```bash
+brew install --cask flutter android-studio   # Flutter SDK + Android Studio
+cd frontend && flutter pub get
+flutter devices                              # 연결된 기기·시뮬레이터 확인
+flutter run                                  # 기기/에뮬레이터에서 실행
+flutter run -d chrome                        # 웹으로 빠르게 확인
+```
+
+- **Android 에뮬레이터**: Android Studio → Device Manager에서 AVD 생성 후 `flutter run`. 로컬 백엔드는 `10.0.2.2`로 자동 연결됩니다.
+- **iOS 시뮬레이터**(Mac 전용): `sudo xcodebuild -license accept` 후 `open -a Simulator` → `flutter run`. 로컬 백엔드는 `localhost`로 연결됩니다.
+- 백엔드는 Mac에서도 `cd backend && docker compose up`으로 띄울 수 있습니다.
+
 ## APK 빌드 (설치용)
 
 ```bash

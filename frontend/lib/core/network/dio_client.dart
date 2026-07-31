@@ -10,21 +10,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// 토큰의 `sub` 사용자가 로컬/dev DB에 있어야 보호 API가 200을 준다
 /// (`backend/generate_dev_token.py`로 재발급).
 ///
-/// Android 에뮬레이터에서는 10.0.2.2가 호스트 머신 루프백을 가리킨다
-/// (실기기는 같은 Wi-Fi의 LAN IP로 바꿔야 한다 — frontend/README.md).
-final _apiHost = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-    ? '10.0.2.2'
+/// API 주소는 빌드 시 주입할 수 있다 — 실기기는 에뮬레이터 루프백(10.0.2.2)에 붙을 수 없어
+/// 재빌드 없이 주소를 바꿀 수 있어야 한다(frontend/README.md '실기기 설치').
+///
+///   flutter build apk --release --dart-define=API_BASE_URL=http://192.168.0.3:8000/api/v1
+///
+/// 미지정 시 기본값: Android는 에뮬레이터 루프백(10.0.2.2), 그 외는 localhost.
+const _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
+
+final _defaultApiHost =
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+    ? '10.0.2.2' // Android 에뮬레이터에서 호스트 머신 루프백
     : 'localhost';
+
+final _apiBaseUrl = _apiBaseUrlOverride.isNotEmpty
+    ? _apiBaseUrlOverride
+    : 'http://$_defaultApiHost:8000/api/v1';
 
 final dioProvider = Provider<Dio>((ref) {
   return Dio(
     BaseOptions(
-      baseUrl: 'http://$_apiHost:8000/api/v1',
+      baseUrl: _apiBaseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {
         'Authorization':
-            'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTlmNTVkMS1iMTMyLTc2YjItOWE0Mi02OTM0YzU2NGJiNWEiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzg1MzMwOTIxLCJleHAiOjE3ODU5MzU3MjF9.zQxaDz9upLqDzeaWgfJOEiEFh1z4blK2eALvkx7WXkA',
+            'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTlmOGVkYy0zYTAwLTcwYTAtODhiZi1mYmE5NDgyZmNkOGUiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzg0ODA4MjI1LCJleHAiOjE4MTYzNDQyMjV9.Tb23OdZp0uuexn4uAVWCZ65noUUVlrrtLtSnhAO_F80',
       },
     ),
   );
