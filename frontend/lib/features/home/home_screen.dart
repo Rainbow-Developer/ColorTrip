@@ -14,6 +14,8 @@ import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/home_recommendation_provider.dart';
+import '../../state/auth_controller.dart';
+import '../../state/domain_recommendation_providers.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
@@ -275,83 +277,113 @@ class _RecommendedRegionBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 로딩 중이거나 폴백 신호(null)면 정적 계산으로 — 서버 응답이 오면 자연히 교체된다.
-    final recommendation = ref.watch(homeRecommendationProvider).value;
-    final content = recommendation != null
-        ? _fromApi(recommendation)
-        : _fromStaticData(ref);
-    if (content == null) return const SizedBox.shrink();
-
-    final dna = ref.watch(dnaRepositoryProvider).byId(content.dnaId);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => context.push('/region/${content.regionId}'),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: dna.gradient,
-            ),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${dna.icon} ${dna.name}를 위한 추천 여행지',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          content.regionName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          content.questLabel,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                ],
-              ),
-              if (content.quests.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                for (final quest in content.quests)
-                  _QuestSummaryRow(quest: quest),
-              ],
-            ],
-          ),
+    final result = ref.watch(unvisitedRecommendedRegionsProvider);
+    return result.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: OutlinedButton.icon(
+          onPressed: () => ref.invalidate(unvisitedRecommendedRegionsProvider),
+          icon: const Icon(Icons.refresh),
+          label: const Text('추천 여행지 다시 시도'),
         ),
       ),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        final recommendation = items.first;
+        final region = ref
+            .watch(regionRepositoryProvider)
+            .byId(recommendation.regionKey);
+        if (region == null) return const SizedBox.shrink();
+        final dnaId =
+            ref.watch(currentUserProvider)?.dna ??
+            ref.watch(progressProvider).dnaType ??
+            'nature';
+        final content = _BannerContent(
+          regionId: region.id,
+          regionName: region.name,
+          dnaId: dnaId,
+          questLabel: recommendation.matchingQuestCount > 0
+              ? '${questTypeStyles[dnaId]?.label ?? dnaId} 퀘스트 ${recommendation.matchingQuestCount}개가 기다리고 있어요'
+              : '퀘스트 ${recommendation.availableQuestCount}개가 기다리고 있어요',
+          quests: _staticQuestSummary(
+            ref.watch(questRepositoryProvider).byRegion(region.id),
+            dnaId,
+          ),
+        );
+
+        final dna = ref.watch(dnaRepositoryProvider).byId(content.dnaId);
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: InkWell(
+            onTap: () => context.push('/region/${content.regionId}'),
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: dna.gradient,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${dna.icon} ${dna.name}를 위한 추천 여행지',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              content.regionName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              content.questLabel,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                    ],
+                  ),
+                  if (content.quests.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    for (final quest in content.quests)
+                      _QuestSummaryRow(quest: quest),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

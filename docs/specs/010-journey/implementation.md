@@ -12,7 +12,7 @@
 - **구현 단위**:
   - [x] 1) 테이블·모델·마이그레이션 — `journeys`·`journey_quests`·`quest_progress` (UUID v7 PK·공통 타임스탬프·Soft Delete). Alembic `f4b2a9c67e18` (005-auth-member `d7b712f1a245`에 체인).
   - [x] 2) 여정 API — POST/GET `/journeys`, GET `/journeys/{id}`, POST/DELETE `/journeys/{id}/quests…` (JRN-01·02). 생성 검증(지역-퀘스트 소속)·진행률·soft delete 복원 포함.
-  - [x] 3) 추천 API — GET `/quests/recommended` (REC-01). DNA seam(`app/quests/dna.py`) + `?category=` fallback, 완료 퀘스트 제외·카테고리 일치 우선 정렬.
+  - [x] 3) 추천 API — GET `/quests/recommended` (REC-01). `users.dna` 기본 적용(`?category=` override), 완료 퀘스트 제외·카테고리 일치 우선 정렬. REC-02 `GET /regions/unvisited`는 여정 미생성 지역을 같은 규칙으로 집계한다([045-quest-recommendation-api](../045-quest-recommendation-api/)).
   - [x] 4) 진행·인증 API — POST `/quests/{id}/start`·`/verify`, GET `/users/me/progress` (VRF-01~04). gps_photo(하버사인 반경)·quiz(정규화 비교) 판정, 완료 시 여정 자동 완료.
   - [x] 5) 사진 업로드 — POST `/uploads/photo` + 스토리지 추상화(`GCS_UPLOAD_BUCKET` 설정 시 GCS, 미설정 시 로컬 디스크) (VRF-03).
   - [~] 6) 검증·문서 — pytest 40건·ruff·pyright 통과, README 갱신 완료. **Notion(테이블·API 명세) 역동기화 남음**.
@@ -34,7 +34,7 @@
 - **Notion 역동기화**: 테이블 설계(journeys·journey_quests 신설, quest_progress에 journey_id·quiz_answer 추가)·API 명세서(여정 5개 엔드포인트 추가) 반영
 - **GCS 버킷 IaC**: 버킷 생성·앱 SA `roles/storage.objectAdmin`·공개 읽기(또는 서빙 방식) — infra/ 후속 작업
 - **LLM 사진 판정**: `mission_meta.judgement_prompt` 데이터만 준비됨 (후속)
-- **DNA 연동**: `app/quests/dna.py` seam을 DNA 도메인 완성 시 교체
+- **DNA 연동**: `app/quests/dna.py`가 `users.dna`를 `Category`로 변환한다. DNA가 없는 계정은 카테고리 가산 없이 추천한다.
 - **Flutter 실제 E2E**: 여정 생성·인증 후 앱 재시작 복원 시나리오는
   [040 서버 영속화](../040-domain-state-persistence/)에서 최종 확인 중
 

@@ -11,6 +11,7 @@ import '../../data/models/quest.dart';
 import '../../data/repositories/domain_repository.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/domain_controller.dart';
+import '../../state/domain_recommendation_providers.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
@@ -50,7 +51,6 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
     }
     final tour = ref.watch(onboardingTourProvider);
     final questRepo = ref.watch(questRepositoryProvider);
-    final regionQuests = questRepo.byRegion(regionId);
     final progress = ref.watch(progressProvider);
     final dnaType = progress.dnaType ?? 'nature';
     final dna = ref.watch(dnaRepositoryProvider).byId(dnaType);
@@ -74,16 +74,9 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
         ? ''
         : '?journeyId=${selectedJourney.id}';
 
-    final recommended = <Quest>[
-      ...regionQuests.where((q) => q.type == dnaType).take(2),
-    ];
-    if (recommended.length < 2) {
-      recommended.addAll(
-        regionQuests
-            .where((q) => !recommended.contains(q))
-            .take(2 - recommended.length),
-      );
-    }
+    final recommendedQuestKeys = tripStarted
+        ? null
+        : ref.watch(recommendedQuestKeysProvider(regionId));
 
     return Scaffold(
       appBar: AppBar(
@@ -213,15 +206,29 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   const SizedBox(height: 10),
-                  for (final quest in recommended)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _RecommendedQuestTile(
-                        quest: quest,
-                        regionName: region.name,
-                        onTap: () => context.push('/quest/${quest.id}'),
+                  recommendedQuestKeys!.when(
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => TextButton(
+                      onPressed: () => ref.invalidate(
+                        recommendedQuestKeysProvider(regionId),
                       ),
+                      child: const Text('추천 퀘스트 다시 시도'),
                     ),
+                    data: (keys) => Column(
+                      children: [
+                        for (final questKey in keys)
+                          if (questRepo.byId(questKey) case final quest?)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _RecommendedQuestTile(
+                                quest: quest,
+                                regionName: region.name,
+                                onTap: () => context.push('/quest/${quest.id}'),
+                              ),
+                            ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
                 ],
               ],

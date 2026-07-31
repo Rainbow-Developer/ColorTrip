@@ -349,3 +349,70 @@ async def test_recommended_excludes_completed_and_sorts_by_category(
 async def test_recommended_requires_auth(client: AsyncClient) -> None:
     response = await client.get("/api/v1/quests/recommended")
     assert response.status_code == 401
+
+
+async def test_recommended_uses_saved_user_dna_when_category_is_omitted(
+    client: AsyncClient,
+) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.get(
+        "/api/v1/quests/recommended",
+        params={"region_id": seed["region_id"]},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["applied_category"] == "nature"
+    gps_quest = next(item for item in data["items"] if item["id"] == seed["gps_quest_id"])
+    assert gps_quest["is_dna_match"] is True
+
+
+async def test_unvisited_regions_excludes_regions_with_a_journey(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    before = await client.get("/api/v1/regions/unvisited", headers=headers)
+    assert before.status_code == 200
+    before_ids = [item["id"] for item in before.json()["data"]["items"]]
+    assert seed["region_id"] in before_ids
+    danyang = next(
+        item
+        for item in before.json()["data"]["items"]
+        if item["id"] == seed["region_id"]
+    )
+    assert danyang["slug"] == "danyang"
+    assert danyang["matching_quest_count"] >= 1
+    assert danyang["available_quest_count"] >= danyang["matching_quest_count"]
+
+    await _create_journey(client, headers, seed["region_id"], [seed["gps_quest_id"]])
+
+    after = await client.get("/api/v1/regions/unvisited", headers=headers)
+    assert after.status_code == 200
+    after_ids = [item["id"] for item in after.json()["data"]["items"]]
+    assert seed["region_id"] not in after_ids
+
+
+async def test_unvisited_regions_requires_auth(client: AsyncClient) -> None:
+    assert (await client.get("/api/v1/regions/unvisited")).status_code == 401
+
+
+async def test_user_primary_category_handles_missing_dna(client: AsyncClient) -> None:
+    from app.quests.dna import get_user_primary_category
+
+    await seed_quest_fixture()
+    headers = await auth_headers(client, token="kakao-token-2")
+    from uuid import UUID
+
+    from app.auth.models import User
+    from app.core.database import AsyncSessionLocal
+
+    me = await client.get("/api/v1/users/me", headers=headers)
+    async with AsyncSessionLocal() as session:
+        user = await session.get(User, UUID(me.json()["data"]["id"]))
+        assert user is not None
+        user.dna = None
+        await session.commit()
+        assert await get_user_primary_category(session, user.id) is None

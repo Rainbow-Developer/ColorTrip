@@ -61,6 +61,18 @@ class DomainTimelineEntry {
   final String? photoUrl;
 }
 
+class DomainRecommendedRegion {
+  const DomainRecommendedRegion({
+    required this.regionKey,
+    required this.matchingQuestCount,
+    required this.availableQuestCount,
+  });
+
+  final String regionKey;
+  final int matchingQuestCount;
+  final int availableQuestCount;
+}
+
 class DomainSnapshot {
   const DomainSnapshot({
     required this.catalog,
@@ -86,6 +98,13 @@ class QuestVerification {
 
 abstract class DomainRepository {
   Future<DomainSnapshot> fetchSnapshot();
+
+  Future<List<DomainRecommendedRegion>> fetchUnvisitedRecommendedRegions();
+
+  Future<List<String>> fetchRecommendedQuestKeys({
+    required String regionKey,
+    int size = 2,
+  });
 
   Future<DomainJourney> createJourney({
     required String clientRequestId,
@@ -141,6 +160,44 @@ class DioDomainRepository implements DomainRepository {
       regionProgress: regionProgress,
       timeline: timeline,
     );
+  }
+
+  @override
+  Future<List<DomainRecommendedRegion>>
+  fetchUnvisitedRecommendedRegions() async {
+    final catalog = await _loadCatalog();
+    final items = await _fetchPaged('/regions/unvisited');
+    final recommendations = <DomainRecommendedRegion>[];
+    for (final item in items) {
+      final regionKey = catalog.regionKeysById[item['id']];
+      if (regionKey == null) continue;
+      recommendations.add(
+        DomainRecommendedRegion(
+          regionKey: regionKey,
+          matchingQuestCount: item['matching_quest_count'] as int,
+          availableQuestCount: item['available_quest_count'] as int,
+        ),
+      );
+    }
+    return recommendations;
+  }
+
+  @override
+  Future<List<String>> fetchRecommendedQuestKeys({
+    required String regionKey,
+    int size = 2,
+  }) async {
+    final catalog = await _loadCatalog();
+    final items = await _fetchPaged(
+      '/quests/recommended',
+      query: {'region_id': catalog.regionId(regionKey)},
+      size: size,
+    );
+    return items
+        .map((item) => item['client_key'] as String?)
+        .whereType<String>()
+        .where(catalog.questIdsByKey.containsKey)
+        .toList();
   }
 
   @override
@@ -332,8 +389,8 @@ class DioDomainRepository implements DomainRepository {
   Future<List<Map<String, dynamic>>> _fetchPaged(
     String path, {
     Map<String, dynamic>? query,
+    int size = 100,
   }) async {
-    const size = 100;
     var page = 1;
     final items = <Map<String, dynamic>>[];
     while (true) {
