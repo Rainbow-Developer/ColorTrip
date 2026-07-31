@@ -78,44 +78,62 @@ class SplashScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: screenSize.width * 0.85,
-                    height: 56,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.kakaoYellow,
-                        foregroundColor: AppColors.kakaoLabel,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: auth.isBusy
-                          ? null
-                          : () async {
-                              final controller = ref.read(
-                                authControllerProvider.notifier,
-                              );
-                              if (auth.status == AuthStatus.failure) {
-                                await controller.bootstrap();
-                              } else {
-                                await controller.login();
-                              }
-                            },
-                      child: auth.isBusy
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              auth.status == AuthStatus.failure
-                                  ? '다시 시도'
-                                  : '카카오로 시작하기',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
+                  if (auth.errorMessage case final error?) ...[
+                    Text(
+                      error,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.danger),
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (auth.status == AuthStatus.checking)
+                    const SizedBox(
+                      height: 56,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else
+                    SizedBox(
+                      width: screenSize.width * 0.85,
+                      height: 56,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.kakaoYellow,
+                          foregroundColor: AppColors.kakaoLabel,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: auth.isBusy
+                            ? null
+                            : () async {
+                                final controller = ref.read(
+                                  authControllerProvider.notifier,
+                                );
+                                if (auth.status == AuthStatus.failure) {
+                                  await controller.bootstrap();
+                                } else {
+                                  await controller.login();
+                                }
+                              },
+                        child: auth.isBusy
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                auth.status == AuthStatus.failure
+                                    ? '다시 시도'
+                                    : '카카오로 시작하기',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
+                    ),
                 ],
               ),
             ),
