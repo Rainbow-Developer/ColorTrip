@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,10 +7,13 @@ import '../../core/constants.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/map_legend.dart';
+import '../../data/models/home_recommendation.dart';
+import '../../data/models/quest.dart';
 import '../../data/models/region.dart';
 import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
+import '../../state/home_recommendation_provider.dart';
 import '../../state/map_sync_provider.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
@@ -219,17 +223,159 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-/// 추천 여행지 배너 — 사용자 DNA 유형과 같은 유형 퀘스트가 가장 많은 **여행 시작 전** 지역을
-/// 추천한다(동률이면 전체 퀘스트 수가 많은 쪽). 탭하면 지역 개요로 이동해 바로 여행을 시작할 수
-/// 있다. 시작 안 한 지역이 없으면 배너를 숨긴다(KAN-28).
+/// 추천 여행지 배너에 그릴 데이터 묶음 — 백엔드 추천 응답과 정적 폴백 계산이 같은 구조로
+/// 수렴해 배너 레이아웃은 출처를 몰라도 된다([040-home-region-recommendation]).
+class _BannerContent {
+  const _BannerContent({
+    required this.regionId,
+    required this.regionName,
+    required this.dnaId,
+    required this.questLabel,
+    required this.quests,
+  });
+
+  final String regionId;
+  final String regionName;
+  final String dnaId;
+  final String questLabel;
+  final List<_QuestSummary> quests;
+}
+
+/// 배너의 퀘스트 요약 1건(표시 전용) — BE 퀘스트 id는 FE 정적 id와 체계가 달라 담지
+/// 않는다(탭 이동은 지역 단위, [040-home-region-recommendation] 리스크 참고).
+class _QuestSummary {
+  const _QuestSummary({
+    required this.title,
+    required this.type,
+    this.thumbnailUrl,
+  });
+
+  final String title;
+  final String type;
+  final String? thumbnailUrl;
+}
+
+/// 추천 여행지 배너 — 백엔드 추천 API 응답이 있으면 그 지역과 대표 퀘스트 요약을 보여주고,
+/// 로딩·API 실패·비로그인·지역 매핑 실패면 기존 정적 계산(사용자 DNA 유형과 같은 유형
+/// 퀘스트가 가장 많은 **여행 시작 전** 지역, 동률이면 전체 퀘스트 수가 많은 쪽)으로
+/// 폴백한다([040-home-region-recommendation]). 두 경로 모두 "무슨 퀘스트가 있는지" 감을
+/// 주도록 요약 최대 3개(DNA 유형 우선)를 함께 노출한다. 탭하면 지역 개요로 이동해 바로
+/// 여행을 시작할 수 있다. 정적 폴백에서 시작 안 한 지역이 없으면 배너를 숨긴다(KAN-28).
 class _RecommendedRegionBanner extends ConsumerWidget {
   const _RecommendedRegionBanner();
 
+  /// 요약할 퀘스트 최대 개수 — 배너 높이를 크게 늘리지 않으면서 감을 주는 최소 수
+  /// ([040-home-region-recommendation] 의사결정).
+  static const _questSummaryMax = 3;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 로딩 중이거나 폴백 신호(null)면 정적 계산으로 — 서버 응답이 오면 자연히 교체된다.
+    final recommendation = ref.watch(homeRecommendationProvider).value;
+    final content = recommendation != null
+        ? _fromApi(recommendation)
+        : _fromStaticData(ref);
+    if (content == null) return const SizedBox.shrink();
+
+    final dna = ref.watch(dnaRepositoryProvider).byId(content.dnaId);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => context.push('/region/${content.regionId}'),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: dna.gradient,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${dna.icon} ${dna.name}를 위한 추천 여행지',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          content.regionName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          content.questLabel,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: Colors.white,
+                    size: 26,
+                  ),
+                ],
+              ),
+              if (content.quests.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                for (final quest in content.quests)
+                  _QuestSummaryRow(quest: quest),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 백엔드 추천 응답 → 배너 데이터. 응답에는 대표 퀘스트(최대 3개)만 담겨 지역 전체
+  /// 퀘스트 개수를 알 수 없으므로 문구는 개수 없이 쓴다.
+  _BannerContent _fromApi(HomeRecommendation recommendation) {
+    final dnaId = recommendation.dnaCategory;
+    final typeLabel = questTypeStyles[dnaId]?.label ?? dnaId;
+    return _BannerContent(
+      regionId: recommendation.regionId,
+      regionName: recommendation.regionName,
+      dnaId: dnaId,
+      questLabel: '$typeLabel 퀘스트가 기다리고 있어요',
+      quests: [
+        for (final quest in recommendation.quests.take(_questSummaryMax))
+          _QuestSummary(
+            title: quest.title,
+            type: quest.category,
+            thumbnailUrl: quest.thumbnailUrl,
+          ),
+      ],
+    );
+  }
+
+  /// 정적 데이터 폴백 — 기존(KAN-28) 추천 계산을 그대로 유지하고, 그 지역 퀘스트에서
+  /// 요약 상위 [_questSummaryMax]개만 추가로 뽑는다. 시작 안 한 지역이 없으면 null.
+  _BannerContent? _fromStaticData(WidgetRef ref) {
     final progress = ref.watch(progressProvider);
     final dnaId = progress.dnaType ?? 'nature';
-    final dna = ref.watch(dnaRepositoryProvider).byId(dnaId);
     final questRepo = ref.watch(questRepositoryProvider);
 
     Region? best;
@@ -249,67 +395,97 @@ class _RecommendedRegionBanner extends ConsumerWidget {
         bestTotal = quests.length;
       }
     }
-    if (best == null) return const SizedBox.shrink();
+    if (best == null) return null;
 
-    final region = best;
     final typeLabel = questTypeStyles[dnaId]?.label ?? dnaId;
-    final questLabel = bestMatch > 0
-        ? '$typeLabel 퀘스트 $bestMatch개가 기다리고 있어요'
-        : '퀘스트 $bestTotal개가 기다리고 있어요';
+    return _BannerContent(
+      regionId: best.id,
+      regionName: best.name,
+      dnaId: dnaId,
+      questLabel: bestMatch > 0
+          ? '$typeLabel 퀘스트 $bestMatch개가 기다리고 있어요'
+          : '퀘스트 $bestTotal개가 기다리고 있어요',
+      quests: _staticQuestSummary(questRepo.byRegion(best.id), dnaId),
+    );
+  }
 
+  /// 정적 퀘스트에서 요약 상위 [_questSummaryMax]개 — DNA 일치 우선, 같은 구간에서는
+  /// 썸네일 보유 우선([040-home-region-recommendation] 요구사항). List.sort는 불안정
+  /// 정렬이라 순서가 흔들리지 않게 구간 결합으로 뽑는다.
+  List<_QuestSummary> _staticQuestSummary(List<Quest> quests, String dnaId) {
+    bool hasThumbnail(Quest q) => q.imageUrl?.isNotEmpty ?? false;
+    final ordered = [
+      ...quests.where((q) => q.type == dnaId && hasThumbnail(q)),
+      ...quests.where((q) => q.type == dnaId && !hasThumbnail(q)),
+      ...quests.where((q) => q.type != dnaId && hasThumbnail(q)),
+      ...quests.where((q) => q.type != dnaId && !hasThumbnail(q)),
+    ];
+    return [
+      for (final quest in ordered.take(_questSummaryMax))
+        _QuestSummary(
+          title: quest.title,
+          type: quest.type,
+          thumbnailUrl: quest.imageUrl,
+        ),
+    ];
+  }
+}
+
+/// 배너 안 퀘스트 요약 한 줄 — 유형 이모지 + 제목, 썸네일이 있으면 소형으로 함께 보여준다.
+/// DNA 그라데이션 배경 위에 얹히므로 텍스트는 흰색 계열을 쓴다.
+class _QuestSummaryRow extends StatelessWidget {
+  const _QuestSummaryRow({required this.quest});
+
+  final _QuestSummary quest;
+
+  @override
+  Widget build(BuildContext context) {
+    final thumbnailUrl = quest.thumbnailUrl;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => context.push('/region/${region.id}'),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: dna.gradient,
-            ),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${dna.icon} ${dna.name}를 위한 추천 여행지',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      region.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      questLabel,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          if (thumbnailUrl != null && thumbnailUrl.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: CachedNetworkImage(
+                imageUrl: thumbnailUrl,
+                width: 24,
+                height: 24,
+                fit: BoxFit.cover,
+                // 로드 전·실패 시 관광지 이미지와 같은 placeholder 색 박스를 쓴다.
+                placeholder: (_, _) => Container(
+                  width: 24,
+                  height: 24,
+                  color: AppColors.imagePlaceholderBg,
+                ),
+                errorWidget: (_, _, _) => Container(
+                  width: 24,
+                  height: 24,
+                  color: AppColors.imagePlaceholderBg,
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.white, size: 26),
-            ],
+            ),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            questTypeStyles[quest.type]?.emoji ?? '📍',
+            style: const TextStyle(fontSize: 12),
           ),
-        ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              quest.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

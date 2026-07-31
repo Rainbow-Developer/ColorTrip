@@ -12,15 +12,20 @@ final mapSyncProvider = FutureProvider.autoDispose<void>((ref) async {
   try {
     final items = await ref.read(mapRepositoryProvider).fetchMyMap();
     final serverRegionProgress = <String, int>{};
+    final serverRegionTripCount = <String, int>{};
     for (final item in items) {
       final id = regionIdByName(item.regionName);
       if (id != null) {
         serverRegionProgress[id] = item.completedCount;
+        // 완료 여행 수는 지도 채색 기준([035-journey-map-coloring]).
+        serverRegionTripCount[id] = item.completedJourneyCount;
       }
     }
-    ref
-        .read(progressProvider.notifier)
-        .syncRegionProgressFromServer(serverRegionProgress);
+    final notifier = ref.read(progressProvider.notifier);
+    notifier.syncRegionProgressFromServer(
+      serverRegionProgress,
+      serverRegionTripCount: serverRegionTripCount,
+    );
   } catch (error) {
     debugPrint('map sync skipped: $error');
   }

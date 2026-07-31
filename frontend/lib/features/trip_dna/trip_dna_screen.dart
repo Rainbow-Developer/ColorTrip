@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_toast.dart';
+import '../../data/models/category_vocabulary.dart';
 import '../../data/models/trip_dna_question.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
@@ -80,7 +81,10 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
               children: [
                 Text(
                   'Q${_step + 1}. ${question.question}',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Expanded(
@@ -93,7 +97,8 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
                             child: _OptionTile(
                               label: option.label,
                               selected: _picks![_step] == option.id,
-                              onTap: () => setState(() => _picks![_step] = option.id),
+                              onTap: () =>
+                                  setState(() => _picks![_step] = option.id),
                             ),
                           ),
                       ],
@@ -102,14 +107,18 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: _submitting ? null : () => _next(isLast, questions),
+                  onPressed: _submitting
+                      ? null
+                      : () => _next(isLast, questions),
                   child: _submitting
                       ? const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : Text(isLast ? '결과 보기' : '다음'),
@@ -143,11 +152,17 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
 
     setState(() => _submitting = true);
     try {
-      final result = await ref.read(tripDnaRepositoryProvider).submitReplies(replies);
-      final String mainDnaType = result['main_dna_type'] as String;
-      
+      final result = await ref
+          .read(tripDnaRepositoryProvider)
+          .submitReplies(replies);
+      // 서버 어휘(activity) → 앱 어휘(active). 변환하지 않으면 액티비티 판정 사용자의
+      // DNA 조회가 실패해 자연 탐험으로 조용히 대체된다([category_vocabulary.dart]).
+      final String mainDnaType = toAppCategory(
+        result['main_dna_type'] as String,
+      );
+
       ref.read(progressProvider.notifier).setDnaType(mainDnaType);
-      
+
       if (mounted) {
         context.go('/trip-dna/result');
       }
