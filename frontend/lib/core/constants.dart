@@ -14,15 +14,17 @@ class AppColors {
   static const textBody = Color(0xFF4A4A44);
   static const border = Color(0xFFE6E6DF);
   static const surfaceMuted = Color(0xFFF5F5F0);
-  static const background = Color(0xFFFAFAF7);
+  static const background = Color(0xFFFAFAFA);
   static const danger = Color(0xFFE24B4A);
-  // 지도 색칠 — 미방문(회색)에서 완료(primaryDark)까지 채도로 연속 보간한다(KAN-44).
-  static const mapEmpty = Color(0xFFCCCCCC);
+  // 지도 색칠 — 미방문 지역은 연한 회색, 방문한 지역은 지역별 팔레트(regionMapColors)를
+  // 5단계로 양자화해서 쓴다(KAN-51). 지역 경계선은 기존 미방문 회색(mapLine)을 그대로 쓴다.
+  static const mapLine = Color(0xFFCCCCCC);
+  static const mapEmpty = Color(0xFFF0F0F0);
   static const mapEmptyLabel = Color(0xFF9A9A90);
 
   // 스플래시(Figma) — color-spring-green-* / color-yellow-50 토큰.
   static const splashCardBackground = Color(0xFFE8EFE4);
-  static const splashHeading = Color(0xFF1A3D2B);
+  static const splashHeading = Color(0xFF2E5A47);
   static const splashAccent = Color(0xFF4A7C5F);
   static const kakaoYellow = Color(0xFFFEE500);
   static const kakaoLabel = Color(0xFF191919);
@@ -113,8 +115,114 @@ const questTypeStyles = <String, QuestTypeStyle>{
   ),
 };
 
+/// 퀘스트 유형 태그 배색 — 원형 아이콘([quest_type_*.svg])에 쓴 연한 배경/선 색 그대로.
+/// 퀘스트 목록·여행 목록 카드에서 공용으로 쓴다.
+const questTypeIconColors = <String, ({Color background, Color foreground})>{
+  'nature': (background: Color(0xFFE8F5E9), foreground: Color(0xFF43A047)),
+  'food': (background: Color(0xFFFFF3E0), foreground: Color(0xFFFB8C00)),
+  'history': (background: Color(0xFFEDE7F6), foreground: Color(0xFF7E57C2)),
+  'active': (background: Color(0xFFE3F2FD), foreground: Color(0xFF1E88E5)),
+  'healing': (background: Color(0xFFFCE4EC), foreground: Color(0xFFD81B60)),
+};
+
+/// 퀘스트/여행 목록 카드 고정 높이 — 값을 바꾸면 카드·좌측 썸네일(4:3) 크기가 같이 바뀐다.
+const double questCardHeight = 100;
+
 const verifyLabels = <String, String>{
   'photo': '사진 인증',
   'gps': 'GPS 인증',
   'quiz': 'OX 퀴즈',
 };
+
+/// 지역별 5단계 채색 팔레트(연함→진함) — 디자인 시안 색상표 그대로,
+/// [core/widgets/chungbuk_map.dart]의 mapFillColors가 채도 레벨(1~5)에 맞춰 고른다(KAN-51).
+const Map<String, List<Color>> regionMapColors = {
+  'jincheon': [
+    Color(0xFFF8F3F2),
+    Color(0xFFF2E5E3),
+    Color(0xFFEDD4CF),
+    Color(0xFFE8BEB5),
+    Color(0xFFE3A396),
+  ],
+  'eumseong': [
+    Color(0xFFF8F6F2),
+    Color(0xFFF2EEE3),
+    Color(0xFFEDE4CF),
+    Color(0xFFE8D9B5),
+    Color(0xFFE3CC96),
+  ],
+  'chungju': [
+    Color(0xFFF2F8F4),
+    Color(0xFFE3F2E9),
+    Color(0xFFCFEDDB),
+    Color(0xFFB5E8CA),
+    Color(0xFF96E3B6),
+  ],
+  'jecheon': [
+    Color(0xFFF8F5F2),
+    Color(0xFFF2EAE3),
+    Color(0xFFEDDDCF),
+    Color(0xFFE8CDB5),
+    Color(0xFFE3BA96),
+  ],
+  'danyang': [
+    Color(0xFFF4F2F8),
+    Color(0xFFE8E3F2),
+    Color(0xFFD9CFED),
+    Color(0xFFC6B5E8),
+    Color(0xFFB096E3),
+  ],
+  'jeungpyeong': [
+    Color(0xFFF6F8F2),
+    Color(0xFFEDF2E3),
+    Color(0xFFE2EDCF),
+    Color(0xFFD5E8B5),
+    Color(0xFFC7E396),
+  ],
+  'cheongju': [
+    Color(0xFFF4F8F2),
+    Color(0xFFE9F2E3),
+    Color(0xFFDBEDCF),
+    Color(0xFFCAE8B5),
+    Color(0xFFB6E396),
+  ],
+  'goesan': [
+    Color(0xFFF2F8F6),
+    Color(0xFFE3F2EE),
+    Color(0xFFCFEDE5),
+    Color(0xFFB5E8DB),
+    Color(0xFF96E3D0),
+  ],
+  'boeun': [
+    Color(0xFFF8F5F2),
+    Color(0xFFF2EBE3),
+    Color(0xFFEDDFCF),
+    Color(0xFFE8D1B5),
+    Color(0xFFE3C196),
+  ],
+  'okcheon': [
+    Color(0xFFF8F2F5),
+    Color(0xFFF2E3EB),
+    Color(0xFFEDCFDF),
+    Color(0xFFE8B5D0),
+    Color(0xFFE396BF),
+  ],
+  'yeongdong': [
+    Color(0xFFF8F7F2),
+    Color(0xFFF2F0E3),
+    Color(0xFFEDE8CF),
+    Color(0xFFE8DFB5),
+    Color(0xFFE3D696),
+  ],
+};
+
+/// 지도 범례([core/widgets/map_legend.dart]) 5단계 스와치 — 실제 지역 팔레트는 지역마다
+/// hue가 달라 대표색으로 못 쓰므로, 앱 기존 파스텔 그린 톤(splashCardBackground·
+/// questSelectedBg 계열)에 맞춘 별도 그라데이션을 쓴다(KAN-51).
+const List<Color> mapLegendColors = [
+  Color(0xFFEAF3E4),
+  Color(0xFFD2E7C6),
+  Color(0xFFB6D9A8),
+  Color(0xFF98CB8B),
+  Color(0xFF78BC6E),
+];

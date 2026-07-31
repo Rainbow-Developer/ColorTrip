@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
+import '../../core/widgets/chungbuk_map.dart';
 import '../../data/models/region.dart';
 import '../../data/static/quests_data.dart';
 import '../../data/static/regions_data.dart';
@@ -105,74 +106,120 @@ class _TripCard extends ConsumerWidget {
     final total = trip.length;
     final done = trip.where(progress.isCompleted).length;
     final dominantType = dominantTypeForRegion(region.id);
-    final typeLabel = questTypeStyles[dominantType]?.label ?? dominantType;
+    final typeStyle = questTypeStyles[dominantType];
+    final tagColors = questTypeIconColors[dominantType];
+    final regionColor = mapFillColors(region.id, 1);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: () => context.push('/region/${region.id}'),
-        borderRadius: BorderRadius.circular(14),
+      padding: const EdgeInsets.only(bottom: 16),
+      child: SizedBox(
+        height: questCardHeight,
         child: Container(
-          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                // 여행 시작 시 입력한 이름 우선, 없으면(과거 데이터) 지역명 기반 기본값.
-                tripInfo?.name ?? tripTitleFor(region),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (tripInfo != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  tripInfo.periodLabel,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.timelineDateText,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  _Badge(
-                    label: region.name,
-                    background: isActive
-                        ? AppColors.tripActiveBadgeBg
-                        : AppColors.tripMutedBadgeBg,
-                    foreground: isActive
-                        ? AppColors.tripActiveBadgeFg
-                        : AppColors.tripMutedBadgeFg,
-                  ),
-                  const SizedBox(width: 6),
-                  if (typeLabel != null)
-                    _Badge(
-                      label: typeLabel,
-                      background: AppColors.tripMutedBadgeBg,
-                      foreground: AppColors.tripMutedBadgeFg,
-                    ),
-                  if (isActive) ...[
-                    const Spacer(),
-                    Text(
-                      '퀘스트 $done/$total',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.tripProgressText,
-                      ),
-                    ),
-                  ],
-                ],
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              onTap: () => context.push('/region/${region.id}'),
+              child: Stack(
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(20),
+                          bottomRight: Radius.circular(20),
+                        ),
+                        child: AspectRatio(
+                          aspectRatio: 4 / 3,
+                          child: Container(
+                            color: AppColors.imagePlaceholderBg,
+                            alignment: Alignment.center,
+                            child: Text(
+                              typeStyle?.emoji ?? '📍',
+                              style: const TextStyle(fontSize: 32),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                // 여행 시작 시 입력한 이름 우선, 없으면(과거 데이터) 지역명 기반 기본값.
+                                tripInfo?.name ?? tripTitleFor(region),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (tripInfo != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  tripInfo.periodLabel,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.timelineDateText,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  _Badge(
+                                    label: region.name,
+                                    background: regionColor.background,
+                                    foreground: regionColor.label,
+                                  ),
+                                  if (typeStyle != null && tagColors != null) ...[
+                                    const SizedBox(width: 6),
+                                    _Badge(
+                                      label: typeStyle.label,
+                                      background: tagColors.background,
+                                      foreground: tagColors.foreground,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (isActive) const SizedBox(width: 48),
+                    ],
+                  ),
+                  if (isActive)
+                    Positioned(
+                      right: 14,
+                      bottom: 10,
+                      child: Text(
+                        '$done/$total',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.tripProgressText,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

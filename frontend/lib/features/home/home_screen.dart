@@ -36,7 +36,9 @@ class HomeScreen extends ConsumerWidget {
     final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('다채로울지도')),
+      appBar: AppBar(
+        title: Image.asset('assets/images/top_bar_logo.png', height: 28),
+      ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -45,28 +47,12 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatTile(
-                          label: '완료 지역',
-                          value: '${progress.completedRegionCount}',
-                          suffix: '/${kRegions.length}',
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _StatTile(
-                          label: '진행률',
-                          value: '$progressPct',
-                          suffix: '%',
-                          progress: progressPct / 100,
-                        ),
-                      ),
-                    ],
+                  _StatsSummaryCard(
+                    completedRegionCount: progress.completedRegionCount,
+                    totalRegionCount: kRegions.length,
+                    progressPct: progressPct,
                   ),
                   const SizedBox(height: 16),
-                  const _RecommendedRegionBanner(),
                   const _InProgressDnaCard(),
                   const SizedBox(height: 16),
                   Align(
@@ -96,6 +82,8 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   const MapLegend(),
+                  const SizedBox(height: 20),
+                  const _RecommendedRegionBanner(),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -151,70 +139,93 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.label,
-    required this.value,
-    required this.suffix,
-    this.progress,
+class _StatsSummaryCard extends StatelessWidget {
+  const _StatsSummaryCard({
+    required this.completedRegionCount,
+    required this.totalRegionCount,
+    required this.progressPct,
   });
 
-  final String label;
-  final String value;
-  final String suffix;
-  final double? progress;
+  final int completedRegionCount;
+  final int totalRegionCount;
+  final int progressPct;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 11, color: AppColors.formLabel),
-          ),
-          const SizedBox(height: 4),
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF111111),
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: _StatColumn(
+                  label: '완료한 지역',
+                  value: '$completedRegionCount / $totalRegionCount',
                 ),
-                TextSpan(
-                  text: suffix,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (progress != null) ...[
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(2),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 4,
-                backgroundColor: const Color(0xFFEEEEEA),
-                valueColor: const AlwaysStoppedAnimation(AppColors.primaryDark),
               ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _StatColumn(
+                  label: '진행률',
+                  value: '$progressPct%',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: progressPct / 100,
+              minHeight: 6,
+              backgroundColor: const Color(0xFFEEEEEA),
+              valueColor: const AlwaysStoppedAnimation(AppColors.primaryDark),
             ),
-          ],
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _StatColumn extends StatelessWidget {
+  const _StatColumn({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppColors.formLabel),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111111),
+          ),
+        ),
+      ],
     );
   }
 }
