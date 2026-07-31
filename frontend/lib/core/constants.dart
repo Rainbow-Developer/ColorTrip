@@ -14,7 +14,7 @@ class AppColors {
   static const textBody = Color(0xFF4A4A44);
   static const border = Color(0xFFE6E6DF);
   static const surfaceMuted = Color(0xFFF5F5F0);
-  static const background = Color(0xFFFAFAF7);
+  static const background = Color(0xFFFAFAFA);
   static const danger = Color(0xFFE24B4A);
   // 지도 색칠 — 미방문 지역은 회색, 방문한 지역은 지역별 팔레트(regionMapColors)를
   // 5단계로 양자화해서 쓴다(KAN-51).
