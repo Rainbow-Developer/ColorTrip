@@ -2,6 +2,8 @@
 
 Flutter 앱 실행·빌드 가이드. 프로젝트 전체 개요는 [루트 README](../README.md), 규약은 [docs/conventions/frontend.md](../docs/conventions/frontend.md)를 보세요.
 
+> **앱을 켜서 만져보는 것이 목적이라면** 백엔드 준비·토큰 맞추기·데모 팁·문제 해결까지 한 번에 정리된 **[docs/app-run-guide.md](../docs/app-run-guide.md)** 를 보세요. 이 문서는 FE 툴체인(컨테이너 명령·캐시·테스트) 레퍼런스입니다.
+
 이 저장소는 **Flutter SDK가 없는 머신에서도** `frontend/Dockerfile`(cirruslabs/flutter — **Android SDK 포함**)로 빌드·테스트할 수 있게 되어 있습니다. 아래 명령은 모두 `frontend/` 디렉토리 기준입니다.
 
 ## 빠른 확인 (웹)
@@ -26,13 +28,11 @@ docker compose run --rm --service-ports frontend flutter run -d web-server --web
 
 ### 2. APK 빌드 (컨테이너)
 
-저장소 루트 또는 `frontend/`에서:
-
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug"
+docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug"
 ```
 
-- 결과물(호스트에 바로 생성): `frontend/build/app/outputs/flutter-apk/app-debug.apk`
+- 결과물(호스트에 바로 생성): `build/app/outputs/flutter-apk/app-debug.apk`
 - 최초 빌드는 Gradle·Android 의존성 다운로드로 오래 걸립니다(수 분~수십 분). 이후는 캐시로 빨라집니다.
 
 ### 3. 에뮬레이터에 설치·실행
@@ -40,7 +40,7 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 Device Manager에서 에뮬레이터를 시작한 뒤:
 
 ```bash
-adb install -r frontend/build/app/outputs/flutter-apk/app-debug.apk
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
 앱 서랍에서 **colortrip** 실행.
@@ -59,7 +59,7 @@ adb install -r frontend/build/app/outputs/flutter-apk/app-debug.apk
 | 사진 인증 | Extended Controls → Camera로 가상 장면 사용, 또는 갤러리에 이미지를 드래그해 넣고 갤러리에서 선택 |
 | QR 인증 | `cd backend && uv run python scripts/generate_quest_qr.py`로 QR PNG 생성 → 모니터에 띄우고 에뮬레이터 카메라(webcam 설정 시) 또는 실기기로 스캔 |
 
-> 실기기 테스트: 같은 Wi-Fi에서 로컬 API에 붙는 방법은 [docs/conventions/infra-deploy.md](../docs/conventions/infra-deploy.md) 결정(LAN IP) 참고 — dio_client의 호스트를 LAN IP로 바꿔야 합니다.
+> 실기기 테스트는 아래 [실기기(내 핸드폰)에 설치](#실기기내-핸드폰에-설치) 참고 — 빌드 시 `--dart-define=API_BASE_URL=...`로 주소를 지정합니다(LAN IP 결정 근거: [infra-deploy.md](../docs/conventions/infra-deploy.md)).
 
 ## 실기기(내 핸드폰)에 설치
 
@@ -68,11 +68,13 @@ adb install -r frontend/build/app/outputs/flutter-apk/app-debug.apk
 | 상황 | `API_BASE_URL` |
 |------|----------------|
 | 내 PC의 로컬 백엔드에 붙이기 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` (예: `http://192.168.0.3:8000/api/v1`) |
-| 팀 dev 서버에 붙이기 | `http://34.64.226.70/api/v1` |
-| 서버 없이 화면만 보기 | 지정 안 해도 됩니다 — API 호출은 실패하고 정적 데이터로 동작합니다 |
+| 팀 dev 서버에 붙이기 | 생략 가능 — **release 빌드 기본값**입니다 |
+| 서버 없이 화면만 보기 | 닿지 않는 주소(예: `http://127.0.0.1:1`) — API는 실패하고 정적 데이터로 동작 |
+
+기본값은 빌드 모드로 갈립니다 — release는 팀 dev 서버, debug/profile은 에뮬레이터 루프백(`10.0.2.2`)·`localhost`. `TargetPlatform.android`가 에뮬레이터와 실기기를 구분하지 못해, 설치용 빌드가 조용히 기기 루프백을 향하는 것을 막기 위함입니다.
 
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=API_BASE_URL=http://192.168.0.3:8000/api/v1"
+docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=API_BASE_URL=http://192.168.0.3:8000/api/v1"
 ```
 
 1. **PC의 LAN IP 확인** (Windows PowerShell): `Get-NetIPAddress -AddressFamily IPv4` — `192.168.x.x` 항목.
@@ -105,10 +107,10 @@ flutter run -d chrome                        # 웹으로 빠르게 확인
 ## APK 빌드 (설치용)
 
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release"
+docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release"
 ```
 
-- 결과물: `frontend/build/app/outputs/flutter-apk/app-release.apk`
+- 결과물: `build/app/outputs/flutter-apk/app-release.apk`
 - 현재 release 빌드는 **debug 키로 서명**됩니다([android/app/build.gradle.kts](android/app/build.gradle.kts)) — 내부 테스트 설치용이며 스토어 업로드 불가.
 - 정식 출시 빌드·서명은 Codemagic 경로를 따릅니다: [docs/conventions/release.md](../docs/conventions/release.md).
 - 참고: 로컬 백엔드(http) 통신을 위해 `usesCleartextTraffic`이 켜져 있습니다 — 운영 전 https 전환 시 제거 대상.

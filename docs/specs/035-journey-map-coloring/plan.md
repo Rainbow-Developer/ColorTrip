@@ -7,7 +7,7 @@
 | 영역 | 공통 (backend + frontend) |
 | 작성자 | Claude Code (KAN-58) |
 | 작성일 | 2026-07-30 |
-| 상태 | 계획 |
+| 상태 | 구현 완료 (2026-07-31) |
 
 ## 배경 / 목적
 
@@ -36,7 +36,8 @@
 - **backend**: `app/maps/repository.py`에 `Journey(status='completed', deleted_at IS NULL)`를 `region_id`로 GROUP BY 집계하는 쿼리를 추가하고, `app/maps/schemas.py`의 `MapProgressRead`에 `completed_journey_count: int`(기본 0)를 추가한다. 기존 `completed_count`(퀘스트 수)는 그대로 내려준다.
 - **frontend**:
   - `MapRegionProgress` 모델에 `completedJourneyCount` 파싱 추가(`map_repository`).
-  - `ProgressState`에 서버 동기화용 `regionTripCount: Map<String,int>` 추가. 표시용 완료 여행 수 = `max(서버값, 로컬 파생값)` — 로컬 파생값은 `tripStatusOf(region) == completed ? 1 : 0`(FE는 지역당 동시 1개 여행만 유지하므로).
+  - `ProgressState`에 서버 동기화용 `regionTripCount`와 로컬 누적 완주 횟수 `localTripCompletions`(둘 다 `Map<String,int>`)를 둔다. 표시용 완료 여행 수 = `max(서버값, 로컬 누적값)`.
+  - 로컬 누적값은 **완주 시점에** `ProgressNotifier.completeQuest`가 1씩 올린다. 현재 선택 집합의 완주 여부로 파생하지 않는 이유: 완료한 지역에 퀘스트를 더 담으면(KAN-46 재방문) 선택 집합이 다시 미완료가 되어 이미 칠한 채색이 사라진다.
   - `regionSaturation` = `(완료 여행 수 / _tripSaturationCap).clamp(0,1)`, `_tripSaturationCap = 3`.
   - `completedRegionCount` = 완료 여행 수 ≥ 1인 지역 수.
 
@@ -47,6 +48,7 @@
 | 채도 기준선(cap) | 지역별 상대 비율 / 고정 cap N | **고정 cap 3**. 기존 퀘스트 기준도 지역별 비율의 편차 문제로 고정 cap(6)을 썼다(progress_state.dart 주석). 여행 1회 ≈ 퀘스트 여러 개이므로 6보다 낮은 3이 체감상 비슷한 진행 속도. 상수 하나라 조정 쉬움 | 합의됨(구현 승인) |
 | 완료 지역 통계 의미 | 채도 100% 지역 / 여행 1회 이상 지역 | **여행 1회 이상 완료한 지역**. "완료 지역"의 직관(한 번이라도 완주)과 일치. 채도 100%(3회) 기준은 과도하게 엄격 | 합의됨(구현 승인) |
 | 로컬·서버 병합 규칙 | 서버 우선 덮어쓰기 / max 병합 | **max 병합**. FE 정적 퀘스트 완료는 서버에 기록되지 않으므로 서버 우선 덮어쓰기 시 로컬 채색이 사라진다 | 합의됨(구현 승인) |
+| 로컬 완주 값 산출 | 현재 선택 집합 완주 여부 파생 / 완주 시점 누적 | **완주 시점 누적**(`localTripCompletions`). 파생 방식은 완료 지역에 퀘스트를 추가할 때 선택 집합이 다시 미완료가 되어 채색이 0으로 되돌아간다(검증에서 발견). 누적이면 재방문 완주도 자연히 2회로 센다 | 합의됨(구현 중 변경) |
 
 ## 영향 범위
 
@@ -56,10 +58,12 @@
 
 ## 작업 단계
 
-- [ ] BE: 완료 여정 수 집계 쿼리 + 응답 필드 + 테스트
-- [ ] FE: 모델·동기화 파싱 + 채도/통계 로직 교체 + 위젯 테스트
-- [ ] 범례·통계 라벨 확인
+- [x] BE: 완료 여정 수 집계 쿼리 + 응답 필드 + 테스트
+- [x] FE: 모델·동기화 파싱 + 채도/통계 로직 교체 + 위젯 테스트
+- [x] FE: 로컬 누적 완주 카운터(`localTripCompletions`) + 재방문 회귀 테스트
+- [x] 범례·통계 라벨 확인 (범례 "여행 완료 횟수 0회 ~ 3회+")
 
 ## 리스크 / 미해결 질문
 
-- FE 로컬은 지역당 여행 1개만 유지하므로 로컬 단독으로는 완료 수가 0/1로 제한된다(2회 이상은 서버 동기화로만 표현). 수용함(MVP).
+- 로컬 누적값은 메모리 상태라 앱 재시작 시 초기화된다(서버 동기화 값은 재조회). 영속화는 후속 과제.
+- (해소) "로컬 단독은 0/1로 제한" 제약은 완주 시점 누적 방식으로 바꿔 없어졌다 — 같은 지역 재방문 완주도 2회로 센다.

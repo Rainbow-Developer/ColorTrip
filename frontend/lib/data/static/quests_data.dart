@@ -40,7 +40,7 @@ const List<Quest> kQuests = [
     place: '단양구경시장',
     verify: 'qr',
     reward: 70,
-    desc: '단양의 명물 마늘 요리를 즐기고 음식 사진으로 기록하세요.',
+    desc: '단양의 명물 마늘 요리를 즐기고 매장에 붙은 QR로 인증하세요.',
     conditions: ['단양구경시장 현장 부착 QR 코드 스캔'],
     imageUrl:
         'https://tong.visitkorea.or.kr/cms/resource/72/2366272_image2_1.jpg',

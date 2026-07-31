@@ -35,11 +35,16 @@
 
 - **backend**: 신규 `app/home/` 도메인(`router.py`/`service.py`/`schemas.py`). 보호 엔드포인트 `GET /api/v1/home/recommendation`:
 
+  응답은 공통 Envelope([api-design](../../conventions/api-design.md))로 감싼다 — `data` 아래에 지역·DNA·퀘스트 요약이 온다.
+
   ```json
-  { "region": {"id": "...", "name": "청주시", "image_url": null},
-    "dna_category": "nature",
-    "quests": [{"id": "...", "title": "...", "category": "nature",
-                 "mission_type": "gps_photo", "thumbnail_url": "..."}] }
+  { "code": "SUCCESS", "status": 200, "message": "요청이 성공했습니다.",
+    "data": {
+      "region": {"id": "...", "name": "청주시", "image_url": null},
+      "dna_category": "nature",
+      "quests": [{"id": "...", "title": "...", "category": "nature",
+                   "mission_type": "gps_photo", "thumbnail_url": "..."}]
+    } }
   ```
 
   집계는 quests 테이블(region_id × category COUNT)과 journeys(완료 여정 존재 여부)로 계산. `region.image_url`은 해당 지역 썸네일 보유 퀘스트에서 대표 1건을 골라 채운다.

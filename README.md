@@ -107,7 +107,7 @@ flutter run -d chrome       # 웹(빠른 확인용)
   docker compose run --rm frontend flutter build web
   docker compose run --rm --service-ports frontend flutter run -d web-server --web-hostname=0.0.0.0 --web-port=5000
   ```
-- **Android 에뮬레이터 실행·APK 빌드**: 절차·데모 팁(위치/QR 인증 등)은 [frontend/README.md](frontend/README.md)를 보세요.
+- **앱을 직접 켜보려면**: 에뮬레이터·Mac·내 핸드폰별 실행/설치 절차와 데모 팁·문제 해결은 **[docs/app-run-guide.md](docs/app-run-guide.md)** 를 보세요. FE 툴체인 상세는 [frontend/README.md](frontend/README.md).
 
 ## 프로젝트 구조
 

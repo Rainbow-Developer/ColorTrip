@@ -282,14 +282,19 @@ async def test_submit_survey_replies_persists_to_db(client: AsyncClient) -> None
         headers=headers,
     )
     assert response.status_code == 201
-    assert response.json()["data"]["main_dna_type"] == "activity"
+    body = response.json()["data"]
+    assert body["main_dna_type"] == "activity"
+    user_id = body["user_id"]
 
-    # 새 세션으로 조회해 커밋 여부를 확인한다.
+    # 새 세션으로 조회해 커밋 여부를 확인한다. 다른 사용자·이전 테스트 데이터가
+    # 조건을 만족해 통과하지 않도록 요청 사용자로 범위를 한정한다.
     async with AsyncSessionLocal() as session:
-        saved_dna = await session.scalar(select(User.dna).where(User.dna.is_not(None)))
+        saved_dna = await session.scalar(select(User.dna).where(User.id == user_id))
         assert saved_dna == "activity"
 
         reply_count = await session.scalar(
-            select(func.count()).select_from(TripReply).where(TripReply.deleted_at.is_(None))
+            select(func.count())
+            .select_from(TripReply)
+            .where(TripReply.user_id == user_id, TripReply.deleted_at.is_(None))
         )
         assert reply_count == 1

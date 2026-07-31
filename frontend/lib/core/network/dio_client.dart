@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show defaultTargetPlatform, kIsWeb, kReleaseMode, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Dio 클라이언트 — 지도 동기화·여행 DNA·홈 추천·퀘스트 인증 Repository가 이 인스턴스로
@@ -15,17 +15,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 ///
 ///   flutter build apk --release --dart-define=API_BASE_URL=http://192.168.0.3:8000/api/v1
 ///
-/// 미지정 시 기본값: Android는 에뮬레이터 루프백(10.0.2.2), 그 외는 localhost.
+/// 미지정 시 기본값은 빌드 모드로 갈린다 — `TargetPlatform.android`는 에뮬레이터와 실기기를
+/// 구분하지 못하므로, 설치해서 쓰는 release 빌드가 조용히 기기 루프백(10.0.2.2)을 향하면
+/// 원인을 찾기 어려운 연결 실패가 된다.
+///
+/// - release: 팀 dev 서버 (설치용 APK가 주소 없이도 동작하도록)
+/// - debug/profile: Android는 에뮬레이터 루프백(10.0.2.2), 그 외는 localhost
 const _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
 
-final _defaultApiHost =
-    !kIsWeb && defaultTargetPlatform == TargetPlatform.android
-    ? '10.0.2.2' // Android 에뮬레이터에서 호스트 머신 루프백
-    : 'localhost';
+/// 팀 dev 서버 — 규약: docs/conventions/infra-deploy.md
+const _devServerBaseUrl = 'http://34.64.226.70/api/v1';
+
+final _localBaseUrl = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+    ? 'http://10.0.2.2:8000/api/v1' // Android 에뮬레이터에서 호스트 머신 루프백
+    : 'http://localhost:8000/api/v1';
 
 final _apiBaseUrl = _apiBaseUrlOverride.isNotEmpty
     ? _apiBaseUrlOverride
-    : 'http://$_defaultApiHost:8000/api/v1';
+    : (kReleaseMode ? _devServerBaseUrl : _localBaseUrl);
 
 final dioProvider = Provider<Dio>((ref) {
   return Dio(

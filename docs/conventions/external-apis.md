@@ -52,7 +52,7 @@
 - **주요 엔드포인트**
   - `areaCode2?areaCode=33` — 충북 시·군구 코드 목록
   - `areaBasedList2?areaCode=33&sigunguCode={코드}&contentTypeId={유형}` — 지역 기반 관광정보 목록
-  - `searchKeyword2?keyword={장소명}&areaCode=33&sigunguCode={코드}` — 키워드 검색(이미지/좌표 보강 매칭용)
+  - `searchKeyword2?keyword={장소명}` — 키워드 검색(이미지/좌표 보강 매칭용). **areaCode/sigunguCode를 주면 0건이 반환**되므로(법정동 코드 전환 영향) 파라미터 없이 호출하고 응답의 `addr1`/legacy 코드로 클라이언트에서 필터링한다
   - `detailCommon2?contentId={id}` — 공통 상세(소개문 `overview` 포함)
   - `detailIntro2?contentId={id}&contentTypeId={유형}` — 운영시간·휴무 등 소개 정보
 - **contentTypeId**: 12 관광지 · 14 문화시설 · 15 축제공연행사 · 25 여행코스 · 28 레포츠 · 32 숙박 · 38 쇼핑 · 39 음식점

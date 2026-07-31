@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../data/models/verification.dart';
+import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
 /// 사진 검증 결과 — 인증 화면이 라우트 extra로 넘긴 **실제 AI 판정값**
@@ -30,9 +31,11 @@ class PhotoVerifyResultScreen extends ConsumerWidget {
       return const Scaffold(body: Center(child: Text('퀘스트를 찾을 수 없어요')));
     }
     final region = ref.watch(regionRepositoryProvider).byId(quest.region);
-    // 통과했을 때만 이 화면으로 push되지만, 값이 없거나(직접 진입) 거절 판정이
-    // 실수로 넘어와도 화면이 거짓말하지 않도록 passed를 기준으로 렌더링한다.
-    final passed = verdict?.passed ?? true;
+    // 통과했을 때만 이 화면으로 push되지만, 거절 판정이 실수로 넘어와도 화면이
+    // 거짓말하지 않도록 passed를 기준으로 렌더링한다. 판정값이 없는 경우(직접 URL
+    // 진입 등)는 임의로 성공으로 단정하지 않고 실제 완료 여부를 근거로 삼는다.
+    final passed =
+        verdict?.passed ?? ref.watch(progressProvider).isCompleted(questId);
 
     return Scaffold(
       appBar: AppBar(
