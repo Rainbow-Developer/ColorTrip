@@ -132,6 +132,7 @@ const verifyLabels = <String, String>{
   'photo': '사진 인증',
   'gps': 'GPS 인증',
   'quiz': 'OX 퀴즈',
+  'qr': 'QR 인증',
 };
 
 /// 지역별 5단계 채색 팔레트(연함→진함) — 디자인 시안 색상표 그대로,

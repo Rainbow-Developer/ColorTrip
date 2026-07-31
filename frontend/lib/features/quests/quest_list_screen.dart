@@ -5,13 +5,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../data/models/quest.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
 class _QuestTypeOption {
-  const _QuestTypeOption({required this.key, required this.label, this.iconAsset});
+  const _QuestTypeOption({
+    required this.key,
+    required this.label,
+    this.iconAsset,
+  });
 
   final String key;
   final String label;
@@ -64,7 +69,11 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
     final progress = ref.watch(progressProvider);
 
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: const Text('퀘스트'), titleSpacing: 0),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('퀘스트'),
+        titleSpacing: 0,
+      ),
       body: Column(
         children: [
           Padding(
@@ -217,15 +226,14 @@ class _QuestCard extends StatelessWidget {
                     topRight: Radius.circular(20),
                     bottomRight: Radius.circular(20),
                   ),
+                  // 관광지 썸네일(TourAPI) — 이미지가 없으면 기존 유형 이모지 placeholder
+                  // 그대로 보여준다([045-quest-region-images]).
                   child: AspectRatio(
                     aspectRatio: 4 / 3,
-                    child: Container(
-                      color: AppColors.imagePlaceholderBg,
-                      alignment: Alignment.center,
-                      child: Text(
-                        typeStyle?.emoji ?? '📍',
-                        style: const TextStyle(fontSize: 32),
-                      ),
+                    child: AppNetworkImage(
+                      url: quest.imageUrl,
+                      placeholderEmoji: typeStyle?.emoji ?? '📍',
+                      placeholderEmojiSize: 32,
                     ),
                   ),
                 ),
@@ -271,7 +279,10 @@ class _QuestCard extends StatelessWidget {
                   const Padding(
                     padding: EdgeInsets.only(right: 14),
                     child: Center(
-                      child: Icon(Icons.check_circle, color: AppColors.primaryDark),
+                      child: Icon(
+                        Icons.check_circle,
+                        color: AppColors.primaryDark,
+                      ),
                     ),
                   ),
               ],

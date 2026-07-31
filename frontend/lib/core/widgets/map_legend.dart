@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 
-/// 지도 색칠 범례 — 지도 자체는 이제 채도를 5단계로 양자화해서 칠하므로
-/// ([core/widgets/chungbuk_map.dart]의 mapFillColors, KAN-51), 연속 그라데이션 바 대신
-/// 그 5단계를 그대로 보여주는 스와치를 쓴다. 실제 지역 팔레트는 지역마다 색조가 달라
-/// 대표색으로 쓸 수 없어, 범례 전용 파스텔 그린 톤([mapLegendColors])을 쓴다.
+/// 지도 색칠 범례 — 지도는 채도를 5단계로 양자화해서 칠하므로
+/// ([core/widgets/chungbuk_map.dart]의 mapFillColors, KAN-51) 그 5단계를 스와치로 보여준다.
+/// 실제 지역 팔레트는 지역마다 색조가 달라 대표색으로 쓸 수 없어, 범례 전용 파스텔 그린
+/// 톤([mapLegendColors])을 쓴다.
+///
+/// 스와치가 나타내는 값은 그 지역에서 **완료한 여행(여정) 수**다
+/// ([ProgressState.regionSaturation], [055-journey-map-coloring]) — 여행 1회가 한 단계씩
+/// 진해져 5회에 최대 채도가 되므로, 오른쪽 표기도 "5회+"로 맞춘다.
 class MapLegend extends StatelessWidget {
   const MapLegend({super.key});
 
@@ -15,7 +19,7 @@ class MapLegend extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         const Text(
-          '여행 농도',
+          '여행 완료 횟수',
           style: TextStyle(fontSize: 10, color: AppColors.tripMutedBadgeFg),
         ),
         const SizedBox(width: 4),
@@ -31,6 +35,11 @@ class MapLegend extends StatelessWidget {
               ),
             ),
           ),
+        const SizedBox(width: 1),
+        const Text(
+          '5회+',
+          style: TextStyle(fontSize: 10, color: AppColors.tripMutedBadgeFg),
+        ),
       ],
     );
   }

@@ -187,7 +187,8 @@ class _TripCard extends ConsumerWidget {
                                     background: regionColor.background,
                                     foreground: regionColor.label,
                                   ),
-                                  if (typeStyle != null && tagColors != null) ...[
+                                  if (typeStyle != null &&
+                                      tagColors != null) ...[
                                     const SizedBox(width: 6),
                                     _Badge(
                                       label: typeStyle.label,

@@ -131,6 +131,7 @@ async def verify_quest(
         lng=payload.lng,
         photo_url=payload.photo_url,
         answer=payload.answer,
+        qr_payload=payload.qr_payload,
     )
 
     if progress is None:  # start 없이 바로 인증하는 경우 진행을 함께 생성

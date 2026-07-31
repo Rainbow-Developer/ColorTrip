@@ -1,7 +1,13 @@
-"""퀘스트 진행·인증·추천 테스트 (docs/specs/010-journey/ REC-01·VRF-01~04)."""
+"""퀘스트 진행·인증·추천 테스트 (docs/specs/010-journey/ REC-01·VRF-01~04).
+
+QR 미션 분기(MissionType.QR)는 docs/specs/050-quest-verification/에서 추가됐다.
+"""
+
+from uuid import UUID
 
 from httpx import AsyncClient
 
+from app.verifications.service import sign_quest_payload
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
 
@@ -115,6 +121,61 @@ async def test_quiz_verify(client: AsyncClient) -> None:
     )
     assert correct.json()["data"]["verified"] is True
     assert correct.json()["data"]["progress"]["status"] == "completed"
+
+
+async def _seed_qr_quest(region_id: str) -> str:
+    """QR 미션 퀘스트를 추가 시드한다 (seed_quest_fixture는 010 스펙 소유라 여기서 직접)."""
+    from app.core.database import AsyncSessionLocal
+    from app.quests.models import Quest
+
+    async with AsyncSessionLocal() as session:
+        quest = Quest(
+            region_id=UUID(region_id),
+            title="수양개빛터널 현장 QR",
+            category="activity",
+            mission_type="qr",
+        )
+        session.add(quest)
+        await session.commit()
+        return str(quest.id)
+
+
+async def test_qr_verify_completes_quest(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    qr_quest_id = await _seed_qr_quest(seed["region_id"])
+
+    # 다른 퀘스트용 QR로는 실패한다.
+    wrong = await client.post(
+        f"/api/v1/quests/{qr_quest_id}/verify",
+        json={"qr_payload": sign_quest_payload(seed["gps_quest_id"])},
+        headers=headers,
+    )
+    assert wrong.status_code == 200
+    assert wrong.json()["data"]["verified"] is False
+    assert "이 퀘스트의 QR" in wrong.json()["data"]["reason"]
+
+    # 해당 퀘스트의 서명 QR로 완료된다.
+    ok = await client.post(
+        f"/api/v1/quests/{qr_quest_id}/verify",
+        json={"qr_payload": sign_quest_payload(qr_quest_id)},
+        headers=headers,
+    )
+    assert ok.status_code == 200
+    data = ok.json()["data"]
+    assert data["verified"] is True
+    assert data["reason"] is None
+    assert data["progress"]["status"] == "completed"
+    assert data["progress"]["completed_at"] is not None
+
+
+async def test_qr_verify_requires_payload(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    qr_quest_id = await _seed_qr_quest(seed["region_id"])
+
+    response = await client.post(f"/api/v1/quests/{qr_quest_id}/verify", json={}, headers=headers)
+    assert response.status_code == 422
 
 
 async def test_verify_completed_quest_conflicts(client: AsyncClient) -> None:

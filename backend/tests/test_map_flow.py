@@ -5,7 +5,14 @@ from uuid import UUID
 
 from httpx import AsyncClient
 
-from tests.helpers import complete_auth_headers, login
+from tests.helpers import (
+    DODAM_LAT,
+    DODAM_LNG,
+    auth_headers,
+    complete_auth_headers,
+    login,
+    seed_quest_fixture,
+)
 
 
 async def _seed_map_fixture(user_id: UUID) -> dict[str, str]:
@@ -56,6 +63,9 @@ async def test_my_map_returns_all_regions(client: AsyncClient) -> None:
     assert by_region[seed["cheongju_id"]]["completed_count"] == 0
     assert by_region[seed["cheongju_id"]]["first_colored_at"] is None
 
+    # 완료한 여정이 없으므로 채색 기준값은 모두 0이다 (055-journey-map-coloring).
+    assert all(item["completed_journey_count"] == 0 for item in items)
+
 
 async def test_my_map_only_returns_my_progress(client: AsyncClient) -> None:
     """다른 유저의 map_progress는 내 응답에 포함되지 않는다."""
@@ -79,6 +89,77 @@ async def test_my_map_only_returns_my_progress(client: AsyncClient) -> None:
         for item in (await client.get("/api/v1/users/me/map", headers=other_headers)).json()["data"]
     }
     assert other_items[seed["danyang_id"]]["completed_count"] == 0
+
+
+async def _get_map_by_region(client: AsyncClient, headers: dict[str, str]) -> dict[str, dict]:
+    """지도 응답을 region_id 키의 dict로 변환해 반환한다."""
+    response = await client.get("/api/v1/users/me/map", headers=headers)
+    assert response.status_code == 200
+    return {item["region_id"]: item for item in response.json()["data"]}
+
+
+async def test_my_map_counts_completed_journeys(client: AsyncClient) -> None:
+    """여정을 완주하면 해당 지역의 completed_journey_count가 증가한다 (035)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    # 여정 생성 직후(진행 중)에는 완료 여정 수에 반영되지 않는다.
+    created = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        headers=headers,
+    )
+    assert created.status_code == 201
+
+    before = await _get_map_by_region(client, headers)
+    assert before[seed["region_id"]]["completed_journey_count"] == 0
+
+    # 퀘스트 인증 → 여정이 completed로 전이 (test_journey_flow.py 패턴).
+    verify = await client.post(
+        f"/api/v1/quests/{seed['gps_quest_id']}/verify",
+        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/x.jpg"},
+        headers=headers,
+    )
+    assert verify.json()["data"]["verified"] is True
+
+    after = await _get_map_by_region(client, headers)
+    assert after[seed["region_id"]]["completed_journey_count"] == 1
+    assert after[seed["other_region_id"]]["completed_journey_count"] == 0
+
+    # 이미 완료한 퀘스트로 여정을 하나 더 만들면 생성 즉시 completed → 2로 집계된다.
+    second = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        headers=headers,
+    )
+    assert second.json()["data"]["status"] == "completed"
+
+    again = await _get_map_by_region(client, headers)
+    assert again[seed["region_id"]]["completed_journey_count"] == 2
+
+
+async def test_my_map_journey_count_is_private_to_owner(client: AsyncClient) -> None:
+    """다른 유저의 완료 여정은 내 completed_journey_count에 포함되지 않는다."""
+    seed = await seed_quest_fixture()
+    owner_headers = await auth_headers(client)
+    other_headers = await auth_headers(client, token="kakao-token-unknown")
+
+    await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        headers=owner_headers,
+    )
+    await client.post(
+        f"/api/v1/quests/{seed['gps_quest_id']}/verify",
+        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/x.jpg"},
+        headers=owner_headers,
+    )
+
+    owner_map = await _get_map_by_region(client, owner_headers)
+    assert owner_map[seed["region_id"]]["completed_journey_count"] == 1
+
+    other_map = await _get_map_by_region(client, other_headers)
+    assert other_map[seed["region_id"]]["completed_journey_count"] == 0
 
 
 async def test_my_map_requires_auth(client: AsyncClient) -> None:

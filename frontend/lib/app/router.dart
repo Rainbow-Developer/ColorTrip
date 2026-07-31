@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/models/verification.dart';
 import '../features/home/home_screen.dart';
 import '../features/home/share_card_screen.dart';
 import '../features/onboarding/signup_screen.dart';
@@ -71,9 +72,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: 'result',
-                builder: (context, state) => PhotoVerifyResultScreen(
-                  questId: state.pathParameters['id']!,
-                ),
+                builder: (context, state) {
+                  // 인증 화면이 push extra로 넘긴 실제 AI 판정값(KAN-58).
+                  final extra = state.extra;
+                  return PhotoVerifyResultScreen(
+                    questId: state.pathParameters['id']!,
+                    verdict: extra is PhotoVerdict ? extra : null,
+                  );
+                },
               ),
             ],
           ),

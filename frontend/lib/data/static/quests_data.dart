@@ -27,6 +27,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '남한강 위에 솟은 세 개의 봉우리를 배경으로 한 장 찍어보세요.',
     conditions: ['도담삼봉이 보이는 구도', '정자(석문) 포함 시 보너스'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/27/2022227_image2_1.jpg',
+    lat: 37.0008140770,
+    lng: 128.3418057718,
   ),
   Quest(
     id: 'dy3',
@@ -34,10 +38,14 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '단양 마늘떡갈비 맛보기',
     place: '단양구경시장',
-    verify: 'photo',
+    verify: 'qr',
     reward: 70,
-    desc: '단양의 명물 마늘 요리를 즐기고 음식 사진으로 기록하세요.',
-    conditions: ['음식이 명확히 보이는 사진', '시장 내 식당에서 촬영'],
+    desc: '단양의 명물 마늘 요리를 즐기고 매장에 붙은 QR로 인증하세요.',
+    conditions: ['단양구경시장 현장 부착 QR 코드 스캔'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/72/2366272_image2_1.jpg',
+    lat: 36.9824296398167,
+    lng: 128.369814924617,
   ),
   Quest(
     id: 'dy4',
@@ -49,6 +57,10 @@ const List<Quest> kQuests = [
     reward: 100,
     desc: '남한강 절벽 위로 솟은 하늘길을 걸으며 짜릿한 전망을 즐겨보세요.',
     conditions: ['스카이워크 입구 100m 이내 도달', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/56/3408156_image2_1.png',
+    lat: 36.9776240425562,
+    lng: 128.337045986236,
   ),
   Quest(
     id: 'dy5',
@@ -62,6 +74,10 @@ const List<Quest> kQuests = [
     conditions: ['OX 퀴즈 정답 맞히기'],
     quizQuestion: '온달산성은 온달장군의 이야기가 전해지는 단양의 산성이다.',
     quizAnswer: true,
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/17/3537517_image2_1.jpg',
+    lat: 37.0632486092,
+    lng: 128.4915183165,
   ),
   Quest(
     id: 'dy6',
@@ -73,6 +89,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '단양팔경중 하나인 중선암은 조선 효종조의 문신인 곡운 김수증이 명명한 것으로 전해지며 삼선구곡의 중심지이다.',
     conditions: ['중선암에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/06/3558506_image2_1.JPG',
+    lat: 36.8801548910,
+    lng: 128.2981020750,
   ),
   Quest(
     id: 'dy7',
@@ -84,6 +104,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '굽이굽이 단풍길로 유명한 보발재는 해발 540m로 가곡면 보발리와 영춘면 백자리를 잇는 고갯길에 위치한 드라이브 명소다.',
     conditions: ['단양 보발재에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/08/3536008_image2_1.jpg',
+    lat: 37.0357486420,
+    lng: 128.4730096702,
   ),
   Quest(
     id: 'dy8',
@@ -96,6 +120,10 @@ const List<Quest> kQuests = [
     desc:
         '총길이 1.2km의 단양강 잔도길에는 그동안 접근하기 어려웠던 남한강 암벽을 따라 잔도가 있어 트레킹의 낭만과 짜릿한 스릴을 온몸으로 체험할 수 있다.',
     conditions: ['단양강 잔도에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/78/2618378_image2_1.jpg',
+    lat: 36.9780499884,
+    lng: 128.3398232796,
   ),
   Quest(
     id: 'dy9',
@@ -107,6 +135,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '양산 통도사 건립 당시 창건하였다고 하는 황정산 대흥사는 신라시대 사찰이다.',
     conditions: ['대흥사(단양)에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/44/3582144_image2_1.jpg',
+    lat: 36.8565863130,
+    lng: 128.3484926956,
   ),
   Quest(
     id: 'dy10',
@@ -118,6 +150,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '단양 수양개빛터널에 깃든 이야기를 따라 걸으며 방문을 인증해보세요.',
     conditions: ['단양 수양개빛터널에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/06/2613306_image2_1.jpg',
+    lat: 36.9606018560,
+    lng: 128.3325466606,
   ),
   Quest(
     id: 'dy11',
@@ -130,6 +166,10 @@ const List<Quest> kQuests = [
     desc:
         '단양 조덕수 고택은 남한강이 굽이쳐 흐르는 가곡면의 상덕천 마을, 해발 200m의 얕은 산자락(국수봉)에 있는 목조기와집으로, 조자형 가옥으로도 불린다.',
     conditions: ['단양 조덕수 고택에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/45/3561945_image2_1.JPG',
+    lat: 37.0033923462,
+    lng: 128.3837741612,
   ),
   Quest(
     id: 'dy12',
@@ -141,6 +181,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '단양 금굴 구석기유적지에 깃든 이야기를 따라 걸으며 방문을 인증해보세요.',
     conditions: ['단양 금굴 구석기유적지에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/82/3561882_image2_1.JPG',
+    lat: 36.9963482049,
+    lng: 128.3567878944,
   ),
   Quest(
     id: 'dy13',
@@ -152,6 +196,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '구경당은 구경 시장 입구에 있는 고객 쉼터이자 디저트 카페이다.',
     conditions: ['음식이 명확히 보이는 사진', '구경당에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/82/3422382_image2_1.jpg',
+    lat: 36.9821556414,
+    lng: 128.3701898860,
   ),
   Quest(
     id: 'dy14',
@@ -163,6 +211,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '장림산방은 충청북도 단양군 대강면 장림리에 있다.',
     conditions: ['음식이 명확히 보이는 사진', '장림산방에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/11/2858011_image2_1.jpg',
+    lat: 36.9213318231,
+    lng: 128.3570650517,
   ),
   Quest(
     id: 'dy15',
@@ -175,6 +227,10 @@ const List<Quest> kQuests = [
     desc:
         '단양군에 위치한 비원쏘가리는 1990년도에 창업하여 청정지역 남한강의 자원으로 쏘가리회, 매운탕을 전문으로 하는 음식점이다.',
     conditions: ['음식이 명확히 보이는 사진', '비원쏘가리에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/88/3583288_image2_1.JPG',
+    lat: 36.9759062123,
+    lng: 128.3623629908,
   ),
   Quest(
     id: 'dy16',
@@ -186,6 +242,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '단양유람선은 충주호를 즐기는 가장 좋은 방법이다.',
     conditions: ['충주호 유람선에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/44/3393944_image2_1.JPG',
+    lat: 36.9305344377,
+    lng: 128.2562099221,
   ),
   Quest(
     id: 'dy17',
@@ -197,6 +257,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '단양읍 천동리 소백산국립공원 진입 관문에 위치한 다리안관광지는 단양 시내에서 7.1㎞ 떨어진 곳에 위치한다.',
     conditions: ['단양 다리안관광지에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/68/3081068_image2_1.jpg',
+    lat: 36.9648335809,
+    lng: 128.4208025284,
   ),
   Quest(
     id: 'dy18',
@@ -208,6 +272,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '굽이치는 남한강가에 우뚝 서있는 다누리센터는 단양의 랜드마크이다.',
     conditions: ['단양 다누리아쿠아리움에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/81/3544781_image2_1.jpg',
+    lat: 36.9854052776,
+    lng: 128.3706841911,
   ),
   Quest(
     id: 'dy19',
@@ -220,6 +288,10 @@ const List<Quest> kQuests = [
     desc:
         '해발 664m의 양방산 정상에 자리한 단양 양방산활공장은 단양시내가 훤히 내려다보이며, 굽이돌아나가는 남한강의 정취를 느낄 수 있다.',
     conditions: ['양방산활공장 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/94/3587394_image2_1.jpg',
+    lat: 36.9683407791,
+    lng: 128.3817753625,
   ),
   Quest(
     id: 'dy20',
@@ -231,6 +303,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '고수동굴과 도담삼봉 근처에 위치한 도깨비 양조장은 도깨비 술이라는 막걸리를 생산, 판매하는 곳이다.',
     conditions: ['도깨비 양조장 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/02/3581802_image2_1.jpg',
+    lat: 37.0264397170,
+    lng: 128.3847678434,
   ),
   Quest(
     id: 'cj1',
@@ -244,6 +320,10 @@ const List<Quest> kQuests = [
     conditions: ['OX 퀴즈 정답 맞히기'],
     quizQuestion: '직지심체요절은 현존하는 세계 최초의 금속활자 인쇄본이다.',
     quizAnswer: true,
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/54/3503554_image2_1.jpg',
+    lat: 36.64294242014988,
+    lng: 127.47221987626683,
   ),
   Quest(
     id: 'cj2',
@@ -255,6 +335,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '골목 가득한 벽화 사이를 걸으며 감성 한 컷을 남겨보세요.',
     conditions: ['벽화가 보이는 사진', '골목 풍경 포함'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/98/3353798_image2_1.jpg',
+    lat: 36.6472835628,
+    lng: 127.4943001085,
   ),
   Quest(
     id: 'cj3',
@@ -262,10 +346,14 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '서문시장 삼겹살 거리',
     place: '서문시장',
-    verify: 'photo',
+    verify: 'qr',
     reward: 60,
     desc: '청주식 삼겹살로 든든하게 배를 채우고 인증해보세요.',
-    conditions: ['삼겹살 거리 내에서 촬영', '음식 사진 등록'],
+    conditions: ['서문시장 현장 부착 QR 코드 스캔'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/41/3461441_image2_1.jpg',
+    lat: 36.6354764300,
+    lng: 127.4857373141,
   ),
   Quest(
     id: 'cj4',
@@ -277,6 +365,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '조선시대 석성 성곽길을 따라 걸으며 청주 시내를 내려다보세요.',
     conditions: ['상당산성 남문 100m 이내 도달', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/74/2793374_image2_1.jpg',
+    lat: 36.6640352704,
+    lng: 127.5416870608,
   ),
   Quest(
     id: 'cj5',
@@ -288,6 +380,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '대통령의 별장이었던 청남대의 울창한 산책로를 걸어보세요.',
     conditions: ['메타세쿼이아길에서 촬영', '가로수길이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/44/3502344_image2_1.jpg',
+    lat: 36.4628000000,
+    lng: 127.4918000000,
   ),
   Quest(
     id: 'cj6',
@@ -299,6 +395,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '옥화자연휴양림은 충청북도 청주시 상당구 미원면에 위치한 자연휴양림으로, 청주시시설관리공단에서 운영하고 있다.',
     conditions: ['옥화자연휴양림에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/70/3461470_image2_1.jpg',
+    lat: 36.5980511753,
+    lng: 127.6958861872,
   ),
   Quest(
     id: 'cj7',
@@ -310,6 +410,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '미동산수목원은 해발 557.5m의 미동산은 청주시 상당구 미원면의 동쪽에 있는 산이라 하여 붙여진 이름이다.',
     conditions: ['미동산수목원에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/06/3461406_image2_1.jpg',
+    lat: 36.6274834238,
+    lng: 127.6688766755,
   ),
   Quest(
     id: 'cj8',
@@ -322,6 +426,10 @@ const List<Quest> kQuests = [
     desc:
         '문암생태공원은 1994년~2000년까지는 생활쓰레기 매립장이었지만 안정화 작업을 거친 후 2010년 도심형 테마공원으로 개장하였다.',
     conditions: ['문암생태공원에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/37/3503837_image2_1.jpg',
+    lat: 36.6745490433,
+    lng: 127.4478174154,
   ),
   Quest(
     id: 'cj9',
@@ -333,6 +441,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '청주 가로수길의 자연 풍경 속에서 여유로운 한때를 보내고 사진으로 남겨보세요.',
     conditions: ['청주 가로수길에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/02/3491202_image2_1.jpg',
+    lat: 36.6221487380,
+    lng: 127.4051171368,
   ),
   Quest(
     id: 'cj10',
@@ -344,6 +456,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '국립현대미술관 청주에 깃든 이야기를 따라 걸으며 방문을 인증해보세요.',
     conditions: ['국립현대미술관 청주에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/79/3352579_image2_1.jpg',
+    lat: 36.6555769823,
+    lng: 127.4902363546,
   ),
   Quest(
     id: 'cj11',
@@ -355,6 +471,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '청주 중앙공원은 청주시 한가운데에 있는 시민들의 휴식처이다.',
     conditions: ['청주 충청도병마절도사영문에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/95/3504295_image2_1.jpg',
+    lat: 36.6322435048,
+    lng: 127.4877955521,
   ),
   Quest(
     id: 'cj12',
@@ -366,6 +486,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '국립청주박물관은 국립박물관 최초로 1998년 어린이박물관을 개관하고, 2015년 영유아체험실을 신설했다.',
     conditions: ['국립청주박물관 어린이박물관에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/11/3504411_image2_1.jpg',
+    lat: 36.6497224889,
+    lng: 127.5119706779,
   ),
   Quest(
     id: 'cj13',
@@ -378,6 +502,10 @@ const List<Quest> kQuests = [
     desc:
         '1999년 1월 충청북도교육연구원과 충청북도과학 연구원을 통합하였고, 1999년 10월 충청북도교육과학연구원을 신축 개관하였다.',
     conditions: ['충청북도자연과학교육원 과학체험관에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/18/3504518_image2_1.jpg',
+    lat: 36.6382456841,
+    lng: 127.4928060477,
   ),
   Quest(
     id: 'cj14',
@@ -389,6 +517,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '고화갈비살 청주본점은 충청북도 청주시 상당구 남일면 효촌리에 있다.',
     conditions: ['음식이 명확히 보이는 사진', '고화갈비살 청주본점에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/50/2860350_image2_1.jpg',
+    lat: 36.5816858255,
+    lng: 127.5106504544,
   ),
   Quest(
     id: 'cj15',
@@ -400,6 +532,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '용자 1은 충청북도 청주시 흥덕구 복대동에 위치하고 있다.',
     conditions: ['음식이 명확히 보이는 사진', '용자1에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/19/2860119_image2_1.jpg',
+    lat: 36.6375530474,
+    lng: 127.4342752070,
   ),
   Quest(
     id: 'cj16',
@@ -411,6 +547,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '보국가든은 충청북도 청주시 흥덕구 옥산면 동림리에 있다.',
     conditions: ['음식이 명확히 보이는 사진', '보국가든에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/62/2859462_image2_1.jpg',
+    lat: 36.6787742067,
+    lng: 127.3288113194,
   ),
   Quest(
     id: 'cj17',
@@ -422,6 +562,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '초정약수 세종 스파텔은 충청북도 청주시 초정리에 위치해 있으며 건강과 힐링을 컨셉으로 하는 스파텔이다.',
     conditions: ['초정약수세종스파텔에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/26/3083726_image2_1.jpg',
+    lat: 36.7191355285,
+    lng: 127.5987081910,
   ),
   Quest(
     id: 'cj18',
@@ -433,6 +577,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '청주랜드동물원은 가까이서 동물의 생태를 직접 관찰할 수 있는 산 교육장으로 활용하고자 1997년 7월 개원했다.',
     conditions: ['청주동물원에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/77/3357777_image2_1.jpg',
+    lat: 36.6524556651,
+    lng: 127.5206781546,
   ),
   Quest(
     id: 'cj19',
@@ -444,6 +592,8 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '멍글멍글 펫 글램핑은 충북 청주시 청원구 오창읍 백현리에 자리 잡고 있다.',
     conditions: ['멍글멍글 펫 글램핑 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    lat: 36.7172741323,
+    lng: 127.3679265279,
   ),
   Quest(
     id: 'cj20',
@@ -455,6 +605,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '벨루아는 오창저수지 뷰가 멋진 글램핑 겸 펜션이다.',
     conditions: ['벨루아 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/36/2798536_image2_1.jpg',
+    lat: 36.7438598229,
+    lng: 127.4086329057,
   ),
   Quest(
     id: 'be1',
@@ -466,6 +620,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '국보 팔상전을 지정된 구도로 담아보세요. 우리나라 유일의 목조 5층탑입니다.',
     conditions: ['팔상전 전체가 보이는 구도', '지정 포토존에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/76/4077376_image2_1.jpg',
+    lat: 36.5410422035,
+    lng: 127.8328568589,
   ),
   Quest(
     id: 'be2',
@@ -477,6 +635,10 @@ const List<Quest> kQuests = [
     reward: 150,
     desc: '문장대 정상에서 GPS 위치 인증에 도전하세요!',
     conditions: ['문장대 정상 100m 이내 도달', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/30/712630_image2_1.jpg',
+    lat: 36.5310126580628,
+    lng: 127.822202605396,
   ),
   Quest(
     id: 'be3',
@@ -488,6 +650,10 @@ const List<Quest> kQuests = [
     reward: 90,
     desc: '속리산으로 향하는 열두 굽이 고갯길을 한눈에 담아보세요.',
     conditions: ['전망대에서 굽잇길이 보이도록 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/57/3449957_image2_1.jpg',
+    lat: 36.4991475269,
+    lng: 127.7893194701,
   ),
   Quest(
     id: 'be4',
@@ -499,6 +665,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '세조가 걸었다는 숲길을 따라 저수지 풍경과 함께 느리게 걸어보세요.',
     conditions: ['세조길 구간에서 촬영', '숲길 풍경 포함'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/17/3556717_image2_1.jpg',
+    lat: 36.5411407332,
+    lng: 127.8329032953,
   ),
   Quest(
     id: 'be5',
@@ -506,10 +676,10 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '보은 대추 간식 맛보기',
     place: '보은 시내',
-    verify: 'photo',
+    verify: 'qr',
     reward: 60,
     desc: '보은의 특산물 대추로 만든 간식을 맛보고 기록해보세요.',
-    conditions: ['대추 음식이 보이는 사진'],
+    conditions: ['보은 시내 현장 부착 QR 코드 스캔'],
   ),
   Quest(
     id: 'be6',
@@ -522,6 +692,10 @@ const List<Quest> kQuests = [
     desc:
         '독수리봉은 대청호 오백리길 제15구간에 위치하여 대청호 인근 분저리 마을을 지나면 볼 수 있는데, 예로부터 독수리가 많이 서식했던 곳으로 알려져 있다.',
     conditions: ['독수리봉에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/67/3581967_image2_1.jpg',
+    lat: 36.4162477630,
+    lng: 127.5844178478,
   ),
   Quest(
     id: 'be7',
@@ -534,6 +708,10 @@ const List<Quest> kQuests = [
     desc:
         '충북알프스자연휴양림은 천혜의 자연환경을 자랑하는 충청북도 보은군 산외면에 자리 잡고 있으며 충북 알프스 끝자락 묘봉과 접하고 있다.',
     conditions: ['충북알프스자연휴양림에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/83/3577183_image2_1.jpeg',
+    lat: 36.5699310989,
+    lng: 127.7898257875,
   ),
   Quest(
     id: 'be8',
@@ -545,6 +723,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '보은 속리 정이품송의 자연 풍경 속에서 여유로운 한때를 보내고 사진으로 남겨보세요.',
     conditions: ['보은 속리 정이품송에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/85/3571785_image2_1.jpg',
+    lat: 36.5175125652,
+    lng: 127.8154471804,
   ),
   Quest(
     id: 'be9',
@@ -556,6 +738,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '상궁저수지는 충북 보은군 내북면에 자리 잡고 있다.',
     conditions: ['상궁저수지에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/92/3571692_image2_1.jpg',
+    lat: 36.5290473459,
+    lng: 127.6613189737,
   ),
   Quest(
     id: 'be10',
@@ -567,6 +753,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '충북 보은군에 위치한 보은 우당고택은 노블레스 오블리주의 상징이다.',
     conditions: ['보은 우당고택에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/69/3575369_image2_1.jpg',
+    lat: 36.4689398869,
+    lng: 127.7901841203,
   ),
   Quest(
     id: 'be11',
@@ -578,6 +768,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '보은동헌은 삼산리의 옛 보은경찰서 자리에 있는 조선시대 관아로 건립연대는 확실하지 않으나 순조 때 고친 것으로 전한다.',
     conditions: ['보은동헌에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/54/3571954_image2_1.jpg',
+    lat: 36.4845923005,
+    lng: 127.7154459195,
   ),
   Quest(
     id: 'be12',
@@ -590,6 +784,10 @@ const List<Quest> kQuests = [
     desc:
         '탈골암은 법주사의 산내 암자로 720년(신라 성덕왕 19) 창건되었고, 776년(혜공왕 12) 진표율사가 중창했다고 한다.',
     conditions: ['탈골암(충북)에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/01/3571901_image2_1.jpg',
+    lat: 36.5485984627,
+    lng: 127.8466768564,
   ),
   Quest(
     id: 'be13',
@@ -602,6 +800,10 @@ const List<Quest> kQuests = [
     desc:
         '여적암은 법주사에 속한 암자로 조선 숙종 20년(1694)에 여적당 경수대사가 창건한 후 광무 9년(1901) 당시 주지였던 남응익 대사가 중창하였다.',
     conditions: ['여적암(보은)에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/43/3571843_image2_1.jpg',
+    lat: 36.5560584459,
+    lng: 127.8315891076,
   ),
   Quest(
     id: 'be14',
@@ -614,6 +816,10 @@ const List<Quest> kQuests = [
     desc:
         '충청북도 보은에 위치한 신토불이약초식당은 신토불이약초식당은 약초산채버섯정식, 더덕구이정식, 버섯전골정식 등 건강한 한식 메뉴가 특징인 식당이다.',
     conditions: ['음식이 명확히 보이는 사진', '신토불이약초식당에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/94/3587994_image2_1.jpg',
+    lat: 36.5315388721,
+    lng: 127.8228572386,
   ),
   Quest(
     id: 'be15',
@@ -625,6 +831,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '충청북도 보은군에 위치한 김천식당은 보은시외버스터미널 맞은편인 보은먹자골목에 위치한 순대 전문점이다.',
     conditions: ['음식이 명확히 보이는 사진', '김천식당에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/96/2876496_image2_1.jpg',
+    lat: 36.4824482097,
+    lng: 127.7214621081,
   ),
   Quest(
     id: 'be16',
@@ -636,6 +846,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '속리토속음식점은 충청북도 보은군에 위치한 속리산 맛집이다.',
     conditions: ['음식이 명확히 보이는 사진', '속리토속음식점에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/47/1193847_image2_1.jpg',
+    lat: 36.5314555326,
+    lng: 127.8219795416,
   ),
   Quest(
     id: 'be17',
@@ -647,6 +861,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '솔밭공원은 충청북도 보은군 탄부면 임한리에 있다.',
     conditions: ['솔밭공원에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/45/4093745_image2_1.jpg',
+    lat: 36.4478167783,
+    lng: 127.8047566100,
   ),
   Quest(
     id: 'be18',
@@ -658,6 +876,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '충청북도에는 수안보온천, 단양, 속리산 등 3곳의 관광특구가 있다.',
     conditions: ['속리산 관광특구에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/84/3082484_image2_1.JPG',
+    lat: 36.5411407332,
+    lng: 127.8329032953,
   ),
   Quest(
     id: 'be19',
@@ -669,6 +891,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '속리산둘레길은 충북 보은군과 괴산군, 경북 문경시와 상주시를 연결하는 속리산 권역의 둘레길로 총 거리 약 200km이다.',
     conditions: ['보은길 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/64/3589764_image2_1.jpg',
+    lat: 36.4700675593,
+    lng: 127.7914756407,
   ),
   Quest(
     id: 'be20',
@@ -680,6 +906,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '충청북도 보은군 속리산면에 있는 마을로 구병산 자락에 아늑하게 놓여있는 산촌마을이다.',
     conditions: ['구병리아름마을 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/63/3585363_image2_1.jpg',
+    lat: 36.4824286850,
+    lng: 127.8702265989,
   ),
   Quest(
     id: 'cu1',
@@ -691,6 +921,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '잔잔한 호수를 따라 달리며 풍경 한 장을 남겨보세요.',
     conditions: ['충주호가 보이는 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/95/3560695_image2_1.JPG',
+    lat: 36.9581494710,
+    lng: 128.0400201677,
   ),
   Quest(
     id: 'cu2',
@@ -702,6 +936,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '우륵이 가야금을 연주했다는 이야기가 깃든 절벽입니다.',
     conditions: ['탄금대 표지석 포함 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/17/3561117_image2_1.JPG',
+    lat: 36.9882989443,
+    lng: 127.8983125810,
   ),
   Quest(
     id: 'cu3',
@@ -713,6 +951,10 @@ const List<Quest> kQuests = [
     reward: 100,
     desc: '국내 유일 백옥 광산 동굴에서 이색 탐험을 즐겨보세요.',
     conditions: ['동굴 내부에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/61/4090161_image2_1.jpg',
+    lat: 36.9618386972,
+    lng: 128.0070832086,
   ),
   Quest(
     id: 'cu4',
@@ -720,10 +962,10 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '충주 사과 디저트 맛보기',
     place: '충주 시내',
-    verify: 'photo',
+    verify: 'qr',
     reward: 60,
     desc: '사과의 고장 충주에서 사과빵, 사과주스 같은 디저트를 즐겨보세요.',
-    conditions: ['사과 디저트가 보이는 사진'],
+    conditions: ['충주 시내 현장 부착 QR 코드 스캔'],
   ),
   Quest(
     id: 'cu5',
@@ -737,6 +979,10 @@ const List<Quest> kQuests = [
     conditions: ['OX 퀴즈 정답 맞히기'],
     quizQuestion: '충주 탑평리 칠층석탑은 현존하는 통일신라 석탑 중 가장 높다.',
     quizAnswer: true,
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/39/3561139_image2_1.JPG',
+    lat: 37.0157883884,
+    lng: 127.8665734128,
   ),
   Quest(
     id: 'cu6',
@@ -748,6 +994,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '충청북도 민간 정원 6호인 우림정원은 충북 충주시 엄정면에 자리 잡고 있다.',
     conditions: ['우림정원에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/21/3573321_image2_1.jpg',
+    lat: 37.0791496960,
+    lng: 127.9037011589,
   ),
   Quest(
     id: 'cu7',
@@ -760,6 +1010,10 @@ const List<Quest> kQuests = [
     desc:
         '충주 강변길은 충주댐 아래 강변에 조성된 걷기 길로 총 길이 91㎞, 9개 코스로 이루어진 ‘충주시 풍경길’ 가운데 하나이다.',
     conditions: ['충주 강변길에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/90/3565090_image2_1.JPG',
+    lat: 36.9910782067,
+    lng: 127.9961287163,
   ),
   Quest(
     id: 'cu8',
@@ -772,6 +1026,10 @@ const List<Quest> kQuests = [
     desc:
         '중원 문화의 발상지 충주는 수운(水運) 교통은 물론, 육로 교통에 있어서도 우리나라 동서남북을 연결하는 요충지였으며, 그중 수운의 중심에는 ‘목계나루’가 있었다.',
     conditions: ['목계나루에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/30/3561230_image2_1.JPG',
+    lat: 37.0752276537,
+    lng: 127.8889470429,
   ),
   Quest(
     id: 'cu9',
@@ -783,6 +1041,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '충주시 가금면 장천리 저우네 마을 아래편으로 솔 무더기가 있는 곳이 옛 명칭으로 목계나루의 목계솔밭이다.',
     conditions: ['목계솔밭(충주)에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/54/3560854_image2_1.JPG',
+    lat: 37.0740498600,
+    lng: 127.8807200387,
   ),
   Quest(
     id: 'cu10',
@@ -795,6 +1057,10 @@ const List<Quest> kQuests = [
     desc:
         '인근의 월악산, 주흘산, 조령산 등과 함께 조령 5악으로 손꼽히는 포암산은 월악산국립공원 내 충주시 상모면과 경북 문경시의 경계를 이루고 있는 산이다.',
     conditions: ['포암산(충주)에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/48/3353448_image2_1.JPG',
+    lat: 36.8215884156,
+    lng: 128.0961579405,
   ),
   Quest(
     id: 'cu11',
@@ -806,6 +1072,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '충주 미륵대원지 석등은 월악산 자락의 미륵대원지에 있는 석등이다.',
     conditions: ['충주 미륵대원지 석등에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/58/3574458_image2_1.jpg',
+    lat: 36.8224299610,
+    lng: 128.0948274797,
   ),
   Quest(
     id: 'cu12',
@@ -817,6 +1087,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '청명주는 충북무형유산으로 지정된 술로 현재 충북 충주 김해김씨 문중에서 4대째 명맥을 유지하고 있다.',
     conditions: ['중원당 (청명주 양조장)에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/97/3572197_image2_1.jpg',
+    lat: 36.9972586653,
+    lng: 127.8788057445,
   ),
   Quest(
     id: 'cu13',
@@ -828,6 +1102,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '중앙공원이라고도 부르며, 면적은 약 7,500㎡이다.',
     conditions: ['충주 관아공원에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/24/3561224_image2_1.JPG',
+    lat: 36.9705377917,
+    lng: 127.9359458203,
   ),
   Quest(
     id: 'cu14',
@@ -839,6 +1117,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '충주 IC와 가까워 접근성이 좋은 탄금한우타운은 한우를 합리적인 가격으로 맛볼 수 있는 곳이다.',
     conditions: ['음식이 명확히 보이는 사진', '충주농협 탄금한우타운에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/23/3588023_image2_1.jpeg',
+    lat: 36.9874322975,
+    lng: 127.8939741061,
   ),
   Quest(
     id: 'cu15',
@@ -851,6 +1133,10 @@ const List<Quest> kQuests = [
     desc:
         '충청북도 충주시 수안보면에 위치한 언덕넘어는 수안보 지역의 향토음식을 제대로 맛볼 수 있는 한식당으로, 꿩요리와 닭요리를 전문으로 선보이는 곳이다.',
     conditions: ['음식이 명확히 보이는 사진', '언덕넘어에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/71/3587971_image2_1.jpg',
+    lat: 36.8410289609,
+    lng: 128.0057988102,
   ),
   Quest(
     id: 'cu16',
@@ -862,6 +1148,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '안림홍두깨칼국수보쌈은 충청북도 충주시 안림동에 있는 칼국수 전문점이다.',
     conditions: ['음식이 명확히 보이는 사진', '안림홍두깨칼국수보쌈에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/53/2857953_image2_1.jpg',
+    lat: 36.9701159659,
+    lng: 127.9548219151,
   ),
   Quest(
     id: 'cu17',
@@ -873,6 +1163,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '충북 충주시에 위치한 앙성탄산온천의 온천수는 지하 700m에서 용출된다.',
     conditions: ['앙성탄산온천에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/10/3061810_image2_1.jpg',
+    lat: 37.0938432626,
+    lng: 127.7970992194,
   ),
   Quest(
     id: 'cu18',
@@ -884,6 +1178,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '양성 온천지구는 충주시 양성면 돈산리와 능암리 일대의 대단위 탄산수 온천타운이다.',
     conditions: ['앙성온천지구에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/37/3061937_image2_1.jpg',
+    lat: 37.0937849348,
+    lng: 127.7970214496,
   ),
   Quest(
     id: 'cu19',
@@ -895,6 +1193,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '수주팔봉 야영장이 자리한 달천은 전 구간이 상수원 보호구역으로 지정되어 취사나 야영이 불가능하다.',
     conditions: ['수주팔봉 야영지 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/76/2761676_image2_1.jpg',
+    lat: 36.8995207136,
+    lng: 127.9227184801,
   ),
   Quest(
     id: 'cu20',
@@ -906,6 +1208,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '천연잔디 운동장이 있는 펫트리파크는 충청북도 충주시 앙성면에 위치한 애견 동반 글램핑장이다.',
     conditions: ['펫 트리파크 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/56/2798656_image2_1.jpg',
+    lat: 37.1028989597,
+    lng: 127.7102706696,
   ),
   Quest(
     id: 'jc1',
@@ -917,6 +1223,10 @@ const List<Quest> kQuests = [
     reward: 90,
     desc: '케이블카에서 내려다보는 청풍호 전경을 담아보세요.',
     conditions: ['케이블카 탑승 인증', '호수 전경 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/46/3356546_image2_1.jpg',
+    lat: 37.0013135287,
+    lng: 128.1668019964,
   ),
   Quest(
     id: 'jc2',
@@ -928,6 +1238,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '삼한시대 저수지의 고요한 밤 풍경을 기록하세요.',
     conditions: ['의림지 야경 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/93/3416193_image2_1.jpg',
+    lat: 37.1761553169,
+    lng: 128.2094875238,
   ),
   Quest(
     id: 'jc3',
@@ -939,6 +1253,10 @@ const List<Quest> kQuests = [
     reward: 100,
     desc: '청풍호 위에 놓인 출렁다리를 건너며 스릴을 느껴보세요.',
     conditions: ['출렁다리 입구 100m 이내 도달', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/92/3491892_image2_1.jpg',
+    lat: 36.9442659618774,
+    lng: 128.232030902103,
   ),
   Quest(
     id: 'jc4',
@@ -950,6 +1268,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '한국 천주교 역사가 깃든 배론성지의 고요한 순례길을 걸어보세요.',
     conditions: ['성지 내에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/15/3570615_image2_1.jpg',
+    lat: 37.1611637644948,
+    lng: 128.083770487214,
   ),
   Quest(
     id: 'jc5',
@@ -957,10 +1279,10 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '제천 약채락 한 상 맛보기',
     place: '제천 시내',
-    verify: 'photo',
+    verify: 'qr',
     reward: 70,
     desc: '약초의 고장 제천에서 약채락 건강 밥상을 즐겨보세요.',
-    conditions: ['음식이 명확히 보이는 사진'],
+    conditions: ['제천 시내 현장 부착 QR 코드 스캔'],
   ),
   Quest(
     id: 'jc6',
@@ -972,6 +1294,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '덕동생태숲의 자연 풍경 속에서 여유로운 한때를 보내고 사진으로 남겨보세요.',
     conditions: ['덕동생태숲에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/47/3569847_image2_1.jpg',
+    lat: 37.2140711502,
+    lng: 127.9520484687,
   ),
   Quest(
     id: 'jc7',
@@ -983,6 +1309,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '송계계곡은 월악산 국립공원 내에 위치한 계곡으로 제천의 대표적인 계곡 관광지라 할 수 있다.',
     conditions: ['송계계곡에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/71/3348771_image2_1.JPG',
+    lat: 36.8715491324,
+    lng: 128.0845214406,
   ),
   Quest(
     id: 'jc8',
@@ -994,6 +1324,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '탁사정은 백사장과 맑은 물, 노송이 어울린 아름다운 계곡으로 제천의 대표적인 여름 피서지이다.',
     conditions: ['탁사정에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/00/3061100_image2_1.JPG',
+    lat: 37.1666739248,
+    lng: 128.1062248599,
   ),
   Quest(
     id: 'jc9',
@@ -1005,6 +1339,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '덕동계곡은 백운산(1,087m)과 십자봉(984.8m)에서 발원하여 원덕동까지 5㎞에 걸쳐 흐르는 계곡이다.',
     conditions: ['덕동계곡에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/31/3062631_image2_1.JPG',
+    lat: 37.1721349831,
+    lng: 127.9878464609,
   ),
   Quest(
     id: 'jc10',
@@ -1016,6 +1354,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '제천시 한수면 월악산 자락의 고찰인 덕주사에 있는 불상이다.',
     conditions: ['덕주사 약사여래입상에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/14/3577314_image2_1.jpg',
+    lat: 36.8622448916,
+    lng: 128.0978371813,
   ),
   Quest(
     id: 'jc11',
@@ -1027,6 +1369,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '제천 시곡리 석조여래 입상은 시곡리 심곡마을 입구에 있는 고려 시대의 석조 여래 입상이다.',
     conditions: ['제천 시곡리 석조여래입상에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/45/3570745_image2_1.jpg',
+    lat: 37.1964878500,
+    lng: 128.2916406584,
   ),
   Quest(
     id: 'jc12',
@@ -1038,6 +1384,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '충청북도 제천시 명동에 있는 제천 엽연초생산조합의 옛 사옥이다.',
     conditions: ['제천 엽연초생산조합 구사옥에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/70/3568670_image2_1.jpg',
+    lat: 37.1364153993,
+    lng: 128.2068389221,
   ),
   Quest(
     id: 'jc13',
@@ -1049,6 +1399,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '청풍문화유산단지 안에 있는 누각으로 사료적 가치가 큰 건축물이다.',
     conditions: ['제천 청풍 한벽루에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/40/3568740_image2_1.jpg',
+    lat: 37.0034550704,
+    lng: 128.1733319047,
   ),
   Quest(
     id: 'jc14',
@@ -1060,6 +1414,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '고원갈비는 제천시 의병대로 도시 중심부에 위치하고 있는 고깃집이다.',
     conditions: ['음식이 명확히 보이는 사진', '고원갈비에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/38/3587938_image2_1.jpg',
+    lat: 37.1370403639,
+    lng: 128.2087942841,
   ),
   Quest(
     id: 'jc15',
@@ -1071,6 +1429,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '노송식당은 제천시 내토로길에 자리하고 있으며 2019년 중소벤처기업부가 인증한 백년가게이다.',
     conditions: ['음식이 명확히 보이는 사진', '노송식당에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/36/2616136_image2_1.jpg',
+    lat: 37.1282164622,
+    lng: 128.2131941465,
   ),
   Quest(
     id: 'jc16',
@@ -1083,6 +1445,10 @@ const List<Quest> kQuests = [
     desc:
         '충북 제천에 위치한 덩실분식은 1965년부터 3대째 국산 찹쌀과 국산 팥으로 정성을 들여 빚여내는 전통수제 찹쌀떡, 찹쌀도넛을 판매하고 있는 곳이다.',
     conditions: ['음식이 명확히 보이는 사진', '덩실분식에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/20/3587020_image2_1.jpg',
+    lat: 37.1393150937,
+    lng: 128.2083525907,
   ),
   Quest(
     id: 'jc17',
@@ -1094,6 +1460,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '청풍리조트에서 잠시 쉬어가며 느린 여행의 매력을 느껴보세요.',
     conditions: ['청풍리조트에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/48/3583948_image2_1.jpg',
+    lat: 37.0167119714,
+    lng: 128.1782616343,
   ),
   Quest(
     id: 'jc18',
@@ -1106,6 +1476,10 @@ const List<Quest> kQuests = [
     desc:
         '약초의 본고장 제천시의 생산품을 사용하여 운영하는 한방족욕체험 카페 본초다담은 일상생활과 여행중 쌓인 피로를 풀 수 있는 장소이다.',
     conditions: ['본초다담에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/55/3570655_image2_1.jpg',
+    lat: 37.1809216161,
+    lng: 128.2191559605,
   ),
   Quest(
     id: 'jc19',
@@ -1117,6 +1491,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '백운일출캠핑장 충북 제천시 백운면 구학산로에 자리 잡고 있다.',
     conditions: ['백운일출캠핑장 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/68/2793668_image2_1.jpg',
+    lat: 37.2000094693,
+    lng: 127.9964589643,
   ),
   Quest(
     id: 'jc20',
@@ -1128,6 +1506,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '무도 글램핑은 충북 제천시 송학면에 있다.',
     conditions: ['무도글램핑 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/09/2747709_image2_1.jpg',
+    lat: 37.1716484819,
+    lng: 128.2617301848,
   ),
   Quest(
     id: 'es1',
@@ -1139,6 +1521,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '세계 위인들의 조각상 사이에서 한 컷.',
     conditions: ['조각상 포함 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/46/3064346_image2_1.JPG',
+    lat: 37.0329240101,
+    lng: 127.5754320289,
   ),
   Quest(
     id: 'es2',
@@ -1150,6 +1536,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '울창한 숲에서 맑은 공기를 마시며 산림욕을 즐겨보세요.',
     conditions: ['숲길에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/86/3350486_image2_1.JPG',
+    lat: 36.9720192434,
+    lng: 127.6911150050,
   ),
   Quest(
     id: 'es3',
@@ -1161,6 +1551,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '100년이 넘은 고딕 양식 성당의 고즈넉한 아름다움을 만나보세요.',
     conditions: ['성당 외관이 보이는 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/53/3576253_image2_1.jpg',
+    lat: 37.1213983401,
+    lng: 127.6411569266,
   ),
   Quest(
     id: 'es4',
@@ -1168,10 +1562,14 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '음성 오일장 먹거리 탐방',
     place: '무극시장',
-    verify: 'photo',
+    verify: 'qr',
     reward: 60,
     desc: '시골 장터의 정겨운 먹거리를 맛보고 기록해보세요.',
-    conditions: ['시장 내에서 촬영', '음식 사진 등록'],
+    conditions: ['무극시장 현장 부착 QR 코드 스캔'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/22/4094222_image2_1.jpg',
+    lat: 36.9918194094,
+    lng: 127.5970025404,
   ),
   Quest(
     id: 'es5',
@@ -1183,6 +1581,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '음성 도심 속 호수공원에서 여유로운 산책을 즐겨보세요.',
     conditions: ['공원 풍경 포함 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/62/3350462_image2_1.JPG',
+    lat: 36.9327889229958,
+    lng: 127.691019883154,
   ),
   Quest(
     id: 'es6',
@@ -1194,6 +1596,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '사정저수지는 충북 음성군 음성읍에 있다.',
     conditions: ['사정저수지에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/81/3576381_image2_1.jpg',
+    lat: 36.9778949243,
+    lng: 127.6131190792,
   ),
   Quest(
     id: 'es7',
@@ -1205,6 +1611,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '충도저수지는 충북 음성군 소이면에 자리 잡고 있다.',
     conditions: ['충도저수지에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/88/3573688_image2_1.jpg',
+    lat: 36.9063496627,
+    lng: 127.7262192626,
   ),
   Quest(
     id: 'es8',
@@ -1216,6 +1626,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '금석저수지는 충북 음성군 금왕읍에 있다.',
     conditions: ['금석저수지에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/73/3573573_image2_1.jpg',
+    lat: 36.9906878948,
+    lng: 127.6130992751,
   ),
   Quest(
     id: 'es9',
@@ -1227,6 +1641,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '삼형제 저수지는 음성에 있는 무극저수지, 금석저수지, 용계저수지를 일컫는 말이다.',
     conditions: ['삼형제 저수지에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/56/3335356_image2_1.JPG',
+    lat: 36.9720596210,
+    lng: 127.6205907936,
   ),
   Quest(
     id: 'es10',
@@ -1238,6 +1656,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '반기문 유엔사무총장 생가마을 (행치마을)에 깃든 이야기를 따라 걸으며 방문을 인증해보세요.',
     conditions: ['반기문 유엔사무총장 생가마을 (행치마을)에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/89/3586789_image2_1.jpg',
+    lat: 36.8922112791,
+    lng: 127.6646724156,
   ),
   Quest(
     id: 'es11',
@@ -1249,6 +1671,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '음성군 원남면의 사향산 자락에 있는 사찰이다.',
     conditions: ['꽃절(화암사)에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/37/3574837_image2_1.jpg',
+    lat: 36.8994932275,
+    lng: 127.6345804712,
   ),
   Quest(
     id: 'es12',
@@ -1260,6 +1686,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '광명선원은 1974년 창건된 광명사에 뿌리를 두고 있으며, 1998년 대한불교조계종 광명선원으로 사찰 명칭을 변경하였다.',
     conditions: ['광명선원에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/23/3573723_image2_1.jpg',
+    lat: 36.9855880108,
+    lng: 127.5871767532,
   ),
   Quest(
     id: 'es13',
@@ -1271,6 +1701,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '하하형제두묵골은 충북 음성군 감곡면 문촌리에 자리 잡고 있다.',
     conditions: ['음식이 명확히 보이는 사진', '하하형제두묵골에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/54/2767154_image2_1.jpg',
+    lat: 37.1117532343,
+    lng: 127.6960550311,
   ),
   Quest(
     id: 'es14',
@@ -1282,6 +1716,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '갑오징어와 코다리는 충청북도 음성군 삼성면 대사리에 자리 잡고 있다.',
     conditions: ['음식이 명확히 보이는 사진', '갑오징어와코다리에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/70/2767270_image2_1.jpg',
+    lat: 37.0419072775,
+    lng: 127.4757713143,
   ),
   Quest(
     id: 'es15',
@@ -1294,6 +1732,10 @@ const List<Quest> kQuests = [
     desc:
         '[중소벤처기업부 2018년도 ‘백년가게’로 선정] 32년 동안 중식에 대한 특별한 노하우로 3대째 운영 중인 중화요리 전문점이다.',
     conditions: ['음식이 명확히 보이는 사진', '영빈관에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/57/2608257_image2_1.jpg',
+    lat: 36.9371482554,
+    lng: 127.6910187779,
   ),
   Quest(
     id: 'es16',
@@ -1305,6 +1747,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '응천공원은 충북 음성군 생극면에 있다.',
     conditions: ['응천공원에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/07/3574907_image2_1.jpg',
+    lat: 37.0311997614,
+    lng: 127.6057960086,
   ),
   Quest(
     id: 'es17',
@@ -1316,6 +1762,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '무극전적 국민관광지에서 잠시 쉬어가며 느린 여행의 매력을 느껴보세요.',
     conditions: ['무극전적 국민관광지에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/02/3335402_image2_1.JPG',
+    lat: 36.9505986735,
+    lng: 127.6464612946,
   ),
   Quest(
     id: 'es18',
@@ -1327,6 +1777,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '백야자연휴양림 오토캠핑장은 충북 음성군 금왕읍에 있다.',
     conditions: ['백야자연휴양림 오토캠핑장 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/67/2747867_image2_1.jpg',
+    lat: 36.9568306099,
+    lng: 127.6090922586,
   ),
   Quest(
     id: 'es19',
@@ -1338,6 +1792,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '수레의산자연휴양림 캠핑장은 충북 음성군 생극면에 자리 잡고 있다.',
     conditions: ['수레의산자연휴양림 캠핑장 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/52/2743352_image2_1.jpg',
+    lat: 37.0383747962,
+    lng: 127.6530915454,
   ),
   Quest(
     id: 'es20',
@@ -1349,6 +1807,10 @@ const List<Quest> kQuests = [
     reward: 90,
     desc: '충청북도 음성군 감곡면에 자리 잡은 매산마을은 서울과 경상도를 잇는 교통의 요지로 한때 관문 역할을 했던 곳이다.',
     conditions: ['체험 모습이 보이는 사진', '매산마을 담장벽화에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/67/3573667_image2_1.jpg',
+    lat: 37.1215955407,
+    lng: 127.6412208040,
   ),
   Quest(
     id: 'jh1',
@@ -1360,6 +1822,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '천 년을 버틴 돌다리를 직접 건너보세요.',
     conditions: ['농다리 위 또는 앞에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/26/4053626_image2_1.JPG',
+    lat: 36.826945,
+    lng: 127.493167,
   ),
   Quest(
     id: 'jh2',
@@ -1371,6 +1837,10 @@ const List<Quest> kQuests = [
     reward: 100,
     desc: '초평호 위를 가로지르는 출렁다리에서 짜릿함을 느껴보세요.',
     conditions: ['출렁다리 입구 100m 이내 도달', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/72/4058272_image2_1.JPG',
+    lat: 36.825332378221916,
+    lng: 127.49684294390443,
   ),
   Quest(
     id: 'jh3',
@@ -1382,6 +1852,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '못을 쓰지 않고 지어 올린 3층 목탑의 웅장함을 만나보세요.',
     conditions: ['목탑 전체가 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/15/3560215_image2_1.jpg',
+    lat: 36.8398864577,
+    lng: 127.3411307620,
   ),
   Quest(
     id: 'jh4',
@@ -1389,10 +1863,14 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '생거진천 전통시장 맛보기',
     place: '생거진천 전통시장',
-    verify: 'photo',
+    verify: 'qr',
     reward: 60,
     desc: '진천 장터의 소문난 먹거리를 찾아 맛보세요.',
-    conditions: ['시장 내에서 촬영', '음식 사진 등록'],
+    conditions: ['생거진천 전통시장 현장 부착 QR 코드 스캔'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/73/3498073_image2_1.jpg',
+    lat: 36.86,
+    lng: 127.4507,
   ),
   Quest(
     id: 'jh5',
@@ -1404,6 +1882,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '연못과 야생화가 어우러진 생태공원을 천천히 둘러보세요.',
     conditions: ['생태공원에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/64/3498064_image2_1.jpg',
+    lat: 36.8538,
+    lng: 127.3423,
   ),
   Quest(
     id: 'jh6',
@@ -1415,6 +1897,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '생거진천 자연휴양림은 수려한 경관을 지닌 진천군 백곡면 명암리 무제산 일원에 자리 잡고 있다.',
     conditions: ['생거진천 자연휴양림에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/00/3465400_image2_1.JPG',
+    lat: 36.9241498594,
+    lng: 127.3901878870,
   ),
   Quest(
     id: 'jh7',
@@ -1426,6 +1912,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '구암저수지는 충북 진천군 광혜원면에 자리 잡고 있다.',
     conditions: ['구암저수지에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/40/3560240_image2_1.jpg',
+    lat: 36.9789803949,
+    lng: 127.4313382006,
   ),
   Quest(
     id: 'jh8',
@@ -1437,6 +1927,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '백곡저수지의 자연 풍경 속에서 여유로운 한때를 보내고 사진으로 남겨보세요.',
     conditions: ['백곡저수지에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/74/3064574_image2_1.JPG',
+    lat: 36.8695620983,
+    lng: 127.4123207495,
   ),
   Quest(
     id: 'jh9',
@@ -1449,6 +1943,10 @@ const List<Quest> kQuests = [
     desc:
         '진천읍 상계리에 있는 김유신탄생지를 들러 구불구불한 도로를 따라 위쪽으로 올라가면 산속에 자리하고 있는 조용한 저수지를 만날 수 있는데 이곳이 연곡저수지이다.',
     conditions: ['연곡저수지에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/86/3341286_image2_1.JPG',
+    lat: 36.8445001714,
+    lng: 127.3609677364,
   ),
   Quest(
     id: 'jh10',
@@ -1460,6 +1958,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '문수암은 진천의 미륵산 중턱에 구불구불 이어진 길 끝에 자리하고 있다.',
     conditions: ['문수암에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/94/3561894_image2_1.jpg',
+    lat: 36.8212311890,
+    lng: 127.3923100063,
   ),
   Quest(
     id: 'jh11',
@@ -1471,6 +1973,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '이곳은 흥무왕 김유신 장군이 탄생한 곳으로 가락국의 시조 김수로왕의 13 세손이다.',
     conditions: ['진천 김유신 탄생지와 태실에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/56/3560256_image2_1.jpg',
+    lat: 36.8405703330,
+    lng: 127.3757387382,
   ),
   Quest(
     id: 'jh12',
@@ -1482,6 +1988,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '진천 길상사는 삼국통일의 주역이었던 김유신 장군의 영정을 모시고 있는 사당이다.',
     conditions: ['진천 길상사에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/48/3560248_image2_1.jpg',
+    lat: 36.8533474931,
+    lng: 127.4231841125,
   ),
   Quest(
     id: 'jh13',
@@ -1493,6 +2003,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '할머니집은 충청북도 진천군 이월면 신계리에 자리 잡고 있다.',
     conditions: ['음식이 명확히 보이는 사진', '할머니집에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/95/2767195_image2_1.jpg',
+    lat: 36.9416676423,
+    lng: 127.4099828364,
   ),
   Quest(
     id: 'jh14',
@@ -1504,6 +2018,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '스시이찌방 충북혁신도시점은 충청북도 진천군 덕산읍 두촌리에 있다.',
     conditions: ['음식이 명확히 보이는 사진', '스시이찌방 충북혁신도시점에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/90/2858190_image2_1.jpg',
+    lat: 36.9019938680,
+    lng: 127.5325340239,
   ),
   Quest(
     id: 'jh15',
@@ -1515,6 +2033,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '한옥카페봄이와에서 지역의 맛을 즐기고 음식 사진으로 기록해보세요.',
     conditions: ['음식이 명확히 보이는 사진', '한옥카페봄이와에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/91/3458291_image2_1.jpg',
+    lat: 36.9859520023,
+    lng: 127.4418065063,
   ),
   Quest(
     id: 'jh16',
@@ -1527,6 +2049,10 @@ const List<Quest> kQuests = [
     desc:
         '현대모비스에서 사회공헌활동 일환으로 만들어진 미르숲은 한반도 지형을 감싸며 승천하는 용 모습의 초평호와 천년의 신비를 간직한 농다리를 볼 수 있다.',
     conditions: ['미르숲에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/42/3341242_image2_1.JPG',
+    lat: 36.8253798152,
+    lng: 127.4968615975,
   ),
   Quest(
     id: 'jh17',
@@ -1538,6 +2064,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '아빠 캠핑가 오토캠핑장은 충북 진천군 배곡면에 자리 잡고 있다.',
     conditions: ['아빠캠핑가 오토캠핑장 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/45/2743545_image2_1.jpg',
+    lat: 36.8871508123,
+    lng: 127.3606971304,
   ),
   Quest(
     id: 'jh18',
@@ -1549,6 +2079,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '충북대학교 천문대 천문체험학교 캠핑장은 충청북도 진천군 문백면에 위치했다.',
     conditions: ['충북대학교천문대천문체험학교 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/51/2740951_image2_1.JPG',
+    lat: 36.7816094626,
+    lng: 127.4754508537,
   ),
   Quest(
     id: 'jh19',
@@ -1561,6 +2095,10 @@ const List<Quest> kQuests = [
     desc:
         '충북 진천군에 위치한 물안뜰 마을은 아름다운 백곡저수지를 배경으로 넉넉한 마을인심과 따뜻한 정으로 마을을 찾는 관광객들을 맞이하고 있다.',
     conditions: ['체험 모습이 보이는 사진', '물안뜰체험관에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/76/3561976_image2_1.jpg',
+    lat: 36.8804214043,
+    lng: 127.3814760022,
   ),
   Quest(
     id: 'jh20',
@@ -1573,6 +2111,10 @@ const List<Quest> kQuests = [
     desc:
         '충북 진천군 문백면 공예촌길 일원에 도자기, 목공예, 천연 염색, 한지공예 등 각 분야 예술인들이 모여 사는 진천공예마을이 있다.',
     conditions: ['체험 모습이 보이는 사진', '진천공예마을에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/25/3560225_image2_1.jpg',
+    lat: 36.7898748433,
+    lng: 127.4568161877,
   ),
   Quest(
     id: 'jp1',
@@ -1584,6 +2126,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '밤하늘 아래에서 위치 인증에 도전하세요.',
     conditions: ['천문대 100m 이내 도달', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/58/3064458_image2_1.JPG',
+    lat: 36.7056158066,
+    lng: 127.6511399762,
   ),
   Quest(
     id: 'jp2',
@@ -1608,6 +2154,10 @@ const List<Quest> kQuests = [
     conditions: ['OX 퀴즈 정답 맞히기'],
     quizQuestion: '김득신은 「백이전」을 십만 번 넘게 읽었다고 전해진다.',
     quizAnswer: true,
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/32/3570832_image2_1.jpg',
+    lat: 36.7897326395,
+    lng: 127.5801412206,
   ),
   Quest(
     id: 'jp4',
@@ -1615,10 +2165,10 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '증평 인삼 요리 맛보기',
     place: '증평 시내',
-    verify: 'photo',
+    verify: 'qr',
     reward: 70,
     desc: '인삼의 고장 증평에서 몸보신 한 끼를 즐겨보세요.',
-    conditions: ['인삼 요리가 보이는 사진'],
+    conditions: ['증평 시내 현장 부착 QR 코드 스캔'],
   ),
   Quest(
     id: 'jp5',
@@ -1630,6 +2180,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '거북이를 닮은 좌구산 자락의 울창한 숲길을 걸어보세요.',
     conditions: ['휴양림 숲길에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/46/4077446_image2_1.jpg',
+    lat: 36.7055135253,
+    lng: 127.6510807615,
   ),
   Quest(
     id: 'jp6',
@@ -1641,6 +2195,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '증평 시내에서 자동차로 약 10~15분 거리에 위치한 수변 생태공원이다.',
     conditions: ['연암지질생태공원에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/52/3544152_image2_1.jpg',
+    lat: 36.8358025954,
+    lng: 127.5940747900,
   ),
   Quest(
     id: 'jp7',
@@ -1652,6 +2210,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '율리휴양촌의 자연 풍경 속에서 여유로운 한때를 보내고 사진으로 남겨보세요.',
     conditions: ['율리휴양촌에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/25/3340725_image2_1.JPG',
+    lat: 36.7172642077,
+    lng: 127.6366520617,
   ),
   Quest(
     id: 'jp8',
@@ -1663,6 +2225,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '미륵사(彌勒寺)는 충북 증평군 증평읍에 자리한 대한 불교 조계혜능종 소속 사찰이다.',
     conditions: ['미륵사(증평)에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/60/3570960_image2_1.jpg',
+    lat: 36.7950821160,
+    lng: 127.5851989502,
   ),
   Quest(
     id: 'jp9',
@@ -1674,6 +2240,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '보타사는 증평군 연탄 2리 산에 자리한 한국불교 태고종 소속 사찰이다.',
     conditions: ['보타사(증평)에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/70/3064470_image2_1.JPG',
+    lat: 36.8045970077,
+    lng: 127.5475020713,
   ),
   Quest(
     id: 'jp10',
@@ -1686,6 +2256,10 @@ const List<Quest> kQuests = [
     desc:
         '광덕사는 1949년 이묘연 보살이 석불의 몽조(夢兆)를 얻어 석불 옆에 3칸의 암자를 짓고 마을 이름을 따서 광덕사라 이름 지었다고 한다.',
     conditions: ['증평 광덕사에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/06/3334706_image2_1.JPG',
+    lat: 36.8324813097,
+    lng: 127.6246665798,
   ),
   Quest(
     id: 'jp11',
@@ -1697,6 +2271,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '증평 연병호 생가에 깃든 이야기를 따라 걸으며 방문을 인증해보세요.',
     conditions: ['증평 연병호 생가에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/95/3340395_image2_1.jpg',
+    lat: 36.8284011411,
+    lng: 127.6201226578,
   ),
   Quest(
     id: 'jp12',
@@ -1708,6 +2286,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '미몽은 충청북도 증평군 증평읍 미암리에 자리 잡고 있다.',
     conditions: ['음식이 명확히 보이는 사진', '미몽에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/67/2767167_image2_1.jpg',
+    lat: 36.8127495478,
+    lng: 127.5862178086,
   ),
   Quest(
     id: 'jp13',
@@ -1719,6 +2301,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '충청북도 증평군에 위치한 율리손두부는 좌구산 휴양림 근처에서 찾아볼 수 있는 손두부 전문점이다.',
     conditions: ['음식이 명확히 보이는 사진', '증평 율리손두부에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/43/3452643_image2_1.jpg',
+    lat: 36.7167559757,
+    lng: 127.6390546381,
   ),
   Quest(
     id: 'jp14',
@@ -1730,6 +2316,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '두남자와어머니청국장은 충청북도 증평군 증평읍에 위치한 청국장 전문점이다.',
     conditions: ['음식이 명확히 보이는 사진', '두남자와어머니청국장에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/61/2849661_image2_1.jpg',
+    lat: 36.7762756651,
+    lng: 127.5697703057,
   ),
   Quest(
     id: 'jp15',
@@ -1742,6 +2332,10 @@ const List<Quest> kQuests = [
     desc:
         '증평 자전거공원은 자전거를 주제로 하는 이색테마공원으로 증평군을 축소하여 놓은 자전거 공원에서 어린이들의 학습공간으로 많은 사랑을 받고 있다.',
     conditions: ['증평 자전거공원에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/22/3571522_image2_1.jpg',
+    lat: 36.7673634254,
+    lng: 127.6043813359,
   ),
   Quest(
     id: 'jp16',
@@ -1753,6 +2347,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '2014년 개장한 별천지 공원은 천문대(별)의 이미지와 자연이 살아 숨 쉬는 청정한 이미지(천지)를 합성한 명칭이다.',
     conditions: ['별천지공원에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/37/3570937_image2_1.jpg',
+    lat: 36.7161337965,
+    lng: 127.6374520213,
   ),
   Quest(
     id: 'jp17',
@@ -1764,6 +2362,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '복합레저단지 벨포레 내에 위치한 벨포레 CC는 벨포레리조트의 자연을 그대로 담은 코스에서 골프를 할 수 있는 곳이다.',
     conditions: ['블랙스톤벨포레CC 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/99/2761999_image2_1.jpg',
+    lat: 36.8451985215,
+    lng: 127.5821367111,
   ),
   Quest(
     id: 'jp18',
@@ -1775,6 +2377,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '증평 장이익어가는마을에서 몸으로 부딪치는 즐거움을 경험하고 인증해보세요.',
     conditions: ['증평 장이익어가는마을 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/98/1083198_image2_1.jpg',
+    lat: 36.8004646993,
+    lng: 127.5779494510,
   ),
   Quest(
     id: 'jp19',
@@ -1786,6 +2392,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '송원칼국수는 충청북도 증평군 증평읍 초중리에 있다.',
     conditions: ['음식이 명확히 보이는 사진', '송원칼국수에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/26/2903526_image2_1.jpg',
+    lat: 36.7781087681,
+    lng: 127.5686703533,
   ),
   Quest(
     id: 'jp20',
@@ -1797,6 +2407,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '이와카페는 충청북도 증평군 증평읍 초중리에 있다.',
     conditions: ['음식이 명확히 보이는 사진', '이와카페에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/12/2856212_image2_1.jpg',
+    lat: 36.7682684406,
+    lng: 127.5802168136,
   ),
   Quest(
     id: 'gs1',
@@ -1808,6 +2422,10 @@ const List<Quest> kQuests = [
     reward: 90,
     desc: '괴산호를 끼고 걷는 아름다운 숲길을 걸어보세요.',
     conditions: ['옛길 구간에서 촬영', '괴산호 풍경 포함'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/29/3488229_image2_1.jpg',
+    lat: 36.769362062031355,
+    lng: 127.83974508663044,
   ),
   Quest(
     id: 'gs2',
@@ -1819,6 +2437,10 @@ const List<Quest> kQuests = [
     reward: 100,
     desc: '아홉 절경이 이어지는 화양천 계곡길을 따라 걸어보세요.',
     conditions: ['화양구곡 구간에서 촬영', '계곡 풍경 포함'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/84/3059184_image2_1.jpg',
+    lat: 36.6688340823,
+    lng: 127.8133764693,
   ),
   Quest(
     id: 'gs3',
@@ -1830,6 +2452,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '20m 높이에서 떨어지는 시원한 물줄기 앞에서 잠시 쉬어가세요.',
     conditions: ['폭포가 보이는 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/01/4084901_image2_1.jpg',
+    lat: 36.8070000000,
+    lng: 128.0286000000,
   ),
   Quest(
     id: 'gs4',
@@ -1837,10 +2463,10 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '괴산 대학찰옥수수 맛보기',
     place: '괴산 시내',
-    verify: 'photo',
+    verify: 'qr',
     reward: 60,
     desc: '괴산 명물 찰옥수수의 쫀득한 단맛을 즐겨보세요.',
-    conditions: ['옥수수가 보이는 사진'],
+    conditions: ['괴산 시내 현장 부착 QR 코드 스캔'],
   ),
   Quest(
     id: 'gs5',
@@ -1854,6 +2480,10 @@ const List<Quest> kQuests = [
     conditions: ['OX 퀴즈 정답 맞히기'],
     quizQuestion: '화양구곡의 이름은 우암 송시열과 관련이 있다.',
     quizAnswer: true,
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/27/3349927_image2_1.JPG',
+    lat: 36.6689479280,
+    lng: 127.8117210590,
   ),
   Quest(
     id: 'gs6',
@@ -1865,6 +2495,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '적석리 입석마을은 400년 전 조선 숙종 때 연일 정 씨의 선조가 정착하면서 조성되었다고 전한다.',
     conditions: ['괴산 적석리 소나무에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/69/3571269_image2_1.jpg',
+    lat: 36.7576741205,
+    lng: 127.9776564792,
   ),
   Quest(
     id: 'gs7',
@@ -1876,6 +2510,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '괴산호의 자연 풍경 속에서 여유로운 한때를 보내고 사진으로 남겨보세요.',
     conditions: ['괴산호에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/37/3571237_image2_1.jpg',
+    lat: 36.7555274086,
+    lng: 127.8404160535,
   ),
   Quest(
     id: 'gs8',
@@ -1887,6 +2525,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '송덕리 미선나무 자생지는 세계적으로 우리나라에만 자생하는 우리나라 특산식물인 미선나무가 무리를 지어 자생하는 곳이다.',
     conditions: ['괴산 송덕리 미선나무 자생지에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/12/3571212_image2_1.jpg',
+    lat: 36.7946302716,
+    lng: 127.9384728287,
   ),
   Quest(
     id: 'gs9',
@@ -1898,6 +2540,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '괴산군 연풍면 소재지에 있는 조선시대의 건축물이다.',
     conditions: ['연풍향청에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/98/3589298_image2_1.jpg',
+    lat: 36.7631599411,
+    lng: 127.9961241142,
   ),
   Quest(
     id: 'gs10',
@@ -1909,6 +2555,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '고산정은 달천변의 경승지를 일컫는 고산9경의 하나인 제월대 옆에 자리하고 있는 정자이다.',
     conditions: ['괴산 고산정 및 제월대에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/95/4093595_image2_1.jpg',
+    lat: 36.8189735441,
+    lng: 127.8310462497,
   ),
   Quest(
     id: 'gs11',
@@ -1920,6 +2570,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '김시민장군 충민사는 임진왜란 때 전공을 세운 충무공 김시민과 문숙공 김제갑의 위패를 봉안하고 제향하는 사당이다.',
     conditions: ['김시민장군 충민사에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/61/3571261_image2_1.jpg',
+    lat: 36.8360877427,
+    lng: 127.8480353156,
   ),
   Quest(
     id: 'gs12',
@@ -1931,6 +2585,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '청안 사마소에 깃든 이야기를 따라 걸으며 방문을 인증해보세요.',
     conditions: ['청안 사마소에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/60/3571260_image2_1.jpg',
+    lat: 36.7752826421,
+    lng: 127.6420138467,
   ),
   Quest(
     id: 'gs13',
@@ -1942,6 +2600,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '한남불고기는 충청북도 괴산군 문광면에 위치해 있는 한식당이다.',
     conditions: ['음식이 명확히 보이는 사진', '한남불고기에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/35/2857135_image2_1.jpg',
+    lat: 36.8001516009,
+    lng: 127.7724736641,
   ),
   Quest(
     id: 'gs14',
@@ -1953,6 +2615,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '충청북도 괴산군 산막이옛길 인근에 위치한 한옥정원 숲 카페는 자연을 느끼며 여유롭게 커피 한잔을 할 수 있는 곳이다.',
     conditions: ['음식이 명확히 보이는 사진', '한옥정원 숲에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/84/2857584_image2_1.jpg',
+    lat: 36.7756916124,
+    lng: 127.8322995453,
   ),
   Quest(
     id: 'gs15',
@@ -1964,6 +2630,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '카페청안은 충청북도 괴산군 청안면 금신리에 있다.',
     conditions: ['음식이 명확히 보이는 사진', '카페청안에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/10/2857110_image2_1.jpg',
+    lat: 36.7686444350,
+    lng: 127.6375810974,
   ),
   Quest(
     id: 'gs16',
@@ -1975,6 +2645,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '목도강수욕장은 충북 괴산군 불정면에 자리한 강변 휴식 공간이다.',
     conditions: ['목도강수욕장에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/22/3571222_image2_1.jpg',
+    lat: 36.8753806098,
+    lng: 127.8567528640,
   ),
   Quest(
     id: 'gs17',
@@ -1986,6 +2660,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '초원의 집은 충북 괴산군 칠성면에 자리 잡고 있다.',
     conditions: ['초원의 집에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/31/3570931_image2_1.jpg',
+    lat: 36.7785089434,
+    lng: 127.8863196246,
   ),
   Quest(
     id: 'gs18',
@@ -1998,6 +2676,10 @@ const List<Quest> kQuests = [
     desc:
         '속리산국립공원 내 해발 400m 고지에 위치한 수려한 자연환경을 무대로 첨단 교육시설을 갖춘 종합 수련시설로서 새로운 경험과 추억을 만들 수 있다.',
     conditions: ['청소년수련마을보람원 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/99/3585899_image2_1.JPG',
+    lat: 36.6939853866,
+    lng: 127.8907021743,
   ),
   Quest(
     id: 'gs19',
@@ -2009,6 +2691,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '루파니애견캠핑장은 충청북도 괴산에 위치한 소규모 캠핑장으로 조용히 쉴 수 있는 곳이다.',
     conditions: ['루파니애견캠핑장 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/25/3578825_image2_1.jpg',
+    lat: 36.8591717527,
+    lng: 127.8781208517,
   ),
   Quest(
     id: 'gs20',
@@ -2021,6 +2707,10 @@ const List<Quest> kQuests = [
     desc:
         '충청도양반길 2코스는 갈론체험관을 시작으로 갈은구곡, 사기막리, 운교리목교, 선유대, 양반길출렁다리를 거쳐 갈론체험관으로 다시 돌아오는 코스다.',
     conditions: ['체험 모습이 보이는 사진', '충청도양반길 2코스에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/63/3575663_image2_1.jpg',
+    lat: 36.7345967173,
+    lng: 127.8535682433,
   ),
   Quest(
     id: 'oc1',
@@ -2032,6 +2722,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '시 향수의 고향에서 시인의 흔적을 만나보세요.',
     conditions: ['생가 입구에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/16/4041116_image2_1.jpg',
+    lat: 36.315025897543,
+    lng: 127.582145468665,
   ),
   Quest(
     id: 'oc2',
@@ -2043,6 +2737,10 @@ const List<Quest> kQuests = [
     reward: 90,
     desc: '호수 위로 솟은 700m 병풍바위의 절경을 담아보세요.',
     conditions: ['부소담악이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource_photo/75/3590775_image2_1.jpg',
+    lat: 36.3522365367,
+    lng: 127.5636944413,
   ),
   Quest(
     id: 'oc3',
@@ -2054,6 +2752,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '대청호를 끼고 걷는 감성 호숫길에서 여유를 즐겨보세요.',
     conditions: ['호수길 구간에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/67/4085367_image2_1.jpg',
+    lat: 36.3476696888,
+    lng: 127.6090975469,
   ),
   Quest(
     id: 'oc4',
@@ -2061,10 +2763,10 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '옥천 생선국수 맛보기',
     place: '옥천 시내',
-    verify: 'photo',
+    verify: 'qr',
     reward: 60,
     desc: '금강 민물고기로 끓여낸 옥천의 명물 생선국수를 맛보세요.',
-    conditions: ['음식이 명확히 보이는 사진'],
+    conditions: ['옥천 시내 현장 부착 QR 코드 스캔'],
   ),
   Quest(
     id: 'oc5',
@@ -2078,6 +2780,10 @@ const List<Quest> kQuests = [
     conditions: ['OX 퀴즈 정답 맞히기'],
     quizQuestion: '시 「향수」를 쓴 정지용 시인의 고향은 옥천이다.',
     quizAnswer: true,
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/08/4041108_image2_1.jpg',
+    lat: 36.3148870152445,
+    lng: 127.581587192523,
   ),
   Quest(
     id: 'oc6',
@@ -2089,6 +2795,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '둔주봉은 안남면 연주리 뒷산의 봉우리이자 옥천 제1경인 한반도 지형을 볼 수 있는 곳이다.',
     conditions: ['둔주봉에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/16/3547416_image2_1.jpg',
+    lat: 36.3519815498,
+    lng: 127.6645652307,
   ),
   Quest(
     id: 'oc7',
@@ -2101,6 +2811,10 @@ const List<Quest> kQuests = [
     desc:
         '교동 저수지는 농업용수를 공급할 뿐만 아니라 지역 주민과 관광객에게 산책과 명상을 함께 할 수 있도록 조성한 휴식공간이다.',
     conditions: ['교동저수지(교동생태습지)에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/29/3336629_image2_1.jpg',
+    lat: 36.3201448735,
+    lng: 127.5850176477,
   ),
   Quest(
     id: 'oc8',
@@ -2113,6 +2827,10 @@ const List<Quest> kQuests = [
     desc:
         '끝없이 솟은 메타세쿼이아가 맞아주는 곳, 화인산림욕장은 40여 년 전 이곳 부지를 산 정홍용 대표가 홀로 나무를 심고 가꾸어 온 거대한 숲이다.',
     conditions: ['화인산림욕장에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/38/3373738_image2_1.JPG',
+    lat: 36.3824281372,
+    lng: 127.6683362799,
   ),
   Quest(
     id: 'oc9',
@@ -2124,6 +2842,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '양조장은 술이나 식초 등을 담가 만드는 곳을 뜻한다.',
     conditions: ['이원양조장에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/93/3573393_image2_1.jpg',
+    lat: 36.2472982794,
+    lng: 127.6208553269,
   ),
   Quest(
     id: 'oc10',
@@ -2135,6 +2857,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '‘청풍정’은 산수가 좋고 바람이 맑아 고려시대 때부터 선비들이 자주 찾던 곳이라고 전해진다.',
     conditions: ['청풍정에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/95/3572895_image2_1.jpg',
+    lat: 36.3688171939,
+    lng: 127.5909713406,
   ),
   Quest(
     id: 'oc11',
@@ -2146,6 +2872,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '옥천군 금강비경 11선인 상춘정은 옥천 동쪽을 굽이쳐 흐르는 보청천 한가운데 자리하고 있는 정자이다.',
     conditions: ['상춘정에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/12/3572012_image2_1.jpg',
+    lat: 36.3216451059,
+    lng: 127.7622184647,
   ),
   Quest(
     id: 'oc12',
@@ -2157,6 +2887,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '프란스테이션은 충청북도 옥천군 군북면 소정리에 있다.',
     conditions: ['음식이 명확히 보이는 사진', '프란스테이션에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/09/3547409_image2_1.jpg',
+    lat: 36.3613432715,
+    lng: 127.6033926579,
   ),
   Quest(
     id: 'oc13',
@@ -2168,6 +2902,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '나의 신랑은 나무꾼은 충청북도 옥천군 군북면 증약리에 자리 잡고 있다.',
     conditions: ['음식이 명확히 보이는 사진', '나의신랑은나무꾼에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/58/2835458_image2_1.jpg',
+    lat: 36.3497959466,
+    lng: 127.5238695217,
   ),
   Quest(
     id: 'oc14',
@@ -2179,6 +2917,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '금강이 있는 옥천은 다슬기가 최고의 명물이다.',
     conditions: ['음식이 명확히 보이는 사진', '금강올갱이에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/67/2795567_image2_1.jpg',
+    lat: 36.3097706426,
+    lng: 127.5617255662,
   ),
   Quest(
     id: 'oc15',
@@ -2190,6 +2932,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '천연향기공원이라고 불리는 청산공원은 옥천 시내에서 차로 약 30분 정도 거리에 위치해 있다.',
     conditions: ['청산공원에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/93/2996093_image2_1.JPG',
+    lat: 36.3431460792,
+    lng: 127.7983202086,
   ),
   Quest(
     id: 'oc16',
@@ -2201,6 +2947,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '옥천 금강 수변 친수공원은 주변 경관이 빼어나 여름철 피서지로 제격인 금강변 공원이다.',
     conditions: ['옥천금강수변 친수공원에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/08/3336308_image2_1.jpg',
+    lat: 36.2857443111,
+    lng: 127.6444188423,
   ),
   Quest(
     id: 'oc17',
@@ -2213,6 +2963,10 @@ const List<Quest> kQuests = [
     desc:
         '구읍은 옥천의 옛 중심지로, 지금의 옥천읍 죽향리와 상계리, 하계리, 교동리, 문정리 일부를 가리키는 주민들 사이의 고유명사다.',
     conditions: ['옥천 구읍벽화마을 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/45/3581945_image2_1.jpg',
+    lat: 36.3125456970,
+    lng: 127.5825180784,
   ),
   Quest(
     id: 'oc18',
@@ -2224,6 +2978,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '수십 년 이 자리에서 아이들 웃음소리를 듣고 자란 울창한 플라타너스 두 그루 넉넉한 그늘이 있다.',
     conditions: ['팔음산마을 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/50/3573450_image2_1.jpg',
+    lat: 36.3559063310,
+    lng: 127.8314085729,
   ),
   Quest(
     id: 'oc19',
@@ -2246,6 +3004,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '옥천 구읍의 한옥 교동집은 육영수 여사의 생가이며 육 여사가 나고 자란 집이다.',
     conditions: ['옥천 육영수 생가에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/30/2653930_image2_1.jpg',
+    lat: 36.3179840474,
+    lng: 127.5871258519,
   ),
   Quest(
     id: 'yd1',
@@ -2253,10 +3015,14 @@ const List<Quest> kQuests = [
     type: 'food',
     title: '영동 와인터널 체험',
     place: '영동 와인터널',
-    verify: 'photo',
+    verify: 'qr',
     reward: 80,
     desc: '포도의 고장 영동에서 와인 한 잔을 즐겨보세요.',
-    conditions: ['와인터널 내부에서 촬영'],
+    conditions: ['영동 와인터널 현장 부착 QR 코드 스캔'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/04/4081604_image2_1.jpg',
+    lat: 36.1612646508,
+    lng: 127.7842748637,
   ),
   Quest(
     id: 'yd2',
@@ -2268,6 +3034,10 @@ const List<Quest> kQuests = [
     reward: 90,
     desc: '달도 머물다 간다는 월류봉의 절경을 사진에 담아보세요.',
     conditions: ['월류봉과 한천이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/60/3543160_image2_1.jpg',
+    lat: 36.2343129647,
+    lng: 127.8917176683,
   ),
   Quest(
     id: 'yd3',
@@ -2279,6 +3049,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '천 년을 살아온 천연기념물 은행나무의 위엄을 만나보세요.',
     conditions: ['은행나무 전체가 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/44/3059844_image2_1.JPG',
+    lat: 36.1581304898,
+    lng: 127.6104836756,
   ),
   Quest(
     id: 'yd4',
@@ -2290,6 +3064,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '한여름에도 서늘한 깊은 계곡에서 쉬어가세요.',
     conditions: ['계곡에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/27/3082527_image2_1.jpg',
+    lat: 36.0576133105,
+    lng: 127.8730686140,
   ),
   Quest(
     id: 'yd5',
@@ -2301,6 +3079,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '국악의 고장 영동에서 전통 악기를 직접 체험해보세요.',
     conditions: ['박물관 체험장에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/81/3581881_image2_1.jpg',
+    lat: 36.2101762428,
+    lng: 127.7049321798,
   ),
   Quest(
     id: 'yd6',
@@ -2312,6 +3094,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '황간면 원촌리에 깎아 세운 듯한 월류봉의 여덟 경승지를 한천팔경이라 부른다.',
     conditions: ['한천팔경에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/62/3577262_image2_1.jpg',
+    lat: 36.2379179868,
+    lng: 127.8849598367,
   ),
   Quest(
     id: 'yd7',
@@ -2323,6 +3109,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '충청북도 영동군 양산면 송호리에 있는 소나무 숲으로, 100년이 넘은 소나무 1만여 그루가 심어져 있다.',
     conditions: ['송호리송림에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/88/3572788_image2_1.jpg',
+    lat: 36.1300459714,
+    lng: 127.6759202784,
   ),
   Quest(
     id: 'yd8',
@@ -2334,6 +3124,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '산의 형세가 말갈기와 같다고 하여 이름 지어진 갈기산은 해발 585m 높이로 양산팔경 지역에 속해 있다.',
     conditions: ['갈기산에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/51/3341351_image2_1.JPG',
+    lat: 36.1121138260,
+    lng: 127.6280083624,
   ),
   Quest(
     id: 'yd9',
@@ -2345,6 +3139,10 @@ const List<Quest> kQuests = [
     reward: 80,
     desc: '천태산은 충청북도 영동군의 양산면 누교리와 충남 금산군 제원면 화원리 경계에 있는 산이다.',
     conditions: ['천태산에서 촬영', '주변 풍경이 보이는 구도'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/36/3059936_image2_1.JPG',
+    lat: 36.1586024648,
+    lng: 127.5996540718,
   ),
   Quest(
     id: 'yd10',
@@ -2356,6 +3154,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '영동 세천재에 깃든 이야기를 따라 걸으며 방문을 인증해보세요.',
     conditions: ['영동 세천재에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/88/3577288_image2_1.jpg',
+    lat: 36.1791757185,
+    lng: 127.9422619134,
   ),
   Quest(
     id: 'yd11',
@@ -2367,6 +3169,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '도마령은 영동군 황간에서 전북 무주로 넘어가는 고갯길이다.',
     conditions: ['도마령(전망대)에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/84/3581684_image2_1.JPG',
+    lat: 36.0698445605,
+    lng: 127.8346189174,
   ),
   Quest(
     id: 'yd12',
@@ -2379,6 +3185,10 @@ const List<Quest> kQuests = [
     desc:
         '충청북도 영동군에 위치한 노근리 평화공원은 1950년 한국전쟁 당시 발생했던 노근리 양민 학살사건으로 희생된 영령들의 넋을 기리기 위해 조성된 공원이다.',
     conditions: ['노근리평화공원에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/51/3572851_image2_1.jpg',
+    lat: 36.2135456865,
+    lng: 127.8805775641,
   ),
   Quest(
     id: 'yd13',
@@ -2390,6 +3200,10 @@ const List<Quest> kQuests = [
     reward: 70,
     desc: '양산팔경 중 가장 아름답다고 손꼽히는 곳이 바로 강선대이다.',
     conditions: ['강선대에서 촬영', '장소가 알아볼 수 있게 나온 사진'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/06/3572806_image2_1.jpg',
+    lat: 36.1352096262,
+    lng: 127.6957322633,
   ),
   Quest(
     id: 'yd14',
@@ -2401,6 +3215,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '인터식당은 충청북도 영동군 황간면 마산리에 있는 다슬기 요리 전문 음식점이다.',
     conditions: ['음식이 명확히 보이는 사진', '인터식당에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/90/2876590_image2_1.jpg',
+    lat: 36.2239729044,
+    lng: 127.9153741817,
   ),
   Quest(
     id: 'yd15',
@@ -2412,6 +3230,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '갑돌갈비는 충청북도 영동군 영동읍에 자리 잡고 있다.',
     conditions: ['음식이 명확히 보이는 사진', '갑돌갈비에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/91/2835391_image2_1.jpg',
+    lat: 36.1732734690,
+    lng: 127.7802292626,
   ),
   Quest(
     id: 'yd16',
@@ -2423,6 +3245,10 @@ const List<Quest> kQuests = [
     reward: 60,
     desc: '덕승관은 충청북도 영동군 황간면 소계리에 자리 잡고 있다.',
     conditions: ['음식이 명확히 보이는 사진', '덕승관에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/07/2835407_image2_1.jpg',
+    lat: 36.2255060738,
+    lng: 127.9159685311,
   ),
   Quest(
     id: 'yd17',
@@ -2434,6 +3260,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '사계절 야영장은 충북 영동군 상촌면에 자리했다.',
     conditions: ['사계절 야영장 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/82/2753282_image2_1.jpeg',
+    lat: 36.1016529532,
+    lng: 127.8847691495,
   ),
   Quest(
     id: 'yd18',
@@ -2445,6 +3275,10 @@ const List<Quest> kQuests = [
     reward: 110,
     desc: '‘달이머무는집’은 충북 영동군 상촌면에 있다.',
     conditions: ['달이머무는집 도착(인증 반경 이내)', 'GPS 위치 인증'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/78/2750078_image2_1.jpg',
+    lat: 36.2327825409,
+    lng: 127.8893845842,
   ),
   Quest(
     id: 'yd19',
@@ -2456,6 +3290,10 @@ const List<Quest> kQuests = [
     reward: 90,
     desc: '맑은누리 캠핑장은 충북 영동군 상촌면에 있다.',
     conditions: ['체험 모습이 보이는 사진', '맑은누리캠핑장에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/91/2747691_image2_1.jpg',
+    lat: 36.0624627970,
+    lng: 127.8751849606,
   ),
   Quest(
     id: 'yd20',
@@ -2467,6 +3305,10 @@ const List<Quest> kQuests = [
     reward: 90,
     desc: '리앤파크는 충북 영동군 황간면에 있다.',
     conditions: ['체험 모습이 보이는 사진', '리앤파크캠핑장에서 촬영'],
+    imageUrl:
+        'https://tong.visitkorea.or.kr/cms/resource/83/2747683_image2_1.jpg',
+    lat: 36.2551433460,
+    lng: 127.8598338207,
   ),
 ];
 

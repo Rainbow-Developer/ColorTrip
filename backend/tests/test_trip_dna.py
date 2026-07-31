@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import func, select
 
+from app.auth.models import User
 from app.core.database import AsyncSessionLocal
-from app.trip_dna.models import TripQuestion, TripQuestionOption
+from app.trip_dna.models import TripQuestion, TripQuestionOption, TripReply
 from tests.helpers import auth_headers  # 인증 헤더를 만들어주는 헬퍼 임포트
 
 
@@ -248,3 +250,51 @@ async def test_submit_survey_replies_invalid_mapping(client: AsyncClient) -> Non
     assert response.status_code == 400
     res_json = response.json()
     assert res_json["message"] == "유효하지 않은 답변 조합입니다."
+
+
+@pytest.mark.asyncio
+async def test_submit_survey_replies_persists_to_db(client: AsyncClient) -> None:
+    """제출 결과가 실제로 DB에 커밋되는지 검증합니다.
+
+    응답만 검증하면 세션 커밋 누락을 잡지 못한다 — 실제로 답변·User.dna가 저장되지 않아
+    DNA 기반 홈 추천(docs/specs/040-home-region-recommendation)이 항상 기본값으로
+    동작하는 버그가 있었다.
+    """
+    async with AsyncSessionLocal() as session:
+        question = TripQuestion(question="액티비티 질문", sort_order=1)
+        session.add(question)
+        await session.flush()
+        option = TripQuestionOption(
+            question_id=question.id,
+            content="activity opt",
+            score_value={"activity": 5},
+            category="activity",
+            sort_order=1,
+        )
+        session.add(option)
+        await session.commit()
+        question_id, option_id = str(question.id), str(option.id)
+
+    headers = await auth_headers(client)
+    response = await client.post(
+        "/api/v1/trip_dna/replies",
+        json={"replies": [{"question_id": question_id, "question_option_id": option_id}]},
+        headers=headers,
+    )
+    assert response.status_code == 201
+    body = response.json()["data"]
+    assert body["main_dna_type"] == "activity"
+    user_id = body["user_id"]
+
+    # 새 세션으로 조회해 커밋 여부를 확인한다. 다른 사용자·이전 테스트 데이터가
+    # 조건을 만족해 통과하지 않도록 요청 사용자로 범위를 한정한다.
+    async with AsyncSessionLocal() as session:
+        saved_dna = await session.scalar(select(User.dna).where(User.id == user_id))
+        assert saved_dna == "activity"
+
+        reply_count = await session.scalar(
+            select(func.count())
+            .select_from(TripReply)
+            .where(TripReply.user_id == user_id, TripReply.deleted_at.is_(None))
+        )
+        assert reply_count == 1

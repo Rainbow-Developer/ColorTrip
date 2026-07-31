@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/models/region.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/data/static/regions_data.dart';
@@ -71,8 +72,10 @@ void main() {
     await tester.pumpWidget(_wrap(const HomeScreen()));
     await tester.pumpAndSettle();
 
-    // 기본 DNA(nature)·초기 상태(모든 지역 미시작) 기준, 배너 로직과 같은 방식으로
-    // 기대 지역을 데이터에서 계산한다(퀘스트 데이터가 늘어나도 테스트가 깨지지 않게).
+    // 테스트 환경에서는 추천 API 호출이 실패하므로(서버 없음) 배너는 정적 폴백으로
+    // 그려진다([040-home-region-recommendation]). 기본 DNA(nature)·초기 상태(모든 지역
+    // 미시작) 기준, 배너 로직과 같은 방식으로 기대 지역을 데이터에서 계산한다
+    // (퀘스트 데이터가 늘어나도 테스트가 깨지지 않게).
     Region? expected;
     var bestMatch = -1;
     var bestTotal = -1;
@@ -90,6 +93,22 @@ void main() {
     expect(find.textContaining('추천 여행지'), findsOneWidget);
     expect(find.text(expected!.name), findsWidgets);
     expect(find.text('자연탐험 퀘스트 $bestMatch개가 기다리고 있어요'), findsOneWidget);
+
+    // 정적 폴백에서도 추천 지역의 퀘스트 요약 3개가 함께 보인다 — DNA 일치 우선, 같은
+    // 구간에서는 썸네일 보유 우선(배너와 같은 순서로 기대값을 계산한다, [040]).
+    bool hasThumbnail(Quest q) => q.imageUrl?.isNotEmpty ?? false;
+    final regionQuests = questsByRegion(expected.id);
+    final ordered = [
+      ...regionQuests.where((q) => q.type == 'nature' && hasThumbnail(q)),
+      ...regionQuests.where((q) => q.type == 'nature' && !hasThumbnail(q)),
+      ...regionQuests.where((q) => q.type != 'nature' && hasThumbnail(q)),
+      ...regionQuests.where((q) => q.type != 'nature' && !hasThumbnail(q)),
+    ];
+    final summary = ordered.take(3).toList();
+    expect(summary.length, 3);
+    for (final quest in summary) {
+      expect(find.text(quest.title), findsWidgets, reason: quest.id);
+    }
   });
 
   testWidgets('여행 시작하기 시 이름·날짜 입력 시트를 거쳐 여행이 등록된다', (tester) async {

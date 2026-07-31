@@ -1,15 +1,30 @@
-# 로컬 개발 환경 — Flutter SDK 미설치 머신에서 컨테이너로 pub get·analyze·test·build web 실행.
+# 로컬 개발 환경 — Flutter SDK 미설치 머신에서 컨테이너로 pub get·analyze·test·build(web/apk) 실행.
 # 사용 예:
 #   docker compose run --rm frontend flutter pub get
 #   docker compose run --rm frontend flutter analyze
 #   docker compose run --rm frontend flutter test
 #   docker compose run --rm --service-ports frontend flutter run -d web-server --web-hostname=0.0.0.0 --web-port=5000
+#
+# 캐시 볼륨(pub/gradle)은 컨테이너가 매번 새로 만들어져도 유지된다. 이게 없으면
+# `flutter pub get`이 받아둔 패키지가 컨테이너 종료와 함께 사라지는데 .dart_tool의
+# package_config.json은 그 경로를 계속 가리켜, 다음 실행에서 SDK 의존성(vector_math 등)을
+# 못 찾는 오류가 난다. APK 빌드의 Gradle 의존성 재다운로드도 함께 막는다.
 services:
   frontend:
     build: .
     volumes:
       - .:/app
+      - pub-cache:/root/.pub-cache
+      - gradle-cache:/root/.gradle
+      # APK 빌드 중 설치되는 Android SDK 구성요소(platform-35·CMake 등)를 유지한다.
+      # 첫 마운트 때 이미지의 기존 SDK 내용이 볼륨으로 복사되므로 잃는 것은 없다.
+      - android-sdk:/opt/android-sdk-linux
     working_dir: /app
     ports:
       - "5000:5000"
     tty: true
+
+volumes:
+  pub-cache:
+  gradle-cache:
+  android-sdk:

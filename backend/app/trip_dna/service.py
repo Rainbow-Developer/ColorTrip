@@ -77,4 +77,9 @@ async def submit_survey_replies(
     # 7. User 테이블의 dna 컬럼 갱신
     await repository.update_user_dna(session, user, main_dna_type)
 
+    # 8. 커밋 — get_session은 커밋하지 않으므로(app/core/database.py) 여기서 확정한다.
+    #    없으면 응답은 정상인데 답변·User.dna가 저장되지 않아, DNA 기반 홈 추천
+    #    (docs/specs/040-home-region-recommendation)이 항상 기본값으로 동작한다.
+    await session.commit()
+
     return DNAResultResponse(user_id=user.id, main_dna_type=main_dna_type.value, scores=scores)

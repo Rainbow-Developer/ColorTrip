@@ -106,11 +106,15 @@ int _mapColorLevel(double saturation) {
 /// 지역 채색 색상 — 퀘스트 개수가 아니라 완료한 퀘스트의 난이도(reward) 비율로 정해지는
 /// 채도([ProgressState.regionSaturation] 참고, KAN-44)를 5단계로 양자화해, 지역별 고유
 /// 팔레트([regionMapColors], KAN-51)에서 해당 단계 색을 고른다.
-({Color background, Color label}) mapFillColors(String regionId, double saturation) {
+({Color background, Color label}) mapFillColors(
+  String regionId,
+  double saturation,
+) {
   final level = _mapColorLevel(saturation);
   final palette = regionMapColors[regionId];
-  final background =
-      (level == 0 || palette == null) ? AppColors.mapEmpty : palette[level - 1];
+  final background = (level == 0 || palette == null)
+      ? AppColors.mapEmpty
+      : palette[level - 1];
   // 고정 임계값 대신 배경의 실제 명도로 라벨 색을 고른다. regionMapColors 팔레트가
   // 전 지역 파스텔 톤이라(레벨5도 luminance 최대 0.69) 0.4는 너무 낮아서 레벨5에서도
   // 회색 글씨가 나오는 지역이 있었다 — 모든 지역이 레벨5에서 흰 글씨가 되도록 0.7로 올렸다.
