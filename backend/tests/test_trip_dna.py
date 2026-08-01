@@ -140,8 +140,8 @@ async def test_submit_survey_replies_success_and_grading(client: AsyncClient) ->
         session.add_all(options)
         await session.commit()
 
-    # 2. 로그인 인증 헤더 획득
-    headers = await auth_headers(client)
+    # 2. DNA 결과가 아직 없는 ProfiledUser의 최초 제출
+    headers = await auth_headers(client, complete=False)
 
     # 3. 설문 답변 제출 API 페이로드 빌드 및 POST 요청
     payload = {
