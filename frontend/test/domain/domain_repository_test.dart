@@ -261,4 +261,45 @@ void main() {
       expect(journeyPageRequests, 2);
     },
   );
+
+  test('replaces a journey quest set with server UUIDs', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    late Map<String, dynamic> requestBody;
+    dio.httpClientAdapter = _Adapter((options) {
+      if (options.path == '/regions') {
+        return _json(
+          '{"data":[{"id":"region-uuid","name":"단양군","slug":"danyang",'
+          '"area_code":"2","center_lat":null,"center_lng":null}]}',
+        );
+      }
+      if (options.path == '/quests') {
+        return _json(
+          '{"data":{"items":[{"id":"quest-uuid","region_id":"region-uuid",'
+          '"client_key":"dy1","title":"퀘스트","category":"nature",'
+          '"mission_type":"photo","lat":null,"lng":null,"thumbnail_url":null}],'
+          '"page":1,"size":100,"total":1}}',
+        );
+      }
+      if (options.path == '/journeys/journey-uuid/quests') {
+        requestBody = Map<String, dynamic>.from(options.data as Map);
+        return _json(
+          '{"data":{"id":"journey-uuid","region_id":"region-uuid","title":null,'
+          '"start_date":null,"end_date":null,"status":"in_progress",'
+          '"progress":{"completed":0,"total":1},"created_at":"2026-07-20T09:00:00+09:00",'
+          '"completed_at":null,"quests":[{"quest_id":"quest-uuid","client_key":"dy1",'
+          '"title":"퀘스트","category":"nature","mission_type":"photo",'
+          '"thumbnail_url":null,"sort_order":0,"progress_status":null}]}}',
+        );
+      }
+      throw StateError('unexpected ${options.method} ${options.path}');
+    });
+
+    await DioDomainRepository(
+      dio,
+    ).replaceJourneyQuests(journeyId: 'journey-uuid', questKeys: const ['dy1']);
+
+    expect(requestBody, {
+      'quest_ids': ['quest-uuid'],
+    });
+  });
 }
