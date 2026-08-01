@@ -101,7 +101,7 @@ abstract class DomainRepository {
     required List<String> questKeys,
   });
 
-  Future<String> uploadPhoto(Uint8List bytes);
+  Future<String> uploadPhoto(Uint8List bytes, {String mimeType = 'image/jpeg'});
 
   Future<QuestVerification> verifyQuest({
     required String questKey,
@@ -180,14 +180,24 @@ class DioDomainRepository implements DomainRepository {
   }
 
   @override
-  Future<String> uploadPhoto(Uint8List bytes) async {
+  Future<String> uploadPhoto(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) async {
+    final mediaType = DioMediaType.parse(mimeType);
+    final extension = switch (mediaType.subtype) {
+      'png' => 'png',
+      'webp' => 'webp',
+      'heic' => 'heic',
+      _ => 'jpg',
+    };
     final response = await _dio.post(
       '/uploads/photo',
       data: FormData.fromMap({
         'file': MultipartFile.fromBytes(
           bytes,
-          filename: 'quest.jpg',
-          contentType: DioMediaType('image', 'jpeg'),
+          filename: 'quest.$extension',
+          contentType: mediaType,
         ),
       }),
     );
@@ -329,9 +339,10 @@ class DioDomainRepository implements DomainRepository {
         queryParameters: {...?query, 'page': page, 'size': size},
       );
       final data = _data(response);
-      items.addAll((data['items'] as List).cast<Map<String, dynamic>>());
+      final pageItems = (data['items'] as List).cast<Map<String, dynamic>>();
+      items.addAll(pageItems);
       final total = data['total'] as int;
-      if (items.length >= total) return items;
+      if (pageItems.isEmpty || items.length >= total) return items;
       page++;
     }
   }

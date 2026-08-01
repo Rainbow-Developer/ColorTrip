@@ -195,30 +195,70 @@ void main() {
     });
   });
 
+  test('uploads photo bytes using the picker-provided MIME type', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    late RequestOptions uploadRequest;
+    dio.httpClientAdapter = _Adapter((options) {
+      uploadRequest = options;
+      return _json(
+        '{"data":{"photo_url":"/uploads/photos/2026/07/uploaded.jpg"}}',
+        status: 201,
+      );
+    });
+
+    final photoUrl = await DioDomainRepository(dio).uploadPhoto(
+      Uint8List.fromList([0x89, 0x50, 0x4e, 0x47]),
+      mimeType: 'image/png',
+    );
+
+    expect(uploadRequest.path, '/uploads/photo');
+    expect(uploadRequest.method, 'POST');
+    final form = uploadRequest.data as FormData;
+    expect(form.files.single.key, 'file');
+    expect(form.files.single.value.filename, 'quest.png');
+    expect(form.files.single.value.contentType.toString(), 'image/png');
+    expect(photoUrl, '/uploads/photos/2026/07/uploaded.jpg');
+  });
+
   test(
-    'uploads photo bytes as an authenticated JPEG multipart request',
+    'stops pagination when a later page is empty before the reported total',
     () async {
       final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
-      late RequestOptions uploadRequest;
+      var journeyPageRequests = 0;
       dio.httpClientAdapter = _Adapter((options) {
-        uploadRequest = options;
-        return _json(
-          '{"data":{"photo_url":"/uploads/photos/2026/07/uploaded.jpg"}}',
-          status: 201,
-        );
+        switch (options.path) {
+          case '/regions':
+            return _json(
+              '{"data":[{"id":"region-uuid","name":"단양군","slug":"danyang",'
+              '"area_code":"2","center_lat":null,"center_lng":null}]}',
+            );
+          case '/quests':
+            return _json('{"data":{"items":[],"page":1,"size":100,"total":0}}');
+          case '/journeys':
+            journeyPageRequests++;
+            return _json(
+              journeyPageRequests == 1
+                  ? '{"data":{"items":[{"id":"journey-uuid","region_id":"region-uuid",'
+                        '"title":null,"start_date":null,"end_date":null,"status":"in_progress",'
+                        '"progress":{"completed":0,"total":0},"quest_client_keys":[], '
+                        '"created_at":"2026-07-20T09:00:00+09:00","completed_at":null}],'
+                        '"page":1,"size":100,"total":2}}'
+                  : '{"data":{"items":[],"page":2,"size":100,"total":2}}',
+            );
+          case '/users/me/progress':
+            return _json('{"data":{"items":[],"page":1,"size":100,"total":0}}');
+          case '/users/me/map':
+          case '/users/me/timeline':
+            return _json('{"data":[]}');
+          default:
+            throw StateError('unexpected ${options.method} ${options.path}');
+        }
       });
 
-      final photoUrl = await DioDomainRepository(
-        dio,
-      ).uploadPhoto(Uint8List.fromList([0xff, 0xd8, 0xff]));
+      final snapshot = await DioDomainRepository(dio).fetchSnapshot();
 
-      expect(uploadRequest.path, '/uploads/photo');
-      expect(uploadRequest.method, 'POST');
-      final form = uploadRequest.data as FormData;
-      expect(form.files.single.key, 'file');
-      expect(form.files.single.value.filename, 'quest.jpg');
-      expect(form.files.single.value.contentType.toString(), 'image/jpeg');
-      expect(photoUrl, '/uploads/photos/2026/07/uploaded.jpg');
+      expect(snapshot.journeys, hasLength(1));
+      expect(journeyPageRequests, 2);
     },
   );
 }

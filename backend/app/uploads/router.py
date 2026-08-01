@@ -2,12 +2,15 @@
 
 from fastapi import APIRouter, Depends, UploadFile
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import CurrentUser
 from app.core.base import new_uuid7, now_kst
 from app.core.config import settings
+from app.core.database import get_session
 from app.core.exceptions import AppException, ErrorCode
 from app.core.response import Envelope, success
+from app.uploads.models import UploadedPhoto
 from app.uploads.storage import PhotoStorage, get_photo_storage
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
@@ -28,6 +31,7 @@ class PhotoUploadData(BaseModel):
 async def upload_photo(
     file: UploadFile,
     current_user: CurrentUser,
+    session: AsyncSession = Depends(get_session),
     storage: PhotoStorage = Depends(get_photo_storage),
 ) -> Envelope[PhotoUploadData]:
     content_type = (file.content_type or "").lower()
@@ -57,6 +61,8 @@ async def upload_photo(
 
     object_name = f"photos/{now_kst():%Y/%m}/{new_uuid7().hex}{extension}"
     photo_url = await storage.save(object_name, content, content_type)
+    session.add(UploadedPhoto(user_id=current_user.id, photo_url=photo_url))
+    await session.commit()
     return success(
         PhotoUploadData(photo_url=photo_url), status=201, message="사진을 업로드했습니다."
     )

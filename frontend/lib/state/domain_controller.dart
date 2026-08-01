@@ -13,10 +13,20 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
   String? _pendingCreateRequestId;
 
   @override
-  FutureOr<DomainSnapshot> build() => _fetchAndApply();
+  FutureOr<DomainSnapshot> build() {
+    listenSelf((_, next) {
+      next.when(
+        data: (snapshot) =>
+            ref.read(progressProvider.notifier).replaceFromServer(snapshot),
+        loading: () {},
+        error: (_, _) {},
+      );
+    });
+    return _fetch();
+  }
 
   Future<DomainSnapshot> refresh() async {
-    final snapshot = await _fetchAndApply();
+    final snapshot = await _fetch();
     state = AsyncData(snapshot);
     return snapshot;
   }
@@ -82,19 +92,26 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
           photoUrl: photoUrl,
           answer: answer,
         );
-    if (result.verified) await refresh();
+    if (result.verified) {
+      try {
+        await refresh();
+      } on Object {
+        // 인증 결과는 이미 서버에 저장됐다. 다음 동기화에서 화면 상태를 복구한다.
+      }
+    }
     return result;
   }
 
   Future<QuestVerification> uploadAndVerifyPhoto({
     required String questKey,
     required Uint8List bytes,
+    String mimeType = 'image/jpeg',
     String? journeyId,
     double? latitude,
     double? longitude,
   }) async {
     final repository = ref.read(domainRepositoryProvider);
-    final photoUrl = await repository.uploadPhoto(bytes);
+    final photoUrl = await repository.uploadPhoto(bytes, mimeType: mimeType);
     return verifyQuest(
       questKey: questKey,
       journeyId: journeyId,
@@ -104,11 +121,8 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
     );
   }
 
-  Future<DomainSnapshot> _fetchAndApply() async {
-    final snapshot = await ref.read(domainRepositoryProvider).fetchSnapshot();
-    ref.read(progressProvider.notifier).replaceFromServer(snapshot);
-    return snapshot;
-  }
+  Future<DomainSnapshot> _fetch() =>
+      ref.read(domainRepositoryProvider).fetchSnapshot();
 }
 
 final domainControllerProvider =

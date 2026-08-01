@@ -24,7 +24,7 @@ async def create_timeline_event(
     quest_progress_id: uuid.UUID | None = None,
     title: str | None = None,
     occurred_at: datetime | None = None,
-) -> TimelineEvent:
+) -> tuple[TimelineEvent, bool]:
     """타임라인 이벤트를 적재합니다."""
     if occurred_at is None:
         occurred_at = now_kst()
@@ -92,7 +92,21 @@ async def handle_quest_completion(
     region_name = quest.region.name if quest.region else ""
     completed_at = now_kst()
 
-    # 2. MapProgress를 단일 UPSERT로 증가시켜 같은 지역의 동시 완료를 직렬화한다.
+    # 2. 퀘스트 완료 이벤트를 먼저 멱등하게 적재한다. 동시 요청에서 이미 생성된
+    # 이벤트라면 지도 카운트를 다시 올리지 않는다.
+    _, created = await create_timeline_event(
+        session=session,
+        user_id=user_id,
+        event_type="quest_completed",
+        region_id=region_id,
+        quest_progress_id=quest_progress_id,
+        title=quest.title,
+        occurred_at=completed_at,
+    )
+    if not created:
+        return
+
+    # 3. MapProgress를 단일 UPSERT로 증가시켜 같은 지역의 동시 완료를 직렬화한다.
     map_progress_stmt = (
         insert(MapProgress)
         .values(
@@ -122,8 +136,7 @@ async def handle_quest_completion(
     completed_count = (await session.execute(map_progress_stmt)).scalar_one()
     is_first_color = completed_count == 1
 
-    # 3. 타임라인 기록 생성
-    # 3-1. 최초 색칠 성공 시 'region_colored' 이벤트 생성
+    # 4. 최초 색칠 성공 시 'region_colored' 이벤트 생성
     if is_first_color:
         await create_timeline_event(
             session=session,
@@ -133,14 +146,3 @@ async def handle_quest_completion(
             title=f"{region_name} 색칠 성공!",
             occurred_at=completed_at,
         )
-
-    # 3-2. 'quest_completed' 이벤트 생성
-    await create_timeline_event(
-        session=session,
-        user_id=user_id,
-        event_type="quest_completed",
-        region_id=region_id,
-        quest_progress_id=quest_progress_id,
-        title=quest.title,
-        occurred_at=completed_at,
-    )

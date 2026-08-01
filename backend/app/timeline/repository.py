@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import extract, func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -13,8 +14,38 @@ from app.timeline.schemas import TimelineCreate
 
 
 class TimelineRepository:
-    async def create(self, session: AsyncSession, obj_in: TimelineCreate) -> TimelineEvent:
-        """타임라인 레코드를 삽입합니다."""
+    async def create(
+        self, session: AsyncSession, obj_in: TimelineCreate
+    ) -> tuple[TimelineEvent, bool]:
+        """타임라인 레코드를 삽입하고, 중복 완료 이벤트는 기존 행을 반환합니다."""
+        if obj_in.quest_progress_id is not None:
+            stmt = (
+                insert(TimelineEvent)
+                .values(
+                    user_id=obj_in.user_id,
+                    region_id=obj_in.region_id,
+                    quest_progress_id=obj_in.quest_progress_id,
+                    event_type=obj_in.event_type,
+                    title=obj_in.title,
+                    occurred_at=obj_in.occurred_at,
+                )
+                .on_conflict_do_nothing(constraint="uq_timelines_quest_progress_id_event_type")
+                .returning(TimelineEvent.id)
+            )
+            event_id = (await session.execute(stmt)).scalar_one_or_none()
+            if event_id is not None:
+                event = await session.get(TimelineEvent, event_id)
+                assert event is not None
+                return event, True
+            existing = await session.scalar(
+                select(TimelineEvent).where(
+                    TimelineEvent.quest_progress_id == obj_in.quest_progress_id,
+                    TimelineEvent.event_type == obj_in.event_type,
+                )
+            )
+            assert existing is not None
+            return existing, False
+
         db_obj = TimelineEvent(
             user_id=obj_in.user_id,
             region_id=obj_in.region_id,
@@ -25,7 +56,7 @@ class TimelineRepository:
         )
         session.add(db_obj)
         await session.flush()  # 트랜잭션 내 ID 확보 및 영속화
-        return db_obj
+        return db_obj, True
 
     async def get_by_user(
         self,

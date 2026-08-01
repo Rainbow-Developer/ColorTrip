@@ -14,8 +14,6 @@ import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/home_recommendation_provider.dart';
-import '../../state/map_sync_provider.dart';
-import '../../state/auth_controller.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';

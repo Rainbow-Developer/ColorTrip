@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/repositories/domain_repository.dart';
 import '../data/static/quests_data.dart';
+import '../data/static/regions_data.dart';
 import 'progress_state.dart';
 
 /// 앱 전역 진행 상태 Notifier — 퀘스트 완료·DNA 진단 시 상태를 갱신한다.
@@ -104,8 +105,9 @@ class ProgressNotifier extends Notifier<ProgressState> {
       if (tripQuests.containsKey(journey.regionKey)) continue;
       tripQuests[journey.regionKey] = journey.questKeys.toSet();
       if (journey.startDate != null && journey.endDate != null) {
+        final region = regionById(journey.regionKey);
         tripInfo[journey.regionKey] = TripInfo(
-          name: journey.title ?? '${journey.regionKey} 여행',
+          name: journey.title ?? (region == null ? '여행' : tripTitleFor(region)),
           startDate: journey.startDate!,
           endDate: journey.endDate!,
         );

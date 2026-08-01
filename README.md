@@ -10,7 +10,7 @@
 
 <!-- 사용자/도메인 관점의 핵심 기능. 상세 동작은 각 기능 스펙의 description.md를 SOT로 둔다. -->
 - **여행 퀘스트·지도 색칠**: 카카오로 시작 → 여행 DNA 진단(초기 설문) → 시·군별 퀘스트를 사진·GPS·OX퀴즈로 인증 → 완료할수록 지도가 진하게 칠해짐. 타임라인·공유 카드로 기록. (상세: [docs/specs/000-frontend-app/description.md](docs/specs/000-frontend-app/description.md))
-- **Kakao 인증·회원**: 백엔드는 Kakao access token의 발급 앱을 검증하고 JWT·프로필·버전 동의·즉시 익명화 탈퇴를 제공한다. Flutter SDK·세션·설문 연동은 후속 KAN-54에서 제공한다. (상세: [docs/specs/035-kakao-auth-integration/](docs/specs/035-kakao-auth-integration/))
+- **Kakao 인증·회원**: Kakao access token의 발급 앱을 검증하고 JWT·프로필·버전 동의·즉시 익명화 탈퇴를 제공한다. Flutter는 Kakao SDK·secure storage 세션·서버 온보딩 상태를 연결한다. (상세: [docs/specs/035-kakao-auth-integration/](docs/specs/035-kakao-auth-integration/))
 - **여행 DNA별 퀘스트**: 설문으로 파악한 여행 성향(자연탐험·미식·역사문화·액티비티·힐링 5종)에 맞춰 충북 11개 시·군의 퀘스트를 추천
 - **GPS·사진 기반 퀘스트 인증**: 퀘스트 완료 시 GPS로 현재 위치를 확인하고, 사진 인증으로 실제 방문 여부를 검증
 - **지도 색칠 / 방문 기록 시각화**: 퀘스트를 완료한 지역을 지도에 색칠하고, 방문 깊이에 따라 색의 채도가 진해지는 수집형 경험
@@ -19,7 +19,7 @@
 ### 🏗️ 아키텍처 특징
 
 - **모노레포**: backend(Python)와 frontend(Flutter)를 한 저장소에서 관리
-- **인증 상태의 서버 단일 출처**: Flutter는 서버의 `onboarding_step`에 따라 회원정보·여행 DNA·홈을 라우팅하고, 인증 토큰은 secure storage에 보관한다. 여행·퀘스트·타임라인은 현재 일부 메모리 상태를 사용하며, 앱 재시작 복원은 [040 서버 영속화](docs/specs/040-domain-state-persistence/)에서 진행한다.
+- **인증·도메인 상태의 서버 단일 출처**: Flutter는 서버의 `onboarding_step`에 따라 회원정보·여행 DNA·홈을 라우팅하고, 인증 토큰은 secure storage에 보관한다. 여행·퀘스트·지도·타임라인은 서버 스냅샷으로 복원하며 기존 `ProgressState`는 화면 호환 projection으로만 사용한다. (상세: [040 서버 영속화](docs/specs/040-domain-state-persistence/))
 
 ## 요구사항
 

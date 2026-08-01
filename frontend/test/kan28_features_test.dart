@@ -83,7 +83,10 @@ class _DomainRepository implements DomainRepository {
   }) => throw UnimplementedError();
 
   @override
-  Future<String> uploadPhoto(Uint8List bytes) => throw UnimplementedError();
+  Future<String> uploadPhoto(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) => throw UnimplementedError();
 
   @override
   Future<QuestVerification> verifyQuest({

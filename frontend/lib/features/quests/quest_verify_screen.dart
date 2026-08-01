@@ -36,7 +36,12 @@ class QuestVerifyScreen extends ConsumerWidget {
             .watch(domainControllerProvider)
             .value
             ?.journeys
-            .where((journey) => journey.regionKey == quest.region)
+            .where(
+              (journey) =>
+                  journey.regionKey == quest.region &&
+                  journey.questKeys.contains(quest.id) &&
+                  journey.status == 'in_progress',
+            )
             .firstOrNull
             ?.id;
 
@@ -49,6 +54,7 @@ class QuestVerifyScreen extends ConsumerWidget {
       case 'quiz':
         return _QuizVerifyBody(
           quest: quest,
+          successDestination: '/region/${quest.region}',
           onVerified: (answer) => _verify(
             context,
             ref,
@@ -60,13 +66,19 @@ class QuestVerifyScreen extends ConsumerWidget {
       default:
         return _PhotoVerifyBody(
           questTitle: quest.title,
-          onVerified: (photo) =>
-              _verifyPhoto(context, ref, quest, photo, journeyId),
+          onVerified: (photo) => _verifyPhoto(
+            context,
+            ref,
+            quest,
+            photo.bytes,
+            photo.mimeType,
+            journeyId,
+          ),
         );
     }
   }
 
-  Future<bool> _verify(
+  Future<bool?> _verify(
     BuildContext context,
     WidgetRef ref,
     Quest quest, {
@@ -87,7 +99,7 @@ class QuestVerifyScreen extends ConsumerWidget {
             photoUrl: photoUrl,
             answer: answer,
           );
-      if (!context.mounted) return false;
+      if (!context.mounted) return null;
       if (!result.verified) {
         showAppToast(context, result.reason ?? '인증 조건을 확인해주세요.');
       }
@@ -96,7 +108,7 @@ class QuestVerifyScreen extends ConsumerWidget {
       if (context.mounted) {
         showAppToast(context, '인증 결과를 저장하지 못했어요. 다시 시도해주세요.');
       }
-      return false;
+      return null;
     }
   }
 
@@ -117,10 +129,9 @@ class QuestVerifyScreen extends ConsumerWidget {
         latitude: location.latitude,
         longitude: location.longitude,
       );
-      if (verified && context.mounted) {
+      if (verified == true && context.mounted) {
         showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
-        context.pop();
-        context.pop();
+        context.go('/region/${quest.region}');
       }
     } on LocationFailure catch (error) {
       if (context.mounted) await _showLocationFailure(context, ref, error);
@@ -136,6 +147,7 @@ class QuestVerifyScreen extends ConsumerWidget {
     WidgetRef ref,
     Quest quest,
     Uint8List photo,
+    String mimeType,
     String? journeyId,
   ) async {
     try {
@@ -144,6 +156,7 @@ class QuestVerifyScreen extends ConsumerWidget {
           .uploadAndVerifyPhoto(
             questKey: quest.id,
             bytes: photo,
+            mimeType: mimeType,
             journeyId: journeyId,
           );
       if (!context.mounted) return false;
@@ -214,10 +227,15 @@ class QuestVerifyScreen extends ConsumerWidget {
 }
 
 class _QuizVerifyBody extends StatefulWidget {
-  const _QuizVerifyBody({required this.quest, required this.onVerified});
+  const _QuizVerifyBody({
+    required this.quest,
+    required this.onVerified,
+    required this.successDestination,
+  });
 
   final Quest quest;
-  final Future<bool> Function(bool answer) onVerified;
+  final Future<bool?> Function(bool answer) onVerified;
+  final String successDestination;
 
   @override
   State<_QuizVerifyBody> createState() => _QuizVerifyBodyState();
@@ -293,10 +311,13 @@ class _QuizVerifyBodyState extends State<_QuizVerifyBody> {
     });
     final verified = await widget.onVerified(value);
     if (!mounted) return;
-    if (verified) {
+    if (verified == true) {
       showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
-      context.pop();
-      context.pop();
+      context.go(widget.successDestination);
+      return;
+    }
+    if (verified == null) {
+      setState(() => _busy = false);
       return;
     }
     setState(() {
@@ -473,7 +494,7 @@ class _PhotoVerifyBody extends StatefulWidget {
   final String questTitle;
 
   /// 완료 처리 콜백 — 사용자가 실제로 고른 사진을 함께 넘겨 히스토리에 남긴다.
-  final Future<bool> Function(Uint8List photo) onVerified;
+  final Future<bool> Function(_PickedPhoto photo) onVerified;
 
   @override
   State<_PhotoVerifyBody> createState() => _PhotoVerifyBodyState();
@@ -484,6 +505,7 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
   static const _maxPhotoBytes = 5 * 1024 * 1024;
 
   Uint8List? _photoBytes;
+  String _photoMimeType = 'image/jpeg';
   bool _busy = false;
 
   Future<void> _pickPhoto(ImageSource source) async {
@@ -500,11 +522,12 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
       showAppToast(context, '사진을 불러오지 못했어요. 카메라·사진 접근 권한을 확인해주세요.');
       return;
     }
-    if (picked == null) return; // 사용자가 선택을 취소함 — 에러 아님.
+    final selected = picked;
+    if (selected == null) return; // 사용자가 선택을 취소함 — 에러 아님.
 
     final Uint8List bytes;
     try {
-      bytes = await picked.readAsBytes();
+      bytes = await selected.readAsBytes();
     } catch (_) {
       if (!mounted) return;
       showAppToast(context, '사진을 불러오지 못했어요. 다시 시도해주세요.');
@@ -517,7 +540,10 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
     }
 
     if (!mounted) return;
-    setState(() => _photoBytes = bytes);
+    setState(() {
+      _photoBytes = bytes;
+      _photoMimeType = selected.mimeType ?? _mimeTypeForName(selected.name);
+    });
   }
 
   @override
@@ -631,7 +657,9 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
               onPressed: photoBytes != null && !_busy
                   ? () async {
                       setState(() => _busy = true);
-                      await widget.onVerified(photoBytes);
+                      await widget.onVerified(
+                        _PickedPhoto(photoBytes, _photoMimeType),
+                      );
                       if (mounted) setState(() => _busy = false);
                     }
                   : null,
@@ -648,6 +676,23 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
       ),
     );
   }
+}
+
+class _PickedPhoto {
+  const _PickedPhoto(this.bytes, this.mimeType);
+
+  final Uint8List bytes;
+  final String mimeType;
+}
+
+String _mimeTypeForName(String name) {
+  final extension = name.split('.').last.toLowerCase();
+  return switch (extension) {
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    'heic' => 'image/heic',
+    _ => 'image/jpeg',
+  };
 }
 
 class _PhotoSourceButton extends StatelessWidget {

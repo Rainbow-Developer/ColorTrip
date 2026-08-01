@@ -50,11 +50,24 @@ async def complete_auth_headers(
     if complete:
         from app.auth.models import User
         from app.core.database import AsyncSessionLocal
+        from app.uploads.models import UploadedPhoto
 
         async with AsyncSessionLocal() as session:
             user = await session.get(User, UUID(data["user"]["id"]))
             assert user is not None
             user.dna = "nature"
+            # 기존 인증 테스트의 사진 URL은 실제 업로드가 선행된 상태를 표현한다.
+            # 사진 소유권 제약 아래에서도 해당 fixture 의도를 유지한다.
+            session.add_all(
+                UploadedPhoto(user_id=user.id, photo_url=photo_url)
+                for photo_url in (
+                    "/uploads/photos/x.jpg",
+                    "/uploads/photos/legacy.jpg",
+                    "/uploads/photos/concurrent.jpg",
+                    "/uploads/photos/2026/07/test.jpg",
+                    "/uploads/photos/2026/07/photo.jpg",
+                )
+            )
             await session.commit()
     return headers
 

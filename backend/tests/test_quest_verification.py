@@ -3,9 +3,8 @@
 QR 미션 분기(MissionType.QR)는 docs/specs/050-quest-verification/에서 추가됐다.
 """
 
-from uuid import UUID
-
 import asyncio
+from uuid import UUID
 
 from httpx import AsyncClient
 
@@ -120,6 +119,27 @@ async def test_photo_verify_requires_only_an_uploaded_photo(client: AsyncClient)
 
     assert response.status_code == 200
     assert response.json()["data"]["verified"] is True
+
+
+async def test_photo_verify_rejects_another_users_upload(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    owner_headers = await auth_headers(client)
+    other_headers = await auth_headers(client, token="kakao-token-unknown")
+    uploaded = await client.post(
+        "/api/v1/uploads/photo",
+        headers=owner_headers,
+        files={"file": ("proof.jpg", b"jpeg", "image/jpeg")},
+    )
+    assert uploaded.status_code == 201
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": uploaded.json()["data"]["photo_url"]},
+        headers=other_headers,
+    )
+
+    assert response.status_code == 422
+    assert "본인이 업로드" in response.json()["message"]
 
 
 async def test_gps_only_verify_requires_location_but_not_photo(

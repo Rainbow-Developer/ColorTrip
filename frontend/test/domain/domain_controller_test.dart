@@ -44,6 +44,7 @@ DomainSnapshot _snapshot({bool completed = true}) => DomainSnapshot(
 class _Repository implements DomainRepository {
   DomainSnapshot snapshot = _snapshot();
   Object? createError;
+  Object? fetchError;
   int fetchCalls = 0;
   int createCalls = 0;
   final createRequestIds = <String>[];
@@ -52,6 +53,7 @@ class _Repository implements DomainRepository {
   @override
   Future<DomainSnapshot> fetchSnapshot() async {
     fetchCalls++;
+    if (fetchError case final error?) throw error;
     return snapshot;
   }
 
@@ -81,7 +83,10 @@ class _Repository implements DomainRepository {
   }
 
   @override
-  Future<String> uploadPhoto(Uint8List bytes) async => '/uploads/photos/x.jpg';
+  Future<String> uploadPhoto(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) async => '/uploads/photos/x.jpg';
 
   @override
   Future<QuestVerification> verifyQuest({
@@ -202,4 +207,23 @@ void main() {
 
     expect(repository.replacedJourneyId, 'older-journey');
   });
+
+  test(
+    'keeps a persisted verification successful when snapshot refresh fails',
+    () async {
+      final repository = _Repository();
+      final container = ProviderContainer(
+        overrides: [domainRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      await container.read(domainControllerProvider.future);
+      repository.fetchError = Exception('offline');
+
+      final result = await container
+          .read(domainControllerProvider.notifier)
+          .verifyQuest(questKey: 'dy1');
+
+      expect(result.verified, isTrue);
+    },
+  );
 }
