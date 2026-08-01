@@ -27,6 +27,7 @@ final secureTokenStorageProvider = Provider<SecureTokenStorage>(
   (ref) => JsonSecureTokenStorage(
     FlutterSecureKeyValueStore(
       FlutterSecureStorage(
+        aOptions: AndroidOptions(resetOnError: true),
         iOptions: IOSOptions(
           accessibility: KeychainAccessibility.first_unlock_this_device,
         ),

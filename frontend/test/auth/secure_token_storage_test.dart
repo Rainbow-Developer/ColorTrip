@@ -78,6 +78,22 @@ void main() {
     expect((await storage.read())!.refreshToken, 'new-refresh');
   });
 
+  test('clears embedded withdrawal stage for a new login', () async {
+    final store = _MemorySecureStore();
+    final storage = JsonSecureTokenStorage(store);
+    await storage.replace(
+      const TokenPair(accessToken: 'old-access', refreshToken: 'old-refresh'),
+    );
+    await storage.markWithdrawalPending();
+
+    await storage.replace(
+      const TokenPair(accessToken: 'new-access', refreshToken: 'new-refresh'),
+      preserveWithdrawalState: false,
+    );
+
+    expect(await storage.withdrawalStage(), WithdrawalStage.none);
+  });
+
   test('compare-and-swap does not resurrect a cleared session', () async {
     final store = _MemorySecureStore();
     final storage = JsonSecureTokenStorage(store);

@@ -99,8 +99,9 @@ class AuthSessionInterceptor extends Interceptor {
       }
       options.extra[_retriedKey] = true;
       options.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
-      // The retried marker guarantees this request cannot start another refresh.
-      handler.resolve(await client.fetch<dynamic>(options));
+      // `refreshClient` has no auth interceptor.  Retrying through it prevents
+      // this response from recursively entering the refresh interceptor.
+      handler.resolve(await refreshClient.fetch<dynamic>(options));
     } on DioException catch (retryError) {
       if (retryError.response?.statusCode == 401) {
         final current = await storage.read();

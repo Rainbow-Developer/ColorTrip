@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/services.dart';
 
 import '../models/auth_models.dart';
 
@@ -34,14 +35,33 @@ class FlutterSecureKeyValueStore implements SecureKeyValueStore {
   final FlutterSecureStorage _storage;
 
   @override
-  Future<String?> read({required String key}) => _storage.read(key: key);
+  Future<String?> read({required String key}) async {
+    try {
+      return await _storage.read(key: key);
+    } on PlatformException {
+      return null;
+    }
+  }
 
   @override
-  Future<void> write({required String key, required String value}) =>
-      _storage.write(key: key, value: value);
+  Future<void> write({required String key, required String value}) async {
+    try {
+      await _storage.write(key: key, value: value);
+    } on PlatformException {
+      // A Keystore/Keychain reset makes the previous session unavailable.
+      // The caller can continue as an unauthenticated user instead of failing
+      // during app bootstrap.
+    }
+  }
 
   @override
-  Future<void> delete({required String key}) => _storage.delete(key: key);
+  Future<void> delete({required String key}) async {
+    try {
+      await _storage.delete(key: key);
+    } on PlatformException {
+      // Deletion is best-effort after a platform secure-storage failure.
+    }
+  }
 }
 
 class JsonSecureTokenStorage implements SecureTokenStorage {
@@ -68,7 +88,10 @@ class JsonSecureTokenStorage implements SecureTokenStorage {
       await _store.delete(key: _withdrawalStageStorageKey);
     }
     final current = await _readStoredSession();
-    await _write(tokens, current.stage);
+    await _write(
+      tokens,
+      preserveWithdrawalState ? current.stage : WithdrawalStage.none,
+    );
   });
 
   @override
@@ -117,7 +140,7 @@ class JsonSecureTokenStorage implements SecureTokenStorage {
   });
 
   Future<void> _setWithdrawalStage(WithdrawalStage stage) =>
-    _exclusive(() async {
+      _exclusive(() async {
         await _store.write(
           key: _withdrawalStageStorageKey,
           value: switch (stage) {

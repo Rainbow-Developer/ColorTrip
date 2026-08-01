@@ -140,11 +140,15 @@ void main() {
       return _json(200, {'data': 'ok'});
     });
     refreshDio.httpClientAdapter = _Adapter((options) async {
-      refreshCalls++;
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      return _json(200, {
-        'data': {'access_token': 'access-2', 'refresh_token': 'refresh-2'},
-      });
+      if (options.path == '/auth/refresh') {
+        refreshCalls++;
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        return _json(200, {
+          'data': {'access_token': 'access-2', 'refresh_token': 'refresh-2'},
+        });
+      }
+      retriedCalls++;
+      return _json(200, {'data': 'ok'});
     });
     dio.interceptors.add(
       AuthSessionInterceptor(
@@ -180,10 +184,13 @@ void main() {
       return _json(200, {'data': 'ok'});
     });
     refreshDio.httpClientAdapter = _Adapter((options) async {
-      refreshCalls++;
-      return _json(200, {
-        'data': {'access_token': 'access-2', 'refresh_token': 'refresh-2'},
-      });
+      if (options.path == '/auth/refresh') {
+        refreshCalls++;
+        return _json(200, {
+          'data': {'access_token': 'access-2', 'refresh_token': 'refresh-2'},
+        });
+      }
+      return _json(200, {'data': 'ok'});
     });
     dio.interceptors.add(
       AuthSessionInterceptor(
@@ -230,6 +237,38 @@ void main() {
     expect(protectedCalls, 1);
   });
 
+  test('a refresh connection failure preserves the local session', () async {
+    final storage = _MemoryTokenStorage(
+      const TokenPair(accessToken: 'expired', refreshToken: 'refresh-1'),
+    );
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    final refreshDio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    var expiredNotifications = 0;
+    dio.httpClientAdapter = _Adapter(
+      (options) async => _json(401, {'code': 'TOKEN_EXPIRED'}),
+    );
+    refreshDio.httpClientAdapter = _Adapter((options) async {
+      throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+      );
+    });
+    dio.interceptors.add(
+      AuthSessionInterceptor(
+        client: dio,
+        refreshClient: refreshDio,
+        storage: storage,
+        onSessionExpired: () => expiredNotifications++,
+      ),
+    );
+
+    await expectLater(dio.get('/protected'), throwsA(isA<DioException>()));
+
+    expect(storage.clears, 0);
+    expect(expiredNotifications, 0);
+    expect(storage.tokens, isNotNull);
+  });
+
   test('a 401 after the single retry expires the rotated session', () async {
     final storage = _MemoryTokenStorage(
       const TokenPair(accessToken: 'expired', refreshToken: 'refresh-1'),
@@ -243,9 +282,12 @@ void main() {
       return _json(401, {'code': 'TOKEN_EXPIRED'});
     });
     refreshDio.httpClientAdapter = _Adapter((options) async {
-      return _json(200, {
-        'data': {'access_token': 'access-2', 'refresh_token': 'refresh-2'},
-      });
+      if (options.path == '/auth/refresh') {
+        return _json(200, {
+          'data': {'access_token': 'access-2', 'refresh_token': 'refresh-2'},
+        });
+      }
+      return _json(401, {'code': 'TOKEN_EXPIRED'});
     });
     dio.interceptors.add(
       AuthSessionInterceptor(
@@ -258,7 +300,7 @@ void main() {
 
     await expectLater(dio.get('/protected'), throwsA(isA<DioException>()));
 
-    expect(protectedCalls, 2);
+    expect(protectedCalls, 1);
     expect(storage.tokens, isNull);
     expect(expiredNotifications, 1);
   });

@@ -52,7 +52,7 @@ class StaticTripDnaRepository implements TripDnaRepository {
 
     return {
       'user_id': '00000000-0000-0000-0000-000000000000',
-      'main_dna_type': best,
+      'main_dna_type': best == 'active' ? 'activity' : best,
       'scores': tally,
     };
   }
@@ -84,9 +84,6 @@ class ApiTripDnaRepository implements TripDnaRepository {
     // Envelope 포맷: {code: SUCCESS, status: 201, message: ..., data: {...}}
     final data = response.data['data'] as Map<String, dynamic>;
     final mainDnaType = data['main_dna_type'];
-    return {
-      ...data,
-      if (mainDnaType == 'active') 'main_dna_type': 'activity',
-    };
+    return {...data, if (mainDnaType == 'active') 'main_dna_type': 'activity'};
   }
 }
