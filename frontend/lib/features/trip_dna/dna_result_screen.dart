@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../state/progress_notifier.dart';
+import '../../state/auth_controller.dart';
 import '../../state/repository_providers.dart';
 
 class DnaResultScreen extends ConsumerWidget {
@@ -10,7 +11,10 @@ class DnaResultScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dnaType = ref.watch(progressProvider).dnaType ?? 'nature';
+    final dnaType =
+        ref.watch(currentUserProvider)?.dna ??
+        ref.watch(progressProvider).dnaType ??
+        'nature';
     final dna = ref.watch(dnaRepositoryProvider).byId(dnaType);
 
     return Scaffold(

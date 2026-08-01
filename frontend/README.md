@@ -29,7 +29,7 @@ docker compose run --rm --service-ports frontend flutter run -d web-server --web
 ### 2. APK 빌드 (컨테이너)
 
 ```bash
-docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug"
+docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1"
 ```
 
 - 결과물(호스트에 바로 생성): `build/app/outputs/flutter-apk/app-debug.apk`
@@ -47,9 +47,9 @@ adb install -r build/app/outputs/flutter-apk/app-debug.apk
 
 ### 4. 로컬 백엔드 연결
 
-- 에뮬레이터 안에서 호스트 머신은 `10.0.2.2` — 앱이 Android에서 자동으로 `http://10.0.2.2:8000/api/v1`을 사용합니다([lib/core/network/dio_client.dart](lib/core/network/dio_client.dart)).
+- 에뮬레이터 안에서 호스트 머신은 `10.0.2.2`입니다. 빌드할 때 `API_BASE_URL=http://10.0.2.2:8000/api/v1`를 명시하세요.
 - 백엔드를 먼저 띄우세요: `cd backend && docker compose up` ([backend/README.md](../backend/README.md)).
-- 현재 인증은 개발용 하드코딩 JWT를 사용합니다(dio_client.dart). 토큰의 `sub` 사용자가 로컬 DB에 있어야 보호 API가 동작합니다(`backend/generate_dev_token.py` 참고).
+- 인증은 카카오 로그인으로 받은 access token을 ColorTrip 세션으로 교환합니다. `KAKAO_NATIVE_APP_KEY`와 `API_BASE_URL`을 빌드 설정으로 제공해야 하며, 정적 Bearer token은 사용하지 않습니다.
 
 ### 5. 기능별 에뮬레이터 데모 팁
 
@@ -74,7 +74,7 @@ adb install -r build/app/outputs/flutter-apk/app-debug.apk
 기본값은 빌드 모드로 갈립니다 — release는 팀 dev 서버, debug/profile은 에뮬레이터 루프백(`10.0.2.2`)·`localhost`. `TargetPlatform.android`가 에뮬레이터와 실기기를 구분하지 못해, 설치용 빌드가 조용히 기기 루프백을 향하는 것을 막기 위함입니다.
 
 ```bash
-docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=API_BASE_URL=http://192.168.0.3:8000/api/v1"
+docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://api.example.com/api/v1"
 ```
 
 1. **PC의 LAN IP 확인** (Windows PowerShell): `Get-NetIPAddress -AddressFamily IPv4` — `192.168.x.x` 항목.
@@ -113,7 +113,7 @@ docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.di
 - 결과물: `build/app/outputs/flutter-apk/app-release.apk`
 - 현재 release 빌드는 **debug 키로 서명**됩니다([android/app/build.gradle.kts](android/app/build.gradle.kts)) — 내부 테스트 설치용이며 스토어 업로드 불가.
 - 정식 출시 빌드·서명은 Codemagic 경로를 따릅니다: [docs/conventions/release.md](../docs/conventions/release.md).
-- 참고: 로컬 백엔드(http) 통신을 위해 `usesCleartextTraffic`이 켜져 있습니다 — 운영 전 https 전환 시 제거 대상.
+- 참고: 로컬 백엔드(http) 통신은 debug manifest에서만 허용됩니다. release 빌드는 HTTPS API 주소를 사용해야 합니다.
 
 ## 테스트·정적 분석
 

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
-import '../../state/repository_providers.dart';
+import '../../state/auth_controller.dart';
 
 /// 스플래시 — Figma 스펙(2026-07-06 공유) 반영: 전체 화면 사진 배경 + 카카오 브랜드 버튼.
 /// main_background_image 에셋(충북 산·호수 전경)을 화면 전체에 깔고, 텍스트·버튼은
@@ -15,6 +14,7 @@ class SplashScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final screenSize = MediaQuery.of(context).size;
     final screenHeight = screenSize.height;
+    final auth = ref.watch(authControllerProvider);
 
     return Scaffold(
       body: Stack(
@@ -78,28 +78,62 @@ class SplashScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: screenSize.width * 0.85,
-                    height: 56,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.kakaoYellow,
-                        foregroundColor: AppColors.kakaoLabel,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                  if (auth.errorMessage case final error?) ...[
+                    Text(
+                      error,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.danger),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (auth.status == AuthStatus.checking)
+                    const SizedBox(
+                      height: 56,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else
+                    SizedBox(
+                      width: screenSize.width * 0.85,
+                      height: 56,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.kakaoYellow,
+                          foregroundColor: AppColors.kakaoLabel,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
-                      ),
-                      onPressed: () async {
-                        await ref.read(authRepositoryProvider).loginWithKakao();
-                        if (context.mounted) context.go('/signup');
-                      },
-                      child: const Text(
-                        '카카오로 시작하기',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                        onPressed: auth.isBusy
+                            ? null
+                            : () async {
+                                final controller = ref.read(
+                                  authControllerProvider.notifier,
+                                );
+                                if (auth.status == AuthStatus.failure) {
+                                  await controller.bootstrap();
+                                } else {
+                                  await controller.login();
+                                }
+                              },
+                        child: auth.isBusy
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                auth.status == AuthStatus.failure
+                                    ? '다시 시도'
+                                    : '카카오로 시작하기',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
