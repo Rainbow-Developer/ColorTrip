@@ -54,5 +54,14 @@ void main() {
       ).errors,
       contains('birthDate'),
     );
+    expect(
+      validateOnboardingProfile(
+        nickname: '컬러트립',
+        email: 'traveler@example.com',
+        birthDate: '1900-01-01',
+        today: DateTime(2026, 7, 25),
+      ).errors,
+      contains('birthDate'),
+    );
   });
 }

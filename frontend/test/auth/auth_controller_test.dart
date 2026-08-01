@@ -207,7 +207,7 @@ void main() {
   );
 
   test(
-    'bootstrap rejects a withdrawal marker without a recoverable JWT',
+    'bootstrap keeps a withdrawal marker without a recoverable JWT',
     () async {
       final repository = _Repository()
         ..pending = true
@@ -221,8 +221,9 @@ void main() {
 
       expect(
         container.read(authControllerProvider).status,
-        AuthStatus.unauthenticated,
+        AuthStatus.withdrawalPending,
       );
+      expect(container.read(authControllerProvider).user, isNull);
     },
   );
 

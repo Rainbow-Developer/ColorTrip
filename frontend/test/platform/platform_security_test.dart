@@ -12,6 +12,8 @@ void main() {
     ).readAsStringSync();
 
     expect(mainManifest, contains('android:allowBackup="false"'));
+    expect(mainManifest, contains('android.permission.CAMERA'));
+    expect(mainManifest, contains('android.permission.ACCESS_FINE_LOCATION'));
     expect(mainManifest, isNot(contains('android:networkSecurityConfig')));
     expect(
       mainManifest,

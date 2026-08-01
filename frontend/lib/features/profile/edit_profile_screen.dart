@@ -173,14 +173,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Future<void> _pickBirthDate() async {
     final today = DateTime.now();
+    final firstDate = minimumBirthDate(today);
     final parsed = DateTime.tryParse(_birthdateController.text);
-    final initial = parsed != null && !parsed.isAfter(today)
+    final initial =
+        parsed != null && !parsed.isBefore(firstDate) && !parsed.isAfter(today)
         ? parsed
-        : DateTime(2000, 1, 1);
+        : DateTime(today.year - 26, today.month, today.day);
     final selected = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(today.year - 120),
+      firstDate: firstDate,
       lastDate: today,
     );
     if (selected == null || !mounted) return;

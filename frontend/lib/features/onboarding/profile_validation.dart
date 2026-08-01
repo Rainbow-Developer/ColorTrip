@@ -5,6 +5,9 @@ class ProfileValidationResult {
   final DateTime? birthDate;
 }
 
+/// Date-picker and form validation share the same supported birth-date range.
+DateTime minimumBirthDate(DateTime today) => DateTime(today.year - 120);
+
 ProfileValidationResult validateOnboardingProfile({
   required String nickname,
   required String email,
@@ -39,7 +42,9 @@ ProfileValidationResult validateOnboardingProfile({
     }
   }
   final todayOnly = DateTime(today.year, today.month, today.day);
-  if (parsedBirthDate == null || parsedBirthDate.isAfter(todayOnly)) {
+  if (parsedBirthDate == null ||
+      parsedBirthDate.isBefore(minimumBirthDate(todayOnly)) ||
+      parsedBirthDate.isAfter(todayOnly)) {
     errors['birthDate'] = '유효한 생년월일을 입력해주세요.';
   }
 

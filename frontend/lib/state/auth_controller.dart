@@ -48,7 +48,7 @@ class AuthController extends Notifier<AuthState> {
       // may have cleared the whole secure session.
       final pending = await repository.isWithdrawalPending();
       if (epoch != _epoch) return;
-      if (pending && user != null) {
+      if (pending) {
         state = AuthState(status: AuthStatus.withdrawalPending, user: user);
         return;
       }
