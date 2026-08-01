@@ -52,28 +52,29 @@ class TravelListScreen extends ConsumerWidget {
                 if (inProgress.isNotEmpty) ...[
                   const _SectionHeader('진행중인 여행'),
                   for (final journey in inProgress)
-                    if (regionById(journey.regionKey) case final region?)
-                      _TripCard(
-                        journey: journey,
-                        region: region,
-                        isActive: true,
-                      ),
+                    _journeyCard(journey, isActive: true),
                   const SizedBox(height: 12),
                 ],
                 if (past.isNotEmpty) ...[
                   const _SectionHeader('지난 여행'),
                   for (final journey in past)
-                    if (regionById(journey.regionKey) case final region?)
-                      _TripCard(
-                        journey: journey,
-                        region: region,
-                        isActive: false,
-                      ),
+                    _journeyCard(journey, isActive: false),
                 ],
               ],
             ),
     );
   }
+}
+
+Widget _journeyCard(DomainJourney journey, {required bool isActive}) {
+  final region = regionByStableKey(journey.regionKey);
+  if (region == null) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Text('여행 지역 정보를 불러오지 못했어요.'),
+    );
+  }
+  return _TripCard(journey: journey, region: region, isActive: isActive);
 }
 
 class _SectionHeader extends StatelessWidget {

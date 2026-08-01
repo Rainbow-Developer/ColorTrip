@@ -9,6 +9,7 @@ import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../data/models/quest.dart';
 import '../../data/repositories/domain_repository.dart';
+import '../../data/static/regions_data.dart';
 import '../../state/domain_controller.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
@@ -57,7 +58,12 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
         ref.watch(domainControllerProvider).value?.journeys ??
         const <DomainJourney>[];
     final selectedJourney = widget.journeyId == null
-        ? journeys.where((journey) => journey.regionKey == regionId).firstOrNull
+        ? journeys
+              .where(
+                (journey) =>
+                    regionByStableKey(journey.regionKey)?.id == regionId,
+              )
+              .firstOrNull
         : journeys
               .where((journey) => journey.id == widget.journeyId)
               .firstOrNull;
@@ -196,11 +202,11 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                         ),
                       ),
                   const SizedBox(height: 12),
-                   OutlinedButton(
+                  OutlinedButton(
                     onPressed: () =>
                         context.push('/region/$regionId/quests$journeyQuery'),
-                     child: const Text('퀘스트 더 선택하기'),
-                   ),
+                    child: const Text('퀘스트 더 선택하기'),
+                  ),
                 ] else ...[
                   const Text(
                     '추천 퀘스트',
