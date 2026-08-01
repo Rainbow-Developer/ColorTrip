@@ -49,6 +49,7 @@ class QuestVerifyScreen extends ConsumerWidget {
       case 'gps':
         return _GpsVerifyBody(
           questTitle: quest.title,
+          isReady: quest.lat != null && quest.lng != null,
           onVerified: () => _verifyGps(context, ref, quest, journeyId),
         );
       case 'quiz':
@@ -63,6 +64,8 @@ class QuestVerifyScreen extends ConsumerWidget {
             answer: answer ? 'O' : 'X',
           ),
         );
+      case 'qr':
+        return const _QrVerifyBody();
       default:
         return _PhotoVerifyBody(
           questTitle: quest.title,
@@ -328,9 +331,14 @@ class _QuizVerifyBodyState extends State<_QuizVerifyBody> {
 }
 
 class _GpsVerifyBody extends StatefulWidget {
-  const _GpsVerifyBody({required this.questTitle, required this.onVerified});
+  const _GpsVerifyBody({
+    required this.questTitle,
+    required this.isReady,
+    required this.onVerified,
+  });
 
   final String questTitle;
+  final bool isReady;
   final Future<void> Function() onVerified;
 
   @override
@@ -421,6 +429,14 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
               ),
             ),
             const SizedBox(height: 14),
+            if (!widget.isReady)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 14),
+                child: Text(
+                  '이 퀘스트는 위치 정보가 준비되지 않았어요.',
+                  style: TextStyle(color: AppColors.danger, fontSize: 13),
+                ),
+              ),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -472,7 +488,7 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
             ),
             const Spacer(),
             ElevatedButton(
-              onPressed: _busy
+              onPressed: _busy || !widget.isReady
                   ? null
                   : () async {
                       setState(() => _busy = true);
@@ -480,6 +496,39 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
                       if (mounted) setState(() => _busy = false);
                     },
               child: Text(_busy ? '현재 위치 확인 중...' : '현재 위치로 인증하기'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QrVerifyBody extends StatelessWidget {
+  const _QrVerifyBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('QR 인증'),
+      ),
+      body: const Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('현장에 부착된 QR 코드를 프레임 안에 맞춰주세요.'),
+            SizedBox(height: 16),
+            Expanded(
+              child: Center(
+                child: Text(
+                  '카메라를 열 수 없어요. 기기 권한을 확인한 뒤 다시 시도해주세요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.textMuted),
+                ),
+              ),
             ),
           ],
         ),
