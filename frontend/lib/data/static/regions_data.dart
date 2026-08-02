@@ -108,7 +108,7 @@ Region? regionById(String id) {
 }
 
 /// 백엔드 카탈로그의 지역 stable key를 앱의 정적 지역으로 해석한다.
-/// 서버 key가 앱 카탈로그에 없으면 `null`을 반환해 화면이 조용히 여정을 누락하지 않게 한다.
+/// 서버 key가 앱 카탈로그에 없으면 `null`을 반환하며, 호출자가 화면별 오류·대체 정책을 결정한다.
 Region? regionByStableKey(String stableKey) => regionById(stableKey);
 
 /// 백엔드 region_name(예: "청주시") → 로컬 지역 id(예: 'cheongju') 매칭

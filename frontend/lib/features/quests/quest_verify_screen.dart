@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
@@ -65,7 +66,15 @@ class QuestVerifyScreen extends ConsumerWidget {
           ),
         );
       case 'qr':
-        return const _QrVerifyBody();
+        return _QrVerifyBody(
+          onVerified: (payload) => _verify(
+            context,
+            ref,
+            quest,
+            journeyId: journeyId,
+            qrPayload: payload,
+          ),
+        );
       default:
         return _PhotoVerifyBody(
           questTitle: quest.title,
@@ -90,6 +99,7 @@ class QuestVerifyScreen extends ConsumerWidget {
     double? longitude,
     String? photoUrl,
     String? answer,
+    String? qrPayload,
   }) async {
     try {
       final result = await ref
@@ -101,6 +111,7 @@ class QuestVerifyScreen extends ConsumerWidget {
             longitude: longitude,
             photoUrl: photoUrl,
             answer: answer,
+            qrPayload: qrPayload,
           );
       if (!context.mounted) return null;
       if (!result.verified) {
@@ -504,8 +515,31 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
   }
 }
 
-class _QrVerifyBody extends StatelessWidget {
-  const _QrVerifyBody();
+class _QrVerifyBody extends StatefulWidget {
+  const _QrVerifyBody({required this.onVerified});
+
+  final Future<bool?> Function(String payload) onVerified;
+
+  @override
+  State<_QrVerifyBody> createState() => _QrVerifyBodyState();
+}
+
+class _QrVerifyBodyState extends State<_QrVerifyBody> {
+  bool _busy = false;
+
+  Future<void> _verify(BarcodeCapture capture) async {
+    if (_busy) return;
+    final payload = capture.barcodes.firstOrNull?.rawValue;
+    if (payload == null || payload.isEmpty) return;
+    setState(() => _busy = true);
+    final verified = await widget.onVerified(payload);
+    if (!mounted) return;
+    if (verified == true) {
+      showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
+      context.go('/home');
+    }
+    if (mounted) setState(() => _busy = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -514,19 +548,22 @@ class _QrVerifyBody extends StatelessWidget {
         leading: const AppBackButton(),
         title: const Text('QR 인증'),
       ),
-      body: const Padding(
-        padding: EdgeInsets.all(20),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('현장에 부착된 QR 코드를 프레임 안에 맞춰주세요.'),
-            SizedBox(height: 16),
+            const Text('현장에 부착된 QR 코드를 프레임 안에 맞춰주세요.'),
+            const SizedBox(height: 16),
             Expanded(
-              child: Center(
-                child: Text(
-                  '카메라를 열 수 없어요. 기기 권한을 확인한 뒤 다시 시도해주세요.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textMuted),
+              child: MobileScanner(
+                onDetect: _verify,
+                errorBuilder: (_, _) => const Center(
+                  child: Text(
+                    '카메라를 열 수 없어요. 기기 권한을 확인한 뒤 다시 시도해주세요.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
                 ),
               ),
             ),

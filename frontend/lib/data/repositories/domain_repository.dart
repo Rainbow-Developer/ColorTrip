@@ -110,6 +110,7 @@ abstract class DomainRepository {
     double? longitude,
     String? photoUrl,
     String? answer,
+    String? qrPayload,
   });
 }
 
@@ -212,6 +213,7 @@ class DioDomainRepository implements DomainRepository {
     double? longitude,
     String? photoUrl,
     String? answer,
+    String? qrPayload,
   }) async {
     final catalog = await _loadCatalog();
     final payload = <String, dynamic>{};
@@ -220,6 +222,7 @@ class DioDomainRepository implements DomainRepository {
     if (longitude != null) payload['lng'] = longitude;
     if (photoUrl != null) payload['photo_url'] = photoUrl;
     if (answer != null) payload['answer'] = answer;
+    if (qrPayload != null) payload['qr_payload'] = qrPayload;
     final response = await _dio.post(
       '/quests/${catalog.questId(questKey)}/verify',
       data: payload,

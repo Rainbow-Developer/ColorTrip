@@ -71,7 +71,9 @@ class _FakeQuestRepository implements QuestRepository {
 }
 
 class _QuizDomainRepository implements DomainRepository {
-  int _attempts = 0;
+  _QuizDomainRepository(this.expectedAnswer);
+
+  final String expectedAnswer;
   final _completed = <String>{};
 
   @override
@@ -96,9 +98,11 @@ class _QuizDomainRepository implements DomainRepository {
     double? longitude,
     String? photoUrl,
     String? answer,
+    String? qrPayload,
   }) async {
-    _attempts++;
-    if (_attempts == 1) return const QuestVerification(verified: false);
+    if (answer != expectedAnswer) {
+      return const QuestVerification(verified: false);
+    }
     _completed.add(questKey);
     return const QuestVerification(verified: true);
   }
@@ -188,7 +192,11 @@ void main() {
     // OX 퀴즈는 이번 작업의 비변경 대상 — 정적 데이터의 실제 퀴즈 퀘스트로 검증한다
     // (completeQuest가 정적 데이터의 questById를 쓰므로 합성 퀘스트로는 완료가 안 된다).
     final quizQuest = kQuests.firstWhere((q) => q.verify == 'quiz');
-    final container = _container(domainRepository: _QuizDomainRepository());
+    final container = _container(
+      domainRepository: _QuizDomainRepository(
+        quizQuest.quizAnswer! ? 'O' : 'X',
+      ),
+    );
     await tester.pumpWidget(_wrapVerifyScreen(quizQuest.id, container));
     await tester.pumpAndSettle();
 

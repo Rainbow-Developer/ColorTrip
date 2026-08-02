@@ -81,6 +81,7 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
     double? longitude,
     String? photoUrl,
     String? answer,
+    String? qrPayload,
   }) async {
     final result = await ref
         .read(domainRepositoryProvider)
@@ -91,6 +92,7 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
           longitude: longitude,
           photoUrl: photoUrl,
           answer: answer,
+          qrPayload: qrPayload,
         );
     if (result.verified) {
       try {

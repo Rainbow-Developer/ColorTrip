@@ -96,6 +96,7 @@ class _DomainRepository implements DomainRepository {
     double? longitude,
     String? photoUrl,
     String? answer,
+    String? qrPayload,
   }) => throw UnimplementedError();
 }
 

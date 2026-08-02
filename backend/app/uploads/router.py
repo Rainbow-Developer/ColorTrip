@@ -1,5 +1,7 @@
 """uploads — 인증 사진 업로드 라우터 (VRF-03). 보호 API."""
 
+import logging
+
 from fastapi import APIRouter, Depends, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,7 @@ from app.uploads.models import UploadedPhoto
 from app.uploads.storage import PhotoStorage, get_photo_storage
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
+logger = logging.getLogger(__name__)
 
 _ALLOWED_TYPES = {
     "image/jpeg": ".jpg",
@@ -62,7 +65,16 @@ async def upload_photo(
     object_name = f"photos/{now_kst():%Y/%m}/{new_uuid7().hex}{extension}"
     photo_url = await storage.save(object_name, content, content_type)
     session.add(UploadedPhoto(user_id=current_user.id, photo_url=photo_url))
-    await session.commit()
+    try:
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        try:
+            await storage.delete(object_name)
+        except Exception:
+            logger.exception("업로드 DB 저장 실패 후 스토리지 정리 실패: %s", object_name)
+        logger.exception("업로드 DB 저장 실패로 스토리지 객체를 정리했습니다: %s", object_name)
+        raise
     return success(
         PhotoUploadData(photo_url=photo_url), status=201, message="사진을 업로드했습니다."
     )
