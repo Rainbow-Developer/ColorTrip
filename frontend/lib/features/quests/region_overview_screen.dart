@@ -91,21 +91,20 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
         title: const Text('여행하기'),
         titleSpacing: 0,
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-          child: tripStarted
-              ? OutlinedButton(
-                  onPressed: () => context.push('/region/$regionId/quests'),
-                  child: const Text('퀘스트 더 선택하기'),
-                )
-              : ElevatedButton(
+      // 여행이 이미 시작된 지역은 본문 하단의 "퀘스트 더 선택하기"(journeyQuery 포함)가
+      // 그 역할을 하므로, 고정 하단 바는 시작 전 CTA에만 쓴다(과거 둘 다 떠 있던 중복 버그 수정).
+      bottomNavigationBar: tripStarted
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                child: ElevatedButton(
                   key: _selectQuestButtonKey,
                   onPressed: () => context.push('/region/$regionId/quests'),
                   child: const Text('퀘스트 선택하러 가기'),
                 ),
-        ),
-      ),
+              ),
+            ),
       body: Stack(
         children: [
           SingleChildScrollView(

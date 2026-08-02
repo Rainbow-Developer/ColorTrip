@@ -87,6 +87,7 @@ class _QuizDomainRepository implements DomainRepository {
     journeys: const [],
     completedQuestKeys: _completed,
     regionProgress: const {},
+    regionTripCount: const {},
     timeline: const [],
   );
 

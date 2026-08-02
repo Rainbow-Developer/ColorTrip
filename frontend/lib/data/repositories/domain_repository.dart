@@ -67,6 +67,7 @@ class DomainSnapshot {
     required this.journeys,
     required this.completedQuestKeys,
     required this.regionProgress,
+    required this.regionTripCount,
     required this.timeline,
   });
 
@@ -74,6 +75,10 @@ class DomainSnapshot {
   final List<DomainJourney> journeys;
   final Set<String> completedQuestKeys;
   final Map<String, int> regionProgress;
+
+  /// 지역별 완료 여행(여정) 수 — 지도 채색 기준([055-journey-map-coloring]).
+  /// `/users/me/map`의 `completed_journey_count`를 그대로 담는다.
+  final Map<String, int> regionTripCount;
   final List<DomainTimelineEntry> timeline;
 }
 
@@ -126,19 +131,25 @@ class DioDomainRepository implements DomainRepository {
     final results = await Future.wait<Object>([
       _fetchJourneys(catalog),
       _fetchCompletedQuestKeys(catalog),
-      _fetchRegionProgress(catalog),
+      _fetchMapProgress(catalog),
       _fetchTimeline(),
     ]);
     final journeys = results[0] as List<DomainJourney>;
     final completed = results[1] as Set<String>;
-    final regionProgress = results[2] as Map<String, int>;
+    final mapProgress =
+        results[2]
+            as ({
+              Map<String, int> completedCounts,
+              Map<String, int> tripCounts,
+            });
     final timeline = results[3] as List<DomainTimelineEntry>;
     completed.addAll(timeline.map((entry) => entry.questKey));
     return DomainSnapshot(
       catalog: catalog,
       journeys: journeys,
       completedQuestKeys: completed,
-      regionProgress: regionProgress,
+      regionProgress: mapProgress.completedCounts,
+      regionTripCount: mapProgress.tripCounts,
       timeline: timeline,
     );
   }
@@ -301,16 +312,21 @@ class DioDomainRepository implements DomainRepository {
         .toSet();
   }
 
-  Future<Map<String, int>> _fetchRegionProgress(DomainCatalog catalog) async {
+  Future<({Map<String, int> completedCounts, Map<String, int> tripCounts})>
+  _fetchMapProgress(DomainCatalog catalog) async {
     final response = await _dio.get('/users/me/map');
     final items = (_envelope(response.data) as List)
         .cast<Map<String, dynamic>>();
-    final progress = <String, int>{};
+    final completedCounts = <String, int>{};
+    final tripCounts = <String, int>{};
     for (final item in items) {
       final key = catalog.regionKeysById[item['region_id']];
-      if (key != null) progress[key] = item['completed_count'] as int;
+      if (key == null) continue;
+      completedCounts[key] = item['completed_count'] as int;
+      // 완료 여행(여정) 수 — 지도 채색 기준([055-journey-map-coloring]).
+      tripCounts[key] = item['completed_journey_count'] as int? ?? 0;
     }
-    return progress;
+    return (completedCounts: completedCounts, tripCounts: tripCounts);
   }
 
   Future<List<DomainTimelineEntry>> _fetchTimeline() async {
