@@ -122,3 +122,85 @@ async def test_get_public_share_card_not_found(client: AsyncClient) -> None:
     """존재하지 않는 숏코드 조회 시 404 에러를 반환하는지 테스트합니다."""
     response = await client.get("/api/v1/shares/nonexist")
     assert response.status_code == 404
+
+
+async def _create_share_and_get_landing(
+    client: AsyncClient, headers: dict[str, str], share_style: str
+) -> str:
+    share_res = await client.post(
+        "/api/v1/shares",
+        json={"share_style": share_style},
+        headers=headers,
+    )
+    share_code = share_res.json()["data"]["share_code"]
+    landing_res = await client.get(f"/share/{share_code}")
+    assert landing_res.status_code == 200
+    return landing_res.text
+
+
+@pytest.mark.asyncio
+async def test_share_landing_page_map_and_dna(client: AsyncClient) -> None:
+    """MAP_AND_DNA 랜딩 페이지는 색칠 지역과 DNA를 모두 보여줍니다(060-share-native-experience)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    await client.post(
+        f"/api/v1/quests/{seed['gps_quest_id']}/verify",
+        json={
+            "lat": str(DODAM_LAT),
+            "lng": str(DODAM_LNG),
+            "photo_url": "/uploads/photos/2026/07/test.jpg",
+        },
+        headers=headers,
+    )
+
+    html = await _create_share_and_get_landing(client, headers, "MAP_AND_DNA")
+    assert "단양군" in html
+    assert "자연탐험형" in html
+
+
+@pytest.mark.asyncio
+async def test_share_landing_page_map_only_omits_dna(client: AsyncClient) -> None:
+    """MAP 스타일 랜딩 페이지는 색칠 지역만 보여주고 DNA는 노출하지 않습니다."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    await client.post(
+        f"/api/v1/quests/{seed['gps_quest_id']}/verify",
+        json={
+            "lat": str(DODAM_LAT),
+            "lng": str(DODAM_LNG),
+            "photo_url": "/uploads/photos/2026/07/test.jpg",
+        },
+        headers=headers,
+    )
+
+    html = await _create_share_and_get_landing(client, headers, "MAP")
+    assert "단양군" in html
+    assert "자연탐험형" not in html
+
+
+@pytest.mark.asyncio
+async def test_share_landing_page_dna_only_omits_regions(client: AsyncClient) -> None:
+    """DNA 스타일 랜딩 페이지는 DNA만 보여주고 색칠 지역은 노출하지 않습니다."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    await client.post(
+        f"/api/v1/quests/{seed['gps_quest_id']}/verify",
+        json={
+            "lat": str(DODAM_LAT),
+            "lng": str(DODAM_LNG),
+            "photo_url": "/uploads/photos/2026/07/test.jpg",
+        },
+        headers=headers,
+    )
+
+    html = await _create_share_and_get_landing(client, headers, "DNA")
+    assert "자연탐험형" in html
+    assert "단양군" not in html
+
+
+@pytest.mark.asyncio
+async def test_share_landing_page_not_found(client: AsyncClient) -> None:
+    """존재하지 않는 공유 코드는 랜딩 페이지에서도 404를 반환합니다."""
+    response = await client.get("/share/nonexist")
+    assert response.status_code == 404
+    assert "존재하지 않는" in response.text

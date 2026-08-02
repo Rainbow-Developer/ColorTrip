@@ -130,15 +130,18 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _ShareStat(
-                        label: '완료 지역',
-                        value: '${progress.completedRegionCount}',
-                      ),
-                      _ShareStat(label: '진행률', value: '$progressPct%'),
-                      _ShareStat(
-                        label: dna.name.replaceAll(' 여행자', ''),
-                        value: dna.icon,
-                      ),
+                      if (_style != _ShareStyle.dnaOnly) ...[
+                        _ShareStat(
+                          label: '완료 지역',
+                          value: '${progress.completedRegionCount}',
+                        ),
+                        _ShareStat(label: '진행률', value: '$progressPct%'),
+                      ],
+                      if (_style != _ShareStyle.mapOnly)
+                        _ShareStat(
+                          label: dna.name.replaceAll(' 여행자', ''),
+                          value: dna.icon,
+                        ),
                     ],
                   ),
                 ],
