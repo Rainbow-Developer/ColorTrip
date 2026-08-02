@@ -38,3 +38,4 @@ docs/specs/
 | [050-quest-verification](050-quest-verification/) | 퀘스트 인증 3종(사진 AI·위치·QR) + 위치정보법 검토 |
 | [055-journey-map-coloring](055-journey-map-coloring/) | 지도 채색 기준 전환(완료 여행 수) |
 | [040-domain-state-persistence](040-domain-state-persistence/) | 여행·퀘스트·지도·타임라인 서버 영속화와 앱 재시작 복원 |
+| [060-share-native-experience](060-share-native-experience/) | 공유 카드 실사용화(지도 미리보기·네이티브 공유 시트·공유 랜딩 페이지) |
