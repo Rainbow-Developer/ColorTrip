@@ -4,12 +4,13 @@ import logging
 
 from fastapi import APIRouter, Depends, UploadFile
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import CurrentUser
 from app.core.base import new_uuid7, now_kst
 from app.core.config import settings
-from app.core.database import get_session
+from app.core.database import AsyncSessionLocal, get_session
 from app.core.exceptions import AppException, ErrorCode
 from app.core.response import Envelope, success
 from app.uploads.models import UploadedPhoto
@@ -69,11 +70,21 @@ async def upload_photo(
         await session.commit()
     except Exception:
         await session.rollback()
-        try:
-            await storage.delete(object_name)
-        except Exception:
-            logger.exception("업로드 DB 저장 실패 후 스토리지 정리 실패: %s", object_name)
-        logger.exception("업로드 DB 저장 실패로 스토리지 객체를 정리했습니다: %s", object_name)
+        async with AsyncSessionLocal() as check_session:
+            persisted = await check_session.scalar(
+                select(UploadedPhoto.id).where(UploadedPhoto.photo_url == photo_url)
+            )
+        if persisted is None:
+            try:
+                await storage.delete(object_name)
+            except Exception:
+                logger.exception("업로드 DB 저장 실패 후 스토리지 정리 실패: %s", object_name)
+            else:
+                logger.exception(
+                    "업로드 DB 저장 실패로 스토리지 객체를 정리했습니다: %s", object_name
+                )
+        else:
+            logger.exception("업로드 커밋 응답 실패지만 사진 레코드는 저장됨: %s", object_name)
         raise
     return success(
         PhotoUploadData(photo_url=photo_url), status=201, message="사진을 업로드했습니다."
