@@ -24,6 +24,7 @@ class _Repository implements DomainRepository {
       journeys: [],
       completedQuestKeys: {},
       regionProgress: {},
+      regionTripCount: {},
       timeline: [],
     );
   }

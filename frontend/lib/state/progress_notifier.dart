@@ -126,6 +126,11 @@ class ProgressNotifier extends Notifier<ProgressState> {
       tripQuests: tripQuests,
       tripInfo: tripInfo,
       regionProgress: {...snapshot.regionProgress},
+      // 지도 채색 기준([055-journey-map-coloring]) — 이 값이 비어 있으면 실제 퀘스트
+      // 완료·여행 완주 흐름(DomainController.verifyQuest → refresh → replaceFromServer)에서
+      // 지도가 영영 채색되지 않는 버그가 있었다. 서버 값이 로컬 누적([localTripCompletions])보다
+      // 클 때만 의미가 있으므로(ProgressState.completedTripCountOf가 max 병합) 그대로 담는다.
+      regionTripCount: {...snapshot.regionTripCount},
     );
   }
 
