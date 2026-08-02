@@ -11,9 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:colortrip/data/models/quest.dart';
-import 'package:colortrip/data/models/region.dart';
 import 'package:colortrip/data/static/quests_data.dart';
-import 'package:colortrip/data/static/regions_data.dart';
 import 'package:colortrip/features/home/home_screen.dart';
 import 'package:colortrip/features/quests/region_quest_select_screen.dart';
 import 'package:colortrip/features/travel/travel_list_screen.dart';
@@ -46,6 +44,22 @@ class _DomainRepository implements DomainRepository {
 
   @override
   Future<DomainSnapshot> fetchSnapshot() async => snapshot;
+
+  @override
+  Future<List<DomainRecommendedRegion>>
+  fetchUnvisitedRecommendedRegions() async => const [
+    DomainRecommendedRegion(
+      regionKey: 'danyang',
+      matchingQuestCount: 3,
+      availableQuestCount: 20,
+    ),
+  ];
+
+  @override
+  Future<List<String>> fetchRecommendedQuestKeys({
+    required String regionKey,
+    int size = 2,
+  }) async => const ['dy1'];
 
   @override
   Future<DomainJourney> createJourney({
@@ -142,36 +156,25 @@ void main() {
     }
   });
 
-  testWidgets('홈에 DNA 유형 기반 추천 여행지 배너가 뜬다', (tester) async {
-    await tester.pumpWidget(_wrap(const HomeScreen()));
+  testWidgets('홈에 서버 추천 여행지 배너가 뜬다', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        _tourDoneOverride,
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(_wrap(const HomeScreen(), container: container));
     await tester.pumpAndSettle();
 
-    // 테스트 환경에서는 추천 API 호출이 실패하므로(서버 없음) 배너는 정적 폴백으로
-    // 그려진다([040-home-region-recommendation]). 기본 DNA(nature)·초기 상태(모든 지역
-    // 미시작) 기준, 배너 로직과 같은 방식으로 기대 지역을 데이터에서 계산한다
-    // (퀘스트 데이터가 늘어나도 테스트가 깨지지 않게).
-    Region? expected;
-    var bestMatch = -1;
-    var bestTotal = -1;
-    for (final region in kRegionsInMapOrder) {
-      final quests = questsByRegion(region.id);
-      final match = quests.where((q) => q.type == 'nature').length;
-      if (match > bestMatch ||
-          (match == bestMatch && quests.length > bestTotal)) {
-        expected = region;
-        bestMatch = match;
-        bestTotal = quests.length;
-      }
-    }
-
     expect(find.textContaining('추천 여행지'), findsOneWidget);
-    expect(find.text(expected!.name), findsWidgets);
-    expect(find.text('자연탐험 퀘스트 $bestMatch개가 기다리고 있어요'), findsOneWidget);
+    expect(find.text('단양군'), findsWidgets);
+    expect(find.text('자연탐험 퀘스트 3개가 기다리고 있어요'), findsOneWidget);
 
     // 정적 폴백에서도 추천 지역의 퀘스트 요약 3개가 함께 보인다 — DNA 일치 우선, 같은
     // 구간에서는 썸네일 보유 우선(배너와 같은 순서로 기대값을 계산한다, [040]).
     bool hasThumbnail(Quest q) => q.imageUrl?.isNotEmpty ?? false;
-    final regionQuests = questsByRegion(expected.id);
+    final regionQuests = questsByRegion('danyang');
     final ordered = [
       ...regionQuests.where((q) => q.type == 'nature' && hasThumbnail(q)),
       ...regionQuests.where((q) => q.type == 'nature' && !hasThumbnail(q)),

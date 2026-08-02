@@ -7,13 +7,10 @@ import '../../core/constants.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/map_legend.dart';
-import '../../data/models/home_recommendation.dart';
 import '../../data/models/quest.dart';
-import '../../data/models/region.dart';
 import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
-import '../../state/home_recommendation_provider.dart';
 import '../../state/auth_controller.dart';
 import '../../state/domain_recommendation_providers.dart';
 import '../../state/onboarding_tour_notifier.dart';
@@ -384,65 +381,6 @@ class _RecommendedRegionBanner extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-
-  /// 백엔드 추천 응답 → 배너 데이터. 응답에는 대표 퀘스트(최대 3개)만 담겨 지역 전체
-  /// 퀘스트 개수를 알 수 없으므로 문구는 개수 없이 쓴다.
-  _BannerContent _fromApi(HomeRecommendation recommendation) {
-    final dnaId = recommendation.dnaCategory;
-    final typeLabel = questTypeStyles[dnaId]?.label ?? dnaId;
-    return _BannerContent(
-      regionId: recommendation.regionId,
-      regionName: recommendation.regionName,
-      dnaId: dnaId,
-      questLabel: '$typeLabel 퀘스트가 기다리고 있어요',
-      quests: [
-        for (final quest in recommendation.quests.take(_questSummaryMax))
-          _QuestSummary(
-            title: quest.title,
-            type: quest.category,
-            thumbnailUrl: quest.thumbnailUrl,
-          ),
-      ],
-    );
-  }
-
-  /// 정적 데이터 폴백 — 기존(KAN-28) 추천 계산을 그대로 유지하고, 그 지역 퀘스트에서
-  /// 요약 상위 [_questSummaryMax]개만 추가로 뽑는다. 시작 안 한 지역이 없으면 null.
-  _BannerContent? _fromStaticData(WidgetRef ref) {
-    final progress = ref.watch(progressProvider);
-    final dnaId = progress.dnaType ?? 'nature';
-    final questRepo = ref.watch(questRepositoryProvider);
-
-    Region? best;
-    var bestMatch = -1;
-    var bestTotal = -1;
-    for (final region in kRegionsInMapOrder) {
-      if (progress.tripStatusOf(region.id) != RegionTripStatus.notStarted) {
-        continue;
-      }
-      final quests = questRepo.byRegion(region.id);
-      if (quests.isEmpty) continue;
-      final match = quests.where((q) => q.type == dnaId).length;
-      if (match > bestMatch ||
-          (match == bestMatch && quests.length > bestTotal)) {
-        best = region;
-        bestMatch = match;
-        bestTotal = quests.length;
-      }
-    }
-    if (best == null) return null;
-
-    final typeLabel = questTypeStyles[dnaId]?.label ?? dnaId;
-    return _BannerContent(
-      regionId: best.id,
-      regionName: best.name,
-      dnaId: dnaId,
-      questLabel: bestMatch > 0
-          ? '$typeLabel 퀘스트 $bestMatch개가 기다리고 있어요'
-          : '퀘스트 $bestTotal개가 기다리고 있어요',
-      quests: _staticQuestSummary(questRepo.byRegion(best.id), dnaId),
     );
   }
 
