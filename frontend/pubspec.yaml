@@ -54,6 +54,7 @@ dependencies:
   geolocator: ^14.0.2
   # QR 인증 스캔 (docs/specs/050-quest-verification)
   mobile_scanner: ^7.0.1
+  share_plus: ^13.3.0
 
 dev_dependencies:
   flutter_test:

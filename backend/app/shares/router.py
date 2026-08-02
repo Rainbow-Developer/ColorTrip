@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import html
+
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import CurrentUser
 from app.core.database import get_session
+from app.core.exceptions import AppException
 from app.core.response import Envelope, success
 from app.shares import service
 from app.shares.schemas import (
@@ -15,6 +19,14 @@ from app.shares.schemas import (
 )
 
 router = APIRouter(tags=["shares"])
+
+# 랜딩 페이지 전용 공개 라우트 — /api/v1 prefix 없이 최상위로 등록한다(사람이 직접 클릭하는
+# 공개 URL이라 API 버전 prefix가 어울리지 않는다, 060-share-native-experience).
+landing_router = APIRouter(tags=["shares"])
+
+# 앱이 아직 스토어에 배포되지 않아 실제 URL이 없다. 배포 후 이 값을 채우면
+# 랜딩 페이지에 "앱 다운받기" 링크가 활성화된다.
+PLAY_STORE_URL = ""
 
 
 @router.get("/users/me/share-summary", response_model=Envelope[ShareSummaryResponse])
@@ -50,3 +62,98 @@ async def get_public_share_card(
     """외부 누구나 접속 가능한 공개 공유 카드 데이터를 조회합니다."""
     card_data = await service.get_public_share_card(session, share_code)
     return success(card_data)
+
+
+def _render_not_found_page(share_code: str) -> str:
+    safe_code = html.escape(share_code)
+    return f"""<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>존재하지 않는 공유 링크 — 다채로울지도</title></head>
+<body style="font-family:sans-serif;text-align:center;padding:48px 16px;color:#4A4A44;">
+<h1 style="font-size:20px;">존재하지 않는 공유 링크예요</h1>
+<p>코드 <code>{safe_code}</code>에 해당하는 공유를 찾을 수 없어요.</p>
+</body></html>"""
+
+
+def _render_share_landing_page(card: ShareReadResponse) -> str:
+    nickname = html.escape(card.owner_nickname or "여행자")
+    title = f"{nickname}님의 여행 지도"
+
+    region_count_label = f"{card.completed_region_count}/{card.total_region_count}"
+    stat_box_style = "font-size:18px;font-weight:700;"
+    stats_html = f"""
+        <div style="display:flex;justify-content:space-evenly;margin:16px 0;">
+            <div><div style="font-size:12px;color:#888;">완료 지역</div>
+                 <div style="{stat_box_style}">{region_count_label}</div></div>
+            <div><div style="font-size:12px;color:#888;">진행률</div>
+                 <div style="{stat_box_style}">{card.progress_percentage}%</div></div>
+        </div>
+    """
+
+    dna_html = ""
+    if card.dna_name:
+        badge_style = (
+            "background:#EAF3DE;color:#1A5C35;padding:6px 14px;"
+            "border-radius:999px;font-size:13px;font-weight:700;"
+        )
+        dna_html = f"""
+        <div style="margin:12px 0;">
+            <span style="{badge_style}">{html.escape(card.dna_name)}</span>
+        </div>
+        """
+
+    regions_html = ""
+    if card.colored_regions:
+        chips = "".join(
+            f'<span style="background:#F0F0EA;color:#444;padding:4px 10px;border-radius:8px;'
+            f'font-size:12px;margin:3px;display:inline-block;">{html.escape(r.name)}</span>'
+            for r in card.colored_regions
+        )
+        regions_html = f'<div style="margin:12px 0;">{chips}</div>'
+
+    open_app_url = f"colortrip://share/{html.escape(card.share_code)}"
+    download_html = (
+        f'<a href="{html.escape(PLAY_STORE_URL)}" '
+        'style="display:block;background:#2D6A4F;color:#fff;text-decoration:none;'
+        'padding:14px;border-radius:10px;font-weight:700;margin-top:8px;">앱 다운받기</a>'
+        if PLAY_STORE_URL
+        else '<div style="padding:14px;color:#999;font-size:13px;">앱 다운로드 (출시 예정)</div>'
+    )
+
+    return f"""<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{title} — 다채로울지도</title></head>
+<body style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:24px 16px;color:#1F1F1B;">
+<h1 style="font-size:18px;text-align:center;">{title}</h1>
+{stats_html}
+{dna_html}
+{regions_html}
+<div style="margin-top:24px;">
+    <a href="{open_app_url}"
+       style="display:block;background:#EAF3DE;color:#1A5C35;text-decoration:none;
+              padding:14px;border-radius:10px;font-weight:700;text-align:center;">앱에서 열기</a>
+    <div style="text-align:center;">{download_html}</div>
+    <p style="text-align:center;color:#999;font-size:12px;margin-top:16px;">
+        앱 다운받고 퀘스트 깨러가기!
+    </p>
+</div>
+</body></html>"""
+
+
+@landing_router.get("/share/{share_code}", response_class=HTMLResponse)
+async def get_share_landing_page(
+    share_code: str,
+    session: AsyncSession = Depends(get_session),
+) -> HTMLResponse:
+    """공유 링크를 클릭한 외부 사용자에게 보여주는 공개 HTML 랜딩 페이지.
+
+    안드로이드 전용 — "앱에서 열기"는 사용자가 직접 탭하는 커스텀 URL 스킴 링크이며,
+    앱 미설치 시 브라우저가 조용히 무시하고 이 페이지에 그대로 머문다(별도 폴백 불필요).
+    """
+    try:
+        card = await service.get_public_share_card(session, share_code)
+    except AppException:
+        return HTMLResponse(content=_render_not_found_page(share_code), status_code=404)
+    return HTMLResponse(content=_render_share_landing_page(card))

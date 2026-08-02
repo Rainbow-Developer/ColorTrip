@@ -8,6 +8,7 @@ import '../data/repositories/domain_repository.dart';
 import '../data/repositories/map_repository.dart';
 import '../data/repositories/quest_repository.dart';
 import '../data/repositories/region_repository.dart';
+import '../data/repositories/share_repository.dart';
 import '../data/repositories/trip_dna_repository.dart';
 
 /// Repository seam — 백엔드 연동 시 이 Provider들의 override만 교체하면 된다([plan.md] 의사결정).
@@ -47,4 +48,8 @@ final domainRepositoryProvider = Provider<DomainRepository>(
 
 final locationGatewayProvider = Provider<LocationGateway>(
   (ref) => const GeolocatorLocationGateway(),
+);
+
+final shareRepositoryProvider = Provider<ShareRepository>(
+  (ref) => DioShareRepository(ref.watch(dioProvider)),
 );

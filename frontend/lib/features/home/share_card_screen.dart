@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/chungbuk_map.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/auth_controller.dart';
 import '../../state/repository_providers.dart';
 
-/// 공유 카드 만들기 — Figma 스펙(2026-07-08 공유) 반영. 이미지 저장·링크 복사·공유는
-/// 실제 내보내기 없이 토스트로 흉내만 낸다(실 구현은 후속 작업, [implementation.md] 참고).
+/// 공유 카드 만들기 — Figma 스펙(2026-07-08 공유) 반영. 이미지 저장은 아직 실제 내보내기
+/// 없이 토스트로 흉내만 낸다(실 구현은 후속 작업, [implementation.md] 참고). 공유·링크 복사는
+/// 실제 `POST /shares`로 링크를 발급받아 안드로이드 네이티브 공유 시트·클립보드에 사용한다
+/// ([060-share-native-experience]).
 class ShareCardScreen extends ConsumerStatefulWidget {
   const ShareCardScreen({super.key});
 
@@ -20,8 +25,52 @@ class ShareCardScreen extends ConsumerStatefulWidget {
 
 enum _ShareStyle { mapAndDna, mapOnly, dnaOnly }
 
+extension on _ShareStyle {
+  /// 백엔드 `ShareStyle` Enum 값과 일치시킨다([030-share-card] `shares/schemas.py`).
+  String get apiValue => switch (this) {
+    _ShareStyle.mapAndDna => 'MAP_AND_DNA',
+    _ShareStyle.mapOnly => 'MAP',
+    _ShareStyle.dnaOnly => 'DNA',
+  };
+}
+
 class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
   _ShareStyle _style = _ShareStyle.mapAndDna;
+  bool _isLinking = false;
+
+  Future<String?> _createShareLink() async {
+    setState(() => _isLinking = true);
+    try {
+      return await ref
+          .read(shareRepositoryProvider)
+          .createShareLink(_style.apiValue);
+    } catch (_) {
+      if (mounted) {
+        showAppToast(context, '공유 링크 생성에 실패했어요. 다시 시도해주세요.');
+      }
+      return null;
+    } finally {
+      if (mounted) setState(() => _isLinking = false);
+    }
+  }
+
+  Future<void> _copyLink() async {
+    final url = await _createShareLink();
+    if (url == null || !mounted) return;
+    await Clipboard.setData(ClipboardData(text: url));
+    if (!mounted) return;
+    showAppToast(context, '링크가 복사되었어요');
+  }
+
+  Future<void> _shareViaSheet() async {
+    final url = await _createShareLink();
+    if (url == null) return;
+    final user = ref.read(currentUserProvider);
+    final who = user?.nickname == null ? '내' : '${user!.nickname}님의';
+    await SharePlus.instance.share(
+      ShareParams(text: '$who 다채로울지도 여행 지도를 확인해보세요! $url'),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,33 +112,36 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: Container(
+                  if (_style != _ShareStyle.dnaOnly)
+                    Container(
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppColors.shareMapPreviewBg,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        '지도 미리보기',
-                        style: TextStyle(color: AppColors.shareMapPreviewText),
+                      child: ChungbukMap(
+                        regionSaturation: {
+                          for (final region in kRegions)
+                            region.id: progress.regionSaturation(region.id),
+                        },
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                  if (_style != _ShareStyle.dnaOnly) const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _ShareStat(
-                        label: '완료 지역',
-                        value: '${progress.completedRegionCount}',
-                      ),
-                      _ShareStat(label: '진행률', value: '$progressPct%'),
-                      _ShareStat(
-                        label: dna.name.replaceAll(' 여행자', ''),
-                        value: dna.icon,
-                      ),
+                      if (_style != _ShareStyle.dnaOnly) ...[
+                        _ShareStat(
+                          label: '완료 지역',
+                          value: '${progress.completedRegionCount}',
+                        ),
+                        _ShareStat(label: '진행률', value: '$progressPct%'),
+                      ],
+                      if (_style != _ShareStyle.mapOnly)
+                        _ShareStat(
+                          label: dna.name.replaceAll(' 여행자', ''),
+                          value: dna.icon,
+                        ),
                     ],
                   ),
                 ],
@@ -140,7 +192,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => showAppToast(context, '링크가 복사되었어요'),
+                    onPressed: _isLinking ? null : _copyLink,
                     child: const Text('🔗 링크 복사'),
                   ),
                 ),
@@ -148,7 +200,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
             ),
             const Spacer(),
             ElevatedButton(
-              onPressed: () => showAppToast(context, '공유했어요'),
+              onPressed: _isLinking ? null : _shareViaSheet,
               child: const Text('공유'),
             ),
           ],

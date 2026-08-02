@@ -22,13 +22,13 @@ from app.quests.models import Quest, QuestProgress  # noqa: F401
 from app.regions.models import Region  # noqa: F401
 from app.shares.models import Share  # noqa: F401
 from app.timeline.models import TimelineEvent  # noqa: F401
-from app.uploads.models import UploadedPhoto  # noqa: F401
 from app.trip_dna.models import (  # noqa: F401
     TripQuestion,
     TripQuestionOption,
     TripReply,
     UserDnaHistory,
 )
+from app.uploads.models import UploadedPhoto  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

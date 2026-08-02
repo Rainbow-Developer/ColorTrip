@@ -20,8 +20,8 @@
 * **공개 공유 카드 조회 API**: `GET /api/v1/shares/{share_code}` (비인증 공개 접근 허용, 외부 조회용 데이터 반환).
 
 ## 비목표 (Non-Goals)
-* 프론트엔드 (Flutter) 공유 카드 UI/UX 화면 구현 (백엔드 API 및 연동 검증 위주).
-* 외부 웹 랜딩 SSR 서버 렌더링 (이번 스펙은 REST API JSON 서빙 중심).
+* 프론트엔드 (Flutter) 공유 카드 UI/UX 화면 구현 (백엔드 API 및 연동 검증 위주). → [060-share-native-experience](../060-share-native-experience/)에서 이어서 구현.
+* 외부 웹 랜딩 SSR 서버 렌더링 (이번 스펙은 REST API JSON 서빙 중심). → [060-share-native-experience](../060-share-native-experience/)에서 이어서 구현.
 
 ## 요구사항
 * `share_style` 값은 `MAP_AND_DNA`, `MAP`, `DNA` 3가지 Enum 값을 사용합니다.
