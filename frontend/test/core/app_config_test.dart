@@ -31,25 +31,27 @@ void main() {
         kakaoNativeAppKey: '',
         apiBaseUrl: 'http://10.0.2.2:8000/api/v1',
       ),
-      throwsA(isA<StateError>().having(
-        (error) => error.message,
-        'message',
-        contains('KAKAO_NATIVE_APP_KEY build definition'),
-      )),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('KAKAO_NATIVE_APP_KEY build definition'),
+        ),
+      ),
     );
   });
 
   test('reports only the missing API base URL', () {
     expect(
-      () => AppConfig.fromValues(
-        kakaoNativeAppKey: 'native-key',
-        apiBaseUrl: '',
+      () =>
+          AppConfig.fromValues(kakaoNativeAppKey: 'native-key', apiBaseUrl: ''),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('API_BASE_URL build definition'),
+        ),
       ),
-      throwsA(isA<StateError>().having(
-        (error) => error.message,
-        'message',
-        contains('API_BASE_URL build definition'),
-      )),
     );
   });
 
