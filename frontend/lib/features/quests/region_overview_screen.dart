@@ -8,6 +8,9 @@ import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../data/models/quest.dart';
+import '../../data/repositories/domain_repository.dart';
+import '../../data/static/regions_data.dart';
+import '../../state/domain_controller.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
@@ -18,9 +21,14 @@ import '../../state/repository_providers.dart';
 /// 목록을 보여준다(2026-07-09 사용자 확정 — 퀘스트 선택은 다중 선택이며, 그 자리에서 수행하지 않는다).
 /// 온보딩 투어 2단계("퀘스트 선택하러 가기" 버튼)·4단계("내 여행 퀘스트" 탭)를 코치마크로 안내한다.
 class RegionOverviewScreen extends ConsumerStatefulWidget {
-  const RegionOverviewScreen({super.key, required this.regionId});
+  const RegionOverviewScreen({
+    super.key,
+    required this.regionId,
+    this.journeyId,
+  });
 
   final String regionId;
+  final String? journeyId;
 
   @override
   ConsumerState<RegionOverviewScreen> createState() =>
@@ -46,8 +54,25 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
     final progress = ref.watch(progressProvider);
     final dnaType = progress.dnaType ?? 'nature';
     final dna = ref.watch(dnaRepositoryProvider).byId(dnaType);
-    final tripQuests = progress.tripQuestsOf(regionId);
+    final journeys =
+        ref.watch(domainControllerProvider).value?.journeys ??
+        const <DomainJourney>[];
+    final selectedJourney = widget.journeyId == null
+        ? journeys
+              .where(
+                (journey) =>
+                    regionByStableKey(journey.regionKey)?.id == regionId,
+              )
+              .firstOrNull
+        : journeys
+              .where((journey) => journey.id == widget.journeyId)
+              .firstOrNull;
+    final tripQuests =
+        selectedJourney?.questKeys.toSet() ?? progress.tripQuestsOf(regionId);
     final tripStarted = tripQuests.isNotEmpty;
+    final journeyQuery = selectedJourney == null
+        ? ''
+        : '?journeyId=${selectedJourney.id}';
 
     final recommended = <Quest>[
       ...regionQuests.where((q) => q.type == dnaType).take(2),
@@ -171,10 +196,17 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                           done: progress.isCompleted(quest.id),
                           onTap: () => progress.isCompleted(quest.id)
                               ? context.push('/quest/${quest.id}')
-                              : context.push('/quest/${quest.id}/verify'),
+                              : context.push(
+                                  '/quest/${quest.id}/verify$journeyQuery',
+                                ),
                         ),
                       ),
                   const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () =>
+                        context.push('/region/$regionId/quests$journeyQuery'),
+                    child: const Text('퀘스트 더 선택하기'),
+                  ),
                 ] else ...[
                   const Text(
                     '추천 퀘스트',

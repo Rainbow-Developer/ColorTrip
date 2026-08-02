@@ -13,6 +13,7 @@ from httpx import AsyncClient
 from alembic import command
 from app.core.base import now_kst
 from app.core.database import engine
+from tests.helpers import auth_headers, seed_quest_fixture
 
 _ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 
@@ -310,6 +311,191 @@ async def test_journey_migration_schema_is_preserved(client: AsyncClient) -> Non
     }
 
 
+async def test_domain_state_persistence_contract_has_stable_keys_and_idempotency(
+    client: AsyncClient,
+) -> None:
+    _ = client
+
+    async with engine.connect() as connection:
+        regions_columns = await connection.run_sync(_columns_for("regions"))
+        regions_uniques = await connection.run_sync(_unique_constraints_for("regions"))
+        quests_columns = await connection.run_sync(_columns_for("quests"))
+        quests_uniques = await connection.run_sync(_unique_constraints_for("quests"))
+        journeys_columns = await connection.run_sync(_columns_for("journeys"))
+        journeys_uniques = await connection.run_sync(_unique_constraints_for("journeys"))
+        timeline_uniques = await connection.run_sync(_unique_constraints_for("timelines"))
+
+    assert "slug" in regions_columns
+    assert ("slug",) in regions_uniques
+    assert "client_key" in quests_columns
+    assert ("client_key",) in quests_uniques
+    assert "client_request_id" in journeys_columns
+    assert ("user_id", "client_request_id") in journeys_uniques
+    assert ("quest_progress_id", "event_type") in timeline_uniques
+
+
+async def test_domain_catalog_snapshot_is_seeded_by_migration(client: AsyncClient) -> None:
+    _ = client
+
+    async with engine.connect() as connection:
+        region_count = await connection.scalar(
+            sa.text("SELECT count(*) FROM regions WHERE slug IS NOT NULL")
+        )
+        quest_count = await connection.scalar(
+            sa.text("SELECT count(*) FROM quests WHERE client_key IS NOT NULL")
+        )
+        gps_without_coordinates = await connection.scalar(
+            sa.text(
+                """
+                SELECT count(*)
+                FROM quests
+                WHERE client_key IS NOT NULL
+                  AND mission_type = 'gps'
+                  AND (lat IS NULL OR lng IS NULL)
+                """
+            )
+        )
+
+    assert region_count == 11
+    assert quest_count == 220
+    assert gps_without_coordinates == 0
+
+
+async def test_domain_catalog_migration_reuses_matching_legacy_rows(
+    client: AsyncClient,
+) -> None:
+    _ = client
+    region_id = uuid4()
+    quest_id = uuid4()
+    now = now_kst()
+
+    async with engine.begin() as connection:
+        await connection.run_sync(_downgrade_to_pre_domain_catalog_head)
+        await connection.execute(sa.text("DELETE FROM quests"))
+        await connection.execute(sa.text("DELETE FROM regions"))
+        await connection.execute(
+            sa.text(
+                """
+                INSERT INTO regions (
+                    name, area_code, center_lat, center_lng,
+                    id, created_at, updated_at, deleted_at
+                ) VALUES (
+                    '단양군', '2', NULL, NULL,
+                    :id, :now, :now, NULL
+                )
+                """
+            ),
+            {"id": region_id, "now": now},
+        )
+        await connection.execute(
+            sa.text(
+                """
+                INSERT INTO quests (
+                    region_id, title, description, category, mission_type,
+                    mission_meta, content_id, content_type_id, lat, lng,
+                    verify_radius, thumbnail_url, id, created_at, updated_at, deleted_at
+                ) VALUES (
+                    :region_id, '소백산 연화봉 전망대 인증', NULL, 'nature', 'gps_photo',
+                    NULL, NULL, NULL, NULL, NULL,
+                    200, NULL, :id, :now, :now, NULL
+                )
+                """
+            ),
+            {"region_id": region_id, "id": quest_id, "now": now},
+        )
+        await connection.run_sync(_upgrade_to_head)
+
+        migrated_region = (
+            await connection.execute(sa.text("SELECT id, slug FROM regions WHERE name = '단양군'"))
+        ).one()
+        migrated_quest = (
+            await connection.execute(
+                sa.text(
+                    "SELECT id, client_key FROM quests WHERE title = '소백산 연화봉 전망대 인증'"
+                )
+            )
+        ).one()
+        region_count = await connection.scalar(
+            sa.text("SELECT count(*) FROM regions WHERE slug IS NOT NULL")
+        )
+        quest_count = await connection.scalar(
+            sa.text("SELECT count(*) FROM quests WHERE client_key IS NOT NULL")
+        )
+
+    assert migrated_region == (region_id, "danyang")
+    assert migrated_quest == (quest_id, "dy1")
+    assert region_count == 11
+    assert quest_count == 220
+
+
+async def test_domain_catalog_migration_deduplicates_legacy_timeline_events(
+    client: AsyncClient,
+) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    verified = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": "/uploads/photos/legacy.jpg"},
+        headers=headers,
+    )
+    assert verified.status_code == 200
+
+    async with engine.begin() as connection:
+        await connection.run_sync(_downgrade_to_pre_domain_catalog_head)
+        original = (
+            await connection.execute(
+                sa.text(
+                    """
+                    SELECT user_id, region_id, quest_progress_id, event_type,
+                           title, occurred_at, created_at, updated_at
+                    FROM timelines
+                    WHERE quest_progress_id IS NOT NULL
+                      AND event_type = 'quest_completed'
+                    """
+                )
+            )
+        ).one()
+        await connection.execute(
+            sa.text(
+                """
+                INSERT INTO timelines (
+                    id, user_id, region_id, quest_progress_id, event_type,
+                    title, occurred_at, created_at, updated_at, deleted_at
+                ) VALUES (
+                    :id, :user_id, :region_id, :quest_progress_id, :event_type,
+                    :title, :occurred_at, :created_at, :updated_at, NULL
+                )
+                """
+            ),
+            {
+                "id": uuid4(),
+                "user_id": original.user_id,
+                "region_id": original.region_id,
+                "quest_progress_id": original.quest_progress_id,
+                "event_type": original.event_type,
+                "title": original.title,
+                "occurred_at": original.occurred_at,
+                "created_at": original.created_at,
+                "updated_at": original.updated_at,
+            },
+        )
+
+        await connection.run_sync(_upgrade_to_head)
+        remaining = await connection.scalar(
+            sa.text(
+                """
+                SELECT count(*)
+                FROM timelines
+                WHERE quest_progress_id = :quest_progress_id
+                  AND event_type = 'quest_completed'
+                """
+            ),
+            {"quest_progress_id": original.quest_progress_id},
+        )
+
+    assert remaining == 1
+
+
 async def test_new_tables_have_database_defaults_and_sort_indexes(
     client: AsyncClient,
 ) -> None:
@@ -534,3 +720,7 @@ def _alembic_config(connection: sa.Connection) -> Config:
     config = Config(str(_ALEMBIC_INI))
     config.attributes["connection"] = connection
     return config
+
+
+def _downgrade_to_pre_domain_catalog_head(connection: sa.Connection) -> None:
+    command.downgrade(_alembic_config(connection), "7f2a1c9d4e6b")

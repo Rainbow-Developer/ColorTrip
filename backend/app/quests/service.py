@@ -27,6 +27,7 @@ from app.quests.schemas import (
     VerifyResultData,
 )
 from app.timeline.service import handle_quest_completion
+from app.uploads.service import require_owned_photo
 
 
 async def list_quests(
@@ -124,6 +125,9 @@ async def verify_quest(
     progress = await repository.get_progress(session, user_id, quest_id)
     if progress is not None and progress.status == ProgressStatus.COMPLETED.value:
         raise AppException(ErrorCode.CONFLICT_ERROR, "이미 완료한 퀘스트입니다.")
+
+    if quest.mission_type in {MissionType.PHOTO.value, MissionType.GPS_PHOTO.value}:
+        await require_owned_photo(session, user_id, payload.photo_url)
 
     verified, reason = verification.judge(
         quest,

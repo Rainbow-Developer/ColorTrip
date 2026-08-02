@@ -32,6 +32,8 @@ def dna_type_column() -> SQLEnum:
 
 
 class MissionType(StrEnum):
+    PHOTO = "photo"  # 업로드된 사진 인증
+    GPS = "gps"  # 목표 반경 내 위치 인증
     GPS_PHOTO = "gps_photo"  # GPS + 사진 인증 (기본)
     QUIZ = "quiz"  # 퀴즈
     QR = "qr"  # 현장 QR 스캔 인증 (docs/specs/050-quest-verification)

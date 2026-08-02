@@ -34,9 +34,13 @@ if TYPE_CHECKING:
 
 class Quest(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "quests"
-    __table_args__ = (Index("ix_quests_region_category", "region_id", "category"),)
+    __table_args__ = (
+        UniqueConstraint("client_key", name="uq_quests_client_key"),
+        Index("ix_quests_region_category", "region_id", "category"),
+    )
 
     region_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("regions.id"))
+    client_key: Mapped[str | None] = mapped_column(String(30))
     title: Mapped[str] = mapped_column(String(100))
     description: Mapped[str | None] = mapped_column(Text)
     category: Mapped[str] = mapped_column(String(20))  # Category 값

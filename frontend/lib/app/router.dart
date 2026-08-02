@@ -21,6 +21,7 @@ import '../features/trip_dna/trip_dna_screen.dart';
 import '../features/timeline/timeline_screen.dart';
 import '../features/travel/travel_list_screen.dart';
 import '../state/auth_controller.dart';
+import '../state/domain_state_gate.dart';
 import 'app_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -50,7 +51,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/timeline',
-        builder: (context, state) => const TimelineScreen(),
+        builder: (context, state) =>
+            const DomainStateGate(child: TimelineScreen()),
       ),
       GoRoute(
         path: '/profile/edit',
@@ -62,34 +64,48 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/region/:id',
-        builder: (context, state) =>
-            RegionOverviewScreen(regionId: state.pathParameters['id']!),
+        builder: (context, state) => DomainStateGate(
+          child: RegionOverviewScreen(
+            regionId: state.pathParameters['id']!,
+            journeyId: state.uri.queryParameters['journeyId'],
+          ),
+        ),
         routes: [
           GoRoute(
             path: 'quests',
-            builder: (context, state) =>
-                RegionQuestSelectScreen(regionId: state.pathParameters['id']!),
+            builder: (context, state) => DomainStateGate(
+              child: RegionQuestSelectScreen(
+                regionId: state.pathParameters['id']!,
+                journeyId: state.uri.queryParameters['journeyId'],
+              ),
+            ),
           ),
         ],
       ),
       GoRoute(
         path: '/quest/:id',
-        builder: (context, state) =>
-            QuestDetailScreen(questId: state.pathParameters['id']!),
+        builder: (context, state) => DomainStateGate(
+          child: QuestDetailScreen(questId: state.pathParameters['id']!),
+        ),
         routes: [
           GoRoute(
             path: 'verify',
-            builder: (context, state) =>
-                QuestVerifyScreen(questId: state.pathParameters['id']!),
+            builder: (context, state) => DomainStateGate(
+              child: QuestVerifyScreen(
+                questId: state.pathParameters['id']!,
+                journeyId: state.uri.queryParameters['journeyId'],
+              ),
+            ),
             routes: [
               GoRoute(
                 path: 'result',
                 builder: (context, state) {
-                  // 인증 화면이 push extra로 넘긴 실제 AI 판정값(KAN-58).
                   final extra = state.extra;
-                  return PhotoVerifyResultScreen(
-                    questId: state.pathParameters['id']!,
-                    verdict: extra is PhotoVerdict ? extra : null,
+                  return DomainStateGate(
+                    child: PhotoVerifyResultScreen(
+                      questId: state.pathParameters['id']!,
+                      verdict: extra is PhotoVerdict ? extra : null,
+                    ),
                   );
                 },
               ),
@@ -99,11 +115,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/quests',
-        builder: (context, state) => const QuestListScreen(),
+        builder: (context, state) =>
+            const DomainStateGate(child: QuestListScreen()),
       ),
       GoRoute(
         path: '/share',
-        builder: (context, state) => const ShareCardScreen(),
+        builder: (context, state) =>
+            const DomainStateGate(child: ShareCardScreen()),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

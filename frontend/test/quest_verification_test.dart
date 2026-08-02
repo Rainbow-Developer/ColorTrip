@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import 'package:colortrip/data/models/quest.dart';
+import 'package:colortrip/data/repositories/domain_repository.dart';
 import 'package:colortrip/data/repositories/quest_repository.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/features/quests/quest_verify_screen.dart';
@@ -69,6 +70,66 @@ class _FakeQuestRepository implements QuestRepository {
       quests.where((q) => q.type == type).toList();
 }
 
+class _QuizDomainRepository implements DomainRepository {
+  _QuizDomainRepository(this.expectedAnswer);
+
+  final String expectedAnswer;
+  final _completed = <String>{};
+
+  @override
+  Future<DomainSnapshot> fetchSnapshot() async => DomainSnapshot(
+    catalog: const DomainCatalog(
+      regionIdsByKey: {},
+      regionKeysById: {},
+      questIdsByKey: {},
+      questKeysById: {},
+    ),
+    journeys: const [],
+    completedQuestKeys: _completed,
+    regionProgress: const {},
+    timeline: const [],
+  );
+
+  @override
+  Future<QuestVerification> verifyQuest({
+    required String questKey,
+    String? journeyId,
+    double? latitude,
+    double? longitude,
+    String? photoUrl,
+    String? answer,
+    String? qrPayload,
+  }) async {
+    if (answer != expectedAnswer) {
+      return const QuestVerification(verified: false);
+    }
+    _completed.add(questKey);
+    return const QuestVerification(verified: true);
+  }
+
+  @override
+  Future<DomainJourney> createJourney({
+    required String clientRequestId,
+    required String regionKey,
+    required List<String> questKeys,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<DomainJourney> replaceJourneyQuests({
+    required String journeyId,
+    required List<String> questKeys,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<String> uploadPhoto(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) => throw UnimplementedError();
+}
+
 /// 인증 화면은 완료 시 두 번 pop하므로(루트 ← 상세 ← 인증) 3단 스택으로 감싼다.
 Widget _wrapVerifyScreen(String questId, ProviderContainer container) {
   final router = GoRouter(
@@ -89,6 +150,10 @@ Widget _wrapVerifyScreen(String questId, ProviderContainer container) {
               ),
             ],
           ),
+          GoRoute(
+            path: 'region/:id',
+            builder: (_, _) => const Scaffold(body: Text('region')),
+          ),
         ],
       ),
     ],
@@ -104,13 +169,18 @@ Widget _wrapVerifyScreen(String questId, ProviderContainer container) {
   );
 }
 
-ProviderContainer _container({List<Quest>? fakeQuests}) {
+ProviderContainer _container({
+  List<Quest>? fakeQuests,
+  DomainRepository? domainRepository,
+}) {
   final container = ProviderContainer(
     overrides: [
       if (fakeQuests != null)
         questRepositoryProvider.overrideWith(
           (ref) => _FakeQuestRepository(fakeQuests),
         ),
+      if (domainRepository != null)
+        domainRepositoryProvider.overrideWithValue(domainRepository),
     ],
   );
   addTearDown(container.dispose);
@@ -122,7 +192,11 @@ void main() {
     // OX 퀴즈는 이번 작업의 비변경 대상 — 정적 데이터의 실제 퀴즈 퀘스트로 검증한다
     // (completeQuest가 정적 데이터의 questById를 쓰므로 합성 퀘스트로는 완료가 안 된다).
     final quizQuest = kQuests.firstWhere((q) => q.verify == 'quiz');
-    final container = _container();
+    final container = _container(
+      domainRepository: _QuizDomainRepository(
+        quizQuest.quizAnswer! ? 'O' : 'X',
+      ),
+    );
     await tester.pumpWidget(_wrapVerifyScreen(quizQuest.id, container));
     await tester.pumpAndSettle();
 
@@ -135,12 +209,12 @@ void main() {
     expect(find.text('다시 생각해보세요.'), findsOneWidget);
     expect(container.read(progressProvider).isCompleted(quizQuest.id), isFalse);
 
-    // 정답 → 완료 처리 + 토스트 + 두 번 pop으로 루트까지 복귀.
+    // 정답 → 완료 처리 후 지역 화면으로 이동.
     await tester.tap(find.text(quizQuest.quizAnswer! ? 'O' : 'X'));
     await tester.pumpAndSettle();
     expect(container.read(progressProvider).isCompleted(quizQuest.id), isTrue);
     expect(find.text('퀘스트 완료! 지도가 칠해졌어요'), findsOneWidget);
-    expect(find.text('root'), findsOneWidget);
+    expect(find.text('region'), findsOneWidget);
 
     // 토스트 제거 타이머(1.9초)를 소진시켜 pending timer 실패를 막는다.
     await tester.pump(const Duration(seconds: 2));
