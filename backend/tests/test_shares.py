@@ -132,9 +132,11 @@ async def _create_share_and_get_landing(
         json={"share_style": share_style},
         headers=headers,
     )
+    assert share_res.status_code == 201
     share_code = share_res.json()["data"]["share_code"]
     landing_res = await client.get(f"/share/{share_code}")
     assert landing_res.status_code == 200
+    assert landing_res.headers["content-type"].startswith("text/html")
     return landing_res.text
 
 
