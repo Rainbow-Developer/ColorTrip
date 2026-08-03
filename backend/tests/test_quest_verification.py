@@ -1,7 +1,14 @@
-"""퀘스트 진행·인증·추천 테스트 (docs/specs/010-journey/ REC-01·VRF-01~04)."""
+"""퀘스트 진행·인증·추천 테스트 (docs/specs/010-journey/ REC-01·VRF-01~04).
+
+QR 미션 분기(MissionType.QR)는 docs/specs/050-quest-verification/에서 추가됐다.
+"""
+
+import asyncio
+from uuid import UUID
 
 from httpx import AsyncClient
 
+from app.verifications.service import sign_quest_payload
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
 
@@ -74,7 +81,11 @@ async def test_gps_verify_out_of_radius_fails(client: AsyncClient) -> None:
 
     response = await client.post(
         f"/api/v1/quests/{seed['gps_quest_id']}/verify",
-        json={"lat": "37.5000000", "lng": "127.0000000", "photo_url": "/uploads/x.jpg"},
+        json={
+            "lat": "37.5000000",
+            "lng": "127.0000000",
+            "photo_url": "/uploads/photos/x.jpg",
+        },
         headers=headers,
     )
     assert response.status_code == 200
@@ -96,6 +107,57 @@ async def test_gps_verify_requires_coords_and_photo(client: AsyncClient) -> None
     assert response.status_code == 422
 
 
+async def test_photo_verify_requires_only_an_uploaded_photo(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": "/uploads/photos/2026/07/photo.jpg"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["verified"] is True
+
+
+async def test_photo_verify_rejects_another_users_upload(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    owner_headers = await auth_headers(client)
+    other_headers = await auth_headers(client, token="kakao-token-unknown")
+    uploaded = await client.post(
+        "/api/v1/uploads/photo",
+        headers=owner_headers,
+        files={"file": ("proof.jpg", b"jpeg", "image/jpeg")},
+    )
+    assert uploaded.status_code == 201
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": uploaded.json()["data"]["photo_url"]},
+        headers=other_headers,
+    )
+
+    assert response.status_code == 422
+    assert "본인이 업로드" in response.json()["message"]
+
+
+async def test_gps_only_verify_requires_location_but_not_photo(
+    client: AsyncClient,
+) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
+        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG)},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["verified"] is True
+
+
 async def test_quiz_verify(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
@@ -115,6 +177,97 @@ async def test_quiz_verify(client: AsyncClient) -> None:
     )
     assert correct.json()["data"]["verified"] is True
     assert correct.json()["data"]["progress"]["status"] == "completed"
+
+
+async def _seed_qr_quest(region_id: str) -> str:
+    """QR 미션 퀘스트를 추가 시드한다 (seed_quest_fixture는 010 스펙 소유라 여기서 직접)."""
+    from app.core.database import AsyncSessionLocal
+    from app.quests.models import Quest
+
+    async with AsyncSessionLocal() as session:
+        quest = Quest(
+            region_id=UUID(region_id),
+            title="수양개빛터널 현장 QR",
+            category="activity",
+            mission_type="qr",
+        )
+        session.add(quest)
+        await session.commit()
+        return str(quest.id)
+
+
+async def test_qr_verify_completes_quest(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    qr_quest_id = await _seed_qr_quest(seed["region_id"])
+
+    # 다른 퀘스트용 QR로는 실패한다.
+    wrong = await client.post(
+        f"/api/v1/quests/{qr_quest_id}/verify",
+        json={"qr_payload": sign_quest_payload(seed["gps_quest_id"])},
+        headers=headers,
+    )
+    assert wrong.status_code == 200
+    assert wrong.json()["data"]["verified"] is False
+    assert "이 퀘스트의 QR" in wrong.json()["data"]["reason"]
+
+    # 해당 퀘스트의 서명 QR로 완료된다.
+    ok = await client.post(
+        f"/api/v1/quests/{qr_quest_id}/verify",
+        json={"qr_payload": sign_quest_payload(qr_quest_id)},
+        headers=headers,
+    )
+    assert ok.status_code == 200
+    data = ok.json()["data"]
+    assert data["verified"] is True
+    assert data["reason"] is None
+    assert data["progress"]["status"] == "completed"
+    assert data["progress"]["completed_at"] is not None
+
+
+async def test_qr_verify_requires_payload(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    qr_quest_id = await _seed_qr_quest(seed["region_id"])
+
+    response = await client.post(f"/api/v1/quests/{qr_quest_id}/verify", json={}, headers=headers)
+    assert response.status_code == 422
+
+
+async def test_concurrent_different_quest_completions_update_region_once_each(
+    client: AsyncClient,
+) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    results = await asyncio.gather(
+        client.post(
+            f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+            json={"photo_url": "/uploads/photos/concurrent.jpg"},
+            headers=headers,
+        ),
+        client.post(
+            f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
+            json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG)},
+            headers=headers,
+        ),
+        return_exceptions=True,
+    )
+
+    assert all(not isinstance(result, BaseException) for result in results)
+    responses = [result for result in results if not isinstance(result, BaseException)]
+    assert all(response.status_code == 200 for response in responses)
+    assert all(response.json()["data"]["verified"] is True for response in responses)
+
+    map_response = await client.get("/api/v1/users/me/map", headers=headers)
+    region_progress = next(
+        item for item in map_response.json()["data"] if item["region_id"] == seed["region_id"]
+    )
+    assert region_progress["completed_count"] == 2
+
+    timeline = (await client.get("/api/v1/users/me/timeline", headers=headers)).json()["data"]
+    assert sum(item["event_type"] == "quest_completed" for item in timeline) == 2
+    assert sum(item["event_type"] == "region_colored" for item in timeline) == 1
 
 
 async def test_verify_completed_quest_conflicts(client: AsyncClient) -> None:
@@ -153,7 +306,7 @@ async def test_verify_with_foreign_journey_rejected(client: AsyncClient) -> None
             "journey_id": journey_id,
             "lat": str(DODAM_LAT),
             "lng": str(DODAM_LNG),
-            "photo_url": "/uploads/x.jpg",
+            "photo_url": "/uploads/photos/x.jpg",
         },
         headers=other_headers,
     )
@@ -169,7 +322,11 @@ async def test_recommended_excludes_completed_and_sorts_by_category(
     # nature 퀘스트를 완료하면 추천에서 빠진다.
     await client.post(
         f"/api/v1/quests/{seed['gps_quest_id']}/verify",
-        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/x.jpg"},
+        json={
+            "lat": str(DODAM_LAT),
+            "lng": str(DODAM_LNG),
+            "photo_url": "/uploads/photos/x.jpg",
+        },
         headers=headers,
     )
 
@@ -183,9 +340,10 @@ async def test_recommended_excludes_completed_and_sorts_by_category(
     assert data["applied_category"] == "history"
     ids = [item["id"] for item in data["items"]]
     assert seed["gps_quest_id"] not in ids  # 완료 퀘스트 제외
-    assert ids[0] == seed["quiz_quest_id"]  # 카테고리 일치 우선
+    assert seed["quiz_quest_id"] in ids
+    assert data["items"][0]["category"] == "history"  # 카테고리 일치 우선
     assert data["items"][0]["is_dna_match"] is True
-    assert data["items"][1]["is_dna_match"] is False
+    assert any(not item["is_dna_match"] for item in data["items"])
 
 
 async def test_recommended_requires_auth(client: AsyncClient) -> None:

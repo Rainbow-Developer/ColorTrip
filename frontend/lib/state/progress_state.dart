@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import '../data/static/regions_data.dart';
@@ -13,6 +14,7 @@ class TimelineEntry {
     required this.questId,
     required this.completedAt,
     this.photo,
+    this.photoUrl,
   });
 
   final String questId;
@@ -21,6 +23,7 @@ class TimelineEntry {
   /// 사진 인증 퀘스트를 완료할 때 사용자가 실제로 선택한 사진(세션 동안만 메모리에 보관 —
   /// 백엔드 연동 전까지는 서버에 저장되지 않는다, KAN-46 히스토리 피드백).
   final Uint8List? photo;
+  final String? photoUrl;
 
   static String _two(int n) => n.toString().padLeft(2, '0');
 
@@ -82,6 +85,8 @@ class ProgressState {
     required this.tripInfo,
     required this.nickname,
     required this.regionProgress,
+    required this.regionTripCount,
+    required this.localTripCompletions,
   });
 
   const ProgressState.empty()
@@ -91,7 +96,9 @@ class ProgressState {
       tripQuests = const {},
       tripInfo = const {},
       nickname = null,
-      regionProgress = const {};
+      regionProgress = const {},
+      regionTripCount = const {},
+      localTripCompletions = const {};
 
   final Set<String> completedQuestIds;
   final List<TimelineEntry> timeline;
@@ -108,8 +115,20 @@ class ProgressState {
 
   /// 지역별 완료 퀘스트 개수 — 로컬 완료 시 즉시 +1(낙관적 갱신), 앱 진입 시 백엔드
   /// (`GET /users/me/map`)의 completed_count로 덮어써 동기화한다([020-frontend-map-sync],
-  /// `ProgressNotifier.syncRegionProgressFromServer`).
+  /// `ProgressNotifier.syncRegionProgressFromServer`). 지도 채색 기준에서는 빠졌지만
+  /// ([055-journey-map-coloring]) 다른 통계·동기화에 그대로 쓰여 유지한다.
   final Map<String, int> regionProgress;
+
+  /// 지역별 완료 여행(여정) 수 — 백엔드(`GET /users/me/map`)의 completed_journey_count와
+  /// 동기화한 서버 값이다([055-journey-map-coloring]). 로컬에서 막 완주한 여행은
+  /// [completedTripCountOf]가 max 병합으로 반영하므로 여기에는 서버 값만 담는다.
+  final Map<String, int> regionTripCount;
+
+  /// 지역별 로컬 누적 완주 횟수 — 여행을 완주한 **시점에** 1씩 늘린다
+  /// (`ProgressNotifier.completeQuest`). 현재 선택 집합의 완주 여부로 파생하지 않는 이유:
+  /// 완료한 지역에 퀘스트를 더 담으면(KAN-46 재방문) 선택 집합이 다시 미완료가 되어
+  /// 이미 칠해진 채색이 사라지기 때문이다([055-journey-map-coloring]).
+  final Map<String, int> localTripCompletions;
 
   bool isCompleted(String questId) => completedQuestIds.contains(questId);
 
@@ -121,22 +140,38 @@ class ProgressState {
     return null;
   }
 
-  /// 완료 개수가 이 값 이상이면 채도 100% — 지역별 퀘스트 개수가 제각각이라(1개~3개)
-  /// 지역 전체 개수 대비 비율로 계산하면 퀘스트가 적은 지역만 쉽게 꽉 차버리는 문제가 있어,
-  /// 모든 지역에 같은 기준선을 쓴다. `completed_count`는 재방문 시 계속 늘어날 수 있어
-  /// 정적 퀘스트 개수와 무관하다(KAN-46).
-  static const _saturationCap = 6;
+  /// 완료 여행 수가 이 값 이상이면 채도 100% — 퀘스트 기준(6개)일 때와 같은 이유로 모든
+  /// 지역에 같은 기준선을 쓴다. 지도가 채도를 **5단계**로 양자화해 칠하므로
+  /// (`mapFillColors`, KAN-51) cap도 5로 맞춰 여행 1회가 정확히 한 단계씩 진해지게 한다 —
+  /// cap이 3이면 5단계 중 2개가 쓰이지 않는다([055-journey-map-coloring] 의사결정).
+  static const _tripSaturationCap = 5;
 
-  /// 지역의 채색 진하기(0.0~1.0) — 그 지역 완료 퀘스트 개수([regionProgress], 백엔드
-  /// completed_count와 동기화)를 [_saturationCap]으로 나눈 비율이다.
-  double regionSaturation(String regionId) {
-    final completed = regionProgress[regionId] ?? 0;
-    return (completed / _saturationCap).clamp(0.0, 1.0);
+  /// 지역에서 완료한 여행 수(표시용) — 서버 동기화 값([regionTripCount])과 로컬 누적
+  /// 완주 횟수([localTripCompletions])의 max 병합이다. FE 정적 퀘스트 완료는 서버에
+  /// 기록되지 않아 서버 값으로 덮어쓰면 로컬 채색이 사라지기 때문이다
+  /// ([055-journey-map-coloring] 의사결정).
+  int completedTripCountOf(String regionId) {
+    return math.max(
+      regionTripCount[regionId] ?? 0,
+      localTripCompletions[regionId] ?? 0,
+    );
   }
 
-  /// 완전히 채색된(채도 100%) 지역 수 — "완료 지역" 통계에서 쓴다.
+  /// 지역의 채색 진하기(0.0~1.0) — 그 지역에서 완료한 여행 수([completedTripCountOf])를
+  /// [_tripSaturationCap]으로 나눈 비율이다. "여행을 완주할수록 지역이 진해지는" 경험을
+  /// 위해 완료 퀘스트 개수 기준에서 전환했다([055-journey-map-coloring]).
+  double regionSaturation(String regionId) {
+    return (completedTripCountOf(regionId) / _tripSaturationCap).clamp(
+      0.0,
+      1.0,
+    );
+  }
+
+  /// 여행을 1회 이상 완료한 지역 수 — "완료 지역" 통계에서 쓴다. 채도 100%(cap회) 기준은
+  /// "한 번이라도 완주한 지역"이라는 직관에 비해 과도하게 엄격해 1회 이상으로 정의한다
+  /// ([055-journey-map-coloring] 의사결정).
   int get completedRegionCount =>
-      kRegions.where((r) => regionSaturation(r.id) >= 1.0).length;
+      kRegions.where((r) => completedTripCountOf(r.id) >= 1).length;
 
   /// 지역의 여행 시작 시 선택한 퀘스트 목록(없으면 빈 집합).
   Set<String> tripQuestsOf(String regionId) => tripQuests[regionId] ?? const {};
@@ -159,6 +194,8 @@ class ProgressState {
     Map<String, TripInfo>? tripInfo,
     String? nickname,
     Map<String, int>? regionProgress,
+    Map<String, int>? regionTripCount,
+    Map<String, int>? localTripCompletions,
   }) {
     return ProgressState(
       completedQuestIds: completedQuestIds ?? this.completedQuestIds,
@@ -168,6 +205,8 @@ class ProgressState {
       tripInfo: tripInfo ?? this.tripInfo,
       nickname: nickname ?? this.nickname,
       regionProgress: regionProgress ?? this.regionProgress,
+      regionTripCount: regionTripCount ?? this.regionTripCount,
+      localTripCompletions: localTripCompletions ?? this.localTripCompletions,
     );
   }
 }

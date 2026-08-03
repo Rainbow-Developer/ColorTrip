@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_form_field.dart';
+import '../../data/models/auth_models.dart';
+import '../../state/auth_controller.dart';
 import '../../state/progress_notifier.dart';
+import 'profile_validation.dart';
 
 /// 회원가입 — Figma 스펙(2026-07-08 공유) 반영: 닉네임(카카오 프로필 프리필 가정)
 /// + 이름·생년월일·이메일(빈 값, placeholder) + 필수/선택 약관 동의.
@@ -16,24 +19,31 @@ class SignupScreen extends ConsumerStatefulWidget {
 }
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
-  // 카카오 로그인이 실제 연동되기 전까지는 프로필 닉네임을 가져올 수 없어 빈 값으로 시작한다.
-  // 하드코딩된 예시값을 넣으면 사용자가 수정하지 않고 넘어갈 때 그대로 저장되는 문제가 있었다
-  // (CodeRabbit 리뷰 반영).
-  final _nicknameController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _birthdateController = TextEditingController();
-  final _emailController = TextEditingController();
+  late final TextEditingController _nicknameController;
+  late final TextEditingController _birthdateController;
+  late final TextEditingController _emailController;
 
   // 필수 약관은 사용자가 실제로 체크해야만 진행 가능하다 — 사전 체크는 컴플라이언스 리스크
   // (CodeRabbit 리뷰 반영, 이전엔 true로 사전 체크되어 있었음).
   bool _agreeTerms = false;
   bool _agreePrivacy = false;
   bool _agreeMarketing = false;
+  Map<String, String> _errors = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    final user = ref.read(currentUserProvider);
+    _nicknameController = TextEditingController(text: user?.nickname ?? '');
+    _birthdateController = TextEditingController(
+      text: user?.birthDate == null ? '' : _date(user!.birthDate!),
+    );
+    _emailController = TextEditingController(text: user?.email ?? '');
+  }
 
   @override
   void dispose() {
     _nicknameController.dispose();
-    _nameController.dispose();
     _birthdateController.dispose();
     _emailController.dispose();
     super.dispose();
@@ -41,93 +51,215 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-          onPressed: () => context.go('/splash'),
+    final auth = ref.watch(authControllerProvider);
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _confirmExit();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+            onPressed: _confirmExit,
+          ),
+          title: const Text('회원가입'),
         ),
-        title: const Text('회원가입'),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                '기본 정보를 입력해주세요',
-                style: TextStyle(color: AppColors.formLabel, fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              const _StepProgress(totalSteps: 3, currentStep: 2),
-              const SizedBox(height: 20),
-              AppFormField(
-                label: '닉네임',
-                controller: _nicknameController,
-                hint: '닉네임을 입력해주세요',
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 14),
-              AppFormField(
-                label: '이름',
-                controller: _nameController,
-                hint: '최동인',
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 14),
-              AppFormField(
-                label: '생년월일',
-                controller: _birthdateController,
-                hint: '1909.01.01',
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 14),
-              AppFormField(
-                label: '이메일',
-                controller: _emailController,
-                hint: 'example@email.com',
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 20),
-              _AgreementCheckbox(
-                label: '[필수] 이용약관 동의',
-                value: _agreeTerms,
-                onChanged: (v) => setState(() => _agreeTerms = v),
-              ),
-              const SizedBox(height: 8),
-              _AgreementCheckbox(
-                label: '[필수] 개인정보 처리방침',
-                value: _agreePrivacy,
-                onChanged: (v) => setState(() => _agreePrivacy = v),
-              ),
-              const SizedBox(height: 8),
-              _AgreementCheckbox(
-                label: '[선택] 마케팅 수신 동의',
-                value: _agreeMarketing,
-                onChanged: (v) => setState(() => _agreeMarketing = v),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: (_agreeTerms && _agreePrivacy)
-                    ? () {
-                        final nickname = _nicknameController.text.trim();
-                        if (nickname.isNotEmpty) {
-                          ref
-                              .read(progressProvider.notifier)
-                              .setNickname(nickname);
-                        }
-                        context.go('/trip-dna');
-                      }
-                    : null,
-                child: const Text('다음'),
-              ),
-            ],
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  '기본 정보를 입력해주세요',
+                  style: TextStyle(color: AppColors.formLabel, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                const _StepProgress(totalSteps: 3, currentStep: 2),
+                const SizedBox(height: 20),
+                AppFormField(
+                  label: '닉네임',
+                  controller: _nicknameController,
+                  hint: '닉네임을 입력해주세요',
+                  enabled: !auth.isBusy,
+                  textInputAction: TextInputAction.next,
+                  onChanged: (_) => setState(() {}),
+                ),
+                if (_errors['nickname'] case final error?) _FieldError(error),
+                const SizedBox(height: 14),
+                AppFormField(
+                  label: '생년월일',
+                  controller: _birthdateController,
+                  hint: '2000-01-01',
+                  enabled: !auth.isBusy,
+                  readOnly: true,
+                  onTap: _pickBirthDate,
+                  suffixIcon: const Icon(
+                    Icons.calendar_today_outlined,
+                    size: 18,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                if (_errors['birthDate'] case final error?) _FieldError(error),
+                const SizedBox(height: 14),
+                AppFormField(
+                  label: '이메일',
+                  controller: _emailController,
+                  hint: 'example@email.com',
+                  enabled: !auth.isBusy,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.done,
+                  onChanged: (_) => setState(() {}),
+                ),
+                if (_errors['email'] case final error?) _FieldError(error),
+                const SizedBox(height: 20),
+                _AgreementCheckbox(
+                  label: '[필수] 이용약관 동의',
+                  value: _agreeTerms,
+                  onChanged: auth.isBusy
+                      ? null
+                      : (v) => setState(() => _agreeTerms = v),
+                ),
+                const SizedBox(height: 8),
+                _AgreementCheckbox(
+                  label: '[필수] 개인정보 처리방침',
+                  value: _agreePrivacy,
+                  onChanged: auth.isBusy
+                      ? null
+                      : (v) => setState(() => _agreePrivacy = v),
+                ),
+                const SizedBox(height: 8),
+                _AgreementCheckbox(
+                  label: '[선택] 마케팅 수신 동의',
+                  value: _agreeMarketing,
+                  onChanged: auth.isBusy
+                      ? null
+                      : (v) => setState(() => _agreeMarketing = v),
+                ),
+                if (auth.errorMessage case final error?) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    error,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.danger),
+                  ),
+                ],
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: (_agreeTerms && _agreePrivacy && !auth.isBusy)
+                      ? _submit
+                      : null,
+                  child: auth.isBusy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('다음'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  Future<void> _submit() async {
+    final validation = validateOnboardingProfile(
+      nickname: _nicknameController.text,
+      email: _emailController.text,
+      birthDate: _birthdateController.text,
+      today: DateTime.now(),
+    );
+    if (validation.errors.isNotEmpty) {
+      setState(() => _errors = validation.errors);
+      return;
+    }
+    setState(() => _errors = const {});
+    final nickname = _nicknameController.text.trim();
+    final success = await ref
+        .read(authControllerProvider.notifier)
+        .submitOnboardingProfile(
+          OnboardingProfileInput(
+            nickname: nickname,
+            email: _emailController.text.trim(),
+            birthDate: validation.birthDate!,
+            termsAgreed: _agreeTerms,
+            privacyAgreed: _agreePrivacy,
+            marketingAgreed: _agreeMarketing,
+          ),
+        );
+    if (!mounted) return;
+    if (success) {
+      ref.read(progressProvider.notifier).setNickname(nickname);
+      context.go('/trip-dna');
+    }
+  }
+
+  Future<void> _pickBirthDate() async {
+    final today = DateTime.now();
+    final firstDate = minimumBirthDate(today);
+    final parsed = DateTime.tryParse(_birthdateController.text);
+    final initial =
+        parsed != null && !parsed.isBefore(firstDate) && !parsed.isAfter(today)
+        ? parsed
+        : DateTime(today.year - 26, today.month, today.day);
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: firstDate,
+      lastDate: today,
+    );
+    if (selected == null || !mounted) return;
+    setState(() => _birthdateController.text = _date(selected));
+  }
+
+  Future<void> _confirmExit() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('회원가입을 중단할까요?'),
+        content: const Text('입력한 내용은 저장되지 않으며 로그아웃됩니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('계속 작성'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('로그아웃'),
+          ),
+        ],
+      ),
+    );
+    if (shouldLogout != true || !mounted) return;
+    await ref.read(authControllerProvider.notifier).logout();
+    if (!mounted) return;
+    ref.read(progressProvider.notifier).reset();
+    context.go('/splash');
+  }
+
+  String _date(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
+}
+
+class _FieldError extends StatelessWidget {
+  const _FieldError(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 4),
+    child: Text(
+      message,
+      style: const TextStyle(color: AppColors.danger, fontSize: 12),
+    ),
+  );
 }
 
 /// 온보딩 단계 표시 막대(3칸 중 N칸 채움). 정확한 단계 정의는 Figma에 명시되지 않아
@@ -162,7 +294,7 @@ class _StepProgress extends StatelessWidget {
   }
 }
 
-class _AgreementCheckbox extends StatelessWidget {
+class _AgreementCheckbox extends StatefulWidget {
   const _AgreementCheckbox({
     required this.label,
     required this.value,
@@ -171,34 +303,68 @@ class _AgreementCheckbox extends StatelessWidget {
 
   final String label;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  State<_AgreementCheckbox> createState() => _AgreementCheckboxState();
+}
+
+class _AgreementCheckboxState extends State<_AgreementCheckbox> {
+  var _showFocus = false;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => onChanged(!value),
-      child: Row(
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: value ? AppColors.primaryDark : Colors.transparent,
-              borderRadius: BorderRadius.circular(5),
-              border: Border.all(
-                color: value ? AppColors.primaryDark : AppColors.checkboxBorder,
+    final toggle = widget.onChanged == null
+        ? null
+        : () => widget.onChanged!(!widget.value);
+    return Semantics(
+      container: true,
+      label: widget.label,
+      checked: widget.value,
+      button: true,
+      enabled: widget.onChanged != null,
+      excludeSemantics: true,
+      child: FocusableActionDetector(
+        enabled: widget.onChanged != null,
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              toggle?.call();
+              return null;
+            },
+          ),
+        },
+        onShowFocusHighlight: (value) => setState(() => _showFocus = value),
+        child: InkWell(
+          onTap: toggle,
+          child: Row(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: widget.value
+                      ? AppColors.primaryDark
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                    color: widget.value || _showFocus
+                        ? AppColors.primaryDark
+                        : AppColors.checkboxBorder,
+                  ),
+                ),
+                child: widget.value
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    : null,
               ),
-            ),
-            child: value
-                ? const Icon(Icons.check, size: 14, color: Colors.white)
-                : null,
+              const SizedBox(width: 8),
+              Text(
+                widget.label,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF888888)),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF888888)),
-          ),
-        ],
+        ),
       ),
     );
   }

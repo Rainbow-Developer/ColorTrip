@@ -9,11 +9,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import repository
 from app.auth.kakao import KakaoClient, KakaoUserInfo
 from app.auth.models import RefreshToken, User
-from app.auth.schemas import AuthTokenData, RefreshTokenRenewalData, UserProfile
+from app.auth.schemas import (
+    AuthTokenData,
+    OnboardingProfileRequest,
+    RefreshTokenRenewalData,
+    UserProfile,
+    UserProfileUpdateRequest,
+)
 from app.core.base import now_kst
 from app.core.config import settings
 from app.core.exceptions import AppException, ErrorCode
 from app.core.security import create_access_token, create_refresh_token, hash_refresh_token
+
+TERMS_CONSENT_VERSION = "terms-v1"
+PRIVACY_CONSENT_VERSION = "privacy-v1"
+MARKETING_CONSENT_VERSION = "marketing-v1"
 
 
 async def login_with_kakao_access_token(
@@ -22,6 +32,7 @@ async def login_with_kakao_access_token(
     kakao_access_token: str,
     kakao_client: KakaoClient,
 ) -> AuthTokenData:
+    await kakao_client.validate_access_token(kakao_access_token)
     kakao_user = await kakao_client.get_user_info(kakao_access_token)
     last_error: IntegrityError | None = None
 
@@ -31,7 +42,7 @@ async def login_with_kakao_access_token(
             token_data = _issue_tokens(session, user)
             await session.commit()
             await session.refresh(user)
-            token_data.user = UserProfile.model_validate(user)
+            token_data.user = await build_user_profile(session, user)
             token_data.is_restored = is_restored
             return token_data
         except IntegrityError as exc:
@@ -119,15 +130,97 @@ async def logout(
 
 
 async def withdraw_current_user(session: AsyncSession, *, current_user: User) -> None:
+    current_user = await require_active_user_for_update(session, current_user.id)
     now = now_kst()
-    current_user.deleted_at = now
-    current_user.withdrawal_grace_until = now + timedelta(days=7)
     await repository.revoke_active_refresh_tokens(
         session,
         user_id=current_user.id,
         deleted_at=now,
     )
+    await repository.hard_delete_consents(session, user_id=current_user.id)
+    _anonymize_user(current_user, now)
+    current_user.deleted_at = now
+    current_user.withdrawal_grace_until = None
     await session.commit()
+
+
+async def build_user_profile(session: AsyncSession, user: User) -> UserProfile:
+    if not _profile_is_complete(user):
+        onboarding_step = "profile"
+    elif not await has_current_required_consents(session, user):
+        onboarding_step = "profile"
+    elif user.dna is None:
+        onboarding_step = "trip_dna"
+    else:
+        onboarding_step = "complete"
+    profile = UserProfile.model_validate(user)
+    profile.onboarding_step = onboarding_step
+    return profile
+
+
+async def has_current_required_consents(session: AsyncSession, user: User) -> bool:
+    return await repository.has_current_required_consents(
+        session,
+        user_id=user.id,
+        terms_version=TERMS_CONSENT_VERSION,
+        privacy_version=PRIVACY_CONSENT_VERSION,
+    )
+
+
+async def is_profiled_user(session: AsyncSession, user: User) -> bool:
+    return _profile_is_complete(user) and await has_current_required_consents(session, user)
+
+
+async def save_onboarding_profile(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    payload: OnboardingProfileRequest,
+) -> UserProfile:
+    if not payload.terms_agreed or not payload.privacy_agreed:
+        raise AppException(ErrorCode.REQUIRED_CONSENT_ERROR)
+
+    current_user = await require_active_user_for_update(session, current_user.id)
+    if _profile_is_complete(current_user) and current_user.email != payload.email:
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR,
+            "Email cannot be changed after onboarding.",
+        )
+    current_user.nickname = payload.nickname
+    current_user.email = payload.email
+    current_user.birth_date = payload.birth_date
+    decided_at = now_kst()
+    await repository.upsert_current_consents(
+        session,
+        user_id=current_user.id,
+        decisions={
+            "terms": (TERMS_CONSENT_VERSION, payload.terms_agreed),
+            "privacy": (PRIVACY_CONSENT_VERSION, payload.privacy_agreed),
+            "marketing": (MARKETING_CONSENT_VERSION, payload.marketing_agreed),
+        },
+        decided_at=decided_at,
+    )
+    await session.commit()
+    await session.refresh(current_user)
+    return await build_user_profile(session, current_user)
+
+
+async def update_current_user_profile(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    payload: UserProfileUpdateRequest,
+) -> UserProfile:
+    current_user = await require_active_user_for_update(session, current_user.id)
+    if not await is_profiled_user(session, current_user) or current_user.dna is None:
+        raise AppException(ErrorCode.ONBOARDING_REQUIRED)
+    if "nickname" in payload.model_fields_set:
+        current_user.nickname = payload.nickname
+    if "birth_date" in payload.model_fields_set:
+        current_user.birth_date = payload.birth_date
+    await session.commit()
+    await session.refresh(current_user)
+    return await build_user_profile(session, current_user)
 
 
 def _issue_tokens(session: AsyncSession, user: User) -> AuthTokenData:
@@ -167,22 +260,15 @@ async def _sync_kakao_user(
         return user, is_restored
 
     if user.deleted_at is not None:
-        if _is_within_withdrawal_grace(user, now):
-            user.deleted_at = None
-            user.withdrawal_grace_until = None
-            user.email = kakao_user.email
-            user.nickname = kakao_user.nickname
-            is_restored = True
-        else:
-            _anonymize_user(user, now)
-            await session.flush()
-            user = _new_kakao_user(kakao_user)
-            session.add(user)
-            await session.flush()
+        _anonymize_user(user, now)
+        await repository.hard_delete_consents(session, user_id=user.id)
+        await repository.revoke_active_refresh_tokens(session, user_id=user.id, deleted_at=now)
+        await session.flush()
+        user = _new_kakao_user(kakao_user)
+        session.add(user)
+        await session.flush()
         return user, is_restored
 
-    user.email = kakao_user.email
-    user.nickname = kakao_user.nickname
     return user, is_restored
 
 
@@ -193,13 +279,8 @@ def _new_kakao_user(kakao_user: KakaoUserInfo) -> User:
         email=kakao_user.email,
         nickname=kakao_user.nickname,
         birth_date=None,
+        profile_image=kakao_user.profile_image,
     )
-
-
-def _is_within_withdrawal_grace(user: User, now: datetime) -> bool:
-    if user.withdrawal_grace_until is None:
-        return False
-    return _as_kst(user.withdrawal_grace_until) > now
 
 
 def _anonymize_user(user: User, now: datetime) -> None:
@@ -207,6 +288,10 @@ def _anonymize_user(user: User, now: datetime) -> None:
     user.email = None
     user.nickname = None
     user.birth_date = None
+    user.profile_image = None
+    user.dna = None
+    user.withdrawal_grace_until = None
+    user.deleted_at = user.deleted_at or now
     user.anonymized_at = now
 
 
@@ -218,3 +303,20 @@ def _as_kst(value: datetime) -> datetime:
 
 async def get_active_user(session: AsyncSession, user_id: UUID) -> User | None:
     return await repository.get_active_user(session, user_id)
+
+
+async def require_active_user_for_update(session: AsyncSession, user_id: UUID) -> User:
+    user = await repository.get_active_user_for_update(session, user_id)
+    if user is None:
+        raise AppException(ErrorCode.UNAUTHORIZED_ERROR, "Authenticated user is not active.")
+    return user
+
+
+def _profile_is_complete(user: User) -> bool:
+    return bool(
+        user.nickname
+        and user.nickname.strip()
+        and user.email
+        and user.email.strip()
+        and user.birth_date is not None
+    )

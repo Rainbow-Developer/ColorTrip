@@ -14,9 +14,7 @@ class ShareStyle(StrEnum):
 
 
 class ShareCreateRequest(BaseModel):
-    share_style: ShareStyle = Field(
-        ..., description="공유 카드 스타일 (MAP_AND_DNA, MAP, DNA)"
-    )
+    share_style: ShareStyle = Field(..., description="공유 카드 스타일 (MAP_AND_DNA, MAP, DNA)")
 
 
 class ShareCreateResponse(BaseModel):

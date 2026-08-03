@@ -10,7 +10,8 @@
 | 관광 데이터 소스 | 한국관광공사 TourAPI | |
 | 지도 / 지역 데이터 | 프론트엔드는 그림(이미지) 방식, 백엔드는 Naver API | |
 | 행사·축제 데이터 | TourAPI 행사정보 | |
-| 사진 인증 검증(M3) | 가벼운 룰 기반으로 먼저 시작 | |
+| 사진 인증 검증 | **Gemini 비전 판정**(제공자 교체 가능 인터페이스, 키 없으면 스텁 판정) | KAN-58에서 룰 기반 → AI 판정으로 변경. [050 스펙](../specs/050-quest-verification/) |
+| 퀘스트·지역 이미지 | TourAPI `firstimage` CDN URL 핫링크 | [045 스펙](../specs/045-quest-region-images/) |
 | 여행 DNA 추천 | 룰 기반으로 시작 | |
 | API 키 / 쿼터 관리 | 환경변수 + GCP Secret Manager | |
 
@@ -18,8 +19,15 @@
 
 - 관광·행사 데이터는 TourAPI를 사용한다.
 - 백엔드 지도/지역 데이터는 Naver API를 사용한다.
-- 사진 인증·추천은 초기엔 룰 기반으로 시작하고, 추후 고도화한다.
+- 사진 인증은 Gemini 비전 판정을 쓰되 `app/integrations/vision/`의 인터페이스 뒤에 두고, 키 미설정 시 스텁으로 동작한다. DNA 추천은 룰 기반 유지.
 - API 키는 환경변수 + GCP Secret Manager로 관리한다.
+
+## Gemini (사진 AI 인증)
+
+- **용도**: 퀘스트 인증 사진이 조건에 맞는지 판정 (`backend/app/integrations/vision/`, `POST /api/v1/verifications/photo`).
+- **키**: [Google AI Studio](https://aistudio.google.com/apikey)에서 발급 → 로컬 `backend/.env`의 `GEMINI_API_KEY`, 운영은 Secret Manager(생성 시 [deploy/deploy.sh](../../deploy/deploy.sh)에 반영 필요). 모델은 `GEMINI_MODEL`(기본 `gemini-2.5-flash`).
+- **미설정 시**: 스텁 판정(항상 통과 + "AI 미설정" 사유) — 데모·테스트는 키 없이 동작한다.
+- **쿼터**: 무료 티어는 분당 요청 제한이 있어 초과 시 오류를 그대로 반환한다(폴백 통과 처리하지 않음).
 
 ## TourAPI 활용신청 현황 (공공데이터포털, 2026-07-17 승인 · 2028-07-17 만료)
 
@@ -30,7 +38,7 @@
 
 | 서비스(활용신청 명) | Base URL (`apis.data.go.kr/B551011/…`) | 상태 |
 |------|------|------|
-| 국문 관광정보 서비스_GW | `KorService2` | **사용 중** — 프론트 퀘스트 데이터 생성 `backend/scripts/generate_frontend_quests.py` · DB 적재 로더 `backend/app/integrations/tour_api/` |
+| 국문 관광정보 서비스_GW | `KorService2` | **사용 중** — 프론트 퀘스트 데이터 생성 `backend/scripts/generate_frontend_quests.py` · 이미지/좌표 보강 `backend/scripts/enrich_frontend_quests.py` · DB 적재 로더 `backend/app/integrations/tour_api/` |
 | 영문/일문/중문간체/중문번체/독어 관광정보서비스_GW | `EngService2` / `JpnService2` / `ChsService2` / `ChtService2` / `GerService2` | 미사용 (다국어 대응 시) |
 | 관광사진 정보_GW | `PhotoGalleryService1` (`gallerySearchList1` 등) | 미사용 (퀘스트 썸네일 후보) |
 | 기초지자체 중심 관광지 정보 | `LocgoHubTarService1` (`areaBasedList1`, `baseYm`·`areaCd`·`signguCd` 필수) | 미사용 (지역 대표 관광지 선정 후보) |
@@ -44,6 +52,7 @@
 - **주요 엔드포인트**
   - `areaCode2?areaCode=33` — 충북 시·군구 코드 목록
   - `areaBasedList2?areaCode=33&sigunguCode={코드}&contentTypeId={유형}` — 지역 기반 관광정보 목록
+  - `searchKeyword2?keyword={장소명}` — 키워드 검색(이미지/좌표 보강 매칭용). **areaCode/sigunguCode를 주면 0건이 반환**되므로(법정동 코드 전환 영향) 파라미터 없이 호출하고 응답의 `addr1`/legacy 코드로 클라이언트에서 필터링한다
   - `detailCommon2?contentId={id}` — 공통 상세(소개문 `overview` 포함)
   - `detailIntro2?contentId={id}&contentTypeId={유형}` — 운영시간·휴무 등 소개 정보
 - **contentTypeId**: 12 관광지 · 14 문화시설 · 15 축제공연행사 · 25 여행코스 · 28 레포츠 · 32 숙박 · 38 쇼핑 · 39 음식점

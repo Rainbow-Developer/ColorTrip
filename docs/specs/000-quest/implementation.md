@@ -11,8 +11,8 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 진행 중 (조회 API·기반 완료 / TourAPI 실적재는 키 대기) |
-| 최종 업데이트 | 2026-06-25 |
+| 상태 | 진행 중 (조회·검증·Flutter 연동 완료 / TourAPI 실적재는 키 대기) |
+| 최종 업데이트 | 2026-07-28 |
 
 ## 구현 규모 / 단위 분할
 
@@ -30,6 +30,10 @@
 - **모델·마이그레이션**: `regions`·`quests` (`app/regions/models.py`, `app/quests/models.py`), Alembic `init regions and quests`
 - **regions**: 충북 11개 시·군 시드(`app/regions/seed.py`), `GET /api/v1/regions`
 - **quests**: `GET /api/v1/quests`(region_id·category 필터, offset page/size), `GET /api/v1/quests/{id}`
+- **stable catalog**: `regions.slug`·`quests.client_key` 고유 계약과 Flutter 정적 표시
+  카탈로그에 대응하는 11개 지역·220개 퀘스트 migration snapshot
+- **Flutter 검증 연동**: stable key→UUID 매핑, 사진 업로드, 현재 위치 GPS,
+  OX 답안을 서버 verify API로 제출하고 성공 후 서버 snapshot 재조회
 - **TourAPI 연동 골격**: `app/integrations/tour_api/client.py`(areaBasedList2·detailIntro2·categoryCode2), `loader.py`(지역별 적재 — 키/area_code 대기)
 - **로컬 환경**: `docker-compose.yml`(PostgreSQL + FastAPI), `Dockerfile`, Alembic 설정
 - **검증**: ruff 통과, `regions`(11건)·`quests`(목록/상세/404/422) API 동작 확인
@@ -39,13 +43,15 @@
 - TourAPI **실적재**: 키 발급 후 `loader.py`로 `quests` 적재 + 충북 11개 시·군 `area_code`(sigunguCode) 매핑
 - 상세 **운영정보**: `quests` 상세에서 `content_id`로 TourAPI 소개정보(시간·휴무·입장료) 조회 → `operation_info` 채우기 (의사결정 5)
 - **카테고리 분류코드 매핑**: TourAPI cat1/2/3 → Category 5종 (`loader.py` TODO)
-- **인증 적용**: 공통 토큰 미들웨어(CMN-06) 확정 후 보호 API 여부 반영
+- **조회 API 보호 정책**: 현재 공개 조회를 유지할지 `CurrentUser`로 통일할지 팀 결정
 
 ## 알려진 한계 / TODO
 
 - 공통 기반(CMN-01·02 Envelope/에러핸들러)은 퀘스트 도메인 안에서 최소 구현했다. 별도 공통 기반 작업과 통합 시 중복 정리 필요.
 - 시간 컬럼은 `TIMESTAMP WITH TIME ZONE` + KST(`now_kst`)로 저장. database.md의 "KST 저장" 해석은 추후 팀 합의로 확정 가능.
 - TourAPI 키가 없을 때 클라이언트는 빈 결과를 반환한다(빠른 실패 대신 빈 적재). 키 발급 후 동작 재검증 필요.
+- 정적 Flutter 표시 문구는 유지하고 서버 snapshot은 저장·검증용 계약으로 사용한다.
+  둘의 stable key가 달라지면 계약 테스트가 실패한다.
 
 ## 변경 이력
 
@@ -54,3 +60,4 @@
 | 2026-06-25 | 최초 작성 (계획) |
 | 2026-06-25 | 의사결정 7건 합의 반영 |
 | 2026-06-25 | backend 기반·모델·마이그레이션·regions 시드·regions/quests 조회 API·TourAPI 골격 구현 (단위 1·2·4·5 완료, 3 골격) |
+| 2026-07-28 | KAN-55에서 `slug`·`client_key`, 220개 migration snapshot, `photo`·`gps` 미션 타입과 Flutter 실제 업로드·위치·퀴즈 검증 연동 추가 |

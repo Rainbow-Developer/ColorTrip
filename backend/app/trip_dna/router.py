@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import CurrentUser
+from app.auth.dependencies import ProfiledUser
 from app.core.database import get_session
 from app.core.response import Envelope, success
 from app.trip_dna import service
@@ -21,8 +21,7 @@ router = APIRouter(prefix="/trip_dna", tags=["trip_dna"])
     summary="여행 DNA 질문 및 선택지 목록 조회",
 )
 async def get_survey_questions(
-    # TODO: 인증 정보 연동되면 current_user 주석 해제
-    # current_user: CurrentUser,
+    current_user: ProfiledUser,
     session: AsyncSession = Depends(get_session),
 ) -> Envelope[list[QuestionRead]]:
     """
@@ -40,7 +39,6 @@ async def get_survey_questions(
     ### 📌 정렬 순서
     - 질문과 선택지는 각각 DB에 설정된 `sort_order` 기준으로 정렬되어 반환됩니다.
     """
-    # TODO: current_user 연동 시 사용자 식별자를 함께 남긴다.
     logger.info("[TRIP_DNA] Request questions")
 
     """설문용 질문 및 선택지 리스트를 조회합니다."""
@@ -56,7 +54,7 @@ async def get_survey_questions(
 )
 async def submit_survey_replies(
     payload: RepliesSubmitRequest,
-    current_user: CurrentUser,
+    current_user: ProfiledUser,
     session: AsyncSession = Depends(get_session),
 ) -> Envelope[DNAResultResponse]:
     """사용자가 선택한 답변 목록을 제출받아 저장하고, 성향 점수를 계산하여

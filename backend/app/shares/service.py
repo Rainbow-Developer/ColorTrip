@@ -27,9 +27,7 @@ DNA_NAME_MAP = {
 }
 
 
-async def get_user_share_summary_data(
-    session: AsyncSession, user: User
-) -> ShareSummaryResponse:
+async def get_user_share_summary_data(session: AsyncSession, user: User) -> ShareSummaryResponse:
     """사용자의 현재 여행 진행률, DNA, 색칠된 시·군 목록 요약 데이터를 생성합니다."""
     # 1. 마스터 시·군 목록 및 총 개수
     all_regions = await list_regions(session)
@@ -60,9 +58,7 @@ async def get_user_share_summary_data(
 
     completed_region_count = len(colored_regions)
     progress_percentage = (
-        int((completed_region_count / total_region_count) * 100)
-        if total_region_count > 0
-        else 0
+        int((completed_region_count / total_region_count) * 100) if total_region_count > 0 else 0
     )
 
     dna_type = user.dna
@@ -97,9 +93,7 @@ async def create_share_card(
     )
 
 
-async def get_public_share_card(
-    session: AsyncSession, share_code: str
-) -> ShareReadResponse:
+async def get_public_share_card(session: AsyncSession, share_code: str) -> ShareReadResponse:
     """외부 사용자가 조회할 수 있는 공개 공유 카드 데이터를 가져옵니다."""
     repo = repository.ShareRepository()
     share = await repo.get_by_code(session, share_code)

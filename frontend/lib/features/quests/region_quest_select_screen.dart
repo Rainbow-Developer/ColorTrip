@@ -5,11 +5,15 @@ import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/filter_chip_row.dart';
 import '../../data/models/quest.dart';
+import '../../data/repositories/domain_repository.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/onboarding_tour_notifier.dart';
+import '../../state/domain_controller.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
@@ -25,9 +29,14 @@ import '../../state/repository_providers.dart';
 /// Figma 스펙(2026-07-09 공유) 반영: 검색·유형 필터, 카드별 "퀘스트 설명"으로 퀘스트 상세(정보만) 진입.
 /// 새 여행이면 시작 전에 이름·기간 입력 시트를 거친다(2026-07-16 KAN-28).
 class RegionQuestSelectScreen extends ConsumerStatefulWidget {
-  const RegionQuestSelectScreen({super.key, required this.regionId});
+  const RegionQuestSelectScreen({
+    super.key,
+    required this.regionId,
+    this.journeyId,
+  });
 
   final String regionId;
+  final String? journeyId;
 
   @override
   ConsumerState<RegionQuestSelectScreen> createState() =>
@@ -40,6 +49,7 @@ class _RegionQuestSelectScreenState
   final _startTripButtonKey = GlobalKey();
   String _typeFilter = 'all';
   Set<String>? _selectedQuestIds;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -50,13 +60,36 @@ class _RegionQuestSelectScreenState
   /// 새 여행이면 이름·기간 입력 시트를 띄운 뒤 등록하고, 이미 시작한 여행이면
   /// 기존 이름·기간을 유지한 채 선택 퀘스트만 갱신한다.
   Future<void> _startTrip(String defaultName) async {
-    final notifier = ref.read(progressProvider.notifier);
+    if (_saving) return;
     final selected = {..._selectedQuestIds!};
+    final journeys =
+        ref.read(domainControllerProvider).value?.journeys ??
+        const <DomainJourney>[];
+    final existingJourney = widget.journeyId == null
+        ? journeys
+              .where((journey) => journey.regionKey == widget.regionId)
+              .firstOrNull
+        : journeys
+              .where((journey) => journey.id == widget.journeyId)
+              .firstOrNull;
 
-    if (ref.read(progressProvider).tripStatusOf(widget.regionId) !=
-        RegionTripStatus.notStarted) {
-      notifier.setTripQuests(widget.regionId, selected);
-      if (mounted) context.go('/travel');
+    if (existingJourney != null) {
+      setState(() => _saving = true);
+      try {
+        await ref
+            .read(domainControllerProvider.notifier)
+            .replaceJourneyQuests(
+              journeyId: existingJourney.id,
+              questKeys: selected.toList(),
+            );
+        if (mounted) context.go('/travel');
+      } on Object {
+        if (mounted) {
+          showAppToast(context, '퀘스트 선택을 저장하지 못했어요. 다시 시도해주세요.');
+        }
+      } finally {
+        if (mounted) setState(() => _saving = false);
+      }
       return;
     }
 
@@ -71,8 +104,25 @@ class _RegionQuestSelectScreenState
     );
     if (info == null || !mounted) return;
 
-    notifier.startTrip(widget.regionId, selected, info);
-    context.go('/travel');
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(domainControllerProvider.notifier)
+          .createJourney(
+            regionKey: widget.regionId,
+            questKeys: selected.toList(),
+            title: info.name,
+            startDate: info.startDate,
+            endDate: info.endDate,
+          );
+      if (mounted) context.go('/travel');
+    } on Object {
+      if (mounted) {
+        showAppToast(context, '여행을 저장하지 못했어요. 네트워크를 확인해주세요.');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -86,11 +136,22 @@ class _RegionQuestSelectScreenState
         .byRegion(widget.regionId);
 
     final progress = ref.watch(progressProvider);
+    final journeys =
+        ref.watch(domainControllerProvider).value?.journeys ??
+        const <DomainJourney>[];
+    final selectedJourney = widget.journeyId == null
+        ? journeys
+              .where((journey) => journey.regionKey == widget.regionId)
+              .firstOrNull
+        : journeys
+              .where((journey) => journey.id == widget.journeyId)
+              .firstOrNull;
 
     // 기존에 이 지역 여행에서 이미 고른 퀘스트가 있으면 그 상태로 시작한다(추가 선택 지원).
-    final tripAlreadyStarted =
-        progress.tripStatusOf(widget.regionId) != RegionTripStatus.notStarted;
-    _selectedQuestIds ??= {...progress.tripQuestsOf(widget.regionId)};
+    final tripAlreadyStarted = selectedJourney != null;
+    _selectedQuestIds ??= {
+      ...(selectedJourney?.questKeys ?? progress.tripQuestsOf(widget.regionId)),
+    };
 
     final availableTypes = <String>{for (final q in allRegionQuests) q.type};
     final filters = [
@@ -113,7 +174,11 @@ class _RegionQuestSelectScreenState
     final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: const Text('퀘스트'), titleSpacing: 0),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('퀘스트'),
+        titleSpacing: 0,
+      ),
       body: Stack(
         children: [
           Column(
@@ -186,11 +251,13 @@ class _RegionQuestSelectScreenState
                   key: _startTripButtonKey,
                   // 새 여행이면 이름·기간 입력 시트(KAN-28), 이미 시작한 여행이면
                   // 시트 없이 퀘스트만 추가(KAN-46) — 분기는 _startTrip이 담당.
-                  onPressed: selectedCount == 0
+                  onPressed: selectedCount == 0 || _saving
                       ? null
                       : () => _startTrip(tripTitleFor(region)),
                   child: Text(
-                    selectedCount == 0
+                    _saving
+                        ? '저장 중...'
+                        : selectedCount == 0
                         ? '퀘스트를 선택해주세요'
                         : tripAlreadyStarted
                         ? '퀘스트 추가하기 ($selectedCount)'
@@ -264,13 +331,11 @@ class _SelectableQuestCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Container(
+            AppNetworkImage(
+              url: quest.imageUrl,
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.imagePlaceholderBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
+              borderRadius: BorderRadius.circular(8),
             ),
             const SizedBox(width: 10),
             Expanded(

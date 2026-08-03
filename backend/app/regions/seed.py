@@ -16,18 +16,18 @@ from app.regions.models import Region
 
 # 충북 시·군 → TourAPI(KorService2) sigunguCode (areaCode=33 기준, areaCode2로 확인 2026-07-17).
 # 상세: docs/conventions/external-apis.md. center_lat/lng는 추후 매핑.
-CHUNGBUK_REGIONS: Sequence[tuple[str, str]] = (
-    ("청주시", "10"),
-    ("충주시", "11"),
-    ("제천시", "7"),
-    ("보은군", "3"),
-    ("옥천군", "5"),
-    ("영동군", "4"),
-    ("증평군", "12"),
-    ("진천군", "8"),
-    ("괴산군", "1"),
-    ("음성군", "6"),
-    ("단양군", "2"),
+CHUNGBUK_REGIONS: Sequence[tuple[str, str, str]] = (
+    ("cheongju", "청주시", "10"),
+    ("chungju", "충주시", "11"),
+    ("jecheon", "제천시", "7"),
+    ("boeun", "보은군", "3"),
+    ("okcheon", "옥천군", "5"),
+    ("yeongdong", "영동군", "4"),
+    ("jeungpyeong", "증평군", "12"),
+    ("jincheon", "진천군", "8"),
+    ("goesan", "괴산군", "1"),
+    ("eumseong", "음성군", "6"),
+    ("danyang", "단양군", "2"),
 )
 
 
@@ -38,14 +38,25 @@ async def seed_regions(session: AsyncSession) -> int:
     existing = {region.name: region for region in result.scalars().all()}
 
     added = 0
-    for name, sigungu_code in CHUNGBUK_REGIONS:
+    for slug, name, sigungu_code in CHUNGBUK_REGIONS:
         region = existing.get(name)
         if region is None:
             # center_lat·lng: 추후
-            session.add(Region(name=name, area_code=sigungu_code, center_lat=None, center_lng=None))
+            session.add(
+                Region(
+                    name=name,
+                    slug=slug,
+                    area_code=sigungu_code,
+                    center_lat=None,
+                    center_lng=None,
+                )
+            )
             added += 1
-        elif region.area_code is None:
-            region.area_code = sigungu_code
+        else:
+            if region.slug is None:
+                region.slug = slug
+            if region.area_code is None:
+                region.area_code = sigungu_code
 
     return added
 

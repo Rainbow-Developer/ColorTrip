@@ -12,6 +12,11 @@ class AppFormField extends StatelessWidget {
     required this.hint,
     this.onChanged,
     this.enabled = true,
+    this.readOnly = false,
+    this.onTap,
+    this.keyboardType,
+    this.textInputAction,
+    this.suffixIcon,
   });
 
   final String label;
@@ -19,6 +24,11 @@ class AppFormField extends StatelessWidget {
   final String hint;
   final ValueChanged<String>? onChanged;
   final bool enabled;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -34,48 +44,57 @@ class AppFormField extends StatelessWidget {
           style: const TextStyle(color: AppColors.formLabel, fontSize: 13),
         ),
         const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          onChanged: onChanged,
-          enabled: enabled,
-          style: TextStyle(
-            fontSize: 15,
-            color: enabled
-                ? const Color(0xFF222222)
-                : AppColors.formPlaceholder,
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(
+        Semantics(
+          label: label,
+          textField: true,
+          child: TextField(
+            controller: controller,
+            onChanged: onChanged,
+            enabled: enabled,
+            readOnly: readOnly,
+            onTap: onTap,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            style: TextStyle(
+              fontSize: 15,
               color: enabled
-                  ? AppColors.formPlaceholder
-                  : AppColors.timelineDotGrey,
+                  ? const Color(0xFF222222)
+                  : AppColors.formPlaceholder,
             ),
-            filled: true,
-            fillColor: (enabled && hasValue)
-                ? Colors.white
-                : AppColors.formFieldBg,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 13,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: borderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: borderColor),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(color: borderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(
-                color: AppColors.primaryDark,
-                width: 1.5,
+            decoration: InputDecoration(
+              hintText: hint,
+              suffixIcon: suffixIcon,
+              hintStyle: TextStyle(
+                color: enabled
+                    ? AppColors.formPlaceholder
+                    : AppColors.timelineDotGrey,
+              ),
+              filled: true,
+              fillColor: (enabled && hasValue)
+                  ? Colors.white
+                  : AppColors.formFieldBg,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 13,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                  color: AppColors.primaryDark,
+                  width: 1.5,
+                ),
               ),
             ),
           ),

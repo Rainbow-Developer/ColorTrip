@@ -63,8 +63,14 @@ async def test_quest_completion_generates_timeline_and_color_events(client: Asyn
         assert item["region_name"] == "단양군"
         if item["event_type"] == "quest_completed":
             assert item["title"] == "도담삼봉 인증샷"
+            assert item["quest_id"] == seed["gps_quest_id"]
+            assert item["quest_client_key"] == "test-gps-quest"
+            assert item["photo_url"] == "/uploads/photos/2026/07/test.jpg"
         elif item["event_type"] == "region_colored":
             assert item["title"] == "단양군 색칠 성공!"
+            assert item["quest_id"] is None
+            assert item["quest_client_key"] is None
+            assert item["photo_url"] is None
 
 
 @pytest.mark.asyncio

@@ -12,23 +12,28 @@ import httpx
 from app.core.config import settings
 from app.core.exceptions import AppException, ErrorCode
 
+KAKAO_REQUEST_TIMEOUT_SECONDS = 5.0
+
 
 @dataclass(frozen=True)
 class KakaoUserInfo:
     social_id: str
     email: str | None
     nickname: str | None
+    profile_image: str | None = None
 
 
 class KakaoClient(Protocol):
     async def exchange_authorization_code(self, code: str) -> str: ...
+
+    async def validate_access_token(self, access_token: str) -> None: ...
 
     async def get_user_info(self, access_token: str) -> KakaoUserInfo: ...
 
 
 class HttpKakaoClient:
     def __init__(self, http_client: httpx.AsyncClient | None = None) -> None:
-        self._client = http_client or httpx.AsyncClient(timeout=10.0)
+        self._client = http_client or httpx.AsyncClient(timeout=KAKAO_REQUEST_TIMEOUT_SECONDS)
         self._owns_client = http_client is None
 
     async def __aenter__(self) -> Self:
@@ -68,6 +73,30 @@ class HttpKakaoClient:
             raise AppException(ErrorCode.SOCIAL_AUTH_ERROR, "Kakao token API failed.")
         return access_token
 
+    async def validate_access_token(self, access_token: str) -> None:
+        try:
+            response = await self._client.get(
+                settings.kakao_token_info_url,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+        except httpx.HTTPError as exc:
+            raise AppException(
+                ErrorCode.SOCIAL_AUTH_ERROR,
+                "Kakao token validation failed.",
+            ) from exc
+
+        if response.status_code != 200:
+            raise AppException(ErrorCode.SOCIAL_AUTH_ERROR, "Kakao token is invalid.")
+
+        data = _json_object(response, "Kakao token validation failed.")
+        app_id = data.get("app_id")
+        if (
+            not isinstance(app_id, int)
+            or isinstance(app_id, bool)
+            or app_id != settings.kakao_app_id
+        ):
+            raise AppException(ErrorCode.SOCIAL_AUTH_ERROR, "Kakao token is invalid.")
+
     async def get_user_info(self, access_token: str) -> KakaoUserInfo:
         try:
             response = await self._client.get(
@@ -98,10 +127,12 @@ class HttpKakaoClient:
 
         email = account.get("email") if isinstance(account, dict) else None
         nickname = profile.get("nickname")
+        profile_image = profile.get("profile_image_url")
         return KakaoUserInfo(
             social_id=str(social_id),
             email=email if isinstance(email, str) else None,
             nickname=nickname if isinstance(nickname, str) else None,
+            profile_image=profile_image if isinstance(profile_image, str) else None,
         )
 
 

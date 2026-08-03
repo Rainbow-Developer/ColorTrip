@@ -4,23 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_toast.dart';
+import '../../data/location/location_gateway.dart';
 import '../../data/models/quest.dart';
-import '../../state/progress_notifier.dart';
+import '../../state/domain_controller.dart';
 import '../../state/repository_providers.dart';
 
 /// 퀘스트 수행(인증) 화면 — 여행 시작하기로 담은 퀘스트를 지역 개요("여행하기")의
 /// "내 여행 퀘스트" 목록에서 탭하면 여기로 온다(2026-07-09 사용자 확정 — 퀘스트 상세에는
 /// 더 이상 수행 버튼이 없다). 사진/GPS/OX퀴즈 유형별 UI는 Figma 스펙(2026-07-08 공유) 반영.
-/// 실제 카메라/GPS 연동은 없고, 선택·인증 상호작용만 흉내 낸 최소 버전이다
-/// ([implementation.md] 참고 — 스캔 애니메이션·실연동은 후속 작업).
+/// 사진은 실제 업로드하고 GPS는 현재 위치를 조회해 서버 검증을 수행한다.
 class QuestVerifyScreen extends ConsumerWidget {
-  const QuestVerifyScreen({super.key, required this.questId});
+  const QuestVerifyScreen({super.key, required this.questId, this.journeyId});
 
   final String questId;
+  final String? journeyId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,40 +31,225 @@ class QuestVerifyScreen extends ConsumerWidget {
       return const Scaffold(body: Center(child: Text('퀘스트를 찾을 수 없어요')));
     }
 
-    void completeAndPop() {
-      ref.read(progressProvider.notifier).completeQuest(questId);
-      showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
-      context.pop();
-      context.pop();
-    }
-
-    void completeAndShowResult(Uint8List? photo) {
-      ref.read(progressProvider.notifier).completeQuest(questId, photo: photo);
-      context.push('/quest/$questId/verify/result');
-    }
+    final journeyId =
+        this.journeyId ??
+        ref
+            .watch(domainControllerProvider)
+            .value
+            ?.journeys
+            .where(
+              (journey) =>
+                  journey.regionKey == quest.region &&
+                  journey.questKeys.contains(quest.id) &&
+                  journey.status == 'in_progress',
+            )
+            .firstOrNull
+            ?.id;
 
     switch (quest.verify) {
       case 'gps':
         return _GpsVerifyBody(
           questTitle: quest.title,
-          onVerified: completeAndPop,
+          isReady: quest.lat != null && quest.lng != null,
+          onVerified: () => _verifyGps(context, ref, quest, journeyId),
         );
       case 'quiz':
-        return _QuizVerifyBody(quest: quest, onVerified: completeAndPop);
+        return _QuizVerifyBody(
+          quest: quest,
+          successDestination: '/region/${quest.region}',
+          onVerified: (answer) => _verify(
+            context,
+            ref,
+            quest,
+            journeyId: journeyId,
+            answer: answer ? 'O' : 'X',
+          ),
+        );
+      case 'qr':
+        return _QrVerifyBody(
+          onVerified: (payload) => _verify(
+            context,
+            ref,
+            quest,
+            journeyId: journeyId,
+            qrPayload: payload,
+          ),
+        );
       default:
         return _PhotoVerifyBody(
           questTitle: quest.title,
-          onVerified: completeAndShowResult,
+          onVerified: (photo) => _verifyPhoto(
+            context,
+            ref,
+            quest,
+            photo.bytes,
+            photo.mimeType,
+            journeyId,
+          ),
         );
     }
+  }
+
+  Future<bool?> _verify(
+    BuildContext context,
+    WidgetRef ref,
+    Quest quest, {
+    String? journeyId,
+    double? latitude,
+    double? longitude,
+    String? photoUrl,
+    String? answer,
+    String? qrPayload,
+  }) async {
+    try {
+      final result = await ref
+          .read(domainControllerProvider.notifier)
+          .verifyQuest(
+            questKey: quest.id,
+            journeyId: journeyId,
+            latitude: latitude,
+            longitude: longitude,
+            photoUrl: photoUrl,
+            answer: answer,
+            qrPayload: qrPayload,
+          );
+      if (!context.mounted) return null;
+      if (!result.verified) {
+        showAppToast(context, result.reason ?? '인증 조건을 확인해주세요.');
+      }
+      return result.verified;
+    } on Object {
+      if (context.mounted) {
+        showAppToast(context, '인증 결과를 저장하지 못했어요. 다시 시도해주세요.');
+      }
+      return null;
+    }
+  }
+
+  Future<void> _verifyGps(
+    BuildContext context,
+    WidgetRef ref,
+    Quest quest,
+    String? journeyId,
+  ) async {
+    try {
+      final location = await ref.read(locationGatewayProvider).current();
+      if (!context.mounted) return;
+      final verified = await _verify(
+        context,
+        ref,
+        quest,
+        journeyId: journeyId,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      );
+      if (verified == true && context.mounted) {
+        showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
+        context.go('/region/${quest.region}');
+      }
+    } on LocationFailure catch (error) {
+      if (context.mounted) await _showLocationFailure(context, ref, error);
+    } on Object {
+      if (context.mounted) {
+        showAppToast(context, '현재 위치를 확인하지 못했어요. 다시 시도해주세요.');
+      }
+    }
+  }
+
+  Future<bool> _verifyPhoto(
+    BuildContext context,
+    WidgetRef ref,
+    Quest quest,
+    Uint8List photo,
+    String mimeType,
+    String? journeyId,
+  ) async {
+    try {
+      final result = await ref
+          .read(domainControllerProvider.notifier)
+          .uploadAndVerifyPhoto(
+            questKey: quest.id,
+            bytes: photo,
+            mimeType: mimeType,
+            journeyId: journeyId,
+          );
+      if (!context.mounted) return false;
+      if (result.verified) {
+        context.push('/quest/$questId/verify/result');
+        return true;
+      }
+      showAppToast(context, result.reason ?? '사진 인증 조건을 확인해주세요.');
+      return false;
+    } on Object {
+      if (context.mounted) {
+        showAppToast(context, '사진을 업로드하지 못했어요. 다시 시도해주세요.');
+      }
+      return false;
+    }
+  }
+
+  Future<void> _showLocationFailure(
+    BuildContext context,
+    WidgetRef ref,
+    LocationFailure error,
+  ) async {
+    final gateway = ref.read(locationGatewayProvider);
+    final (message, action) = switch (error.reason) {
+      LocationFailureReason.serviceDisabled => (
+        '기기의 위치 서비스를 켜주세요.',
+        gateway.openLocationSettings,
+      ),
+      LocationFailureReason.permissionDeniedForever => (
+        '앱 설정에서 위치 권한을 허용해주세요.',
+        gateway.openAppSettings,
+      ),
+      LocationFailureReason.permissionDenied => (
+        '위치 권한이 있어야 GPS 인증을 진행할 수 있어요.',
+        null,
+      ),
+      LocationFailureReason.timeout => (
+        '현재 위치 확인 시간이 초과됐어요. 실외에서 다시 시도해주세요.',
+        null,
+      ),
+      LocationFailureReason.unavailable => (
+        '현재 위치를 확인하지 못했어요. 다시 시도해주세요.',
+        null,
+      ),
+    };
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('위치 확인 필요'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('확인'),
+          ),
+          if (action != null)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                action();
+              },
+              child: const Text('설정 열기'),
+            ),
+        ],
+      ),
+    );
   }
 }
 
 class _QuizVerifyBody extends StatefulWidget {
-  const _QuizVerifyBody({required this.quest, required this.onVerified});
+  const _QuizVerifyBody({
+    required this.quest,
+    required this.onVerified,
+    required this.successDestination,
+  });
 
   final Quest quest;
-  final VoidCallback onVerified;
+  final Future<bool?> Function(bool answer) onVerified;
+  final String successDestination;
 
   @override
   State<_QuizVerifyBody> createState() => _QuizVerifyBodyState();
@@ -70,6 +257,7 @@ class _QuizVerifyBody extends StatefulWidget {
 
 class _QuizVerifyBodyState extends State<_QuizVerifyBody> {
   bool? _wrong;
+  bool _busy = false;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +265,6 @@ class _QuizVerifyBodyState extends State<_QuizVerifyBody> {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('OX 퀴즈'),
-        titleSpacing: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -112,14 +299,14 @@ class _QuizVerifyBodyState extends State<_QuizVerifyBody> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _answer(true),
+                    onPressed: _busy ? null : () => _answer(true),
                     child: const Text('O'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _answer(false),
+                    onPressed: _busy ? null : () => _answer(false),
                     child: const Text('X'),
                   ),
                 ),
@@ -131,20 +318,46 @@ class _QuizVerifyBodyState extends State<_QuizVerifyBody> {
     );
   }
 
-  void _answer(bool value) {
-    if (value == widget.quest.quizAnswer) {
-      widget.onVerified();
-    } else {
-      setState(() => _wrong = true);
+  Future<void> _answer(bool value) async {
+    setState(() {
+      _busy = true;
+      _wrong = false;
+    });
+    final verified = await widget.onVerified(value);
+    if (!mounted) return;
+    if (verified == true) {
+      showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
+      context.go(widget.successDestination);
+      return;
     }
+    if (verified == null) {
+      setState(() => _busy = false);
+      return;
+    }
+    setState(() {
+      _busy = false;
+      _wrong = true;
+    });
   }
 }
 
-class _GpsVerifyBody extends StatelessWidget {
-  const _GpsVerifyBody({required this.questTitle, required this.onVerified});
+class _GpsVerifyBody extends StatefulWidget {
+  const _GpsVerifyBody({
+    required this.questTitle,
+    required this.isReady,
+    required this.onVerified,
+  });
 
   final String questTitle;
-  final VoidCallback onVerified;
+  final bool isReady;
+  final Future<void> Function() onVerified;
+
+  @override
+  State<_GpsVerifyBody> createState() => _GpsVerifyBodyState();
+}
+
+class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
+  bool _busy = false;
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +365,6 @@ class _GpsVerifyBody extends StatelessWidget {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('GPS 인증'),
-        titleSpacing: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -160,12 +372,12 @@ class _GpsVerifyBody extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              questTitle,
+              widget.questTitle,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
             const Text(
-              '반경 500m 이내여야 합니다.',
+              '퀘스트에 설정된 인증 반경 안에서 시도해주세요.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 13),
             ),
             const SizedBox(height: 16),
@@ -228,6 +440,14 @@ class _GpsVerifyBody extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
+            if (!widget.isReady)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 14),
+                child: Text(
+                  '이 퀘스트는 위치 정보가 준비되지 않았어요.',
+                  style: TextStyle(color: AppColors.danger, fontSize: 13),
+                ),
+              ),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -248,7 +468,7 @@ class _GpsVerifyBody extends StatelessWidget {
                         ),
                       ),
                       const Text(
-                        '위치 확인 중...',
+                        '인증 버튼을 누르면 확인해요',
                         style: TextStyle(
                           color: AppColors.primaryDark,
                           fontWeight: FontWeight.w700,
@@ -256,26 +476,6 @@ class _GpsVerifyBody extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    '목적지까지 약 120m',
-                    style: TextStyle(
-                      color: AppColors.timelineDateText,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(
-                      value: 0.69,
-                      minHeight: 4,
-                      backgroundColor: AppColors.verifyProgressTrack,
-                      valueColor: const AlwaysStoppedAnimation(
-                        AppColors.primaryDark,
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -299,8 +499,73 @@ class _GpsVerifyBody extends StatelessWidget {
             ),
             const Spacer(),
             ElevatedButton(
-              onPressed: onVerified,
-              child: const Text('현재 위치로 인증하기'),
+              onPressed: _busy || !widget.isReady
+                  ? null
+                  : () async {
+                      setState(() => _busy = true);
+                      await widget.onVerified();
+                      if (mounted) setState(() => _busy = false);
+                    },
+              child: Text(_busy ? '현재 위치 확인 중...' : '현재 위치로 인증하기'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QrVerifyBody extends StatefulWidget {
+  const _QrVerifyBody({required this.onVerified});
+
+  final Future<bool?> Function(String payload) onVerified;
+
+  @override
+  State<_QrVerifyBody> createState() => _QrVerifyBodyState();
+}
+
+class _QrVerifyBodyState extends State<_QrVerifyBody> {
+  bool _busy = false;
+
+  Future<void> _verify(BarcodeCapture capture) async {
+    if (_busy) return;
+    final payload = capture.barcodes.firstOrNull?.rawValue;
+    if (payload == null || payload.isEmpty) return;
+    setState(() => _busy = true);
+    final verified = await widget.onVerified(payload);
+    if (!mounted) return;
+    if (verified == true) {
+      showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
+      context.go('/home');
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('QR 인증'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('현장에 부착된 QR 코드를 프레임 안에 맞춰주세요.'),
+            const SizedBox(height: 16),
+            Expanded(
+              child: MobileScanner(
+                onDetect: _verify,
+                errorBuilder: (_, _) => const Center(
+                  child: Text(
+                    '카메라를 열 수 없어요. 기기 권한을 확인한 뒤 다시 시도해주세요.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -315,7 +580,7 @@ class _PhotoVerifyBody extends StatefulWidget {
   final String questTitle;
 
   /// 완료 처리 콜백 — 사용자가 실제로 고른 사진을 함께 넘겨 히스토리에 남긴다.
-  final ValueChanged<Uint8List?> onVerified;
+  final Future<bool> Function(_PickedPhoto photo) onVerified;
 
   @override
   State<_PhotoVerifyBody> createState() => _PhotoVerifyBodyState();
@@ -326,6 +591,8 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
   static const _maxPhotoBytes = 5 * 1024 * 1024;
 
   Uint8List? _photoBytes;
+  String _photoMimeType = 'image/jpeg';
+  bool _busy = false;
 
   Future<void> _pickPhoto(ImageSource source) async {
     final XFile? picked;
@@ -341,11 +608,12 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
       showAppToast(context, '사진을 불러오지 못했어요. 카메라·사진 접근 권한을 확인해주세요.');
       return;
     }
-    if (picked == null) return; // 사용자가 선택을 취소함 — 에러 아님.
+    final selected = picked;
+    if (selected == null) return; // 사용자가 선택을 취소함 — 에러 아님.
 
     final Uint8List bytes;
     try {
-      bytes = await picked.readAsBytes();
+      bytes = await selected.readAsBytes();
     } catch (_) {
       if (!mounted) return;
       showAppToast(context, '사진을 불러오지 못했어요. 다시 시도해주세요.');
@@ -358,7 +626,10 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
     }
 
     if (!mounted) return;
-    setState(() => _photoBytes = bytes);
+    setState(() {
+      _photoBytes = bytes;
+      _photoMimeType = selected.mimeType ?? _mimeTypeForName(selected.name);
+    });
   }
 
   @override
@@ -368,7 +639,6 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: const Text('사진 인증'),
-        titleSpacing: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -470,16 +740,45 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
             ),
             const Spacer(),
             ElevatedButton(
-              onPressed: photoBytes != null
-                  ? () => widget.onVerified(photoBytes)
+              onPressed: photoBytes != null && !_busy
+                  ? () async {
+                      setState(() => _busy = true);
+                      await widget.onVerified(
+                        _PickedPhoto(photoBytes, _photoMimeType),
+                      );
+                      if (mounted) setState(() => _busy = false);
+                    }
                   : null,
-              child: Text(photoBytes != null ? '사진으로 인증하기' : '사진 선택 후 인증 가능'),
+              child: Text(
+                _busy
+                    ? '업로드 중...'
+                    : photoBytes != null
+                    ? '사진으로 인증하기'
+                    : '사진 선택 후 인증 가능',
+              ),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+class _PickedPhoto {
+  const _PickedPhoto(this.bytes, this.mimeType);
+
+  final Uint8List bytes;
+  final String mimeType;
+}
+
+String _mimeTypeForName(String name) {
+  final extension = name.split('.').last.toLowerCase();
+  return switch (extension) {
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    'heic' => 'image/heic',
+    _ => 'image/jpeg',
+  };
 }
 
 class _PhotoSourceButton extends StatelessWidget {

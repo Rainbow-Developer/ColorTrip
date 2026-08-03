@@ -6,10 +6,19 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.base import Base, TimestampMixin, UUIDPKMixin
+from app.core.base import Base, TimestampMixin, UUIDPKMixin, now_kst
 from app.core.enums import dna_type_column
 
 
@@ -48,3 +57,30 @@ class RefreshToken(UUIDPKMixin, TimestampMixin, Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
+
+
+class UserConsent(UUIDPKMixin, Base):
+    __tablename__ = "user_consents"
+    __table_args__ = (
+        CheckConstraint(
+            "consent_type IN ('terms', 'privacy', 'marketing')",
+            name="ck_user_consents_type",
+        ),
+        UniqueConstraint(
+            "user_id",
+            "consent_type",
+            "version",
+            name="uq_user_consents_user_type_version",
+        ),
+        Index("ix_user_consents_user_id", "user_id"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    consent_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    version: Mapped[str] = mapped_column(String(50), nullable=False)
+    agreed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_kst)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=now_kst, onupdate=now_kst
+    )

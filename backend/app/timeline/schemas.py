@@ -23,6 +23,9 @@ class TimelineRead(BaseModel):
     event_type: str
     title: str | None = None
     region_name: str | None = None  # 조인된 시·군 이름
+    quest_id: uuid.UUID | None = None
+    quest_client_key: str | None = None
+    photo_url: str | None = None
     occurred_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

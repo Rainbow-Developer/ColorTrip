@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../state/onboarding_tour_notifier.dart';
+import '../../state/auth_controller.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
@@ -14,9 +15,10 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(progressProvider);
+    final user = ref.watch(currentUserProvider);
     final dna = ref
         .watch(dnaRepositoryProvider)
-        .byId(progress.dnaType ?? 'nature');
+        .byId(user?.dna ?? progress.dnaType ?? 'nature');
     final tour = ref.watch(onboardingTourProvider);
 
     return Scaffold(
@@ -35,7 +37,7 @@ class ProfileScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    progress.nickname ?? kDefaultNickname,
+                    user?.nickname ?? kDefaultNickname,
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
@@ -55,6 +57,14 @@ class ProfileScreen extends ConsumerWidget {
             title: const Text('타임라인'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/timeline'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('로그아웃'),
+            onTap: () async {
+              await ref.read(authControllerProvider.notifier).logout();
+              if (context.mounted) context.go('/splash');
+            },
           ),
           ListTile(
             leading: const Icon(Icons.edit_outlined),

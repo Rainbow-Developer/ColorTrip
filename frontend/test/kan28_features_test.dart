@@ -1,12 +1,16 @@
 /// KAN-28 기능 검증 — 홈 추천 배너 · 여행 시작 이름/날짜 입력 시트 · 여행 목록 표시.
 library;
 
+import 'dart:typed_data';
+
+import 'package:colortrip/data/repositories/domain_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/models/region.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/data/static/regions_data.dart';
@@ -16,6 +20,7 @@ import 'package:colortrip/features/travel/travel_list_screen.dart';
 import 'package:colortrip/state/onboarding_tour_notifier.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/progress_state.dart';
+import 'package:colortrip/state/repository_providers.dart';
 
 /// 온보딩 투어는 main.dart에서 초기값을 주입해야 하는 프로바이더라 테스트에서도 주입한다.
 /// 코치마크가 화면을 덮지 않도록 "완료" 상태로 둔다.
@@ -24,6 +29,78 @@ final _tourDoneOverride = onboardingTourProvider.overrideWith(
     const OnboardingTourState(step: kOnboardingTotalSteps, skipped: true),
   ),
 );
+
+class _DomainRepository implements DomainRepository {
+  DomainSnapshot snapshot = const DomainSnapshot(
+    catalog: DomainCatalog(
+      regionIdsByKey: {'danyang': 'region-uuid'},
+      regionKeysById: {'region-uuid': 'danyang'},
+      questIdsByKey: {'dy1': 'quest-uuid'},
+      questKeysById: {'quest-uuid': 'dy1'},
+    ),
+    journeys: [],
+    completedQuestKeys: {},
+    regionProgress: {},
+    regionTripCount: {},
+    timeline: [],
+  );
+
+  @override
+  Future<DomainSnapshot> fetchSnapshot() async => snapshot;
+
+  @override
+  Future<DomainJourney> createJourney({
+    required String clientRequestId,
+    required String regionKey,
+    required List<String> questKeys,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final journey = DomainJourney(
+      id: 'journey-uuid',
+      regionKey: regionKey,
+      questKeys: questKeys,
+      title: title,
+      startDate: startDate,
+      endDate: endDate,
+      status: 'in_progress',
+      createdAt: DateTime.now(),
+    );
+    snapshot = DomainSnapshot(
+      catalog: snapshot.catalog,
+      journeys: [journey],
+      completedQuestKeys: const {},
+      regionProgress: const {},
+      regionTripCount: const {},
+      timeline: const [],
+    );
+    return journey;
+  }
+
+  @override
+  Future<DomainJourney> replaceJourneyQuests({
+    required String journeyId,
+    required List<String> questKeys,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<String> uploadPhoto(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) => throw UnimplementedError();
+
+  @override
+  Future<QuestVerification> verifyQuest({
+    required String questKey,
+    String? journeyId,
+    double? latitude,
+    double? longitude,
+    String? photoUrl,
+    String? answer,
+    String? qrPayload,
+  }) => throw UnimplementedError();
+}
 
 Widget _wrap(
   Widget child, {
@@ -71,8 +148,10 @@ void main() {
     await tester.pumpWidget(_wrap(const HomeScreen()));
     await tester.pumpAndSettle();
 
-    // 기본 DNA(nature)·초기 상태(모든 지역 미시작) 기준, 배너 로직과 같은 방식으로
-    // 기대 지역을 데이터에서 계산한다(퀘스트 데이터가 늘어나도 테스트가 깨지지 않게).
+    // 테스트 환경에서는 추천 API 호출이 실패하므로(서버 없음) 배너는 정적 폴백으로
+    // 그려진다([040-home-region-recommendation]). 기본 DNA(nature)·초기 상태(모든 지역
+    // 미시작) 기준, 배너 로직과 같은 방식으로 기대 지역을 데이터에서 계산한다
+    // (퀘스트 데이터가 늘어나도 테스트가 깨지지 않게).
     Region? expected;
     var bestMatch = -1;
     var bestTotal = -1;
@@ -90,6 +169,22 @@ void main() {
     expect(find.textContaining('추천 여행지'), findsOneWidget);
     expect(find.text(expected!.name), findsWidgets);
     expect(find.text('자연탐험 퀘스트 $bestMatch개가 기다리고 있어요'), findsOneWidget);
+
+    // 정적 폴백에서도 추천 지역의 퀘스트 요약 3개가 함께 보인다 — DNA 일치 우선, 같은
+    // 구간에서는 썸네일 보유 우선(배너와 같은 순서로 기대값을 계산한다, [040]).
+    bool hasThumbnail(Quest q) => q.imageUrl?.isNotEmpty ?? false;
+    final regionQuests = questsByRegion(expected.id);
+    final ordered = [
+      ...regionQuests.where((q) => q.type == 'nature' && hasThumbnail(q)),
+      ...regionQuests.where((q) => q.type == 'nature' && !hasThumbnail(q)),
+      ...regionQuests.where((q) => q.type != 'nature' && hasThumbnail(q)),
+      ...regionQuests.where((q) => q.type != 'nature' && !hasThumbnail(q)),
+    ];
+    final summary = ordered.take(3).toList();
+    expect(summary.length, 3);
+    for (final quest in summary) {
+      expect(find.text(quest.title), findsWidgets, reason: quest.id);
+    }
   });
 
   testWidgets('여행 시작하기 시 이름·날짜 입력 시트를 거쳐 여행이 등록된다', (tester) async {
@@ -98,7 +193,12 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final container = ProviderContainer(overrides: [_tourDoneOverride]);
+    final container = ProviderContainer(
+      overrides: [
+        _tourDoneOverride,
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
     addTearDown(container.dispose);
     await tester.pumpWidget(
       _wrap(

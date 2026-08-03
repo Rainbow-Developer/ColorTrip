@@ -4,8 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../data/models/quest.dart';
+import '../../data/repositories/domain_repository.dart';
+import '../../data/static/regions_data.dart';
+import '../../state/domain_controller.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
@@ -16,9 +21,14 @@ import '../../state/repository_providers.dart';
 /// 목록을 보여준다(2026-07-09 사용자 확정 — 퀘스트 선택은 다중 선택이며, 그 자리에서 수행하지 않는다).
 /// 온보딩 투어 2단계("퀘스트 선택하러 가기" 버튼)·4단계("내 여행 퀘스트" 탭)를 코치마크로 안내한다.
 class RegionOverviewScreen extends ConsumerStatefulWidget {
-  const RegionOverviewScreen({super.key, required this.regionId});
+  const RegionOverviewScreen({
+    super.key,
+    required this.regionId,
+    this.journeyId,
+  });
 
   final String regionId;
+  final String? journeyId;
 
   @override
   ConsumerState<RegionOverviewScreen> createState() =>
@@ -44,8 +54,25 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
     final progress = ref.watch(progressProvider);
     final dnaType = progress.dnaType ?? 'nature';
     final dna = ref.watch(dnaRepositoryProvider).byId(dnaType);
-    final tripQuests = progress.tripQuestsOf(regionId);
+    final journeys =
+        ref.watch(domainControllerProvider).value?.journeys ??
+        const <DomainJourney>[];
+    final selectedJourney = widget.journeyId == null
+        ? journeys
+              .where(
+                (journey) =>
+                    regionByStableKey(journey.regionKey)?.id == regionId,
+              )
+              .firstOrNull
+        : journeys
+              .where((journey) => journey.id == widget.journeyId)
+              .firstOrNull;
+    final tripQuests =
+        selectedJourney?.questKeys.toSet() ?? progress.tripQuestsOf(regionId);
     final tripStarted = tripQuests.isNotEmpty;
+    final journeyQuery = selectedJourney == null
+        ? ''
+        : '?journeyId=${selectedJourney.id}';
 
     final recommended = <Quest>[
       ...regionQuests.where((q) => q.type == dnaType).take(2),
@@ -59,22 +86,25 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: const Text('여행하기'), titleSpacing: 0),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-          child: tripStarted
-              ? OutlinedButton(
-                  onPressed: () => context.push('/region/$regionId/quests'),
-                  child: const Text('퀘스트 더 선택하기'),
-                )
-              : ElevatedButton(
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: const Text('여행하기'),
+        titleSpacing: 0,
+      ),
+      // 여행이 이미 시작된 지역은 본문 하단의 "퀘스트 더 선택하기"(journeyQuery 포함)가
+      // 그 역할을 하므로, 고정 하단 바는 시작 전 CTA에만 쓴다(과거 둘 다 떠 있던 중복 버그 수정).
+      bottomNavigationBar: tripStarted
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                child: ElevatedButton(
                   key: _selectQuestButtonKey,
                   onPressed: () => context.push('/region/$regionId/quests'),
                   child: const Text('퀘스트 선택하러 가기'),
                 ),
-        ),
-      ),
+              ),
+            ),
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -82,17 +112,13 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
+                // 지역 대표 이미지(TourAPI) — 없으면 기존 안내 placeholder
+                // ([045-quest-region-images]).
+                AppNetworkImage(
+                  url: region.imageUrl,
                   height: 140,
-                  decoration: BoxDecoration(
-                    color: AppColors.imagePlaceholderBg,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    '${region.name} 이미지',
-                    style: const TextStyle(color: AppColors.formPlaceholder),
-                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  placeholderText: '${region.name} 이미지',
                 ),
                 const SizedBox(height: 14),
                 Container(
@@ -161,7 +187,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   for (final (index, questId) in tripQuests.toList().indexed)
                     if (questRepo.byId(questId) case final quest?)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: 16),
                         child: _TripQuestTile(
                           key: index == 0 ? _firstTripQuestKey : null,
                           quest: quest,
@@ -169,10 +195,17 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                           done: progress.isCompleted(quest.id),
                           onTap: () => progress.isCompleted(quest.id)
                               ? context.push('/quest/${quest.id}')
-                              : context.push('/quest/${quest.id}/verify'),
+                              : context.push(
+                                  '/quest/${quest.id}/verify$journeyQuery',
+                                ),
                         ),
                       ),
                   const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () =>
+                        context.push('/region/$regionId/quests$journeyQuery'),
+                    child: const Text('퀘스트 더 선택하기'),
+                  ),
                 ] else ...[
                   const Text(
                     '추천 퀘스트',
@@ -181,7 +214,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   const SizedBox(height: 10),
                   for (final quest in recommended)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: 16),
                       child: _RecommendedQuestTile(
                         quest: quest,
                         regionName: region.name,
@@ -265,61 +298,99 @@ class _TripQuestTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+    final typeStyle = questTypeStyles[quest.type];
+    final tagColors = questTypeIconColors[quest.type];
+    final regionColor = mapFillColors(quest.region, 1);
+
+    return SizedBox(
+      height: questCardHeight,
       child: Container(
-        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.imagePlaceholderBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    quest.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _MiniBadge(
-                        label: regionName,
-                        background: AppColors.tripActiveBadgeBg,
-                        foreground: AppColors.tripActiveBadgeFg,
-                      ),
-                      const SizedBox(width: 4),
-                      _MiniBadge(
-                        label: questTypeStyles[quest.type]?.label ?? quest.type,
-                        background: AppColors.tripMutedBadgeBg,
-                        foreground: AppColors.tripMutedBadgeFg,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              done ? Icons.check_circle : Icons.chevron_right,
-              color: done ? AppColors.primaryDark : AppColors.timelineDotGrey,
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            onTap: onTap,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  // 관광지 썸네일(TourAPI) — 없으면 기존 유형 이모지 placeholder
+                  // ([045-quest-region-images]).
+                  child: AspectRatio(
+                    aspectRatio: 4 / 3,
+                    child: AppNetworkImage(
+                      url: quest.imageUrl,
+                      placeholderEmoji: typeStyle?.emoji ?? '📍',
+                      placeholderEmojiSize: 32,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          quest.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _MiniBadge(
+                              label: regionName,
+                              background: regionColor.background,
+                              foreground: regionColor.label,
+                            ),
+                            if (tagColors != null && typeStyle != null) ...[
+                              const SizedBox(width: 6),
+                              _MiniBadge(
+                                label: typeStyle.label,
+                                background: tagColors.background,
+                                foreground: tagColors.foreground,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 14),
+                  child: Center(
+                    child: Icon(
+                      done ? Icons.check_circle : Icons.chevron_right,
+                      color: done
+                          ? AppColors.primaryDark
+                          : AppColors.timelineDotGrey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -339,57 +410,88 @@ class _RecommendedQuestTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+    final typeStyle = questTypeStyles[quest.type];
+    final tagColors = questTypeIconColors[quest.type];
+    final regionColor = mapFillColors(quest.region, 1);
+
+    return SizedBox(
+      height: questCardHeight,
       child: Container(
-        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.imagePlaceholderBg,
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    quest.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _MiniBadge(
-                        label: regionName,
-                        background: AppColors.tripActiveBadgeBg,
-                        foreground: AppColors.tripActiveBadgeFg,
-                      ),
-                      const SizedBox(width: 4),
-                      _MiniBadge(
-                        label: questTypeStyles[quest.type]?.label ?? quest.type,
-                        background: AppColors.tripMutedBadgeBg,
-                        foreground: AppColors.tripMutedBadgeFg,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            onTap: onTap,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                  ),
+                  // 관광지 썸네일(TourAPI) — 없으면 기존 유형 이모지 placeholder
+                  // ([045-quest-region-images]).
+                  child: AspectRatio(
+                    aspectRatio: 4 / 3,
+                    child: AppNetworkImage(
+                      url: quest.imageUrl,
+                      placeholderEmoji: typeStyle?.emoji ?? '📍',
+                      placeholderEmojiSize: 32,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          quest.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _MiniBadge(
+                              label: regionName,
+                              background: regionColor.background,
+                              foreground: regionColor.label,
+                            ),
+                            if (tagColors != null && typeStyle != null) ...[
+                              const SizedBox(width: 6),
+                              _MiniBadge(
+                                label: typeStyle.label,
+                                background: tagColors.background,
+                                foreground: tagColors.foreground,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -4,10 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../data/models/region.dart';
+import '../../data/repositories/domain_repository.dart';
 import '../../data/static/quests_data.dart';
 import '../../data/static/regions_data.dart';
+import '../../state/domain_controller.dart';
 import '../../state/progress_notifier.dart';
-import '../../state/progress_state.dart';
 
 /// 여행 목록 — 진행 중인 여행(여행 시작함, 선택한 퀘스트 중 미완료 있음) / 지난 여행(선택한 퀘스트 전부 완료)
 /// ([Figma] 여행 목록 화면, 2026-07-09 "여행 시작하기" 도입으로 지역 진행도 기준에서 변경).
@@ -17,20 +18,15 @@ class TravelListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final progress = ref.watch(progressProvider);
-
-    final inProgress = <Region>[];
-    final past = <Region>[];
-    for (final region in kRegionsInMapOrder) {
-      switch (progress.tripStatusOf(region.id)) {
-        case RegionTripStatus.notStarted:
-          break;
-        case RegionTripStatus.inProgress:
-          inProgress.add(region);
-        case RegionTripStatus.completed:
-          past.add(region);
-      }
-    }
+    final journeys =
+        ref.watch(domainControllerProvider).value?.journeys ??
+        const <DomainJourney>[];
+    final inProgress = journeys
+        .where((journey) => journey.status != 'completed')
+        .toList();
+    final past = journeys
+        .where((journey) => journey.status == 'completed')
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -55,19 +51,30 @@ class TravelListScreen extends ConsumerWidget {
               children: [
                 if (inProgress.isNotEmpty) ...[
                   const _SectionHeader('진행중인 여행'),
-                  for (final region in inProgress)
-                    _TripCard(region: region, isActive: true),
+                  for (final journey in inProgress)
+                    _journeyCard(journey, isActive: true),
                   const SizedBox(height: 12),
                 ],
                 if (past.isNotEmpty) ...[
                   const _SectionHeader('지난 여행'),
-                  for (final region in past)
-                    _TripCard(region: region, isActive: false),
+                  for (final journey in past)
+                    _journeyCard(journey, isActive: false),
                 ],
               ],
             ),
     );
   }
+}
+
+Widget _journeyCard(DomainJourney journey, {required bool isActive}) {
+  final region = regionByStableKey(journey.regionKey);
+  if (region == null) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Text('여행 지역 정보를 불러오지 못했어요.'),
+    );
+  }
+  return _TripCard(journey: journey, region: region, isActive: isActive);
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -92,16 +99,20 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _TripCard extends ConsumerWidget {
-  const _TripCard({required this.region, required this.isActive});
+  const _TripCard({
+    required this.journey,
+    required this.region,
+    required this.isActive,
+  });
 
+  final DomainJourney journey;
   final Region region;
   final bool isActive;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = ref.watch(progressProvider);
-    final trip = progress.tripQuestsOf(region.id);
-    final tripInfo = progress.tripInfoOf(region.id);
+    final trip = journey.questKeys;
     final total = trip.length;
     final done = trip.where(progress.isCompleted).length;
     final dominantType = dominantTypeForRegion(region.id);
@@ -110,7 +121,8 @@ class _TripCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
-        onTap: () => context.push('/region/${region.id}'),
+        onTap: () =>
+            context.push('/region/${region.id}?journeyId=${journey.id}'),
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(14),
@@ -123,17 +135,16 @@ class _TripCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                // 여행 시작 시 입력한 이름 우선, 없으면(과거 데이터) 지역명 기반 기본값.
-                tripInfo?.name ?? tripTitleFor(region),
+                journey.title ?? tripTitleFor(region),
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              if (tripInfo != null) ...[
+              if (journey.startDate != null && journey.endDate != null) ...[
                 const SizedBox(height: 2),
                 Text(
-                  tripInfo.periodLabel,
+                  _periodLabel(journey.startDate!, journey.endDate!),
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.timelineDateText,
@@ -177,6 +188,13 @@ class _TripCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _periodLabel(DateTime start, DateTime end) {
+    String md(DateTime value) =>
+        '${value.month.toString().padLeft(2, '0')}.'
+        '${value.day.toString().padLeft(2, '0')}';
+    return '${start.year}.${md(start)} ~ ${md(end)}';
   }
 }
 

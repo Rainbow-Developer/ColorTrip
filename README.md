@@ -10,7 +10,7 @@
 
 <!-- 사용자/도메인 관점의 핵심 기능. 상세 동작은 각 기능 스펙의 description.md를 SOT로 둔다. -->
 - **여행 퀘스트·지도 색칠**: 카카오로 시작 → 여행 DNA 진단(초기 설문) → 시·군별 퀘스트를 사진·GPS·OX퀴즈로 인증 → 완료할수록 지도가 진하게 칠해짐. 타임라인·공유 카드로 기록. (상세: [docs/specs/000-frontend-app/description.md](docs/specs/000-frontend-app/description.md))
-- **Kakao 인증·회원**: Kakao 로그인으로 user를 만들고 JWT로 보호 API를 호출한다. 탈퇴 후 7일 이내 동일 Kakao 계정 재로그인은 복구하고, 이후에는 기존 계정을 익명화한 뒤 새 user를 만든다. (상세: [docs/specs/005-auth-member/description.md](docs/specs/005-auth-member/description.md))
+- **Kakao 인증·회원**: Kakao access token의 발급 앱을 검증하고 JWT·프로필·버전 동의·즉시 익명화 탈퇴를 제공한다. Flutter는 Kakao SDK·secure storage 세션·서버 온보딩 상태를 연결한다. (상세: [docs/specs/035-kakao-auth-integration/](docs/specs/035-kakao-auth-integration/))
 - **여행 DNA별 퀘스트**: 설문으로 파악한 여행 성향(자연탐험·미식·역사문화·액티비티·힐링 5종)에 맞춰 충북 11개 시·군의 퀘스트를 추천
 - **GPS·사진 기반 퀘스트 인증**: 퀘스트 완료 시 GPS로 현재 위치를 확인하고, 사진 인증으로 실제 방문 여부를 검증
 - **지도 색칠 / 방문 기록 시각화**: 퀘스트를 완료한 지역을 지도에 색칠하고, 방문 깊이에 따라 색의 채도가 진해지는 수집형 경험
@@ -19,7 +19,7 @@
 ### 🏗️ 아키텍처 특징
 
 - **모노레포**: backend(Python)와 frontend(Flutter)를 한 저장소에서 관리
-- **프론트엔드 단독 구동(현재)**: 백엔드 연동 전까지 프론트엔드는 정적 데이터 + 메모리 상태로 동작(Repository 인터페이스로 후속 API 교체 seam 확보). 자세한 결정은 [docs/specs/000-frontend-app/plan.md](docs/specs/000-frontend-app/plan.md).
+- **인증·도메인 상태의 서버 단일 출처**: Flutter는 서버의 `onboarding_step`에 따라 회원정보·여행 DNA·홈을 라우팅하고, 인증 토큰은 secure storage에 보관한다. 여행·퀘스트·지도·타임라인은 서버 스냅샷으로 복원하며 기존 `ProgressState`는 화면 호환 projection으로만 사용한다. (상세: [040 서버 영속화](docs/specs/040-domain-state-persistence/))
 
 ## 요구사항
 
@@ -66,12 +66,17 @@ LOG_LEVEL=           # 선택: DEBUG/INFO/WARNING/ERROR/CRITICAL (미설정 시 
 # 외부 API 키
 TOUR_API_KEY=        # 한국관광공사 TourAPI
 NAVER_API_KEY=       # Naver 지도/지역 API
-KAKAO_API_KEY=       # Kakao 로그인
+GEMINI_API_KEY=      # 사진 AI 인증(Gemini) — 비우면 local/test는 스텁 판정, 그 외는 인증 거부 (docs/specs/050-quest-verification)
+GEMINI_MODEL=        # 선택: 기본 gemini-2.5-flash
+QR_SECRET_KEY=       # QR 인증 서명 키 — 비우면 JWT_SECRET_KEY에서 파생
 
 # 인증
 JWT_SECRET_KEY=      # JWT(Access/Refresh) 서명 키
 KAKAO_REST_API_KEY=  # Kakao REST API 키
 KAKAO_REDIRECT_URI=  # Kakao authorization code 교환용 redirect URI
+KAKAO_APP_ID=        # Kakao access token 발급 앱 검증용 숫자 ID
+KAKAO_TOKEN_INFO_URL= # Kakao access token 검증 URL
+KAKAO_CLIENT_SECRET= # client secret 활성화 시 authorization code 교환용
 
 # 업로드 (퀘스트 인증 사진)
 GCS_UPLOAD_BUCKET=   # 설정 시 GCS 사용(운영), 미설정 시 로컬 디스크(개발·테스트)
@@ -96,7 +101,7 @@ flutter run -d chrome       # 웹(빠른 확인용)
 ```
 
 - **용도**: 다채로울지도 앱 구동. iOS/Android 실행은 각 플랫폼 툴체인(Xcode/Android SDK) 필요. 빠른 확인은 웹(Chrome)으로 가능.
-- **Flutter SDK 미설치 환경(Docker)**: iOS/Android 툴체인 없이 웹 빌드·테스트만 필요할 때 사용합니다.
+- **Flutter SDK 미설치 환경(Docker)**: 컨테이너 이미지(cirruslabs/flutter)에 Android SDK가 포함되어 웹 빌드·테스트뿐 아니라 **APK 빌드**도 가능합니다.
   ```bash
   cd frontend
   docker compose run --rm frontend flutter analyze
@@ -104,6 +109,7 @@ flutter run -d chrome       # 웹(빠른 확인용)
   docker compose run --rm frontend flutter build web
   docker compose run --rm --service-ports frontend flutter run -d web-server --web-hostname=0.0.0.0 --web-port=5000
   ```
+- **앱을 직접 켜보려면**: 에뮬레이터·Mac·내 핸드폰별 실행/설치 절차와 데모 팁·문제 해결은 **[docs/app-run-guide.md](docs/app-run-guide.md)** 를 보세요. FE 툴체인 상세는 [frontend/README.md](frontend/README.md).
 
 ## 프로젝트 구조
 
@@ -165,14 +171,18 @@ flowchart TD
 | **퀘스트·인증** | 지역별·상세·인증(사진/GPS/OX퀴즈), 유형별 전체 목록(보조) | `frontend/lib/features/quests/` |
 | **타임라인·프로필·공유** | 완료 기록·마이·내정보수정·공유 카드 | `frontend/lib/features/timeline/`, `frontend/lib/features/profile/` |
 | **도메인 데이터·상태** | 지역·퀘스트·DNA·설문 정적 데이터, 전역 상태 | `frontend/lib/data/`, `frontend/lib/state/` |
-| **인증·회원(Auth/Member)** | Kakao 로그인·JWT·내 정보·탈퇴/복구 | `backend/app/auth/` · 스펙 [docs/specs/005-auth-member/](docs/specs/005-auth-member/) |
+| **인증·회원(Auth/Member)** | Kakao 앱 소유권 검증·JWT·프로필/동의·즉시 익명화 탈퇴 | `backend/app/auth/` · 스펙 [docs/specs/035-kakao-auth-integration/](docs/specs/035-kakao-auth-integration/) |
 | **여행 DNA(Travel DNA)** | 여행 성향 질문·선택지 조회, 답변 제출 및 DNA 판정 | `backend/app/trip_dna/` · 스펙 [docs/specs/010-travel-dna/](docs/specs/010-travel-dna/) |
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
-| **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) | `backend/app/maps/` |
+| **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) — 채색 기준: 완료 여행 수 | `backend/app/maps/` · 스펙 [docs/specs/055-journey-map-coloring/](docs/specs/055-journey-map-coloring/) |
+| **홈 추천(home)** | DNA 기반 지역 추천 + 퀘스트 요약 (`GET /home/recommendation`) | `backend/app/home/`, `frontend/lib/features/home/` · 스펙 [docs/specs/040-home-region-recommendation/](docs/specs/040-home-region-recommendation/) |
 | **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈)·완료 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
+| **퀘스트 인증 3종** | 사진 AI(Gemini)·온디바이스 위치·QR 인증 | `backend/app/verifications/`, `backend/app/integrations/vision/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/050-quest-verification/](docs/specs/050-quest-verification/) |
+| **퀘스트·지역 이미지** | TourAPI 이미지 표시·정적 데이터 보강 | `backend/scripts/enrich_frontend_quests.py`, `frontend/lib/core/widgets/app_network_image.dart` · 스펙 [docs/specs/045-quest-region-images/](docs/specs/045-quest-region-images/) |
 | **DB/데이터 모델 기반** | 여행 DNA 설문·퀘스트 진행·지도 진행·타임라인 기록을 위한 백엔드 데이터 모델 | `backend/app/auth/`, `backend/app/quests/`, `backend/app/progress/`, `backend/app/timeline/`, `backend/app/trip_dna/`, `backend/alembic/` · 스펙 [docs/specs/015-database-migration/](docs/specs/015-database-migration/) |
 | **백엔드 공통 로깅** | JSON 앱 로그, 요청 메타데이터 로깅, request id 전파 | `backend/app/core/` · 스펙 [docs/specs/020-backend-logging/](docs/specs/020-backend-logging/) |
+| **도메인 상태 영속화(KAN-55)** | 여행·퀘스트 완료·지도·타임라인을 서버 SOT로 연결하고 앱 재시작 시 복원 | 계획 [docs/specs/040-domain-state-persistence/](docs/specs/040-domain-state-persistence/) |
 
 > 위 표는 기능이 **어디 있는지**를 가리킵니다. 개별 기능의 **상세 설명**은 이 README에 중복해 적지 않고, 해당 기능 스펙의 `description.md`를 단일 출처(SOT)로 둡니다. 지도 색칠·공유 등은 별도 도메인으로 진행 예정이며, 스펙이 만들어지면 이 표에 추가합니다.
 
@@ -201,9 +211,13 @@ flowchart TD
 | `go_router` | `^17.3.0` | 라우팅 |
 | `flutter_riverpod` | `^3.3.2` | 상태관리(전역·서버) |
 | `flutter_localizations` | Flutter SDK | Material 위젯 한국어화(날짜 피커 등) |
-| `dio` | `^5.9.2` | HTTP 클라이언트(현재 설정만) |
+| `dio` | `^5.9.2` | HTTP 클라이언트 |
 | `flutter_form_builder` · `form_builder_validators` | `^10.3.0` · `^11.3.0` | 폼 |
 | `flutter_secure_storage` | `^10.3.1` | 토큰 저장(인증 연동 시) |
+| `image_picker` | `^1.2.3` | 사진 인증(갤러리·카메라) |
+| `cached_network_image` | `^3.4.1` | 퀘스트·지역 이미지(TourAPI) 캐시 표시 |
+| `geolocator` | `^14.0.2` | 위치 인증 — 온디바이스 거리 계산(좌표 비전송) |
+| `mobile_scanner` | `^7.0.1` | QR 인증 스캔 |
 
 ## 코드 스타일
 

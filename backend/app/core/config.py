@@ -4,8 +4,9 @@
 """
 
 from typing import Self
+from urllib.parse import urlparse
 
-from pydantic import model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_JWT_SECRET_KEY = "change-me-in-production-32-byte-minimum"
@@ -26,7 +27,9 @@ class Settings(BaseSettings):
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 14
     kakao_token_url: str = "https://kauth.kakao.com/oauth/token"
+    kakao_token_info_url: str = "https://kapi.kakao.com/v1/user/access_token_info"
     kakao_user_info_url: str = "https://kapi.kakao.com/v2/user/me"
+    kakao_app_id: int = Field(gt=0)
     kakao_rest_api_key: str = ""
     kakao_redirect_uri: str = ""
     kakao_client_secret: str | None = None
@@ -34,6 +37,15 @@ class Settings(BaseSettings):
     # 한국관광공사 TourAPI
     tour_api_key: str = ""
     tour_api_base_url: str = "https://apis.data.go.kr/B551011/KorService2"
+
+    # 사진 AI 인증 비전 판정 — docs/specs/050-quest-verification/
+    # 키 미설정 시 스텁 판정(항상 통과 + "AI 미설정" 사유)으로 동작한다.
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_base_url: str = "https://generativelanguage.googleapis.com"
+
+    # QR 인증 페이로드 서명 키 — 미설정 시 JWT_SECRET_KEY에서 파생한다.
+    qr_secret_key: str = ""
 
     # 업로드(인증 사진) — docs/specs/010-journey/
     gcs_upload_bucket: str = ""  # 설정 시 GCS 사용(운영 기본), 미설정 시 로컬 디스크
@@ -47,6 +59,15 @@ class Settings(BaseSettings):
     @property
     def cors_allowed_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
+
+    @field_validator("kakao_token_info_url")
+    @classmethod
+    def validate_kakao_token_info_url(cls, value: str) -> str:
+        normalized = value.strip()
+        parsed = urlparse(normalized)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("KAKAO_TOKEN_INFO_URL must be a valid HTTP(S) URL.")
+        return normalized
 
     @model_validator(mode="after")
     def validate_non_local_security(self) -> Self:
@@ -79,4 +100,4 @@ class Settings(BaseSettings):
         return self
 
 
-settings = Settings()
+settings = Settings()  # pyright: ignore[reportCallIssue]  # values may come from environment

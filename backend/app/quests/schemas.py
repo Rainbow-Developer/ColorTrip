@@ -15,6 +15,7 @@ class QuestListItem(BaseModel):
 
     id: UUID
     region_id: UUID
+    client_key: str | None
     title: str
     category: Category
     mission_type: MissionType
@@ -57,12 +58,15 @@ class QuestStartRequest(BaseModel):
 
 class QuestVerifyRequest(BaseModel):
     journey_id: UUID | None = None
-    # gps_photo
+    # gps / gps_photo
     lat: Decimal | None = None
     lng: Decimal | None = None
+    # photo / gps_photo
     photo_url: str | None = None
     # quiz
     answer: str | None = None
+    # qr — 현장 QR 스캔 페이로드 (docs/specs/050-quest-verification/)
+    qr_payload: str | None = None
 
 
 class ProgressItem(BaseModel):

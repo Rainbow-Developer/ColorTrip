@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, String
+from sqlalchemy import DateTime, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.base import Base, TimestampMixin, UUIDPKMixin, now_kst
@@ -22,7 +22,14 @@ class TimelineEvent(UUIDPKMixin, TimestampMixin, Base):
     """
 
     __tablename__ = "timelines"
-    __table_args__ = (Index("ix_timelines_user_occurred", "user_id", "occurred_at"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "quest_progress_id",
+            "event_type",
+            name="uq_timelines_quest_progress_id_event_type",
+        ),
+        Index("ix_timelines_user_occurred", "user_id", "occurred_at"),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     region_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("regions.id"), nullable=True)

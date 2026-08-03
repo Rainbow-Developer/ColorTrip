@@ -1,17 +1,71 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Dio 클라이언트 — 설정만 해두고 실제 API 호출은 하지 않는다(백엔드 연동 전, [plan.md] 비목표).
-/// 후속 연동 시 Repository 구현체가 이 인스턴스를 사용해 실제 엔드포인트를 호출한다.
+import '../../data/auth/kakao_auth_gateway.dart';
+import '../../data/auth/secure_token_storage.dart';
+import '../config/app_config.dart';
+import 'auth_session_interceptor.dart';
+
+final appConfigProvider = Provider<AppConfig>(
+  (ref) => throw UnimplementedError('main.dart must provide AppConfig.'),
+);
+
+final sessionExpiredCallbackProvider = Provider<void Function()>(
+  (ref) => () {},
+);
+
+final onboardingRequiredCallbackProvider = Provider<void Function()>(
+  (ref) => () {},
+);
+
+final kakaoAuthGatewayProvider = Provider<KakaoAuthGateway>(
+  (ref) => const KakaoSdkAuthGateway(),
+);
+
+final secureTokenStorageProvider = Provider<SecureTokenStorage>(
+  (ref) => JsonSecureTokenStorage(
+    FlutterSecureKeyValueStore(
+      FlutterSecureStorage(
+        aOptions: AndroidOptions(resetOnError: true),
+        iOptions: IOSOptions(
+          accessibility: KeychainAccessibility.first_unlock_this_device,
+        ),
+      ),
+    ),
+  ),
+);
+
 final dioProvider = Provider<Dio>((ref) {
-  return Dio(
+  final config = ref.watch(appConfigProvider);
+  final storage = ref.watch(secureTokenStorageProvider);
+  final dio = Dio(
     BaseOptions(
-      baseUrl: 'http://localhost:8000/api/v1',
+      baseUrl: config.apiBaseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
-      headers: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTlmNTVkMS1iMTMyLTc2YjItOWE0Mi02OTM0YzU2NGJiNWEiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzg1MzMwOTIxLCJleHAiOjE3ODU5MzU3MjF9.zQxaDz9upLqDzeaWgfJOEiEFh1z4blK2eALvkx7WXkA',
-      },
     ),
   );
+  final refreshDio = Dio(
+    BaseOptions(
+      baseUrl: config.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    ),
+  );
+  dio.interceptors.add(
+    AuthSessionInterceptor(
+      client: dio,
+      refreshClient: refreshDio,
+      storage: storage,
+      onSessionExpired: () => ref.read(sessionExpiredCallbackProvider)(),
+      onOnboardingRequired: () =>
+          ref.read(onboardingRequiredCallbackProvider)(),
+    ),
+  );
+  ref.onDispose(() {
+    dio.close(force: true);
+    refreshDio.close(force: true);
+  });
+  return dio;
 });
