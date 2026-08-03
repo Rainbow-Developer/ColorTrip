@@ -17,6 +17,7 @@ from app.auth.models import RefreshToken, User, UserConsent  # noqa: F401
 from app.core.base import Base
 from app.core.config import settings
 from app.journeys.models import Journey, JourneyQuest  # noqa: F401
+from app.open_api.models import OpenApiKey  # noqa: F401
 from app.progress.models import MapProgress  # noqa: F401
 from app.quests.models import Quest, QuestProgress  # noqa: F401
 from app.regions.models import Region  # noqa: F401

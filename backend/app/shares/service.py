@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -76,12 +78,35 @@ async def get_user_share_summary_data(session: AsyncSession, user: User) -> Shar
     )
 
 
+async def _representative_region_id(session: AsyncSession, user_id: uuid.UUID) -> uuid.UUID | None:
+    """공유 생성 시점에 완료 퀘스트 수가 가장 많은 지역("대표 지역")을 찾는다.
+
+    지자체 오픈 API의 지역별 공유 통계가 이 값을 근거로 집계한다
+    (docs/specs/070-municipal-open-api).
+    """
+    stmt = (
+        select(MapProgress.region_id)
+        .where(
+            MapProgress.user_id == user_id,
+            MapProgress.completed_count > 0,
+            MapProgress.deleted_at.is_(None),
+        )
+        .order_by(MapProgress.completed_count.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def create_share_card(
     session: AsyncSession, user: User, req: ShareCreateRequest
 ) -> ShareCreateResponse:
     """공유 숏코드 및 공유 카드 정보를 생성합니다."""
     repo = repository.ShareRepository()
-    share = await repo.create(session, user_id=user.id, share_style=req.share_style.value)
+    region_id = await _representative_region_id(session, user.id)
+    share = await repo.create(
+        session, user_id=user.id, share_style=req.share_style.value, region_id=region_id
+    )
     await session.commit()
 
     share_url = f"https://colortrip.app/share/{share.share_code}"

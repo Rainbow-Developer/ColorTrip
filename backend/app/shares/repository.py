@@ -23,7 +23,13 @@ class ShareRepository:
         # 예외 상황 대비 UUID 변환 코드
         return uuid.uuid4().hex[:8]
 
-    async def create(self, session: AsyncSession, user_id: uuid.UUID, share_style: str) -> Share:
+    async def create(
+        self,
+        session: AsyncSession,
+        user_id: uuid.UUID,
+        share_style: str,
+        region_id: uuid.UUID | None = None,
+    ) -> Share:
         """새 공유 숏코드 및 카드를 생성하고 영속화합니다."""
         for _ in range(10):
             share_code = await self._generate_unique_share_code(session)
@@ -33,6 +39,7 @@ class ShareRepository:
                         user_id=user_id,
                         share_code=share_code,
                         share_style=share_style,
+                        region_id=region_id,
                     )
                     session.add(db_obj)
                     await session.flush()

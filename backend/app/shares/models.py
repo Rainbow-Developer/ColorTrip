@@ -25,4 +25,9 @@ class Share(UUIDPKMixin, TimestampMixin, Base):
     share_code: Mapped[str] = mapped_column(String(16), unique=True)
     share_style: Mapped[str] = mapped_column(String(20))  # MAP_AND_DNA / MAP / DNA
 
+    # 공유 생성 시점에 사용자의 완료 퀘스트 수가 가장 많은 지역("대표 지역")을 스냅샷으로
+    # 저장한다 — 지자체 오픈 API의 지역별 공유 통계가 이 값을 근거로 집계한다
+    # (docs/specs/070-municipal-open-api). 색칠 지역이 아예 없으면 None.
+    region_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("regions.id"))
+
     user: Mapped[User] = relationship()

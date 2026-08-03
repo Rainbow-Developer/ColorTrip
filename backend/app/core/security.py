@@ -61,3 +61,18 @@ def hash_refresh_token(token: str) -> str:
         hashlib.sha256,
     )
     return digest.hexdigest()
+
+
+def generate_open_api_key() -> str:
+    """지자체 등에 발급하는 오픈 API 서비스키 원문을 생성한다."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_open_api_key(key: str) -> str:
+    """서비스키 원문을 해시로 변환 — DB에는 이 값만 저장한다(refresh token과 동일한 방식)."""
+    digest = hmac.new(
+        settings.jwt_secret_key.encode(),
+        key.encode(),
+        hashlib.sha256,
+    )
+    return digest.hexdigest()
