@@ -26,7 +26,7 @@
 - **Python**: 3.13 ([docs/conventions/backend.md](docs/conventions/backend.md))
 - **Flutter / Dart**: Flutter 3.44+ / Dart 3.12+
 - **패키지 매니저**: 백엔드 — uv / 프론트엔드 — pub
-- 외부 키: 현재 프론트엔드 단독 구동에는 불필요(카카오 로그인 스텁·정적 데이터). 후속 연동 시 [인증·보안](docs/conventions/auth-security.md)·[외부 API](docs/conventions/external-apis.md) 컨벤션 참고.
+- 외부 키: 실제 로그인·서버 추천·여정 동기화에는 Kakao Native App Key와 백엔드 설정이 필요하다. API 없이 화면만 확인할 때는 정적 카탈로그를 사용할 수 있다. 설정은 [인증·보안](docs/conventions/auth-security.md)·[외부 API](docs/conventions/external-apis.md) 컨벤션을 따른다.
 - **관광 공공데이터 기반**: 한국관광공사 TourAPI로 관광지·행사·운영정보를 받아 퀘스트로 가공 ([docs/conventions/external-apis.md](docs/conventions/external-apis.md))
 - **외부 의존**: PostgreSQL · 한국관광공사 TourAPI 키 · Naver API 키 · Kakao 로그인 키 ([external-apis](docs/conventions/external-apis.md) · [auth-security](docs/conventions/auth-security.md))
 
@@ -126,7 +126,7 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 │   │   ├── main.dart        # 진입점 (ProviderScope)
 │   │   ├── app/             # MaterialApp.router·GoRouter 라우트(app_shell 탭바 포함)·테마(디자인 토큰)
 │   │   ├── core/            # Dio 클라이언트(설정)·공용 위젯(ChungbukMap·토스트·배지·필터칩)
-│   │   ├── data/            # 모델·정적 데이터(static/)·Repository(정적/Auth 스텁)
+│   │   ├── data/            # 모델·정적 카탈로그·서버 Repository
 │   │   ├── state/           # 전역 상태(Riverpod)·진행도 Notifier
 │   │   └── features/        # 화면 단위: onboarding·survey·home·travel·quests·timeline·profile
 │   ├── Dockerfile / docker-compose.yml  # Flutter SDK 미설치 환경 보조용
@@ -170,13 +170,13 @@ flowchart TD
 | **여행 목록** | 진행중/지난 여행(지역 단위) 목록 | `frontend/lib/features/travel/` |
 | **퀘스트·인증** | 지역별·상세·인증(사진/GPS/OX퀴즈), 유형별 전체 목록(보조) | `frontend/lib/features/quests/` |
 | **타임라인·프로필·공유** | 완료 기록·마이·내정보수정·공유 카드 | `frontend/lib/features/timeline/`, `frontend/lib/features/profile/` |
-| **도메인 데이터·상태** | 지역·퀘스트·DNA·설문 정적 데이터, 전역 상태 | `frontend/lib/data/`, `frontend/lib/state/` |
+| **도메인 데이터·상태** | 지역·퀘스트 정적 카탈로그와 서버 스냅샷·추천 상태 | `frontend/lib/data/`, `frontend/lib/state/` |
 | **인증·회원(Auth/Member)** | Kakao 앱 소유권 검증·JWT·프로필/동의·즉시 익명화 탈퇴 | `backend/app/auth/` · 스펙 [docs/specs/035-kakao-auth-integration/](docs/specs/035-kakao-auth-integration/) |
 | **여행 DNA(Travel DNA)** | 여행 성향 질문·선택지 조회, 답변 제출 및 DNA 판정 | `backend/app/trip_dna/` · 스펙 [docs/specs/010-travel-dna/](docs/specs/010-travel-dna/) |
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
 | **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) — 채색 기준: 완료 여행 수 | `backend/app/maps/` · 스펙 [docs/specs/055-journey-map-coloring/](docs/specs/055-journey-map-coloring/) |
-| **홈 추천(home)** | DNA 기반 지역 추천 + 퀘스트 요약 (`GET /home/recommendation`) | `backend/app/home/`, `frontend/lib/features/home/` · 스펙 [docs/specs/040-home-region-recommendation/](docs/specs/040-home-region-recommendation/) |
+| **홈·퀘스트 추천** | 미시작 지역과 DNA 기반 미완료 퀘스트 추천 (`GET /regions/unvisited`, `GET /quests/recommended`) | `backend/app/regions/`, `backend/app/quests/`, `frontend/lib/features/home/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/045-quest-recommendation-api/](docs/specs/045-quest-recommendation-api/) |
 | **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈)·완료 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
 | **퀘스트 인증 3종** | 사진 AI(Gemini)·온디바이스 위치·QR 인증 | `backend/app/verifications/`, `backend/app/integrations/vision/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/050-quest-verification/](docs/specs/050-quest-verification/) |
 | **퀘스트·지역 이미지** | TourAPI 이미지 표시·정적 데이터 보강 | `backend/scripts/enrich_frontend_quests.py`, `frontend/lib/core/widgets/app_network_image.dart` · 스펙 [docs/specs/045-quest-region-images/](docs/specs/045-quest-region-images/) |

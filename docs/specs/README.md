@@ -34,6 +34,7 @@ docs/specs/
 | [030-share-card](030-share-card/) | 여행 공유 카드 API |
 | [035-kakao-auth-integration](035-kakao-auth-integration/) | Kakao Flutter SDK·JWT·온보딩·탈퇴 통합 인증 |
 | [040-home-region-recommendation](040-home-region-recommendation/) | 홈 DNA 지역 추천 + 퀘스트 요약 |
+| [045-quest-recommendation-api](045-quest-recommendation-api/) | 서버 기반 미시작 지역·퀘스트 추천 API |
 | [045-quest-region-images](045-quest-region-images/) | 퀘스트·지역 이미지(TourAPI) |
 | [050-quest-verification](050-quest-verification/) | 퀘스트 인증 3종(사진 AI·위치·QR) + 위치정보법 검토 |
 | [055-journey-map-coloring](055-journey-map-coloring/) | 지도 채색 기준 전환(완료 여행 수) |
