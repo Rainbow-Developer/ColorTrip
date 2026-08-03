@@ -55,6 +55,7 @@ dependencies:
   # QR 인증 스캔 (docs/specs/050-quest-verification)
   mobile_scanner: ^7.0.1
   share_plus: ^13.3.0
+  calendar_date_picker2: ^1.1.6
 
 dev_dependencies:
   flutter_test:

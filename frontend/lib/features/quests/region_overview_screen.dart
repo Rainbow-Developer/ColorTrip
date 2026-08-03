@@ -108,7 +108,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -200,12 +200,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                                 ),
                         ),
                       ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () =>
-                        context.push('/region/$regionId/quests$journeyQuery'),
-                    child: const Text('퀘스트 더 선택하기'),
-                  ),
+                  // The duplicate '퀘스트 더 선택하기' button was removed from here.
                 ] else ...[
                   const Text(
                     '추천 퀘스트',
@@ -224,6 +219,40 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   const SizedBox(height: 24),
                 ],
               ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withOpacity(0),
+                    Colors.white,
+                    Colors.white,
+                  ],
+                  stops: const [0.0, 0.3, 1.0],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                  child: tripStarted
+                      ? OutlinedButton(
+                          onPressed: () => context.push('/region/$regionId/quests$journeyQuery'),
+                          child: const Text('퀘스트 더 선택하기'),
+                        )
+                      : ElevatedButton(
+                          key: _selectQuestButtonKey,
+                          onPressed: () => context.push('/region/$regionId/quests'),
+                          child: const Text('퀘스트 선택하러 가기'),
+                        ),
+                ),
+              ),
             ),
           ),
           if (!tour.isDone && tour.step == 1 && !tripStarted)
