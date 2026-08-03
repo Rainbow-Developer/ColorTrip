@@ -200,12 +200,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                                 ),
                         ),
                       ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () =>
-                        context.push('/region/$regionId/quests$journeyQuery'),
-                    child: const Text('퀘스트 더 선택하기'),
-                  ),
+                  // The duplicate '퀘스트 더 선택하기' button was removed from here.
                 ] else ...[
                   const Text(
                     '추천 퀘스트',
@@ -248,7 +243,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                   child: tripStarted
                       ? OutlinedButton(
-                          onPressed: () => context.push('/region/$regionId/quests'),
+                          onPressed: () => context.push('/region/$regionId/quests$journeyQuery'),
                           child: const Text('퀘스트 더 선택하기'),
                         )
                       : ElevatedButton(
