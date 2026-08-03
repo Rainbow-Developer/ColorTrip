@@ -6,7 +6,7 @@
 
 ## 동작 방식
 
-1. 지역 개요는 `GET /quests/recommended?region_id=...&size=2`로 DNA 일치 미완료 퀘스트를 받는다.
+1. 홈 추천 카드와 지역 개요는 `GET /quests/recommended?region_id=...&size=3`으로 동일한 DNA 일치 미완료 퀘스트를 받는다.
 2. 홈은 `GET /regions/unvisited`로 여정 미생성 지역을 받고 첫 결과를 추천한다.
 3. 여정 생성·수정·퀘스트 완료 뒤 KAN-55 도메인 상태 갱신이 추천 Provider를 다시 조회한다.
 

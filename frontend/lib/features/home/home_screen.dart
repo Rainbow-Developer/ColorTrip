@@ -7,7 +7,6 @@ import '../../core/constants.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/map_legend.dart';
-import '../../data/models/quest.dart';
 import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../data/static/regions_data.dart';
@@ -296,113 +295,118 @@ class _RecommendedRegionBanner extends ConsumerWidget {
             ref.watch(currentUserProvider)?.dna ??
             ref.watch(progressProvider).dnaType ??
             'nature';
-        final content = _BannerContent(
-          regionId: region.id,
-          regionName: region.name,
-          dnaId: dnaId,
-          questLabel: recommendation.matchingQuestCount > 0
-              ? '${questTypeStyles[dnaId]?.label ?? dnaId} 퀘스트 ${recommendation.matchingQuestCount}개가 기다리고 있어요'
-              : '퀘스트 ${recommendation.availableQuestCount}개가 기다리고 있어요',
-          quests: _staticQuestSummary(
-            ref.watch(questRepositoryProvider).byRegion(region.id),
-            dnaId,
-          ),
+        final recommendedQuestKeys = ref.watch(
+          recommendedQuestKeysProvider(recommendation.regionKey),
         );
-
-        final dna = ref.watch(dnaRepositoryProvider).byId(content.dnaId);
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: InkWell(
-            onTap: () => context.push('/region/${content.regionId}'),
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: dna.gradient,
-                ),
-                borderRadius: BorderRadius.circular(14),
+        return recommendedQuestKeys.when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: OutlinedButton.icon(
+              onPressed: () => ref.invalidate(
+                recommendedQuestKeysProvider(recommendation.regionKey),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${dna.icon} ${dna.name}를 위한 추천 여행지',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              content.regionName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              content.questLabel,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ],
-                  ),
-                  if (content.quests.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    for (final quest in content.quests)
-                      _QuestSummaryRow(quest: quest),
-                  ],
-                ],
-              ),
+              icon: const Icon(Icons.refresh),
+              label: const Text('추천 퀘스트 다시 시도'),
             ),
           ),
+          data: (keys) {
+            final questRepo = ref.watch(questRepositoryProvider);
+            final content = _BannerContent(
+              regionId: region.id,
+              regionName: region.name,
+              dnaId: dnaId,
+              questLabel: recommendation.matchingQuestCount > 0
+                  ? '${questTypeStyles[dnaId]?.label ?? dnaId} 퀘스트 ${recommendation.matchingQuestCount}개가 기다리고 있어요'
+                  : '퀘스트 ${recommendation.availableQuestCount}개가 기다리고 있어요',
+              quests: [
+                for (final key in keys.take(_questSummaryMax))
+                  if (questRepo.byId(key) case final quest?)
+                    _QuestSummary(
+                      title: quest.title,
+                      type: quest.type,
+                      thumbnailUrl: quest.imageUrl,
+                    ),
+              ],
+            );
+            final dna = ref.watch(dnaRepositoryProvider).byId(content.dnaId);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: InkWell(
+                onTap: () => context.push('/region/${content.regionId}'),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: dna.gradient,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${dna.icon} ${dna.name}를 위한 추천 여행지',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  content.regionName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  content.questLabel,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        ],
+                      ),
+                      if (content.quests.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        for (final quest in content.quests)
+                          _QuestSummaryRow(quest: quest),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
-  }
-
-  /// 정적 퀘스트에서 요약 상위 [_questSummaryMax]개 — DNA 일치 우선, 같은 구간에서는
-  /// 썸네일 보유 우선([040-home-region-recommendation] 요구사항). List.sort는 불안정
-  /// 정렬이라 순서가 흔들리지 않게 구간 결합으로 뽑는다.
-  List<_QuestSummary> _staticQuestSummary(List<Quest> quests, String dnaId) {
-    bool hasThumbnail(Quest q) => q.imageUrl?.isNotEmpty ?? false;
-    final ordered = [
-      ...quests.where((q) => q.type == dnaId && hasThumbnail(q)),
-      ...quests.where((q) => q.type == dnaId && !hasThumbnail(q)),
-      ...quests.where((q) => q.type != dnaId && hasThumbnail(q)),
-      ...quests.where((q) => q.type != dnaId && !hasThumbnail(q)),
-    ];
-    return [
-      for (final quest in ordered.take(_questSummaryMax))
-        _QuestSummary(
-          title: quest.title,
-          type: quest.type,
-          thumbnailUrl: quest.imageUrl,
-        ),
-    ];
   }
 }
 

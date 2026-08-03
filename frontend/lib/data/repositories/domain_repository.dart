@@ -103,7 +103,7 @@ abstract class DomainRepository {
 
   Future<List<String>> fetchRecommendedQuestKeys({
     required String regionKey,
-    int size = 2,
+    int size = 3,
   });
 
   Future<DomainJourney> createJourney({
@@ -185,7 +185,7 @@ class DioDomainRepository implements DomainRepository {
   @override
   Future<List<String>> fetchRecommendedQuestKeys({
     required String regionKey,
-    int size = 2,
+    int size = 3,
   }) async {
     final catalog = await _loadCatalog();
     final response = await _dio.get(

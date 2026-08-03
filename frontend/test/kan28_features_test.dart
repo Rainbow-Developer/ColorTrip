@@ -58,8 +58,8 @@ class _DomainRepository implements DomainRepository {
   @override
   Future<List<String>> fetchRecommendedQuestKeys({
     required String regionKey,
-    int size = 2,
-  }) async => const ['dy1'];
+    int size = 3,
+  }) async => const ['dy4', 'dy3', 'dy2'];
 
   @override
   Future<DomainJourney> createJourney({
@@ -171,21 +171,11 @@ void main() {
     expect(find.text('단양군'), findsWidgets);
     expect(find.text('자연탐험 퀘스트 3개가 기다리고 있어요'), findsOneWidget);
 
-    // 정적 폴백에서도 추천 지역의 퀘스트 요약 3개가 함께 보인다 — DNA 일치 우선, 같은
-    // 구간에서는 썸네일 보유 우선(배너와 같은 순서로 기대값을 계산한다, [040]).
-    bool hasThumbnail(Quest q) => q.imageUrl?.isNotEmpty ?? false;
-    final regionQuests = questsByRegion('danyang');
-    final ordered = [
-      ...regionQuests.where((q) => q.type == 'nature' && hasThumbnail(q)),
-      ...regionQuests.where((q) => q.type == 'nature' && !hasThumbnail(q)),
-      ...regionQuests.where((q) => q.type != 'nature' && hasThumbnail(q)),
-      ...regionQuests.where((q) => q.type != 'nature' && !hasThumbnail(q)),
-    ];
-    final summary = ordered.take(3).toList();
-    expect(summary.length, 3);
-    for (final quest in summary) {
-      expect(find.text(quest.title), findsWidgets, reason: quest.id);
-    }
+    // 서버가 반환한 순서와 퀘스트를 그대로 카드에 표시한다.
+    Quest questById(String id) => kQuests.firstWhere((quest) => quest.id == id);
+    expect(find.text(questById('dy4').title), findsWidgets);
+    expect(find.text(questById('dy3').title), findsWidgets);
+    expect(find.text(questById('dy2').title), findsWidgets);
   });
 
   testWidgets('여행 시작하기 시 이름·날짜 입력 시트를 거쳐 여행이 등록된다', (tester) async {
