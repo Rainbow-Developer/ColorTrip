@@ -7,10 +7,10 @@
 | 영역 | backend |
 | 작성자 | Claude (AI) |
 | 작성일 | 2026-08-03 |
-| 상태 | 계획 |
+| 상태 | 완료 |
 
 ## 배경 / 목적
-* 지자체(시·군청 등)에 다채로울지도의 관광 활동 데이터를 통계 형태로 제공한다.
+* 지자체(시·군청 등)에 다채로운 관광 활동 데이터를 통계 형태로 제공한다.
 * 이 앱이 지금 한국관광공사 TourAPI를 **소비**하는 입장(`backend/app/integrations/tour_api/`)인 것처럼, 이번엔 반대로 우리가 **제공자**가 되어 같은 스타일(서비스키 기반 오픈 API, 지역 선택 조회)로 데이터를 내준다.
 * 개인 식별 정보는 노출하지 않는다 — 이 앱은 회원 탈퇴 시 즉시 익명화하는 정책([auth-security.md](../../conventions/auth-security.md))을 쓸 만큼 개인정보에 민감하므로, 지자체 API는 처음부터 **집계·통계** 형태로만 설계한다.
 
@@ -50,7 +50,7 @@
 * `region_slug`는 기존 `regions.slug`(예: `danyang`)를 그대로 쓴다 — 지역 목록은 이미 공개인 `GET /api/v1/regions`를 그대로 안내하면 되므로 별도 엔드포인트를 만들지 않는다.
 * `months`(선택, 기본 6): 월별 추이·방문 통계 집계 기간.
 
-**응답 스키마 초안**:
+**응답 스키마**(구현된 최종 스키마 — `RegionStatsResponse`):
 ```json
 {
   "region": { "id": "...", "name": "단양군", "slug": "danyang" },
@@ -58,14 +58,16 @@
   "popular_spots": [{"quest_id": "...", "title": "온달산성 전설 OX 퀴즈", "completed_count": 88}],
   "dna_distribution": {"nature": 0.32, "food": 0.18, "history": 0.21, "activity": 0.15, "healing": 0.14},
   "journey_completion": {"started": 340, "completed": 210, "completion_rate": 0.62, "avg_days_to_complete": 3.4},
-  "verification_method_breakdown": {"photo": 0.7, "gps": 0.15, "quiz": 0.1, "qr": 0.05},
-  "monthly_trend": [{"month": "2026-07", "count": 210}],
+  "verification_method_breakdown": {"photo": 0.6, "gps_photo": 0.25, "gps": 0.05, "quiz": 0.07, "qr": 0.03},
   "share_stats": {"total_shares": 45, "by_style": {"MAP_AND_DNA": 20, "MAP": 15, "DNA": 10}}
 }
 ```
-(`visit_stats.monthly`와 `monthly_trend`는 사실상 같은 데이터라 최종 스키마에서는 하나로 합칠 수 있음 — 구현 단계에서 정리)
+월별 추이는 `visit_stats.monthly` 하나뿐이다(중복 필드 없음). `verification_method_breakdown`의 키는
+`quests.mission_type`의 실제 값(`photo`/`gps`/`gps_photo`/`quiz`/`qr`)을 그대로 쓴다 — TourAPI로 생성된
+퀘스트 165개는 기본값이 `gps_photo`라 실제 데이터에서 이 키가 가장 큰 비중을 차지한다.
 
 **집계 근거 테이블**:
+
 | 통계 | 근거 테이블 |
 |------|------|
 | 방문 인증·월별 추이 | `quest_progress`(status=completed) + `quests.region_id` |
@@ -73,7 +75,7 @@
 | DNA 분포 | `quest_progress`로 해당 지역 방문자 user_id 추출 → `users.dna` 집계 |
 | 여정 완주 통계 | `journeys`(status, start_date, completed_at) |
 | 인증 방식별 참여율 | `quest_progress` × `quests.mission_type` |
-| 공유 통계 | `shares`(region 연결이 없어 사용자의 대표 지역 산정 필요 — 의사결정 참고) |
+| 공유 통계 | `shares.region_id`(공유 생성 시점에 완료 퀘스트 수가 가장 많은 지역을 스냅샷 저장) |
 
 ## 의사결정 (함께 논의 · 근거 필수)
 
@@ -83,7 +85,7 @@
 | 키 저장 방식 | A) `.env`에 정적 키 목록<br>B) DB 테이블(`open_api_keys`)로 발급·회수 관리 | **B 선택** — 여러 지자체에 개별 발급·회수해야 하는 실사용 시나리오라, 배포 없이 키를 추가/폐기할 수 있어야 한다. | 합의됨 |
 | 범위 | A) 일부 카테고리만 우선<br>B) 7개 전부 한 번에 | **B 선택**(사용자 결정) | 합의됨 |
 | 지역별 접근 제한 | A) 키마다 특정 지역만 허용<br>B) 키 하나로 전 지역 조회 | **B 선택**(사용자 결정 — "오픈API처럼 지역 선택하면 가져오는 형태") | 합의됨 |
-| 공유 통계의 지역 연결 | A) `Share`에 region 컬럼 추가<br>B) 사용자의 `MapProgress` 중 완료 수 최대인 지역을 "대표 지역"으로 근사 | **A 선택**(사용자 결정) — 근사치보다 정확한 데이터를 우선한다. 공유 생성 시점에 그 유저의 가장 진행률 높은 지역(또는 가장 최근 채색된 지역)을 `region_id`로 함께 저장한다(구체적 산정 기준은 공유 통계 구현 단위에서 확정). | 합의됨 |
+| 공유 통계의 지역 연결 | A) `Share`에 region 컬럼 추가<br>B) 사용자의 `MapProgress` 중 완료 수 최대인 지역을 "대표 지역"으로 근사 | **A 선택**(사용자 결정) — 근사치보다 정확한 데이터를 우선한다. 공유 생성 시점에 그 유저의 `MapProgress.completed_count`가 가장 많은 지역을 `region_id`로 함께 저장한다(`shares/service.py`의 `_representative_region_id`). | 합의됨 |
 
 ## 영향 범위
 * `backend/app/open_api/`: 신규(`models.py`, `schemas.py`, `repository.py`, `service.py`, `router.py`)
@@ -94,11 +96,12 @@
 * `backend/scripts/`: 키 발급용 CLI 스크립트(예: `issue_open_api_key.py`, `generate_dev_token.py`와 같은 패턴)
 
 ## 작업 단계
-- [ ] 1. 문서 작성 및 사용자 컨펌(공유 통계 지역 연결 방식 결정 포함)
-- [ ] 2. `open_api_keys` 테이블·마이그레이션, 키 발급 스크립트, 인증 dependency
-- [ ] 3. 쉬운 통계부터 구현: 방문 인증·월별 추이, 인기 관광지, 인증 방식별 참여율
-- [ ] 4. 나머지 통계: DNA 분포, 여정 완주 통계, 공유 통계
-- [ ] 5. 테스트(정상 조회·잘못된 키·존재하지 않는 지역) 및 문서화
+(완료됨 — 세부 진행 상황·검증 내역의 단일 출처는 [implementation.md](./implementation.md))
+- [x] 1. 문서 작성 및 사용자 컨펌(공유 통계 지역 연결 방식 결정 포함)
+- [x] 2. `open_api_keys` 테이블·마이그레이션, 키 발급 스크립트, 인증 dependency
+- [x] 3. 쉬운 통계부터 구현: 방문 인증·월별 추이, 인기 관광지, 인증 방식별 참여율
+- [x] 4. 나머지 통계: DNA 분포, 여정 완주 통계, 공유 통계
+- [x] 5. 테스트(정상 조회·잘못된 키·존재하지 않는 지역) 및 문서화
 
 ## 리스크 / 미해결 질문
 * 공유 통계의 지역 연결 방식(위 의사결분 표 참고) — 근사치로 갈지 스키마를 바꿀지 결정 필요.

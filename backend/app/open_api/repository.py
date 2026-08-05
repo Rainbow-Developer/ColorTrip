@@ -123,30 +123,25 @@ async def dna_distribution(session: AsyncSession, region_id: UUID) -> Sequence[t
 async def journey_completion_stats(
     session: AsyncSession, region_id: UUID
 ) -> tuple[int, int, float | None]:
-    """(시작 수, 완료 수, 평균 완주 소요일수)를 반환한다. 완료 건이 없으면 평균은 None."""
-    started_stmt = select(func.count(Journey.id)).where(
-        Journey.region_id == region_id, Journey.deleted_at.is_(None)
-    )
-    started = (await session.execute(started_stmt)).scalar_one()
+    """(시작 수, 완료 수, 평균 완주 소요일수)를 반환한다. 완료 건이 없으면 평균은 None.
 
-    completed_stmt = select(func.count(Journey.id)).where(
-        Journey.region_id == region_id,
-        Journey.status == JourneyStatus.COMPLETED.value,
-        Journey.deleted_at.is_(None),
-    )
-    completed = (await session.execute(completed_stmt)).scalar_one()
-
+    세 번 나눠 조회하지 않고 조건부 집계(FILTER) 하나로 묶는다 — region의 journeys를
+    3번 스캔할 필요가 없다.
+    """
+    is_completed = Journey.status == JourneyStatus.COMPLETED.value
     # Postgres의 date - date는 정수(일수)를 반환한다 — completed_at(timestamptz)을
     # date로 캐스팅해 start_date(date)와 그대로 뺄셈한다.
-    avg_days_expr = func.avg(func.date(Journey.completed_at) - Journey.start_date)
-    avg_stmt = select(avg_days_expr).where(
-        Journey.region_id == region_id,
-        Journey.status == JourneyStatus.COMPLETED.value,
-        Journey.deleted_at.is_(None),
+    avg_days_expr = func.avg(func.date(Journey.completed_at) - Journey.start_date).filter(
+        is_completed,
         Journey.start_date.is_not(None),
         Journey.completed_at.is_not(None),
     )
-    avg_days = (await session.execute(avg_stmt)).scalar_one()
+    stmt = select(
+        func.count(Journey.id),
+        func.count(Journey.id).filter(is_completed),
+        avg_days_expr,
+    ).where(Journey.region_id == region_id, Journey.deleted_at.is_(None))
+    started, completed, avg_days = (await session.execute(stmt)).one()
     return started, completed, float(avg_days) if avg_days is not None else None
 
 

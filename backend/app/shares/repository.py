@@ -43,7 +43,12 @@ class ShareRepository:
                     )
                     session.add(db_obj)
                     await session.flush()
-            except IntegrityError:
+            except IntegrityError as exc:
+                # share_code 충돌만 재시도 대상이다 — region_id의 FK 위반 등 다른 무결성
+                # 오류를 여기서 삼키면 새 share_code를 계속 만들어도 절대 해결되지 않고,
+                # 결국 무관한 "숏코드를 할당할 수 없습니다" 오류로 원인이 가려진다.
+                if getattr(exc.orig, "constraint_name", None) != "uq_shares_share_code":
+                    raise
                 continue
             return db_obj
         raise RuntimeError("Unable to allocate a unique share code")

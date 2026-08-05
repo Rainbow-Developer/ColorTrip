@@ -41,10 +41,11 @@ sequenceDiagram
   "popular_spots": [{"quest_id": "...", "title": "온달산성 전설 OX 퀴즈", "completed_count": 88}],
   "dna_distribution": {"nature": 0.32, "food": 0.18, "history": 0.21, "activity": 0.15, "healing": 0.14},
   "journey_completion": {"started": 340, "completed": 210, "completion_rate": 0.62, "avg_days_to_complete": 3.4},
-  "verification_method_breakdown": {"photo": 0.7, "gps": 0.15, "quiz": 0.1, "qr": 0.05},
+  "verification_method_breakdown": {"photo": 0.6, "gps_photo": 0.25, "gps": 0.05, "quiz": 0.07, "qr": 0.03},
   "share_stats": {"total_shares": 45, "by_style": {"MAP_AND_DNA": 20, "MAP": 15, "DNA": 10}}
 }
 ```
+키는 `quests.mission_type`의 실제 값(`photo`/`gps`/`gps_photo`/`quiz`/`qr`)을 그대로 쓴다.
 
 ## 관련 문서
 * [030-share-card](../030-share-card/) — 공유 데이터 원본

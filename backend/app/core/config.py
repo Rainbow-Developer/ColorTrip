@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     # QR 인증 페이로드 서명 키 — 미설정 시 JWT_SECRET_KEY에서 파생한다.
     qr_secret_key: str = ""
 
+    # 지자체 오픈 API 서비스키 해시 키 — 미설정 시 JWT_SECRET_KEY에서 파생한다
+    # (docs/specs/070-municipal-open-api). JWT_SECRET_KEY와 도메인을 분리해두면,
+    # 사용자 세션 관련 사고로 JWT_SECRET_KEY를 회전시켜도 이미 발급한 지자체 키가
+    # 함께 전부 무효화되지 않는다(반대 방향도 마찬가지).
+    open_api_key_secret: str = ""
+
     # 업로드(인증 사진) — docs/specs/010-journey/
     gcs_upload_bucket: str = ""  # 설정 시 GCS 사용(운영 기본), 미설정 시 로컬 디스크
     upload_dir: str = "./uploads"  # 로컬 스토리지 경로(개발·테스트)
