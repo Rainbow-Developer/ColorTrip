@@ -17,6 +17,9 @@ if ! flutter devices --machine | grep -q "\"id\": \"${device_id}\""; then
   exit 1
 fi
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$script_dir/.."
+
 flutter pub get
 flutter run \
   -d "$device_id" \

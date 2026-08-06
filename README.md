@@ -96,11 +96,16 @@ docker compose up      # PostgreSQL + FastAPI(Uvicorn) 로컬 구동
 
 ```bash
 cd frontend
-flutter run                 # 연결된 기기/시뮬레이터
-flutter run -d chrome       # 웹(빠른 확인용)
+flutter run \
+  --dart-define=KAKAO_NATIVE_APP_KEY=dummy \
+  --dart-define=API_BASE_URL=http://localhost:8000/api/v1     # 연결된 기기/시뮬레이터
+flutter run -d chrome \
+  --dart-define=KAKAO_NATIVE_APP_KEY=dummy \
+  --dart-define=API_BASE_URL=http://localhost:8000/api/v1     # 웹(빠른 확인용)
 ```
 
 - **용도**: 다채로울지도 앱 구동. iOS/Android 실행은 각 플랫폼 툴체인(Xcode/Android SDK) 필요. 빠른 확인은 웹(Chrome)으로 가능.
+- `AppConfig.fromBuildEnvironment()`가 `KAKAO_NATIVE_APP_KEY`·`API_BASE_URL`을 모두 요구하므로, API 없이 정적 카탈로그로 화면만 확인할 때도 두 값을 `--dart-define`으로 넘겨야 `ConfigErrorApp`으로 전환되지 않습니다.
 - **Flutter SDK 미설치 환경(Docker)**: 컨테이너 이미지(cirruslabs/flutter)에 Android SDK가 포함되어 웹 빌드·테스트뿐 아니라 **APK 빌드**도 가능합니다.
   ```bash
   cd frontend
@@ -176,7 +181,7 @@ flowchart TD
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
 | **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) — 채색 기준: 완료 여행 수 | `backend/app/maps/` · 스펙 [docs/specs/055-journey-map-coloring/](docs/specs/055-journey-map-coloring/) |
-| **홈·퀘스트 추천** | 미시작 지역과 DNA 기반 미완료 퀘스트 추천 (`GET /regions/unvisited`, `GET /quests/recommended`) | `backend/app/regions/`, `backend/app/quests/`, `frontend/lib/features/home/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/045-quest-recommendation-api/](docs/specs/045-quest-recommendation-api/) |
+| **홈·퀘스트 추천** | 미시작 지역과 DNA 기반 미완료 퀘스트 추천 (`GET /regions/unvisited`, `GET /quests/recommended`) | `backend/app/regions/`, `backend/app/quests/`, `frontend/lib/features/home/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/060-quest-recommendation-api/](docs/specs/060-quest-recommendation-api/) |
 | **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈)·완료 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
 | **퀘스트 인증 3종** | 사진 AI(Gemini)·온디바이스 위치·QR 인증 | `backend/app/verifications/`, `backend/app/integrations/vision/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/050-quest-verification/](docs/specs/050-quest-verification/) |
 | **퀘스트·지역 이미지** | TourAPI 이미지 표시·정적 데이터 보강 | `backend/scripts/enrich_frontend_quests.py`, `frontend/lib/core/widgets/app_network_image.dart` · 스펙 [docs/specs/045-quest-region-images/](docs/specs/045-quest-region-images/) |

@@ -8,6 +8,9 @@ from uuid import UUID
 
 from httpx import AsyncClient
 
+from app.auth.models import User
+from app.core.database import AsyncSessionLocal
+from app.quests.dna import get_user_primary_category
 from app.verifications.service import sign_quest_payload
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
@@ -376,13 +379,10 @@ async def test_unvisited_regions_excludes_regions_with_a_journey(client: AsyncCl
 
     before = await client.get("/api/v1/regions/unvisited", headers=headers)
     assert before.status_code == 200
-    before_ids = [item["id"] for item in before.json()["data"]["items"]]
+    before_items = before.json()["data"]["items"]
+    before_ids = [item["id"] for item in before_items]
     assert seed["region_id"] in before_ids
-    danyang = next(
-        item
-        for item in before.json()["data"]["items"]
-        if item["id"] == seed["region_id"]
-    )
+    danyang = next(item for item in before_items if item["id"] == seed["region_id"])
     assert danyang["slug"] == "danyang"
     assert danyang["matching_quest_count"] >= 1
     assert danyang["available_quest_count"] >= danyang["matching_quest_count"]
@@ -400,16 +400,11 @@ async def test_unvisited_regions_requires_auth(client: AsyncClient) -> None:
 
 
 async def test_user_primary_category_handles_missing_dna(client: AsyncClient) -> None:
-    from app.quests.dna import get_user_primary_category
-
     await seed_quest_fixture()
     headers = await auth_headers(client, token="kakao-token-2")
-    from uuid import UUID
-
-    from app.auth.models import User
-    from app.core.database import AsyncSessionLocal
 
     me = await client.get("/api/v1/users/me", headers=headers)
+    assert me.status_code == 200
     async with AsyncSessionLocal() as session:
         user = await session.get(User, UUID(me.json()["data"]["id"]))
         assert user is not None

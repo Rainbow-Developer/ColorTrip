@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | 기능명 | 퀘스트 추천 API 연동 |
-| Spec 폴더 | `docs/specs/045-quest-recommendation-api/` |
+| Spec 폴더 | `docs/specs/060-quest-recommendation-api/` |
 | 영역 | backend / frontend |
 | 작성일 | 2026-07-31 |
 | 상태 | 완료 |
@@ -54,4 +54,7 @@ KAN-55는 인증, 여정, 완료 기록을 서버 단일 상태로 복원하지�
 
 ## 리스크 / 미해결 질문
 
-- 서버 카탈로그에 없는 안정 키는 추천 결과에서 제외한다.
+- 서버 카탈로그에 없는 안정 키(`client_key IS NULL`)는 클라이언트가 아니라
+  `backend/app/quests/repository.py`의 `list_recommended` 쿼리(및 `total` 집계)에서부터
+  제외한다 — 그렇지 않으면 Flutter가 카탈로그 필터링 후 `size`보다 적은 항목만 표시하면서도
+  다음 페이지를 추가로 요청하지 않는 페이지네이션 불일치가 생긴다.

@@ -9,7 +9,7 @@
 | 항목 | 내용 |
 |------|------|
 | 상태 | 진행 중 (U0~U4·인증·도메인 서버 연동 완료, KAN-55 실제 E2E 진행 중) |
-| 최종 업데이트 | 2026-07-28 |
+| 최종 업데이트 | 2026-08-03 |
 
 ## 코드 유실 (중요 — 2026-07-05 재구현으로 해소)
 
@@ -41,7 +41,8 @@
 - [ ] 퀘스트 선택 화면의 검색은 제목 부분 일치 필터만 구현(간단한 클라이언트 필터, 실 검색엔진 아님)
 - [ ] dev PR
 - [ ] iOS 실제 로그인·실기기 검증. Android emulator release build와 실제 Kakao E2E는 [035 구현 결과](../035-kakao-auth-integration/implementation.md)에서 통과했다.
-- [ ] 여행·퀘스트·타임라인 서버 연동 구현 완료, 실제 계정 앱 재시작 복원 E2E 확인 — [040](../040-domain-state-persistence/)
+- [x] 여행·퀘스트·타임라인 서버 연동 구현 완료 — [040](../040-domain-state-persistence/)
+- [ ] 실제 계정 앱 재시작 복원 E2E 확인 — [040](../040-domain-state-persistence/)
 - [ ] `pre-commit` 프레임워크·git 훅 설치(`uv tool install pre-commit && pre-commit install --install-hooks`) — Claude Code 자체 훅은 별개로 이미 동작 중
 
 ## 알려진 한계 / TODO
@@ -79,8 +80,8 @@
 | 2026-07-21 | 지도 색칠을 3단계(0/1/2+, 2+는 파랑 `#378ADD`)에서 **연속 채도**로 변경(KAN-44, dev 브랜치 반영분 — 이 문서에는 그동안 미기록). `ProgressState.regionSaturation(regionId)`가 그 지역 완료 퀘스트 개수를 전체 퀘스트 개수로 나눈 비율(0.0~1.0)을 반환하고, `mapFillColors`가 회색(`mapEmpty`)→진초록(`primaryDark`) 사이를 `Color.lerp`로 보간한다. 완료 개수(`ProgressState.regionProgress`)는 `ProgressNotifier.completeQuest`에서 즉시 +1(낙관적 갱신)되고, 앱 진입 시 백엔드 `GET /users/me/map`의 `completed_count`로 동기화된다(`syncRegionProgressFromServer`, [020-frontend-map-sync]) — KAN-31의 지도 API 연동과 KAN-44의 연속 채도를 이번에 재정합함. `MapLegend`도 3단계 스와치 대신 0%~100% 그라데이션 바로 변경 |
 | 2026-07-21 | `regionSaturation` 계산 기준 변경(사용자 요청) — 지역 전체 퀘스트 개수 대비 비율 대신, **완료 개수 ÷ 6(고정값)**, 6개 이상이면 100%로 클램프. 지역마다 정적 퀘스트 개수가 1~3개로 제각각이라 비율 기준으로는 퀘스트가 적은 지역만 완료 1~2개로 바로 100%가 돼버리는 문제가 있었음(테스트로 확인). 고정 기준선 6은 `ProgressState._saturationCap`. `completed_count`가 재방문(KAN-46)으로 정적 퀘스트 개수를 넘어 계속 늘 수 있다는 점과도 더 맞음 |
 | 2026-07-23 | KAN-28 브랜치와 dev 병합 정합: 홈 추천 여행지 배너를 코치마크(KAN-040)·연속 채도 지도(KAN-44) 구조의 새 홈 레이아웃(스탯 아래) 위치에 유지, 퀘스트 선택의 "여행 시작하기/퀘스트 추가하기" 버튼(KAN-42·46)이 새 여행일 때만 이름·기간 입력 시트(KAN-28)를 거치도록 `_startTrip`으로 연결(이미 시작·완료된 지역은 시트 없이 추가). 참고: KAN-44의 채도 기준선(`_saturationCap`=6) 논의 당시 지역별 퀘스트가 1~3개였으나 현재는 TourAPI 확장으로 지역당 20개 |
+| 2026-07-27 | Kakao SDK·JWT·서버 온보딩·secure storage·Android 실제 E2E가 035에서 완료되어 초기 UI 스텁 설명과 플랫폼 검증 상태를 현재 범위에 맞게 정리 |
+| 2026-07-28 | KAN-55에서 stable catalog·여정/퀘스트/지도/타임라인 서버 snapshot·사진 업로드·실제 GPS 위치를 Flutter에 연결. 실제 계정 재시작 복원 E2E는 진행 중 |
 | 2026-07-31 | KAN-59 추천 서버 연동: 홈은 `GET /regions/unvisited`의 첫 후보를 표시하고, 로딩 시 숨김·오류 시 재시도를 제공한다. 여행 시작 전 지역 개요는 `GET /quests/recommended?region_id=…&size=3` 결과를 기존 `client_key` 상세 라우트로 연결한다. 여정 생성/수정/완료 뒤 KAN-55의 서버 스냅샷 갱신에 종속해 추천도 재조회한다. |
 | 2026-07-31 | Android emulator E2E 회귀 수정: 추천 조회는 전체 페이지 수집기가 아니라 `size=3` 단일 응답을 사용한다. 따라서 각 화면에는 서버 추천 3건만 표시되고 추가 페이지 요청이 발생하지 않는다. |
 | 2026-08-03 | 홈 추천 카드의 퀘스트도 지역 개요와 동일한 `/quests/recommended` 결과를 사용하도록 통일했다. 두 화면 모두 `size=3`으로 조회한다. |
-| 2026-07-27 | Kakao SDK·JWT·서버 온보딩·secure storage·Android 실제 E2E가 035에서 완료되어 초기 UI 스텁 설명과 플랫폼 검증 상태를 현재 범위에 맞게 정리 |
-| 2026-07-28 | KAN-55에서 stable catalog·여정/퀘스트/지도/타임라인 서버 snapshot·사진 업로드·실제 GPS 위치를 Flutter에 연결. 실제 계정 재시작 복원 E2E는 진행 중 |

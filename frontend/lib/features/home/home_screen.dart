@@ -286,11 +286,14 @@ class _RecommendedRegionBanner extends ConsumerWidget {
       ),
       data: (items) {
         if (items.isEmpty) return const SizedBox.shrink();
-        final recommendation = items.first;
-        final region = ref
-            .watch(regionRepositoryProvider)
-            .byId(recommendation.regionKey);
-        if (region == null) return const SizedBox.shrink();
+        final regionRepo = ref.watch(regionRepositoryProvider);
+        final resolved = [
+          for (final item in items)
+            if (regionRepo.byId(item.regionKey) case final region?)
+              (item, region),
+        ].firstOrNull;
+        if (resolved == null) return const SizedBox.shrink();
+        final (recommendation, region) = resolved;
         final dnaId =
             ref.watch(currentUserProvider)?.dna ??
             ref.watch(progressProvider).dnaType ??
@@ -312,12 +315,13 @@ class _RecommendedRegionBanner extends ConsumerWidget {
           ),
           data: (keys) {
             final questRepo = ref.watch(questRepositoryProvider);
+            final dna = ref.watch(dnaRepositoryProvider).byId(dnaId);
             final content = _BannerContent(
               regionId: region.id,
               regionName: region.name,
               dnaId: dnaId,
               questLabel: recommendation.matchingQuestCount > 0
-                  ? '${questTypeStyles[dnaId]?.label ?? dnaId} 퀘스트 ${recommendation.matchingQuestCount}개가 기다리고 있어요'
+                  ? '${questTypeStyles[dna.id]?.label ?? dna.id} 퀘스트 ${recommendation.matchingQuestCount}개가 기다리고 있어요'
                   : '퀘스트 ${recommendation.availableQuestCount}개가 기다리고 있어요',
               quests: [
                 for (final key in keys.take(_questSummaryMax))
@@ -329,7 +333,6 @@ class _RecommendedRegionBanner extends ConsumerWidget {
                     ),
               ],
             );
-            final dna = ref.watch(dnaRepositoryProvider).byId(content.dnaId);
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),

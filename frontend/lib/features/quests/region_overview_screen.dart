@@ -8,7 +8,8 @@ import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../data/models/quest.dart';
-import '../../data/repositories/domain_repository.dart';
+import '../../data/repositories/domain_repository.dart'
+    show DomainJourney, kRecommendedQuestSize;
 import '../../data/static/regions_data.dart';
 import '../../state/domain_controller.dart';
 import '../../state/domain_recommendation_providers.dart';
@@ -206,29 +207,34 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   const SizedBox(height: 10),
-                  recommendedQuestKeys!.when(
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, _) => TextButton(
-                      onPressed: () => ref.invalidate(
-                        recommendedQuestKeysProvider(regionId),
-                      ),
-                      child: const Text('추천 퀘스트 다시 시도'),
-                    ),
-                    data: (keys) => Column(
-                      children: [
-                        for (final questKey in keys)
-                          if (questRepo.byId(questKey) case final quest?)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: _RecommendedQuestTile(
-                                quest: quest,
-                                regionName: region.name,
-                                onTap: () => context.push('/quest/${quest.id}'),
-                              ),
-                            ),
-                      ],
-                    ),
-                  ),
+                  recommendedQuestKeys?.when(
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, _) => TextButton(
+                          onPressed: () => ref.invalidate(
+                            recommendedQuestKeysProvider(regionId),
+                          ),
+                          child: const Text('추천 퀘스트 다시 시도'),
+                        ),
+                        data: (keys) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final questKey in keys.take(
+                              kRecommendedQuestSize,
+                            ))
+                              if (questRepo.byId(questKey) case final quest?)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: _RecommendedQuestTile(
+                                    quest: quest,
+                                    regionName: region.name,
+                                    onTap: () =>
+                                        context.push('/quest/${quest.id}'),
+                                  ),
+                                ),
+                          ],
+                        ),
+                      ) ??
+                      const SizedBox.shrink(),
                   const SizedBox(height: 24),
                 ],
               ],

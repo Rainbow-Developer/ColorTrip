@@ -2,6 +2,10 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+/// 추천 퀘스트를 요청·표시할 때 쓰는 기본 개수 — API 요청과 화면 표시 상한이 어긋나지
+/// 않도록 하나의 값으로 공유한다.
+const kRecommendedQuestSize = 3;
+
 class DomainCatalog {
   const DomainCatalog({
     required this.regionIdsByKey,
@@ -103,7 +107,7 @@ abstract class DomainRepository {
 
   Future<List<String>> fetchRecommendedQuestKeys({
     required String regionKey,
-    int size = 3,
+    int size = kRecommendedQuestSize,
   });
 
   Future<DomainJourney> createJourney({
@@ -185,7 +189,7 @@ class DioDomainRepository implements DomainRepository {
   @override
   Future<List<String>> fetchRecommendedQuestKeys({
     required String regionKey,
-    int size = 3,
+    int size = kRecommendedQuestSize,
   }) async {
     final catalog = await _loadCatalog();
     final response = await _dio.get(

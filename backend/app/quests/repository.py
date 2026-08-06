@@ -68,6 +68,7 @@ async def list_recommended(
     """
     filters: list[ColumnElement[bool]] = [
         Quest.deleted_at.is_(None),
+        Quest.client_key.is_not(None),
         ~_completed_by_user(user_id),
     ]
     if region_id is not None:
