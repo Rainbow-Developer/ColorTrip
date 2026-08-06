@@ -21,7 +21,7 @@
 
 ## 예시
 
-`GET /api/v1/regions/unvisited`는 `matching_quest_count`가 가장 높은 지역부터 반환한다. 지역 개요는 해당 지역의 `client_key`를 기존 퀘스트 상세 라우트에 전달한다.
+`GET /api/v1/regions/unvisited`는 `matching_quest_count`가 가장 높은 지역부터 반환한다. 지역 개요는 `GET /api/v1/quests/recommended`로 받은 **추천 퀘스트의 `client_key`** 를 기존 퀘스트 상세 라우트에 전달한다. 지역 라우팅은 `client_key`가 아니라 정적 카탈로그의 지역 키를 쓴다 — `/regions/unvisited` 응답의 `id`(서버 UUID)를 `regionKey`로 변환해 사용한다.
 
 ## 관련 문서
 

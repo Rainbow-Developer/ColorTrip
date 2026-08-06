@@ -96,16 +96,17 @@ docker compose up      # PostgreSQL + FastAPI(Uvicorn) 로컬 구동
 
 ```bash
 cd frontend
-flutter run \
-  --dart-define=KAKAO_NATIVE_APP_KEY=dummy \
-  --dart-define=API_BASE_URL=http://localhost:8000/api/v1     # 연결된 기기/시뮬레이터
 flutter run -d chrome \
   --dart-define=KAKAO_NATIVE_APP_KEY=dummy \
-  --dart-define=API_BASE_URL=http://localhost:8000/api/v1     # 웹(빠른 확인용)
+  --dart-define=API_BASE_URL=http://localhost:8000/api/v1     # 웹·iOS 시뮬레이터
+flutter run \
+  --dart-define=KAKAO_NATIVE_APP_KEY=dummy \
+  --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1      # Android 에뮬레이터
 ```
 
 - **용도**: 다채로울지도 앱 구동. iOS/Android 실행은 각 플랫폼 툴체인(Xcode/Android SDK) 필요. 빠른 확인은 웹(Chrome)으로 가능.
 - `AppConfig.fromBuildEnvironment()`가 `KAKAO_NATIVE_APP_KEY`·`API_BASE_URL`을 모두 요구하므로, API 없이 정적 카탈로그로 화면만 확인할 때도 두 값을 `--dart-define`으로 넘겨야 `ConfigErrorApp`으로 전환되지 않습니다.
+- **`API_BASE_URL`은 실행 대상에 따라 다릅니다**: 웹·iOS 시뮬레이터는 호스트와 네트워크를 공유하므로 `http://localhost:8000/api/v1`, Android 에뮬레이터는 `localhost`가 에뮬레이터 자신을 가리키므로 호스트 별칭인 `http://10.0.2.2:8000/api/v1`(`frontend/scripts/run_android_e2e.sh`의 기본값과 동일), 실기기는 호스트의 LAN 주소(`http://<호스트IP>:8000/api/v1`)를 사용합니다.
 - **Flutter SDK 미설치 환경(Docker)**: 컨테이너 이미지(cirruslabs/flutter)에 Android SDK가 포함되어 웹 빌드·테스트뿐 아니라 **APK 빌드**도 가능합니다.
   ```bash
   cd frontend

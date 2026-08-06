@@ -54,7 +54,16 @@ KAN-55는 인증, 여정, 완료 기록을 서버 단일 상태로 복원하지�
 
 ## 리스크 / 미해결 질문
 
-- 서버 카탈로그에 없는 안정 키(`client_key IS NULL`)는 클라이언트가 아니라
+- **안정 키가 없는 퀘스트(`client_key IS NULL`)** 는 클라이언트가 아니라
   `backend/app/quests/repository.py`의 `list_recommended` 쿼리(및 `total` 집계)에서부터
   제외한다 — 그렇지 않으면 Flutter가 카탈로그 필터링 후 `size`보다 적은 항목만 표시하면서도
   다음 페이지를 추가로 요청하지 않는 페이지네이션 불일치가 생긴다.
+- 이 서버 필터가 성립하는 근거는 **"`client_key`가 비-null인 퀘스트는 Flutter 정적 카탈로그에도
+  반드시 존재한다"** 는 불변식이다. 두 카탈로그(마이그레이션 스냅샷 220건 ↔
+  `frontend/lib/data/static/quests_data.dart` 220건)가 정확히 일치하는지는
+  `backend/tests/test_domain_catalog_contract.py::test_server_snapshot_matches_all_flutter_quest_keys`가
+  강제한다.
+- 따라서 `DioDomainRepository.fetchRecommendedQuestKeys`의
+  `catalog.questIdsByKey.containsKey` 필터는 정상 경로에서 아무것도 걸러내지 않는 **방어 장치**다.
+  이 필터가 실제로 항목을 제거한다면 위 불변식이 깨진 것(스냅샷 밖에서 생성된 퀘스트 등)이므로,
+  클라이언트에서 보정할 게 아니라 카탈로그 동기화를 고쳐야 한다.
