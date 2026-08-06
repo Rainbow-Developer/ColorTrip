@@ -30,6 +30,7 @@ DomainSnapshot _snapshot({bool completed = true}) => DomainSnapshot(
   ],
   completedQuestKeys: completed ? {'dy1'} : {},
   regionProgress: {'danyang': completed ? 1 : 0},
+  regionTripCount: {'danyang': completed ? 1 : 0},
   timeline: completed
       ? [
           DomainTimelineEntry(
@@ -201,6 +202,7 @@ void main() {
       ],
       completedQuestKeys: repository.snapshot.completedQuestKeys,
       regionProgress: repository.snapshot.regionProgress,
+      regionTripCount: repository.snapshot.regionTripCount,
       timeline: repository.snapshot.timeline,
     );
     final container = ProviderContainer(

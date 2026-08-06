@@ -30,6 +30,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- 공유 랜딩 페이지("앱에서 열기")용 커스텀 스킴 — 앱을 실행만 시키고,
+                 이후 화면 분기는 기존 로그인 상태 기반 라우팅(authRedirect)에 맡긴다
+                 (060-share-native-experience, 공유 코드를 앱 내부로 전달하는 라우팅은 비목표). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="colortrip" android:host="share" />
+            </intent-filter>
         </activity>
         <activity
             android:name="com.kakao.sdk.flutter.auth.AuthCodeHandlerActivity"

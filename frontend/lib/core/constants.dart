@@ -59,9 +59,8 @@ class AppColors {
   static const verifyMapBg = Color(0xFFF0F0EA);
   static const verifyProgressTrack = Color(0xFFEEEEEA);
 
-  // 공유 카드 만들기(Figma) — 지도 미리보기 카드 배경/텍스트.
+  // 공유 카드 만들기(Figma) — 지도 미리보기 카드 배경.
   static const shareMapPreviewBg = Color(0xFFE0EDD8);
-  static const shareMapPreviewText = Color(0xFF7AAA6A);
 
   // 퀘스트 선택(Figma) — 선택된 퀘스트 카드 배경.
   static const questSelectedBg = Color(0xFFC8E2C0);

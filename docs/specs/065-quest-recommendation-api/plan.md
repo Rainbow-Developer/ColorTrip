@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | 기능명 | 퀘스트 추천 API 연동 |
-| Spec 폴더 | `docs/specs/060-quest-recommendation-api/` |
+| Spec 폴더 | `docs/specs/065-quest-recommendation-api/` |
 | 영역 | backend / frontend |
 | 작성일 | 2026-07-31 |
 | 상태 | 완료 |

@@ -39,6 +39,7 @@ class _DomainRepository implements DomainRepository {
     journeys: [],
     completedQuestKeys: {},
     regionProgress: {},
+    regionTripCount: {},
     timeline: [],
   );
 
@@ -85,6 +86,7 @@ class _DomainRepository implements DomainRepository {
       journeys: [journey],
       completedQuestKeys: const {},
       regionProgress: const {},
+      regionTripCount: const {},
       timeline: const [],
     );
     return journey;

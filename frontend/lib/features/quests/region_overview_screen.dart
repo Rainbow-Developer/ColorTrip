@@ -85,25 +85,24 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
         title: const Text('여행하기'),
         titleSpacing: 0,
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-          child: tripStarted
-              ? OutlinedButton(
-                  onPressed: () => context.push('/region/$regionId/quests'),
-                  child: const Text('퀘스트 더 선택하기'),
-                )
-              : ElevatedButton(
+      // 여행이 이미 시작된 지역은 본문 하단의 "퀘스트 더 선택하기"(journeyQuery 포함)가
+      // 그 역할을 하므로, 고정 하단 바는 시작 전 CTA에만 쓴다(과거 둘 다 떠 있던 중복 버그 수정).
+      bottomNavigationBar: tripStarted
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                child: ElevatedButton(
                   key: _selectQuestButtonKey,
                   onPressed: () => context.push('/region/$regionId/quests'),
                   child: const Text('퀘스트 선택하러 가기'),
                 ),
-        ),
-      ),
+              ),
+            ),
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -195,12 +194,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                                 ),
                         ),
                       ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () =>
-                        context.push('/region/$regionId/quests$journeyQuery'),
-                    child: const Text('퀘스트 더 선택하기'),
-                  ),
+                  // The duplicate '퀘스트 더 선택하기' button was removed from here.
                 ] else ...[
                   const Text(
                     '추천 퀘스트',
@@ -238,6 +232,40 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   const SizedBox(height: 24),
                 ],
               ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withOpacity(0),
+                    Colors.white,
+                    Colors.white,
+                  ],
+                  stops: const [0.0, 0.3, 1.0],
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                  child: tripStarted
+                      ? OutlinedButton(
+                          onPressed: () => context.push('/region/$regionId/quests$journeyQuery'),
+                          child: const Text('퀘스트 더 선택하기'),
+                        )
+                      : ElevatedButton(
+                          key: _selectQuestButtonKey,
+                          onPressed: () => context.push('/region/$regionId/quests'),
+                          child: const Text('퀘스트 선택하러 가기'),
+                        ),
+                ),
+              ),
             ),
           ),
           if (!tour.isDone && tour.step == 1 && !tripStarted)
