@@ -8,6 +8,10 @@ from uuid import UUID
 
 from httpx import AsyncClient
 
+from app.auth.models import User
+from app.core.database import AsyncSessionLocal
+from app.quests.dna import get_user_primary_category
+from app.quests.models import Quest
 from app.verifications.service import sign_quest_payload
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
@@ -349,3 +353,118 @@ async def test_recommended_excludes_completed_and_sorts_by_category(
 async def test_recommended_requires_auth(client: AsyncClient) -> None:
     response = await client.get("/api/v1/quests/recommended")
     assert response.status_code == 401
+
+
+async def test_recommended_uses_saved_user_dna_when_category_is_omitted(
+    client: AsyncClient,
+) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.get(
+        "/api/v1/quests/recommended",
+        params={"region_id": seed["region_id"]},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["applied_category"] == "nature"
+    gps_quest = next(item for item in data["items"] if item["id"] == seed["gps_quest_id"])
+    assert gps_quest["is_dna_match"] is True
+
+
+async def test_unvisited_regions_excludes_regions_with_a_journey(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    before = await client.get("/api/v1/regions/unvisited", headers=headers)
+    assert before.status_code == 200
+    before_items = before.json()["data"]["items"]
+    before_ids = [item["id"] for item in before_items]
+    assert seed["region_id"] in before_ids
+    danyang = next(item for item in before_items if item["id"] == seed["region_id"])
+    assert danyang["slug"] == "danyang"
+    assert danyang["matching_quest_count"] >= 1
+    assert danyang["available_quest_count"] >= danyang["matching_quest_count"]
+
+    await _create_journey(client, headers, seed["region_id"], [seed["gps_quest_id"]])
+
+    after = await client.get("/api/v1/regions/unvisited", headers=headers)
+    assert after.status_code == 200
+    after_ids = [item["id"] for item in after.json()["data"]["items"]]
+    assert seed["region_id"] not in after_ids
+
+
+async def test_unvisited_regions_requires_auth(client: AsyncClient) -> None:
+    assert (await client.get("/api/v1/regions/unvisited")).status_code == 401
+
+
+async def test_user_primary_category_handles_missing_dna(client: AsyncClient) -> None:
+    await seed_quest_fixture()
+    headers = await auth_headers(client, token="kakao-token-2")
+
+    me = await client.get("/api/v1/users/me", headers=headers)
+    assert me.status_code == 200
+    async with AsyncSessionLocal() as session:
+        user = await session.get(User, UUID(me.json()["data"]["id"]))
+        assert user is not None
+        user.dna = None
+        await session.commit()
+        assert await get_user_primary_category(session, user.id) is None
+
+
+async def test_recommendations_exclude_quests_without_a_client_key(
+    client: AsyncClient,
+) -> None:
+    """안정 키 없는 퀘스트는 추천 결과·집계·total에서 모두 빠진다.
+
+    Flutter는 정적 카탈로그에 없는 키를 표시할 수 없으므로, 서버가 이런 퀘스트를 내려주면
+    화면에는 size보다 적게 뜨는데 페이지네이션 메타데이터는 그렇지 않다고 말하게 된다
+    ([065-quest-recommendation-api] 리스크).
+    """
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    region_id = seed["region_id"]
+
+    params = {"region_id": region_id, "size": 100}
+    before = await client.get("/api/v1/quests/recommended", params=params, headers=headers)
+    assert before.status_code == 200
+    before_total = before.json()["data"]["total"]
+
+    unvisited_before = await client.get("/api/v1/regions/unvisited", headers=headers)
+    assert unvisited_before.status_code == 200
+    danyang_before = next(
+        item
+        for item in unvisited_before.json()["data"]["items"]
+        if item["id"] == region_id
+    )
+
+    # TourAPI 등 카탈로그 밖에서 유입된 안정 키 없는 퀘스트를 같은 지역에 심는다.
+    async with AsyncSessionLocal() as session:
+        session.add(
+            Quest(
+                region_id=UUID(region_id),
+                client_key=None,
+                title="안정 키 없는 레거시 퀘스트",
+                category="nature",
+                mission_type="photo",
+            )
+        )
+        await session.commit()
+
+    after = await client.get("/api/v1/quests/recommended", params=params, headers=headers)
+    assert after.status_code == 200
+    after_data = after.json()["data"]
+    assert after_data["total"] == before_total
+    assert all(item["client_key"] is not None for item in after_data["items"])
+
+    unvisited_after = await client.get("/api/v1/regions/unvisited", headers=headers)
+    assert unvisited_after.status_code == 200
+    danyang_after = next(
+        item
+        for item in unvisited_after.json()["data"]["items"]
+        if item["id"] == region_id
+    )
+    assert danyang_after["available_quest_count"] == danyang_before["available_quest_count"]
+    assert danyang_after["matching_quest_count"] == danyang_before["matching_quest_count"]

@@ -23,8 +23,8 @@ flowchart LR
     D --> E[("journeys + journey_quests")]
 ```
 
-- 추천은 룰 기반: 사용자 DNA의 대표 카테고리와 같은 카테고리 퀘스트를 앞에 정렬한다.
-  DNA 도메인이 아직 없으므로 `get_user_primary_category` seam이 `None`을 반환하면
+- 추천은 룰 기반: `users.dna`의 대표 카테고리와 같은 카테고리 퀘스트를 앞에 정렬한다.
+  `category` 쿼리로 명시하면 사용자 DNA보다 우선하며, DNA가 없으면
   `?category=` 쿼리 파라미터를 대신 사용한다.
 - 여정 생성 시 `quest_ids`는 모두 해당 `region_id` 소속이어야 한다(교차 지역 불가).
 
