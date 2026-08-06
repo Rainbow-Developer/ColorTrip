@@ -50,6 +50,11 @@ PY
 
 `KAKAO_APP_ID`는 비밀이 아니며 GitHub Actions repository variable로 주입한다.
 
+`CORS_ALLOWED_ORIGINS`(콤마 구분 도메인 화이트리스트)는 `deploy.sh`에서 빈 값으로 고정한다.
+현재 브라우저에서 API를 호출하는 웹 프론트가 없어 화이트리스트를 비워도 검증(`local`/`test`
+외에는 `"*"` 금지)을 통과한다. 프론트 도메인이 정해지면 `deploy.sh`의 값을 실제 도메인으로
+교체한다.
+
 ## 실행 (인스턴스에서)
 
 ```bash
