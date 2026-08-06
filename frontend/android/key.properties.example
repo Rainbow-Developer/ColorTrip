@@ -1,0 +1,20 @@
+# Android 릴리스 서명 설정 템플릿.
+#
+# 이 파일을 같은 디렉토리에 key.properties 로 복사해 값을 채우면
+# `flutter build apk --release` / `appbundle` 이 릴리스 키로 서명된다.
+# 파일이 없으면 debug 키로 폴백한다(스토어 업로드 불가, 내부 테스트용).
+#
+# key.properties 와 *.jks 는 루트 .gitignore 로 차단된다. 절대 커밋하지 않는다.
+# 설계·운영 절차: docs/specs/070-release-signing/
+
+# 키스토어 경로. frontend/android/ 기준 상대경로 또는 절대경로.
+storeFile=colortrip-release.jks
+
+# 키스토어 비밀번호
+storePassword=
+
+# 키 별칭 (keytool -genkeypair 의 -alias 값)
+keyAlias=colortrip
+
+# 키 비밀번호 (보통 storePassword 와 동일하게 둔다)
+keyPassword=

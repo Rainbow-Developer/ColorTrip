@@ -113,8 +113,25 @@ docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.di
 ```
 
 - 결과물: `build/app/outputs/flutter-apk/app-release.apk` (약 83MB, 빌드 ~7분)
-- 현재 release 빌드는 **debug 키로 서명**됩니다([android/app/build.gradle.kts](android/app/build.gradle.kts)) — 내부 테스트 설치용이며 스토어 업로드 불가.
 - 정식 출시 빌드·서명은 Codemagic 경로를 따릅니다: [docs/conventions/release.md](../docs/conventions/release.md).
+
+### 서명
+
+`android/key.properties`가 있으면 그 릴리스 키로 서명하고, **없으면 debug 키로 폴백**하며 경고를 출력합니다. 폴백 산출물은 내부 테스트 설치용이고 **스토어 업로드는 불가**합니다.
+
+```bash
+cp android/key.properties.example android/key.properties   # 값 채워서 사용
+```
+
+키스토어와 `key.properties`는 커밋되지 않습니다(`.gitignore`). **키스토어를 분실하면 앱 업데이트가 영구 불가**하니 생성 후 반드시 백업하세요. 상세: [070-release-signing](../docs/specs/070-release-signing/).
+
+카카오 로그인용 키 해시는 빌드된 APK에서 직접 뽑는 게 정확합니다.
+
+```bash
+docker compose run --rm -u 0:0 frontend bash -c "/opt/android-sdk-linux/build-tools/36.0.0/apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk"
+```
+
+출력된 SHA-1을 base64로 변환한 값이 카카오 콘솔에 넣을 키 해시입니다 — `echo "<SHA-1>" | tr -d ':' | xxd -r -p | openssl base64`
 - 참고: 로컬 백엔드(http) 통신은 debug manifest에서만 허용됩니다. release 빌드는 **반드시 HTTPS** API 주소를 사용해야 합니다.
 
 ## 테스트·정적 분석
