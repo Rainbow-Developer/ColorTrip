@@ -226,20 +226,18 @@ class _StatColumn extends StatelessWidget {
   }
 }
 
-/// 추천 여행지 배너에 그릴 데이터 묶음 — 백엔드 추천 응답과 정적 폴백 계산이 같은 구조로
-/// 수렴해 배너 레이아웃은 출처를 몰라도 된다([040-home-region-recommendation]).
+/// 추천 여행지 배너에 그릴 데이터 묶음 — 서버 추천 응답을 배너 레이아웃이 소비하는
+/// 표시 전용 형태로 정규화한다([065-quest-recommendation-api]).
 class _BannerContent {
   const _BannerContent({
     required this.regionId,
     required this.regionName,
-    required this.dnaId,
     required this.questLabel,
     required this.quests,
   });
 
   final String regionId;
   final String regionName;
-  final String dnaId;
   final String questLabel;
   final List<_QuestSummary> quests;
 }
@@ -258,12 +256,12 @@ class _QuestSummary {
   final String? thumbnailUrl;
 }
 
-/// 추천 여행지 배너 — 백엔드 추천 API 응답이 있으면 그 지역과 대표 퀘스트 요약을 보여주고,
-/// 로딩·API 실패·비로그인·지역 매핑 실패면 기존 정적 계산(사용자 DNA 유형과 같은 유형
-/// 퀘스트가 가장 많은 **여행 시작 전** 지역, 동률이면 전체 퀘스트 수가 많은 쪽)으로
-/// 폴백한다([040-home-region-recommendation]). 두 경로 모두 "무슨 퀘스트가 있는지" 감을
-/// 주도록 요약 최대 3개(DNA 유형 우선)를 함께 노출한다. 탭하면 지역 개요로 이동해 바로
-/// 여행을 시작할 수 있다. 정적 폴백에서 시작 안 한 지역이 없으면 배너를 숨긴다(KAN-28).
+/// 추천 여행지 배너 — 서버 추천(`GET /regions/unvisited`)의 첫 후보 지역과, 그 지역의
+/// 추천 퀘스트(`GET /quests/recommended`) 요약 최대 3개를 보여준다
+/// ([065-quest-recommendation-api]). 정적 폴백은 두지 않는다 — 로딩 중에는 배너를 숨기고,
+/// API 실패는 재시도 버튼으로 노출해 오래된 추천을 진짜처럼 보여주지 않는다. 서버가 준
+/// 지역 중 정적 카탈로그에 매핑되는 첫 항목을 쓰며, 하나도 매핑되지 않으면 숨긴다.
+/// 탭하면 지역 개요로 이동해 바로 여행을 시작할 수 있다(KAN-28).
 class _RecommendedRegionBanner extends ConsumerWidget {
   const _RecommendedRegionBanner();
 
@@ -319,7 +317,6 @@ class _RecommendedRegionBanner extends ConsumerWidget {
             final content = _BannerContent(
               regionId: region.id,
               regionName: region.name,
-              dnaId: dnaId,
               questLabel: recommendation.matchingQuestCount > 0
                   ? '${questTypeStyles[dna.id]?.label ?? dna.id} 퀘스트 ${recommendation.matchingQuestCount}개가 기다리고 있어요'
                   : '퀘스트 ${recommendation.availableQuestCount}개가 기다리고 있어요',

@@ -11,6 +11,7 @@ from httpx import AsyncClient
 from app.auth.models import User
 from app.core.database import AsyncSessionLocal
 from app.quests.dna import get_user_primary_category
+from app.quests.models import Quest
 from app.verifications.service import sign_quest_payload
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
@@ -411,3 +412,59 @@ async def test_user_primary_category_handles_missing_dna(client: AsyncClient) ->
         user.dna = None
         await session.commit()
         assert await get_user_primary_category(session, user.id) is None
+
+
+async def test_recommendations_exclude_quests_without_a_client_key(
+    client: AsyncClient,
+) -> None:
+    """안정 키 없는 퀘스트는 추천 결과·집계·total에서 모두 빠진다.
+
+    Flutter는 정적 카탈로그에 없는 키를 표시할 수 없으므로, 서버가 이런 퀘스트를 내려주면
+    화면에는 size보다 적게 뜨는데 페이지네이션 메타데이터는 그렇지 않다고 말하게 된다
+    ([065-quest-recommendation-api] 리스크).
+    """
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    region_id = seed["region_id"]
+
+    params = {"region_id": region_id, "size": 100}
+    before = await client.get("/api/v1/quests/recommended", params=params, headers=headers)
+    assert before.status_code == 200
+    before_total = before.json()["data"]["total"]
+
+    unvisited_before = await client.get("/api/v1/regions/unvisited", headers=headers)
+    assert unvisited_before.status_code == 200
+    danyang_before = next(
+        item
+        for item in unvisited_before.json()["data"]["items"]
+        if item["id"] == region_id
+    )
+
+    # TourAPI 등 카탈로그 밖에서 유입된 안정 키 없는 퀘스트를 같은 지역에 심는다.
+    async with AsyncSessionLocal() as session:
+        session.add(
+            Quest(
+                region_id=UUID(region_id),
+                client_key=None,
+                title="안정 키 없는 레거시 퀘스트",
+                category="nature",
+                mission_type="photo",
+            )
+        )
+        await session.commit()
+
+    after = await client.get("/api/v1/quests/recommended", params=params, headers=headers)
+    assert after.status_code == 200
+    after_data = after.json()["data"]
+    assert after_data["total"] == before_total
+    assert all(item["client_key"] is not None for item in after_data["items"])
+
+    unvisited_after = await client.get("/api/v1/regions/unvisited", headers=headers)
+    assert unvisited_after.status_code == 200
+    danyang_after = next(
+        item
+        for item in unvisited_after.json()["data"]["items"]
+        if item["id"] == region_id
+    )
+    assert danyang_after["available_quest_count"] == danyang_before["available_quest_count"]
+    assert danyang_after["matching_quest_count"] == danyang_before["matching_quest_count"]

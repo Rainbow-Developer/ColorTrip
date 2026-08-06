@@ -414,8 +414,8 @@ class DioDomainRepository implements DomainRepository {
   Future<List<Map<String, dynamic>>> _fetchPaged(
     String path, {
     Map<String, dynamic>? query,
-    int size = 100,
   }) async {
+    const size = 100;
     var page = 1;
     final items = <Map<String, dynamic>>[];
     while (true) {
