@@ -70,6 +70,8 @@ KAKAO_TOKEN_INFO_URL=https://kapi.kakao.com/v1/user/access_token_info
 KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
 TOUR_API_KEY=${TOUR_KEY}
 TOUR_API_BASE_URL=https://apis.data.go.kr/B551011/KorService2
+# 아직 브라우저에서 호출하는 웹 프론트가 없어 화이트리스트 비움. 프론트 도메인이 정해지면 채운다.
+CORS_ALLOWED_ORIGINS=
 EOF
 chmod 600 .env
 
