@@ -71,11 +71,10 @@ KAKAO_REDIRECT_URI=${KAKAO_REDIRECT_URI}
 KAKAO_APP_ID=${KAKAO_APP_ID}
 KAKAO_TOKEN_INFO_URL=https://kapi.kakao.com/v1/user/access_token_info
 KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
-# local/test 밖에서는 "*"가 거부된다. 네이티브 앱 요청엔 Origin이 없어 CORS와 무관하고,
-# 실제로 브라우저에서 열리는 건 API가 서빙하는 공유 랜딩 페이지라 자기 오리진을 넣는다.
-CORS_ALLOWED_ORIGINS=https://${API_DOMAIN}
 TOUR_API_KEY=${TOUR_KEY}
 TOUR_API_BASE_URL=https://apis.data.go.kr/B551011/KorService2
+# 아직 브라우저에서 호출하는 웹 프론트가 없어 화이트리스트 비움. 프론트 도메인이 정해지면 채운다.
+CORS_ALLOWED_ORIGINS=
 EOF
 chmod 600 .env
 

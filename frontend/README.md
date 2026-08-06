@@ -65,13 +65,15 @@ adb install -r build/app/outputs/flutter-apk/app-debug.apk
 
 에뮬레이터용 기본 주소(`10.0.2.2`)는 **실기기에서 접속되지 않습니다.** 실기기는 아래 중 하나로 API 주소를 정해 빌드하세요.
 
-| 상황 | `API_BASE_URL` |
-|------|----------------|
-| 내 PC의 로컬 백엔드에 붙이기 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` (예: `http://192.168.0.3:8000/api/v1`) |
-| 팀 dev 서버에 붙이기 | 생략 가능 — **release 빌드 기본값**입니다 |
-| 서버 없이 화면만 보기 | 닿지 않는 주소(예: `http://127.0.0.1:1`) — API는 실패하고 정적 데이터로 동작 |
+| 상황 | `API_BASE_URL` | 빌드 모드 |
+|------|----------------|----------|
+| 팀 dev 서버에 붙이기 (권장) | `https://34-64-226-70.sslip.io/api/v1` | debug · release 모두 |
+| 내 PC의 로컬 백엔드에 붙이기 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` | **debug만** |
+| 서버 없이 화면만 보기 | 닿지 않는 주소(예: `http://127.0.0.1:1`) | debug |
 
-기본값은 빌드 모드로 갈립니다 — release는 팀 dev 서버, debug/profile은 에뮬레이터 루프백(`10.0.2.2`)·`localhost`. `TargetPlatform.android`가 에뮬레이터와 실기기를 구분하지 못해, 설치용 빌드가 조용히 기기 루프백을 향하는 것을 막기 위함입니다.
+**기본값은 없습니다.** `KAKAO_NATIVE_APP_KEY`와 `API_BASE_URL`을 둘 다 `--dart-define`으로 주지 않으면 앱이 설정 오류 화면으로 뜹니다([app_config.dart](lib/core/config/app_config.dart)). 릴리스는 Gradle이 키 없이 빌드를 거부합니다.
+
+**릴리스 빌드는 평문 HTTP를 통신하지 못합니다** — `targetSdk=36`에 `usesCleartextTraffic` 미설정이라 Android가 cleartext를 차단합니다. 로컬 백엔드(HTTP)를 볼 때는 debug를 쓰세요. 배경: [065-dev-https](../docs/specs/065-dev-https/)
 
 ```bash
 docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://api.example.com/api/v1"
@@ -107,13 +109,13 @@ flutter run -d chrome                        # 웹으로 빠르게 확인
 ## APK 빌드 (설치용)
 
 ```bash
-docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release"
+docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://34-64-226-70.sslip.io/api/v1"
 ```
 
-- 결과물: `build/app/outputs/flutter-apk/app-release.apk`
+- 결과물: `build/app/outputs/flutter-apk/app-release.apk` (약 83MB, 빌드 ~7분)
 - 현재 release 빌드는 **debug 키로 서명**됩니다([android/app/build.gradle.kts](android/app/build.gradle.kts)) — 내부 테스트 설치용이며 스토어 업로드 불가.
 - 정식 출시 빌드·서명은 Codemagic 경로를 따릅니다: [docs/conventions/release.md](../docs/conventions/release.md).
-- 참고: 로컬 백엔드(http) 통신은 debug manifest에서만 허용됩니다. release 빌드는 HTTPS API 주소를 사용해야 합니다.
+- 참고: 로컬 백엔드(http) 통신은 debug manifest에서만 허용됩니다. release 빌드는 **반드시 HTTPS** API 주소를 사용해야 합니다.
 
 ## 테스트·정적 분석
 

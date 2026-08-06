@@ -8,15 +8,17 @@ import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../data/models/quest.dart';
-import '../../data/repositories/domain_repository.dart';
+import '../../data/repositories/domain_repository.dart'
+    show DomainJourney, kRecommendedQuestSize;
 import '../../data/static/regions_data.dart';
 import '../../state/domain_controller.dart';
+import '../../state/domain_recommendation_providers.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
 /// 여행하기 — 지도에서 지역을 탭하면 처음 보는 화면. Figma 스펙(2026-07-09 공유) 반영:
-/// 지역 이미지 placeholder, DNA 요약 카드, 추천 퀘스트 2건(정보만, 수행 버튼 없음),
+/// 지역 이미지 placeholder, DNA 요약 카드, 추천 퀘스트 3건(정보만, 수행 버튼 없음),
 /// "퀘스트 선택하러 가기" → 퀘스트 선택 화면. 여행이 이미 시작된 지역이면 대신 "내 여행 퀘스트"
 /// 목록을 보여준다(2026-07-09 사용자 확정 — 퀘스트 선택은 다중 선택이며, 그 자리에서 수행하지 않는다).
 /// 온보딩 투어 2단계("퀘스트 선택하러 가기" 버튼)·4단계("내 여행 퀘스트" 탭)를 코치마크로 안내한다.
@@ -50,7 +52,6 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
     }
     final tour = ref.watch(onboardingTourProvider);
     final questRepo = ref.watch(questRepositoryProvider);
-    final regionQuests = questRepo.byRegion(regionId);
     final progress = ref.watch(progressProvider);
     final dnaType = progress.dnaType ?? 'nature';
     final dna = ref.watch(dnaRepositoryProvider).byId(dnaType);
@@ -74,16 +75,9 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
         ? ''
         : '?journeyId=${selectedJourney.id}';
 
-    final recommended = <Quest>[
-      ...regionQuests.where((q) => q.type == dnaType).take(2),
-    ];
-    if (recommended.length < 2) {
-      recommended.addAll(
-        regionQuests
-            .where((q) => !recommended.contains(q))
-            .take(2 - recommended.length),
-      );
-    }
+    final recommendedQuestKeys = tripStarted
+        ? null
+        : ref.watch(recommendedQuestKeysProvider(regionId));
 
     return Scaffold(
       appBar: AppBar(
@@ -207,15 +201,34 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                   ),
                   const SizedBox(height: 10),
-                  for (final quest in recommended)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _RecommendedQuestTile(
-                        quest: quest,
-                        regionName: region.name,
-                        onTap: () => context.push('/quest/${quest.id}'),
-                      ),
-                    ),
+                  recommendedQuestKeys?.when(
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, _) => TextButton(
+                          onPressed: () => ref.invalidate(
+                            recommendedQuestKeysProvider(regionId),
+                          ),
+                          child: const Text('추천 퀘스트 다시 시도'),
+                        ),
+                        data: (keys) => Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final questKey in keys.take(
+                              kRecommendedQuestSize,
+                            ))
+                              if (questRepo.byId(questKey) case final quest?)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: _RecommendedQuestTile(
+                                    quest: quest,
+                                    regionName: region.name,
+                                    onTap: () =>
+                                        context.push('/quest/${quest.id}'),
+                                  ),
+                                ),
+                          ],
+                        ),
+                      ) ??
+                      const SizedBox.shrink(),
                   const SizedBox(height: 24),
                 ],
               ],

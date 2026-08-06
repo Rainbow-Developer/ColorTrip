@@ -2,6 +2,10 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+/// 추천 퀘스트를 요청·표시할 때 쓰는 기본 개수 — API 요청과 화면 표시 상한이 어긋나지
+/// 않도록 하나의 값으로 공유한다.
+const kRecommendedQuestSize = 3;
+
 class DomainCatalog {
   const DomainCatalog({
     required this.regionIdsByKey,
@@ -61,6 +65,18 @@ class DomainTimelineEntry {
   final String? photoUrl;
 }
 
+class DomainRecommendedRegion {
+  const DomainRecommendedRegion({
+    required this.regionKey,
+    required this.matchingQuestCount,
+    required this.availableQuestCount,
+  });
+
+  final String regionKey;
+  final int matchingQuestCount;
+  final int availableQuestCount;
+}
+
 class DomainSnapshot {
   const DomainSnapshot({
     required this.catalog,
@@ -91,6 +107,13 @@ class QuestVerification {
 
 abstract class DomainRepository {
   Future<DomainSnapshot> fetchSnapshot();
+
+  Future<List<DomainRecommendedRegion>> fetchUnvisitedRecommendedRegions();
+
+  Future<List<String>> fetchRecommendedQuestKeys({
+    required String regionKey,
+    int size = kRecommendedQuestSize,
+  });
 
   Future<DomainJourney> createJourney({
     required String clientRequestId,
@@ -152,6 +175,49 @@ class DioDomainRepository implements DomainRepository {
       regionTripCount: mapProgress.tripCounts,
       timeline: timeline,
     );
+  }
+
+  @override
+  Future<List<DomainRecommendedRegion>>
+  fetchUnvisitedRecommendedRegions() async {
+    final catalog = await _loadCatalog();
+    final items = await _fetchPaged('/regions/unvisited');
+    final recommendations = <DomainRecommendedRegion>[];
+    for (final item in items) {
+      final regionKey = catalog.regionKeysById[item['id']];
+      if (regionKey == null) continue;
+      recommendations.add(
+        DomainRecommendedRegion(
+          regionKey: regionKey,
+          matchingQuestCount: item['matching_quest_count'] as int,
+          availableQuestCount: item['available_quest_count'] as int,
+        ),
+      );
+    }
+    return recommendations;
+  }
+
+  @override
+  Future<List<String>> fetchRecommendedQuestKeys({
+    required String regionKey,
+    int size = kRecommendedQuestSize,
+  }) async {
+    final catalog = await _loadCatalog();
+    final response = await _dio.get(
+      '/quests/recommended',
+      queryParameters: {
+        'region_id': catalog.regionId(regionKey),
+        'page': 1,
+        'size': size,
+      },
+    );
+    final items = (_data(response)['items'] as List)
+        .cast<Map<String, dynamic>>();
+    return items
+        .map((item) => item['client_key'] as String?)
+        .whereType<String>()
+        .where(catalog.questIdsByKey.containsKey)
+        .toList();
   }
 
   @override

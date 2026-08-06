@@ -114,6 +114,16 @@ class _DomainRepository implements DomainRepository {
   );
 
   @override
+  Future<List<DomainRecommendedRegion>>
+  fetchUnvisitedRecommendedRegions() async => const [];
+
+  @override
+  Future<List<String>> fetchRecommendedQuestKeys({
+    required String regionKey,
+    int size = 2,
+  }) async => const [];
+
+  @override
   Future<DomainJourney> createJourney({
     required String clientRequestId,
     required String regionKey,

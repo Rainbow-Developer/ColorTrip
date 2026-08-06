@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | 상태 | 진행 중 (백엔드·Flutter 연동 완료 / KAN-55 실제 E2E 진행 중) |
-| 최종 업데이트 | 2026-07-28 |
+| 최종 업데이트 | 2026-08-03 |
 
 ## 구현 규모 / 단위 분할
 
@@ -12,7 +12,7 @@
 - **구현 단위**:
   - [x] 1) 테이블·모델·마이그레이션 — `journeys`·`journey_quests`·`quest_progress` (UUID v7 PK·공통 타임스탬프·Soft Delete). Alembic `f4b2a9c67e18` (005-auth-member `d7b712f1a245`에 체인).
   - [x] 2) 여정 API — POST/GET `/journeys`, GET `/journeys/{id}`, POST/DELETE `/journeys/{id}/quests…` (JRN-01·02). 생성 검증(지역-퀘스트 소속)·진행률·soft delete 복원 포함.
-  - [x] 3) 추천 API — GET `/quests/recommended` (REC-01). DNA seam(`app/quests/dna.py`) + `?category=` fallback, 완료 퀘스트 제외·카테고리 일치 우선 정렬.
+  - [x] 3) 추천 API — GET `/quests/recommended` (REC-01). `users.dna` 기본 적용(`?category=` override), 완료 퀘스트 제외·카테고리 일치 우선 정렬. REC-02 `GET /regions/unvisited`는 여정 미생성 지역을 같은 규칙으로 집계한다([065-quest-recommendation-api](../065-quest-recommendation-api/)).
   - [x] 4) 진행·인증 API — POST `/quests/{id}/start`·`/verify`, GET `/users/me/progress` (VRF-01~04). gps_photo(하버사인 반경)·quiz(정규화 비교) 판정, 완료 시 여정 자동 완료.
   - [x] 5) 사진 업로드 — POST `/uploads/photo` + 스토리지 추상화(`GCS_UPLOAD_BUCKET` 설정 시 GCS, 미설정 시 로컬 디스크) (VRF-03).
   - [~] 6) 검증·문서 — pytest 40건·ruff·pyright 통과, README 갱신 완료. **Notion(테이블·API 명세) 역동기화 남음**.
@@ -34,7 +34,7 @@
 - **Notion 역동기화**: 테이블 설계(journeys·journey_quests 신설, quest_progress에 journey_id·quiz_answer 추가)·API 명세서(여정 5개 엔드포인트 추가) 반영
 - **GCS 버킷 IaC**: 버킷 생성·앱 SA `roles/storage.objectAdmin`·공개 읽기(또는 서빙 방식) — infra/ 후속 작업
 - **LLM 사진 판정**: `mission_meta.judgement_prompt` 데이터만 준비됨 (후속)
-- **DNA 연동**: `app/quests/dna.py` seam을 DNA 도메인 완성 시 교체
+- **DNA 연동**: `app/quests/dna.py`가 `users.dna`를 `Category`로 변환한다. DNA가 없는 계정은 카테고리 가산 없이 추천한다.
 - **Flutter 실제 E2E**: 여정 생성·인증 후 앱 재시작 복원 시나리오는
   [040 서버 영속화](../040-domain-state-persistence/)에서 최종 확인 중
 
@@ -58,3 +58,4 @@
 | 2026-07-16 | `journeys`에 여행 기간 `start_date`·`end_date`(DATE, NULL 허용) 추가 — 여행 생성 시 이름(title)과 함께 날짜를 받도록 POST /journeys 요청·응답 스키마 확장, `end_date < start_date`면 422(VALIDATION_ERROR). 마이그레이션 `c9d4e7a2b8f3`, 테스트 추가 |
 | 2026-07-28 | 실제 Flutter 미연동 상태와 KAN-55의 040 서버 영속화 후속 범위를 명시 |
 | 2026-07-28 | KAN-55에서 stable key·멱등 생성·선택 일괄 변경·`quest_client_keys` 목록 복원·사진/GPS/퀴즈 Flutter 연동 완료. 실제 계정 재시작 복원 E2E는 진행 중 |
+| 2026-08-03 | KAN-59: REC-02 `GET /regions/unvisited` 신설 — 인증 사용자의 `users.dna` 기본 적용, 여정 미생성 지역을 매칭/전체 미완료 퀘스트 수와 함께 페이지네이션 조회(대상 퀘스트는 처음부터 `Quest.client_key IS NOT NULL`로 제한). 기존 REC-01 `GET /quests/recommended`에도 동일한 `client_key IS NOT NULL` 필터를 추가해, 안정 키가 없어 Flutter가 표시할 수 없는 퀘스트가 추천 결과와 `total`에 섞이지 않게 했다. 비-null 안정 키가 Flutter 정적 카탈로그에 항상 존재한다는 불변식은 `tests/test_domain_catalog_contract.py`가 강제한다 ([065-quest-recommendation-api](../065-quest-recommendation-api/)) |

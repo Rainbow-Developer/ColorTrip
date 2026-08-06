@@ -16,7 +16,6 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import register_request_logging, setup_logging
 from app.core.response import Envelope, success
-from app.home.router import router as home_router
 from app.journeys.router import router as journeys_router
 from app.maps.router import router as maps_router
 from app.quests.router import progress_router
@@ -53,7 +52,6 @@ app.include_router(uploads_router, prefix="/api/v1")
 app.include_router(trip_dna_router, prefix="/api/v1")
 app.include_router(timeline_router, prefix="/api/v1")
 app.include_router(shares_router, prefix="/api/v1")
-app.include_router(home_router, prefix="/api/v1")
 app.include_router(verifications_router, prefix="/api/v1")
 # 공유 랜딩 페이지는 사람이 직접 클릭하는 공개 URL이라 /api/v1 prefix 없이 최상위로 등록한다.
 app.include_router(shares_landing_router)

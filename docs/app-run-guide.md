@@ -29,19 +29,29 @@ docker compose exec api uv run python -m app.integrations.tour_api.loader
 
 확인: <http://localhost:8000/docs> (Swagger) · <http://localhost:8000/health>
 
-### 개발용 토큰과 사용자 맞추기 (401이 날 때)
+### 팀 dev 서버를 쓸 수도 있습니다
 
-앱은 아직 로그인 대신 [dio_client.dart](../frontend/lib/core/network/dio_client.dart)의 **하드코딩 토큰**을 씁니다. 그 토큰의 `sub` 사용자가 **접속하려는 DB에 존재해야** 보호 API가 200을 줍니다. 없으면 전부 401이고, 앱은 정적 폴백으로 보입니다.
-
-내 로컬 DB에 사용자를 만들고 새 토큰을 받으려면:
+로컬 백엔드를 띄우기 싫으면 팀 dev 서버를 그대로 쓰면 됩니다. HTTPS로 서비스됩니다.
 
 ```bash
-cd backend && docker compose exec api uv run python generate_dev_token.py
+curl https://34-64-226-70.sslip.io/health
 ```
 
-출력된 토큰을 `frontend/lib/core/network/dio_client.dart`의 `Authorization` 값에 붙이고 앱을 다시 빌드합니다. (커밋할 때는 팀 공용 토큰으로 되돌려 주세요 — 개인 토큰은 팀원에게 401을 유발합니다.)
+| 대상 | `API_BASE_URL` | 빌드 모드 |
+|------|----------------|----------|
+| 팀 dev 서버 (HTTPS) | `https://34-64-226-70.sslip.io/api/v1` | debug · release 모두 가능 |
+| 로컬 백엔드 (HTTP) | `http://10.0.2.2:8000/api/v1` | **debug만** — release는 평문 차단 |
 
-> 후속 개선 후보: 토큰도 `API_BASE_URL`처럼 `--dart-define`으로 주입하면 소스 수정 없이 바꿀 수 있습니다.
+### 인증은 카카오 로그인입니다
+
+예전의 하드코딩 Bearer 토큰은 **없어졌습니다.** 앱은 카카오 로그인으로 받은 access token을 ColorTrip 세션으로 교환하고, 이후 refresh까지 자동 처리합니다([auth_session_interceptor.dart](../frontend/lib/core/network/auth_session_interceptor.dart)).
+
+따라서 **빌드할 때 `--dart-define` 2개가 필수**입니다. 하나라도 빠지면 앱이 설정 오류 화면으로 뜹니다([app_config.dart](../frontend/lib/core/config/app_config.dart)).
+
+| 이름 | 설명 |
+|------|------|
+| `KAKAO_NATIVE_APP_KEY` | 카카오 개발자 콘솔의 네이티브 앱 키 (`backend/.env` 참고) |
+| `API_BASE_URL` | 접속할 API 주소 (위 표) |
 
 ---
 
@@ -63,23 +73,25 @@ Flutter SDK가 없어도 됩니다. **빌드는 Docker 컨테이너, 실행·설
 
 ### 1-3. APK 빌드 후 설치
 
-저장소 루트에서 **debug 빌드**로 만듭니다 — 로컬 백엔드에 붙으려면 debug여야 합니다(아래 주의 참고).
+저장소 루트에서 빌드합니다. **로컬 백엔드(HTTP)에 붙으려면 반드시 debug 빌드**여야 합니다(아래 주의 참고).
 
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug"
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1"
 ```
 
 ```bash
 adb install -r frontend/build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-앱 서랍에서 **colortrip** 실행. debug 빌드는 Android에서 기본값이 `10.0.2.2`(에뮬레이터가 보는 호스트 머신)라 로컬 백엔드에 그대로 연결됩니다.
+앱 서랍에서 **colortrip** 실행. 에뮬레이터 안에서 호스트 머신은 `10.0.2.2`입니다.
 
-> **주의**: `--release`로 빌드하면 기본 주소가 **팀 dev 서버**입니다([dio_client.dart](../frontend/lib/core/network/dio_client.dart)). 릴리스 APK로 로컬 백엔드를 보려면 주소를 직접 넣으세요.
->
-> ```bash
-> flutter build apk --release --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1
-> ```
+팀 dev 서버(HTTPS)에 붙일 거라면 릴리스 빌드도 됩니다.
+
+```bash
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://34-64-226-70.sslip.io/api/v1"
+```
+
+> **주의 — 릴리스 빌드는 평문 HTTP를 통신하지 못합니다.** `targetSdk=36`인데 메인 매니페스트에 `usesCleartextTraffic`이 없어 Android가 cleartext를 차단합니다(`network_security_config`는 debug 매니페스트에만 있습니다). 즉 릴리스 APK로는 **로컬 백엔드(`http://...`)에 절대 붙지 않습니다.** 로컬을 보려면 debug를 쓰고, 릴리스는 HTTPS 주소(dev 서버)로만 빌드하세요. 배경: [065-dev-https](specs/065-dev-https/)
 
 ---
 
@@ -114,13 +126,23 @@ flutter run
 
 에뮬레이터 기본 주소(`10.0.2.2`)는 **실기기에서 접속되지 않습니다.** 빌드할 때 API 주소를 지정하세요.
 
-| 상황 | `API_BASE_URL` |
-|------|----------------|
-| 내 PC의 로컬 백엔드 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` |
-| 팀 dev 서버 | 생략 가능 — **release 빌드의 기본값**입니다 |
-| 서버 없이 화면만 보기 | 아무 값이나(예: `http://127.0.0.1:1`) — API는 실패하고 정적 데이터로 동작 |
+| 상황 | `API_BASE_URL` | 빌드 모드 |
+|------|----------------|----------|
+| 팀 dev 서버 (가장 쉬움) | `https://34-64-226-70.sslip.io/api/v1` | debug · release 모두 |
+| 내 PC의 로컬 백엔드 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` | **debug만** (평문) |
+| 서버 없이 화면만 보기 | 닿지 않는 주소(예: `http://127.0.0.1:1`) | debug |
 
-> 기본값은 빌드 모드로 갈립니다: **release는 팀 dev 서버**, debug/profile은 에뮬레이터 루프백(`10.0.2.2`)·`localhost`. 설치용 APK가 주소를 안 줘도 동작하게 하기 위함입니다.
+> **기본값은 없습니다.** `KAKAO_NATIVE_APP_KEY`와 `API_BASE_URL` 둘 다 `--dart-define`으로 주지 않으면 앱이 설정 오류 화면으로 뜹니다. 릴리스 빌드는 Gradle이 키 없이 아예 빌드를 거부합니다.
+>
+> 실기기로 팀 dev 서버를 쓰는 게 가장 간단합니다 — HTTPS라 릴리스 빌드가 그대로 붙고, LAN IP·방화벽 설정이 필요 없습니다.
+
+### 3-0. 팀 dev 서버로 빌드 (권장)
+
+```bash
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://34-64-226-70.sslip.io/api/v1"
+```
+
+아래 3-1 ~ 3-3은 **로컬 백엔드에 붙일 때만** 필요합니다.
 
 ### 3-1. PC의 LAN IP 확인 (로컬 백엔드에 붙일 때만)
 
@@ -134,13 +156,15 @@ Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like '192.16
 New-NetFirewallRule -DisplayName "ColorTrip API 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
 ```
 
-### 3-3. 주소를 넣어 APK 빌드
+### 3-3. 주소를 넣어 APK 빌드 (로컬 백엔드용 — debug)
 
 **저장소 루트에서** (`-f` 경로가 루트 기준입니다):
 
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=API_BASE_URL=http://192.168.0.3:8000/api/v1"
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=http://192.168.0.3:8000/api/v1"
 ```
+
+로컬 백엔드는 평문 HTTP라 **release가 아니라 debug**로 빌드해야 합니다.
 
 ### 3-4. 핸드폰에 넣기
 
@@ -168,12 +192,14 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 
 | 증상 | 원인 · 해결 |
 |------|------------|
-| 보호 API가 모두 **401**, 지도·추천이 정적으로만 보임 | 토큰의 `sub` 사용자가 접속 대상 DB에 없음 → [토큰 맞추기](#개발용-토큰과-사용자-맞추기-401이-날-때) |
+| 앱이 **설정 오류 화면**으로 뜸 | `KAKAO_NATIVE_APP_KEY` 또는 `API_BASE_URL` `--dart-define` 누락 → [인증은 카카오 로그인입니다](#인증은-카카오-로그인입니다) |
+| 릴리스 빌드가 `KAKAO_NATIVE_APP_KEY is required` 로 실패 | Gradle이 릴리스 빌드에서 키를 강제합니다 → `--dart-define`으로 전달 |
+| **릴리스** APK에서 모든 네트워크 요청 실패 | 평문 HTTP 주소로 빌드함. 릴리스는 cleartext 차단 → HTTPS 주소로 빌드하거나 debug 빌드 사용 |
+| 보호 API가 모두 **401** | 카카오 로그인을 하지 않았거나 세션 만료 → 앱에서 다시 로그인 |
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE: signatures do not match` | 다른 키로 서명된 APK가 이미 설치됨 → `adb uninstall io.vmonster.colortrip` 후 재설치 |
 | 컨테이너에서 `Error: Undefined name 'Matrix4'` | pub 캐시가 사라져 `.dart_tool`이 옛 경로를 가리킴 → 명령 앞에 `flutter pub get &&` 붙이기. 상세는 [frontend/README](../frontend/README.md#캐시-볼륨--pub-get을-매번-붙이는-이유) |
-| 실기기에서 서버 연결 실패 | `API_BASE_URL` 미지정(에뮬레이터 주소로 빌드됨) 또는 방화벽·Wi-Fi 불일치 → [3번](#3-내-핸드폰에-설치) |
+| 실기기에서 서버 연결 실패 | 로컬 백엔드를 쓰는 중이면 방화벽·Wi-Fi 확인. 팀 dev 서버(HTTPS)로 빌드하면 이 문제가 없습니다 → [3-0번](#3-0-팀-dev-서버로-빌드-권장) |
 | 컨테이너 권한 오류 | `-u 0:0`과 `GIT_CONFIG_*` 환경변수를 붙여 실행 |
-| 앱을 다시 켜니 진행 상태가 사라짐 | 의도된 현재 한계 → [아래](#검증된-범위와-한계) |
 
 ---
 
@@ -186,9 +212,14 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 - 퀘스트·지역 이미지 표시, 미매칭 항목의 placeholder 폴백
 - 사진 AI 인증(판정 결과 실값 표시) · 위치 인증(반경 밖 거리 안내 → 도착 시 통과) · QR 화면·권한·스캐너
 
+2026-08-06에는 dev 서버 HTTPS 적용([065-dev-https](specs/065-dev-https/))과 함께 다음을 확인했습니다.
+
+- `https://34-64-226-70.sslip.io/health` 200, Let's Encrypt 인증서 유효(만료 2026-11-04), HTTP→HTTPS 308 리다이렉트
+- dev 서버 라우트 29개 정상 등록(이전 배포 실패로 4개에 멈춰 있던 상태 해소)
+- 릴리스 APK가 HTTPS dev 서버 주소로 빌드·설치·기동
+
 알려진 한계:
 
-- **앱을 종료하면 진행 상태(완료 퀘스트·여행·DNA)가 초기화됩니다.** 전역 상태를 메모리에만 두고 있어서이며, 서버 영속화는 후속 작업입니다. 시연 중에는 앱을 닫지 마세요.
 - **QR 실제 코드 인식은 실기기에서만** 확인 가능합니다(에뮬레이터 가상 카메라 한계).
 - `GEMINI_API_KEY` 미설정 시 사진 판정은 **local/test에서만** 스텁(항상 통과)이고, dev·운영에서는 거부됩니다. 실제 판정은 키 발급 후 동작합니다.
 - 릴리스 APK는 **debug 키로 서명**되어 내부 테스트 설치용입니다. 스토어 업로드는 [release.md](conventions/release.md) 경로를 따릅니다.
