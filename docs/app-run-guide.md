@@ -160,15 +160,24 @@ New-NetFirewallRule -DisplayName "ColorTrip API 8000" -Direction Inbound -LocalP
 
 **저장소 루트에서** (`-f` 경로가 루트 기준입니다):
 
+`<PC의-LAN-IP>`는 [3-1](#3-1-pc의-lan-ip-확인-로컬-백엔드에-붙일-때만)에서 확인한 값으로 바꾸세요.
+
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=http://192.168.0.3:8000/api/v1"
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --debug --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=http://<PC의-LAN-IP>:8000/api/v1"
 ```
 
 로컬 백엔드는 평문 HTTP라 **release가 아니라 debug**로 빌드해야 합니다.
 
 ### 3-4. 핸드폰에 넣기
 
-- **USB**: `adb install -r frontend/build/app/outputs/flutter-apk/app-release.apk`
+설치할 파일은 **어느 쪽으로 빌드했는지에 따라 다릅니다.**
+
+| 빌드 | 설치할 APK |
+|------|-----------|
+| [3-0](#3-0-팀-dev-서버로-빌드-권장) 팀 dev 서버 (release) | `app-release.apk` |
+| [3-3](#3-3-주소를-넣어-apk-빌드-로컬-백엔드용--debug) 로컬 백엔드 (debug) | `app-debug.apk` |
+
+- **USB**: `adb install -r frontend/build/app/outputs/flutter-apk/<위 표의 APK>`
 - **무선**: APK를 카카오톡 나에게 보내기·구글 드라이브로 옮긴 뒤 핸드폰에서 파일을 열기
 
 안드로이드가 "알 수 없는 앱" 설치를 막으면 안내에 따라 해당 앱(파일 관리자·카카오톡)의 설치 권한을 허용합니다. 앱 실행 후 위치·카메라 권한을 허용하면 위치·QR 인증을 실제로 쓸 수 있습니다.

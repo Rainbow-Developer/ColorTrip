@@ -96,7 +96,14 @@ HTTP로 접근하면 Caddy가 HTTPS로 리다이렉트한다.
 3. 기존 API를 유지한 상태에서 새 이미지로 `alembic upgrade head`
 4. migration 성공 시에만 API 컨테이너 교체
 5. compose 내부망에서 `api:8000/health` 확인
-6. `https://${API_DOMAIN}/health`를 인증서 검증까지 포함해 확인 (실패 시 Caddy 로그 출력)
+6. **인스턴스 로컬**에서 TLS 종단·인증서 확인 — `--resolve`로 loopback을 향하므로 검증 범위는
+   Caddy의 TLS 종단과 인증서 체인·호스트명까지다. 공개 DNS·방화벽·외부 라우팅은 포함하지
+   않는다 (실패 시 Caddy 로그 출력)
+7. **GitHub Actions 러너(인스턴스 밖)**에서 `https://${API_DOMAIN}/health` 확인 — 여기서
+   공개 DNS·방화벽·외부 라우팅까지 실제로 검증된다
+
+두 단계 모두 상태 코드가 정확히 `200`인지 비교한다(`curl --fail`은 3xx를 실패로 보지 않아
+리다이렉트가 성공으로 새는 것을 막지 못한다). 모든 probe에는 연결·전체 제한 시간을 건다.
 
 Migration 실패 시 기존 API를 교체하지 않으며 자동 downgrade하지 않는다. API 교체 후
 수동 복구가 필요하면 이전 SHA 이미지 태그를 `API_IMAGE`로 지정하고 `docker compose

@@ -102,14 +102,15 @@ flowchart LR
 
 ## 작업 단계
 
-- [ ] `deploy/Caddyfile` 작성
-- [ ] `deploy/docker-compose.yml`에 caddy 추가 · api 포트 제거
-- [ ] `deploy/deploy.sh`에 `API_DOMAIN` 처리 · health check 변경
-- [ ] `.github/workflows/deploy-dev.yml`에 Caddyfile 전송 · `API_DOMAIN` 주입
-- [ ] GitHub 저장소 variable `API_DOMAIN` 등록
-- [ ] dev 배포 실행 후 `https://34-64-226-70.sslip.io/health` 검증
-- [ ] 릴리스 APK를 https 주소로 재빌드 → 에뮬레이터에서 연동 확인
-- [ ] 문서 갱신 (위 영향 범위 표)
+- [x] `deploy/Caddyfile` 작성
+- [x] `deploy/docker-compose.yml`에 caddy 추가 · api 포트 제거
+- [x] `deploy/deploy.sh`에 `API_DOMAIN` 처리 · health check 변경
+- [x] `.github/workflows/deploy-dev.yml`에 Caddyfile 전송 · `API_DOMAIN` 주입
+- [x] GitHub 저장소 variable `API_DOMAIN` 등록
+- [x] dev 배포 실행 후 `https://34-64-226-70.sslip.io/health` 검증
+- [x] 릴리스 APK를 https 주소로 재빌드 → 에뮬레이터에서 연동 확인
+- [x] 문서 갱신 (위 영향 범위 표)
+- [x] CodeRabbit 리뷰 반영 (PR [#61](https://github.com/Rainbow-Developer/ColorTrip/pull/61)) — 호스트명 검증 강화, probe 타임아웃·엄격한 200 검사, 외부 HTTPS probe 추가, Caddy 이미지 digest 고정
 
 ## 리스크 / 미해결 질문
 

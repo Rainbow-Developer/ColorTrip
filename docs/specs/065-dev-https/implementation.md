@@ -28,15 +28,16 @@
 - [x] 에뮬레이터 Chrome에서 인증서 경고 없이 200 — Android 신뢰 저장소가 Let's Encrypt 루트를 이미 신뢰
 - [x] `infra-deploy.md` · `gcp-access.md` · `app-run-guide.md` · `frontend/README.md` · `deploy/README.md` 갱신
 
+- [x] PR [#61](https://github.com/Rainbow-Developer/ColorTrip/pull/61) 머지 — 머지 후 dev 푸시 배포 성공(포트 충돌 해소)
+- [x] `README.md` 실행 파이프라인에 Caddy 반영
+- [x] CodeRabbit 리뷰 7건 반영
+
 ## 미구현 / 남은 항목
 
-- [ ] PR [#61](https://github.com/Rainbow-Developer/ColorTrip/pull/61) 머지 — **머지 전까지 dev 푸시 배포가 실패한다**(아래 참고)
-- [ ] 카카오 로그인 후 화면까지 실조작 검증 (계정 자격증명 필요)
-- [ ] `README.md` 실행 파이프라인에 Caddy 반영
+- [ ] 카카오 로그인 후 화면까지 실조작 검증 (계정 자격증명 필요 — 사람이 직접)
+- [ ] 정식 도메인 구매 후 `API_DOMAIN` 교체
 
 ## 알려진 한계 / TODO
-
-- **PR 머지 전까지 dev 배포가 깨진다.** 기존 compose는 `api`가 호스트 80을 잡는데 인스턴스에서 Caddy가 이미 80을 점유하고 있어 충돌한다(`Bind for 0.0.0.0:80 failed: port is already allocated`). 실제로 2026-08-06 dev 푸시(#60) 배포가 이 이유로 실패해 API가 내려갔고(502), 이 브랜치를 재배포해 복구했다.
 
 - **sslip.io는 임시방편이다.** 서드파티 무료 DNS에 의존하므로 정식 도메인 구매가 후속 과제다. 교체 시 `API_DOMAIN` variable 값만 바꾸면 되도록 설계했다.
 - **`docs/app-run-guide.md`가 낡았다.** 하드코딩 Bearer 토큰 기준으로 쓰여 있는데 실제 코드는 카카오 로그인으로 전환됐다(`dio_client.dart`에 토큰 없음). 이 스펙 범위에서 함께 정리한다.
@@ -49,3 +50,4 @@
 |------|------|
 | 2026-08-06 | 최초 작성. GCP 시크릿·GitHub variable 등록 완료, 배포 스택 HTTPS 전환 구현 |
 | 2026-08-06 | dev 배포·HTTPS 실검증 완료. dev의 KAN-65(#60)와 CORS 수정이 겹쳐 병합 정리, PR #61 생성 |
+| 2026-08-06 | PR #61 머지. CodeRabbit 리뷰 7건 반영 — 호스트명 DNS 라벨 검증, probe 타임아웃·엄격한 200 비교, 외부 HTTPS probe 추가(공개 DNS·방화벽 검증), Caddy 이미지 digest 고정, 문서 정합 |

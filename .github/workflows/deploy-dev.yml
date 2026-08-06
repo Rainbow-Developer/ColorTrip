@@ -63,12 +63,35 @@ jobs:
             echo "KAKAO_APP_ID must be a positive integer."
             exit 1
           fi
-          # Caddy가 이 이름으로 Let's Encrypt 인증서를 발급받는다. 빈 값이면 TLS 없이
-          # 뜨거나 잘못된 도메인으로 발급을 시도하므로 미리 막는다.
-          if [[ ! "${API_DOMAIN}" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+          # Caddy가 이 이름으로 Let's Encrypt 인증서를 발급받는다. 잘못된 값이면 발급이
+          # 실패하고 배포가 늦게 깨지므로 DNS 라벨 규칙으로 미리 막는다.
+          #   - 각 라벨은 영숫자로 시작·끝나고 내부에만 하이픈 허용, 라벨 길이 <= 63
+          #   - 빈 라벨(선행 점)·연속된 점 거부, TLD는 알파벳
+          #   - 전체 길이 <= 253
+          domain_re='^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$'
+          if [[ ! "${API_DOMAIN}" =~ ${domain_re} ]] || (( ${#API_DOMAIN} > 253 )); then
             echo "API_DOMAIN must be a valid hostname (got: '${API_DOMAIN}')."
             exit 1
           fi
           gcloud compute ssh "${INSTANCE}" --zone "${ZONE}" --project "${PROJECT_ID}" \
             --tunnel-through-iap --quiet \
             --command "API_IMAGE='${IMAGE}:${GITHUB_SHA}' CLOUD_SQL_CONNECTION_NAME='${CLOUD_SQL_CONNECTION_NAME}' KAKAO_APP_ID='${KAKAO_APP_ID}' API_DOMAIN='${API_DOMAIN}' bash ~/deploy.sh"
+
+      # deploy.sh 안의 검사는 --resolve 로 인스턴스 loopback을 향하므로 TLS 종단만 확인한다.
+      # 공개 DNS·방화벽·외부 라우팅까지 검증하려면 인스턴스 밖에서 한 번 더 때려봐야 한다.
+      - name: Verify public HTTPS
+        env:
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
+        run: |
+          for _ in $(seq 1 12); do
+            code="$(curl --silent --show-error --connect-timeout 5 --max-time 10 \
+              --output /dev/null --write-out '%{http_code}' \
+              "https://${API_DOMAIN}/health" || true)"
+            if [[ "${code}" == "200" ]]; then
+              echo "공개 HTTPS 확인 완료: https://${API_DOMAIN}/health"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "ERROR: 공개 HTTPS 검증 실패 (마지막 응답 코드: '${code:-없음}')"
+          exit 1
