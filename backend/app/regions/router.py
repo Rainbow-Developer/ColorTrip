@@ -30,7 +30,5 @@ async def list_unvisited_regions(
     size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ) -> Envelope[UnvisitedRegionListData]:
-    data = await service.list_unvisited_recommendations(
-        session, current_user.id, page, size
-    )
+    data = await service.list_unvisited_recommendations(session, current_user.id, page, size)
     return success(data)
