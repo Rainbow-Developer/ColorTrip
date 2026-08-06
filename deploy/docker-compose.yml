@@ -23,7 +23,9 @@ services:
       - "8000"
 
   caddy:
-    image: caddy:2-alpine
+    # 이동 가능한 태그(2-alpine)를 쓰면 재배포마다 다른 패치 이미지를 받을 수 있어
+    # 검증한 버전을 digest 로 고정한다. 업그레이드는 의도적으로만 한다.
+    image: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     depends_on:
       - api
     restart: unless-stopped

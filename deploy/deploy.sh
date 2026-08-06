@@ -103,10 +103,13 @@ sudo docker compose up -d --no-deps api
 sudo docker compose up -d --no-deps caddy
 
 # api 는 호스트 포트를 열지 않으므로 compose 내부망에서 확인한다.
+# wget 자체 타임아웃(-T)과 바깥 timeout 을 함께 건다 — 전자는 응답을 기다리다 멈추는 것을,
+# 후자는 docker compose exec 자체가 붙잡히는 것을 막는다.
 echo "API health 확인(내부망)"
 api_healthy=0
 for _ in $(seq 1 30); do
-  if sudo docker compose exec -T caddy wget -q -O /dev/null http://api:8000/health; then
+  if timeout 15s sudo docker compose exec -T caddy \
+      wget -q -T 5 -O /dev/null http://api:8000/health; then
     api_healthy=1
     break
   fi
@@ -114,21 +117,28 @@ for _ in $(seq 1 30); do
 done
 [ "${api_healthy}" -eq 1 ] || { echo "ERROR: API health 확인 실패"; exit 1; }
 
-# Let's Encrypt 발급까지 시간이 걸리므로 넉넉히 대기한다. --resolve 로 자기 자신을 가리켜
-# hairpin NAT 의존 없이 확인하되, -k 를 쓰지 않아 인증서 체인·호스트명까지 실제로 검증한다.
-echo "HTTPS 인증서 확인(${API_DOMAIN})"
+# Let's Encrypt 발급까지 시간이 걸리므로 넉넉히 대기한다.
+# --resolve 로 자기 자신(loopback)을 가리키므로 이 검사가 보장하는 것은 **TLS 종단과 인증서**
+# 까지다(hairpin NAT 의존을 피하려는 의도). 공개 DNS·방화벽·외부 라우팅은 검증하지 않으며,
+# 그건 워크플로의 "Verify public HTTPS" 스텝이 인스턴스 밖에서 담당한다.
+# -k 를 쓰지 않으므로 인증서 체인·호스트명은 여기서 실제로 검증된다.
+# --fail 은 3xx 를 실패로 보지 않아 리다이렉트가 성공으로 새는 것을 막지 못하므로,
+# 상태 코드를 직접 200 과 비교한다.
+echo "TLS 종단·인증서 확인(${API_DOMAIN}, 인스턴스 로컬)"
 https_ready=0
 for _ in $(seq 1 60); do
-  if curl --fail --silent --show-error \
-      --resolve "${API_DOMAIN}:443:127.0.0.1" \
-      "https://${API_DOMAIN}/health" >/dev/null; then
+  code="$(curl --silent --show-error --connect-timeout 5 --max-time 10 \
+    --resolve "${API_DOMAIN}:443:127.0.0.1" \
+    --output /dev/null --write-out '%{http_code}' \
+    "https://${API_DOMAIN}/health" || true)"
+  if [ "${code}" = "200" ]; then
     https_ready=1
     break
   fi
   sleep 3
 done
 if [ "${https_ready}" -ne 1 ]; then
-  echo "ERROR: HTTPS 확인 실패 — Caddy 로그:"
+  echo "ERROR: TLS 확인 실패 (마지막 응답 코드: '${code:-없음}') — Caddy 로그:"
   sudo docker compose logs --tail 50 caddy
   exit 1
 fi

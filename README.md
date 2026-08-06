@@ -158,12 +158,15 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 
 ```mermaid
 flowchart TD
-    A["사용자 (Flutter 앱)"] --> B["FastAPI /api/v1 (퀘스트·인증·색칠·DNA)"]
+    A["사용자 (Flutter 앱)"] -->|HTTPS| P["Caddy (TLS 종단 · 80·443)"]
+    P -->|내부망 HTTP| B["FastAPI /api/v1 (퀘스트·인증·색칠·DNA)"]
     B --> C[("PostgreSQL — 퀘스트·지역·방문 기록")]
     B --> D["한국관광공사 TourAPI · Naver API"]
     B --> E["응답 Envelope (code/status/message/data)"]
     E --> A
 ```
+
+dev 서버는 Caddy가 TLS를 종단하고 API 컨테이너는 호스트 포트를 열지 않습니다(평문 우회 경로 차단). 안드로이드 릴리스 APK가 평문 HTTP를 차단하므로 HTTPS는 앱 연동의 전제 조건입니다 — [065-dev-https](docs/specs/065-dev-https/).
 
 ## 주요 기능과 위치
 
