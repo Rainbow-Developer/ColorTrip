@@ -6,11 +6,24 @@
 
 | 서비스 | 역할 |
 |--------|------|
+| `caddy` | TLS 종단 리버스 프록시. 80·443 점유, Let's Encrypt 인증서 자동 발급·갱신 후 `api:8000`으로 프록시 |
 | `cloudsql-proxy` | Cloud SQL Auth Proxy. 인스턴스 서비스 계정(`roles/cloudsql.client`)으로 인증, `:5432` 노출 |
 | `api` | FastAPI (`backend/Dockerfile`). `cloudsql-proxy:5432`로 DB 접속 |
 
 Flutter 클라이언트 소스는 `frontend/`에 있지만 모바일 앱으로 별도 빌드·배포한다.
-현재 Compute Engine compose는 백엔드 API만 운영하며 `api`를 80포트로 노출한다.
+현재 Compute Engine compose는 백엔드 API만 운영한다.
+
+### HTTPS
+
+`api`는 **호스트 포트를 열지 않는다.** 외부 노출은 `caddy`만 담당하므로 평문으로 API에
+직접 닿는 경로가 없다. 설계와 근거(왜 Caddy·왜 sslip.io)는
+[docs/specs/065-dev-https/](../docs/specs/065-dev-https/)에 있다.
+
+안드로이드 **릴리스 APK는 평문 HTTP를 차단**하므로(`targetSdk=36`, `usesCleartextTraffic`
+미설정) HTTPS는 선택이 아니라 앱 연동의 전제 조건이다.
+
+인증서는 `caddy-data` 볼륨에 영속화된다. 이 볼륨을 지우면 재발급이 일어나므로
+Let's Encrypt rate limit에 유의한다.
 
 ## 환경변수
 
@@ -48,7 +61,12 @@ PY
 | `colortrip-dev-tour-api-key` | 한국관광공사 TourAPI |
 | `colortrip-dev-kakao-client-secret` | Kakao client secret을 활성화한 경우 |
 
-`KAKAO_APP_ID`는 비밀이 아니며 GitHub Actions repository variable로 주입한다.
+비밀이 아닌 값은 GitHub Actions repository **variable**로 주입한다.
+
+| Variable | 값 | 용도 |
+|----------|-----|------|
+| `KAKAO_APP_ID` | `1522375` | Kakao access token의 `app_id` 검증 |
+| `API_DOMAIN` | `34-64-226-70.sslip.io` | Caddy 인증서 발급 호스트명 |
 
 ## 실행 (인스턴스에서)
 
@@ -57,7 +75,8 @@ docker compose --env-file .env up -d
 docker compose logs -f api
 ```
 
-확인: `curl http://localhost/health` → `{"status":"ok"}` 형태의 Envelope 응답.
+확인: `curl https://34-64-226-70.sslip.io/health` → `{"status":"ok"}` 형태의 Envelope 응답.
+HTTP로 접근하면 Caddy가 HTTPS로 리다이렉트한다.
 
 ## 자동화
 
@@ -71,7 +90,8 @@ docker compose logs -f api
 2. Cloud SQL Proxy 시작 및 TCP 준비 확인
 3. 기존 API를 유지한 상태에서 새 이미지로 `alembic upgrade head`
 4. migration 성공 시에만 API 컨테이너 교체
-5. 제한 시간 동안 `/health` 확인
+5. compose 내부망에서 `api:8000/health` 확인
+6. `https://${API_DOMAIN}/health`를 인증서 검증까지 포함해 확인 (실패 시 Caddy 로그 출력)
 
 Migration 실패 시 기존 API를 교체하지 않으며 자동 downgrade하지 않는다. API 교체 후
 수동 복구가 필요하면 이전 SHA 이미지 태그를 `API_IMAGE`로 지정하고 `docker compose

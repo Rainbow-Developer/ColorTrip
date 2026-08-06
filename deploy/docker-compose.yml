@@ -1,6 +1,6 @@
 # ColorTrip 운영 인스턴스(Compute Engine)용 Docker Compose
-# 현재는 BE 중심: Cloud SQL Auth Proxy + FastAPI.
-# FE(Flutter Web → nginx)는 frontend/lib 소스가 repo에 들어온 뒤 web 서비스로 추가한다.
+# 현재는 BE 중심: Caddy(TLS) + Cloud SQL Auth Proxy + FastAPI.
+# FE(Flutter Web)는 frontend 빌드 산출물을 Caddy가 서빙하도록 후속 추가한다.
 services:
   cloudsql-proxy:
     image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:latest # TODO: 운영 전 특정 버전으로 핀
@@ -17,14 +17,29 @@ services:
     depends_on:
       - cloudsql-proxy
     restart: unless-stopped
-    # 임시: FE/nginx 도입 전까지 API를 80으로 노출. FE 들어오면 nginx(web)가 80을 차지하고
-    #       이 매핑은 제거(nginx가 /api 를 api:8000 으로 프록시)한다.
-    ports:
-      - "80:8000"
+    # 호스트 포트를 열지 않는다. 외부 노출은 caddy 가 전담하고 api 는 내부망으로만 접근된다
+    # (평문으로 API 에 직접 닿는 우회 경로 제거). 근거: docs/specs/065-dev-https/plan.md
+    expose:
+      - "8000"
 
-# FE 도입 시 추가 예정:
-#   web:
-#     image: ${WEB_IMAGE}        # nginx + Flutter Web 빌드 (frontend/Dockerfile)
-#     depends_on: [api]
-#     restart: unless-stopped
-#     ports: ["80:80", "443:443"]
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - api
+    restart: unless-stopped
+    environment:
+      # Caddyfile 의 {$API_DOMAIN} 치환값. deploy.sh 가 .env 에 기록한다.
+      API_DOMAIN: ${API_DOMAIN}
+    ports:
+      - "80:80"   # ACME HTTP-01 챌린지 + HTTPS 리다이렉트
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # 인증서·ACME 계정 키 영속화. 이게 없으면 배포마다 재발급해 Let's Encrypt
+      # rate limit 에 걸린다.
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  caddy-data:
+  caddy-config:

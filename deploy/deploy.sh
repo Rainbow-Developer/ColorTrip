@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # 인스턴스에서 실행되는 배포 스크립트. GitHub Actions가 IAP SSH로 호출한다.
-# 필수 env: API_IMAGE, CLOUD_SQL_CONNECTION_NAME, KAKAO_APP_ID
+# 필수 env: API_IMAGE, CLOUD_SQL_CONNECTION_NAME, KAKAO_APP_ID, API_DOMAIN
 # 시크릿(DB 비번 등)은 인스턴스 서비스 계정으로 Secret Manager에서 직접 읽는다(키 없음).
 set -euo pipefail
 
 : "${API_IMAGE:?API_IMAGE 필요}"
 : "${CLOUD_SQL_CONNECTION_NAME:?CLOUD_SQL_CONNECTION_NAME 필요}"
 : "${KAKAO_APP_ID:?KAKAO_APP_ID 필요}"
+# Caddy가 이 호스트명으로 Let's Encrypt 인증서를 발급받는다(docs/specs/065-dev-https/).
+: "${API_DOMAIN:?API_DOMAIN 필요}"
 
 PROJECT="colortrip"
 REGION="asia-northeast3"
@@ -57,6 +59,7 @@ cd "${HOME}" # CI가 docker-compose.yml 을 여기로 scp 한다
 cat > .env <<EOF
 API_IMAGE=${API_IMAGE}
 CLOUD_SQL_CONNECTION_NAME=${CLOUD_SQL_CONNECTION_NAME}
+API_DOMAIN=${API_DOMAIN}
 APP_ENV=dev
 LOG_LEVEL=${LOG_LEVEL:-INFO}
 DATABASE_URL=postgresql+asyncpg://colortrip:${DB_PW_ENCODED}@cloudsql-proxy:5432/colortrip
@@ -95,17 +98,38 @@ echo "Alembic migration 적용"
 sudo docker compose run --rm --no-deps api uv run alembic upgrade head
 
 sudo docker compose up -d --no-deps api
+sudo docker compose up -d --no-deps caddy
 
-echo "API health 확인"
+# api 는 호스트 포트를 열지 않으므로 compose 내부망에서 확인한다.
+echo "API health 확인(내부망)"
 api_healthy=0
 for _ in $(seq 1 30); do
-  if curl --fail --silent --show-error http://localhost/health >/dev/null; then
+  if sudo docker compose exec -T caddy wget -q -O /dev/null http://api:8000/health; then
     api_healthy=1
     break
   fi
   sleep 2
 done
 [ "${api_healthy}" -eq 1 ] || { echo "ERROR: API health 확인 실패"; exit 1; }
+
+# Let's Encrypt 발급까지 시간이 걸리므로 넉넉히 대기한다. --resolve 로 자기 자신을 가리켜
+# hairpin NAT 의존 없이 확인하되, -k 를 쓰지 않아 인증서 체인·호스트명까지 실제로 검증한다.
+echo "HTTPS 인증서 확인(${API_DOMAIN})"
+https_ready=0
+for _ in $(seq 1 60); do
+  if curl --fail --silent --show-error \
+      --resolve "${API_DOMAIN}:443:127.0.0.1" \
+      "https://${API_DOMAIN}/health" >/dev/null; then
+    https_ready=1
+    break
+  fi
+  sleep 3
+done
+if [ "${https_ready}" -ne 1 ]; then
+  echo "ERROR: HTTPS 확인 실패 — Caddy 로그:"
+  sudo docker compose logs --tail 50 caddy
+  exit 1
+fi
 
 sudo docker image prune -f
 echo "deploy 완료: ${API_IMAGE}"
