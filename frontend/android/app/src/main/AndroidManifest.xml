@@ -68,5 +68,12 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- url_launcher가 개인정보처리방침 등 외부 링크를 브라우저로 열 때 필요
+             (Android 11+ 패키지 가시성, 075-privacy-policy-page). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <category android:name="android.intent.category.BROWSABLE"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

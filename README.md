@@ -192,6 +192,7 @@ dev 서버는 Caddy가 TLS를 종단하고 API 컨테이너는 호스트 포트�
 | **DB/데이터 모델 기반** | 여행 DNA 설문·퀘스트 진행·지도 진행·타임라인 기록을 위한 백엔드 데이터 모델 | `backend/app/auth/`, `backend/app/quests/`, `backend/app/progress/`, `backend/app/timeline/`, `backend/app/trip_dna/`, `backend/alembic/` · 스펙 [docs/specs/015-database-migration/](docs/specs/015-database-migration/) |
 | **백엔드 공통 로깅** | JSON 앱 로그, 요청 메타데이터 로깅, request id 전파 | `backend/app/core/` · 스펙 [docs/specs/020-backend-logging/](docs/specs/020-backend-logging/) |
 | **도메인 상태 영속화(KAN-55)** | 여행·퀘스트 완료·지도·타임라인을 서버 SOT로 연결하고 앱 재시작 시 복원 | 계획 [docs/specs/040-domain-state-persistence/](docs/specs/040-domain-state-persistence/) |
+| **개인정보처리방침 페이지** | Google Play 등록용 공개 정적 페이지(`GET /privacy`), 회원가입 화면에서 링크 연결 | `backend/app/legal/`, `frontend/lib/features/onboarding/signup_screen.dart` · 스펙 [docs/specs/075-privacy-policy-page/](docs/specs/075-privacy-policy-page/) |
 
 > 위 표는 기능이 **어디 있는지**를 가리킵니다. 개별 기능의 **상세 설명**은 이 README에 중복해 적지 않고, 해당 기능 스펙의 `description.md`를 단일 출처(SOT)로 둡니다. 지도 색칠·공유 등은 별도 도메인으로 진행 예정이며, 스펙이 만들어지면 이 표에 추가합니다.
 
@@ -227,6 +228,8 @@ dev 서버는 Caddy가 TLS를 종단하고 API 컨테이너는 호스트 포트�
 | `cached_network_image` | `^3.4.1` | 퀘스트·지역 이미지(TourAPI) 캐시 표시 |
 | `geolocator` | `^14.0.2` | 위치 인증 — 온디바이스 거리 계산(좌표 비전송) |
 | `mobile_scanner` | `^7.0.1` | QR 인증 스캔 |
+| `url_launcher` | `^6.3.1` | 개인정보처리방침 등 외부 링크를 브라우저로 열기 |
+| `flutter_launcher_icons` (dev) | `^0.14.4` | 앱 런처 아이콘(adaptive icon 포함) 생성 |
 
 ## 코드 스타일
 

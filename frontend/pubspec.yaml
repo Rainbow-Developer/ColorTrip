@@ -56,6 +56,8 @@ dependencies:
   mobile_scanner: ^7.0.1
   share_plus: ^13.3.0
   calendar_date_picker2: ^1.1.6
+  # 개인정보처리방침 등 외부 링크를 브라우저로 열기 (075-privacy-policy-page)
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +71,16 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # 앱 아이콘 생성 (Android adaptive icon 포함)
+  flutter_launcher_icons: ^0.14.4
+
+# 앱 런처 아이콘 소스 및 생성 설정 — `dart run flutter_launcher_icons`로 생성
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#F5F5F0"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  min_sdk_android: 29
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -91,6 +103,7 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   assets:
+    - assets/icon/app_icon.png
     - assets/images/main_background_image.png
     - assets/images/gps_mountain_icon.png
     - assets/images/top_bar_logo.png

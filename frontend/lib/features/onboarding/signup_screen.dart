@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants.dart';
+import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_form_field.dart';
 import '../../data/models/auth_models.dart';
 import '../../state/auth_controller.dart';
@@ -128,6 +130,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   onChanged: auth.isBusy
                       ? null
                       : (v) => setState(() => _agreePrivacy = v),
+                  onViewDetails: _openPrivacyPolicy,
                 ),
                 const SizedBox(height: 8),
                 _AgreementCheckbox(
@@ -241,6 +244,24 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     context.go('/splash');
   }
 
+  /// 개인정보처리방침 페이지를 외부 브라우저로 연다. 새 dart-define 없이 기존
+  /// 필수 빌드값인 apiBaseUrl(예: https://host/api/v1)의 origin에 /privacy를
+  /// 붙여 URL을 계산한다 (075-privacy-policy-page).
+  Future<void> _openPrivacyPolicy() async {
+    final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
+    final origin = Uri.parse(apiBaseUrl);
+    final privacyUrl = origin.replace(path: '/privacy', query: '');
+    final opened = await launchUrl(
+      privacyUrl,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('개인정보처리방침 페이지를 열 수 없어요.')),
+      );
+    }
+  }
+
   String _date(DateTime value) =>
       '${value.year.toString().padLeft(4, '0')}-'
       '${value.month.toString().padLeft(2, '0')}-'
@@ -299,11 +320,16 @@ class _AgreementCheckbox extends StatefulWidget {
     required this.label,
     required this.value,
     required this.onChanged,
+    this.onViewDetails,
   });
 
   final String label;
   final bool value;
   final ValueChanged<bool>? onChanged;
+
+  /// 지정하면 라벨 옆에 "보기" 링크를 표시해 약관 본문을 별도로 열람할 수 있게
+  /// 한다. 체크박스 토글과는 별개의 탭 영역이라 서로 간섭하지 않는다.
+  final VoidCallback? onViewDetails;
 
   @override
   State<_AgreementCheckbox> createState() => _AgreementCheckboxState();
@@ -317,7 +343,7 @@ class _AgreementCheckboxState extends State<_AgreementCheckbox> {
     final toggle = widget.onChanged == null
         ? null
         : () => widget.onChanged!(!widget.value);
-    return Semantics(
+    final checkboxRow = Semantics(
       container: true,
       label: widget.label,
       checked: widget.value,
@@ -338,6 +364,7 @@ class _AgreementCheckboxState extends State<_AgreementCheckbox> {
         child: InkWell(
           onTap: toggle,
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 20,
@@ -366,6 +393,24 @@ class _AgreementCheckboxState extends State<_AgreementCheckbox> {
           ),
         ),
       ),
+    );
+    if (widget.onViewDetails == null) return checkboxRow;
+    return Row(
+      children: [
+        checkboxRow,
+        const Spacer(),
+        InkWell(
+          onTap: widget.onViewDetails,
+          child: const Text(
+            '보기',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.primaryDark,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -17,6 +17,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging import register_request_logging, setup_logging
 from app.core.response import Envelope, success
 from app.journeys.router import router as journeys_router
+from app.legal.router import legal_router
 from app.maps.router import router as maps_router
 from app.open_api.router import router as open_api_router
 from app.quests.router import progress_router
@@ -57,6 +58,8 @@ app.include_router(verifications_router, prefix="/api/v1")
 app.include_router(open_api_router, prefix="/api/v1")
 # 공유 랜딩 페이지는 사람이 직접 클릭하는 공개 URL이라 /api/v1 prefix 없이 최상위로 등록한다.
 app.include_router(shares_landing_router)
+# 개인정보처리방침 등 법적 고지도 같은 이유로 /api/v1 prefix 없이 최상위로 등록한다.
+app.include_router(legal_router)
 
 # 로컬 스토리지 사용 시 업로드 파일 정적 서빙 (GCS 사용 시 불필요)
 if not settings.gcs_upload_bucket:
