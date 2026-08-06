@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from zoneinfo import ZoneInfo
+import re
 
 import pytest
 from httpx import AsyncClient
@@ -66,7 +65,7 @@ async def test_region_stats_reflects_completed_quest_and_share(client: AsyncClie
     assert share.status_code == 201
 
     response = await client.get(
-        "/api/v1/open/regions/danyang/stats", params={"serviceKey": service_key}
+        "/api/v1/open/regions/danyang/stats", headers={"X-Service-Key": service_key}
     )
     assert response.status_code == 200
     data = response.json()["data"]
@@ -80,11 +79,15 @@ async def test_region_stats_reflects_completed_quest_and_share(client: AsyncClie
     assert set(data["journey_completion"].keys()) == _JOURNEY_COMPLETION_KEYS
     assert set(data["share_stats"].keys()) == _SHARE_STATS_KEYS
 
-    this_month = datetime.now(ZoneInfo("Asia/Seoul")).strftime("%Y-%m")
-
     assert data["region"]["slug"] == "danyang"
     assert data["visit_stats"]["total_completed_quests"] == 1
-    assert data["visit_stats"]["monthly"] == [{"month": this_month, "count": 1}]
+    # 실행 시각의 "이번 달"을 테스트에서 다시 계산해 비교하면, 자정 직전 월 경계를 넘는
+    # 순간 서버가 기록한 completed_at의 월과 어긋날 수 있다(freezegun 등 시간 고정 없이는
+    # 근본적으로 막기 어려움). 월 문자열 형식·건수만 확인해 그 레이스를 아예 피한다.
+    monthly = data["visit_stats"]["monthly"]
+    assert len(monthly) == 1
+    assert monthly[0]["count"] == 1
+    assert re.fullmatch(r"\d{4}-\d{2}", monthly[0]["month"])
     assert data["popular_spots"][0]["quest_id"] == seed["gps_quest_id"]
     assert data["popular_spots"][0]["completed_count"] == 1
     assert data["dna_distribution"] == {"nature": 1.0}
