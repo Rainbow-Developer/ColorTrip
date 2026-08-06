@@ -25,7 +25,7 @@
 
 ## 알려진 한계 / TODO
 
-- 추천은 DNA 일치와 미완료 상태만 사용하는 룰 기반 MVP다.
+- 추천은 룰 기반 MVP다. 완료한 퀘스트와 안정 키(`client_key`) 없는 퀘스트는 **제외**하지만, DNA 일치 여부로는 **거르지 않고 정렬만** 한다 — 비일치 항목도 응답에 포함되고 `is_dna_match`로 구분한다(`app/quests/service.py`, `app/quests/repository.py`의 `list_recommended`).
 
 ## 변경 이력
 

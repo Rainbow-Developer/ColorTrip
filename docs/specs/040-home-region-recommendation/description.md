@@ -1,5 +1,10 @@
 # [설명] 홈 DNA 지역 추천 + 퀘스트 요약
 
+> ⚠️ **폐기된 스펙 — 아래는 2026-08-06 이전 동작 기록이다.**
+> 현재 홈 추천은 [065-quest-recommendation-api](../065-quest-recommendation-api/)가 담당한다.
+> 여기 적힌 `GET /api/v1/home/recommendation`과 정적 폴백은 구현이 제거됐다.
+> 현재 상태는 [implementation.md](implementation.md) 참고.
+
 ## 개요
 
 홈 화면 추천 배너가 사용자의 여행 DNA에 맞는 지역을 추천하면서, 그 지역의 대표 퀘스트 최대 3개(제목·유형·썸네일)를 함께 요약해 보여준다. 추천은 백엔드 API가 계산하고, API를 쓸 수 없으면 프론트 정적 데이터로 동일한 배너를 구성한다.

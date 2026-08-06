@@ -1,5 +1,10 @@
 # [계획] 홈 DNA 지역 추천 + 퀘스트 요약
 
+> ⚠️ **폐기된 스펙 — 아래는 2026-07-30 당시 계획 기록이다.**
+> 현재 홈 추천은 [065-quest-recommendation-api](../065-quest-recommendation-api/)가 담당하며,
+> 여기 계획한 `app/home/` 도메인은 2026-08-06에 제거됐다.
+> 현재 상태는 [implementation.md](implementation.md) 참고.
+
 | 항목 | 내용 |
 |------|------|
 | 기능명 | 홈 DNA 지역 추천 + 퀘스트 요약 |
