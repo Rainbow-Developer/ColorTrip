@@ -244,7 +244,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.white.withOpacity(0),
+                    Colors.white.withValues(alpha: 0),
                     Colors.white,
                     Colors.white,
                   ],
@@ -256,12 +256,15 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                   child: tripStarted
                       ? OutlinedButton(
-                          onPressed: () => context.push('/region/$regionId/quests$journeyQuery'),
+                          onPressed: () => context.push(
+                            '/region/$regionId/quests$journeyQuery',
+                          ),
                           child: const Text('퀘스트 더 선택하기'),
                         )
                       : ElevatedButton(
                           key: _selectQuestButtonKey,
-                          onPressed: () => context.push('/region/$regionId/quests'),
+                          onPressed: () =>
+                              context.push('/region/$regionId/quests'),
                           child: const Text('퀘스트 선택하러 가기'),
                         ),
                 ),

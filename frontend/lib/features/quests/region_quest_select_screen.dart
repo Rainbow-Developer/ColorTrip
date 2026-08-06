@@ -410,7 +410,9 @@ class _TripSetupSheetState extends State<_TripSetupSheet> {
 
   Future<void> _pickRange() async {
     final now = DateTime.now();
-    List<DateTime?> tempRange = _range != null ? [_range!.start, _range!.end] : [];
+    List<DateTime?> tempRange = _range != null
+        ? [_range!.start, _range!.end]
+        : [];
 
     final picked = await showModalBottomSheet<DateTimeRange>(
       context: context,
@@ -422,17 +424,28 @@ class _TripSetupSheetState extends State<_TripSetupSheet> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final isValid = tempRange.length == 2 && tempRange[0] != null && tempRange[1] != null;
+            final isValid =
+                tempRange.length == 2 &&
+                tempRange[0] != null &&
+                tempRange[1] != null;
             return SafeArea(
               child: Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20),
+                padding: const EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 20,
+                  bottom: 20,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
                       '여행 기간을 선택해주세요',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
@@ -456,7 +469,10 @@ class _TripSetupSheetState extends State<_TripSetupSheet> {
                           ? () {
                               Navigator.pop(
                                 context,
-                                DateTimeRange(start: tempRange[0]!, end: tempRange[1]!),
+                                DateTimeRange(
+                                  start: tempRange[0]!,
+                                  end: tempRange[1]!,
+                                ),
                               );
                             }
                           : null,
