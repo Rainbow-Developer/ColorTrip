@@ -83,8 +83,7 @@ def _render_privacy_policy_page() -> str:
 
 <h2 style="font-size:17px;margin-top:32px;">5. 문의처</h2>
 <p>개인정보 처리에 관한 문의는 아래로 연락해 주세요.</p>
-<p style="color:#999;font-size:13px;">담당자 연락처: privacy@colortrip.app
-  (placeholder — 실제 등록 전 팀 연락처로 교체 필요)</p>
+<p style="color:#999;font-size:13px;">담당자 연락처: rainbow.dev00@gmail.com</p>
 
 <footer style="margin-top:48px;padding-top:16px;border-top:1px solid #E0E0DA;
     color:#999;font-size:12px;">

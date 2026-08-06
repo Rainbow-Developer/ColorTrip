@@ -251,7 +251,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
     final origin = Uri.parse(apiBaseUrl);
     final privacyUrl = origin.replace(path: '/privacy', query: '');
-    await launchUrl(privacyUrl, mode: LaunchMode.externalApplication);
+    final opened = await launchUrl(
+      privacyUrl,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('개인정보처리방침 페이지를 열 수 없어요.')),
+      );
+    }
   }
 
   String _date(DateTime value) =>

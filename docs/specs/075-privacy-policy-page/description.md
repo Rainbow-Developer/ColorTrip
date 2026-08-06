@@ -36,7 +36,7 @@ Play 심사 봇이나 사용자가 이 URL을 직접 열어도 동일하게 동�
 
 ## 예시
 
-```
+```http
 GET https://34-64-226-70.sslip.io/privacy
 
 200 OK

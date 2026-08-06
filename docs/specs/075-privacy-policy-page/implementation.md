@@ -30,8 +30,8 @@
 ## 알려진 한계 / TODO
 
 - 본문은 법무 검토 전 초안이다. Play Console에 실제 등록하기 전 사람이 검토해야 한다
-  (plan.md 리스크 참고). 담당자 연락처도 placeholder(`privacy@colortrip.app`)이므로 실제
-  연락처로 교체가 필요하다.
+  (plan.md 리스크 참고). 담당자 연락처는 `rainbow.dev00@gmail.com`으로 반영했다
+  (CodeRabbit 리뷰 반영, PR #64).
 - URL이 `34-64-226-70.sslip.io`(dev, sslip.io 기반) 도메인에 묶여 있다. 정식 도메인으로
   바뀌면 Play Console에 등록한 URL도 함께 갱신해야 한다.
 - Android 실기기/에뮬레이터에서 "보기" 링크 탭 → 브라우저 오픈까지의 수동 E2E 확인은 아직
