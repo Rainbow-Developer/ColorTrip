@@ -2,9 +2,10 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 진행 중 |
+| 상태 | 완료 (PR 머지 대기) |
 | 최종 업데이트 | 2026-08-06 |
 | Jira | [KAN-64](https://rainbowdev00.atlassian.net/browse/KAN-64) |
+| PR | [#61](https://github.com/Rainbow-Developer/ColorTrip/pull/61) |
 
 ## 구현 규모 / 단위 분할
 
@@ -21,14 +22,21 @@
 - [x] `.github/workflows/deploy-dev.yml` — Caddyfile 전송, `API_DOMAIN` 주입
 - [x] `deploy/.env.example` · `deploy/README.md` 갱신
 
+- [x] GitHub 저장소 variable `API_DOMAIN` 등록
+- [x] dev 배포 실행 및 실검증 — `/health` 200, Let's Encrypt 인증서 유효(만료 2026-11-04), HTTP→HTTPS 308, 라우트 29개(이전 4개)
+- [x] 릴리스 APK를 https 주소로 빌드 → 에뮬레이터 설치·기동, cleartext/TLS 오류 없음
+- [x] 에뮬레이터 Chrome에서 인증서 경고 없이 200 — Android 신뢰 저장소가 Let's Encrypt 루트를 이미 신뢰
+- [x] `infra-deploy.md` · `gcp-access.md` · `app-run-guide.md` · `frontend/README.md` · `deploy/README.md` 갱신
+
 ## 미구현 / 남은 항목
 
-- [ ] GitHub 저장소 variable `API_DOMAIN` 등록
-- [ ] dev 배포 실행 및 `https://34-64-226-70.sslip.io/health` 실검증
-- [ ] 릴리스 APK를 https 주소로 재빌드 → 에뮬레이터 연동 확인
-- [ ] `docs/conventions/infra-deploy.md` · `docs/app-run-guide.md` · `frontend/README.md` · `README.md` 갱신
+- [ ] PR [#61](https://github.com/Rainbow-Developer/ColorTrip/pull/61) 머지 — **머지 전까지 dev 푸시 배포가 실패한다**(아래 참고)
+- [ ] 카카오 로그인 후 화면까지 실조작 검증 (계정 자격증명 필요)
+- [ ] `README.md` 실행 파이프라인에 Caddy 반영
 
 ## 알려진 한계 / TODO
+
+- **PR 머지 전까지 dev 배포가 깨진다.** 기존 compose는 `api`가 호스트 80을 잡는데 인스턴스에서 Caddy가 이미 80을 점유하고 있어 충돌한다(`Bind for 0.0.0.0:80 failed: port is already allocated`). 실제로 2026-08-06 dev 푸시(#60) 배포가 이 이유로 실패해 API가 내려갔고(502), 이 브랜치를 재배포해 복구했다.
 
 - **sslip.io는 임시방편이다.** 서드파티 무료 DNS에 의존하므로 정식 도메인 구매가 후속 과제다. 교체 시 `API_DOMAIN` variable 값만 바꾸면 되도록 설계했다.
 - **`docs/app-run-guide.md`가 낡았다.** 하드코딩 Bearer 토큰 기준으로 쓰여 있는데 실제 코드는 카카오 로그인으로 전환됐다(`dio_client.dart`에 토큰 없음). 이 스펙 범위에서 함께 정리한다.
@@ -40,3 +48,4 @@
 | 날짜 | 내용 |
 |------|------|
 | 2026-08-06 | 최초 작성. GCP 시크릿·GitHub variable 등록 완료, 배포 스택 HTTPS 전환 구현 |
+| 2026-08-06 | dev 배포·HTTPS 실검증 완료. dev의 KAN-65(#60)와 CORS 수정이 겹쳐 병합 정리, PR #61 생성 |
