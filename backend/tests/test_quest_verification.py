@@ -435,9 +435,7 @@ async def test_recommendations_exclude_quests_without_a_client_key(
     unvisited_before = await client.get("/api/v1/regions/unvisited", headers=headers)
     assert unvisited_before.status_code == 200
     danyang_before = next(
-        item
-        for item in unvisited_before.json()["data"]["items"]
-        if item["id"] == region_id
+        item for item in unvisited_before.json()["data"]["items"] if item["id"] == region_id
     )
 
     # TourAPI 등 카탈로그 밖에서 유입된 안정 키 없는 퀘스트를 같은 지역에 심는다.
@@ -462,9 +460,7 @@ async def test_recommendations_exclude_quests_without_a_client_key(
     unvisited_after = await client.get("/api/v1/regions/unvisited", headers=headers)
     assert unvisited_after.status_code == 200
     danyang_after = next(
-        item
-        for item in unvisited_after.json()["data"]["items"]
-        if item["id"] == region_id
+        item for item in unvisited_after.json()["data"]["items"] if item["id"] == region_id
     )
     assert danyang_after["available_quest_count"] == danyang_before["available_quest_count"]
     assert danyang_after["matching_quest_count"] == danyang_before["matching_quest_count"]

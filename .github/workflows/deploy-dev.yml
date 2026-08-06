@@ -50,18 +50,25 @@ jobs:
 
       - name: Upload deploy files to instance
         run: |
-          gcloud compute scp deploy/docker-compose.yml deploy/deploy.sh \
+          gcloud compute scp deploy/docker-compose.yml deploy/deploy.sh deploy/Caddyfile \
             "${INSTANCE}:~/" --zone "${ZONE}" --project "${PROJECT_ID}" \
             --tunnel-through-iap --quiet
 
       - name: Deploy on instance
         env:
           KAKAO_APP_ID: ${{ vars.KAKAO_APP_ID }}
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
         run: |
           if [[ ! "${KAKAO_APP_ID}" =~ ^[1-9][0-9]*$ ]]; then
             echo "KAKAO_APP_ID must be a positive integer."
             exit 1
           fi
+          # Caddy가 이 이름으로 Let's Encrypt 인증서를 발급받는다. 빈 값이면 TLS 없이
+          # 뜨거나 잘못된 도메인으로 발급을 시도하므로 미리 막는다.
+          if [[ ! "${API_DOMAIN}" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+            echo "API_DOMAIN must be a valid hostname (got: '${API_DOMAIN}')."
+            exit 1
+          fi
           gcloud compute ssh "${INSTANCE}" --zone "${ZONE}" --project "${PROJECT_ID}" \
             --tunnel-through-iap --quiet \
-            --command "API_IMAGE='${IMAGE}:${GITHUB_SHA}' CLOUD_SQL_CONNECTION_NAME='${CLOUD_SQL_CONNECTION_NAME}' KAKAO_APP_ID='${KAKAO_APP_ID}' bash ~/deploy.sh"
+            --command "API_IMAGE='${IMAGE}:${GITHUB_SHA}' CLOUD_SQL_CONNECTION_NAME='${CLOUD_SQL_CONNECTION_NAME}' KAKAO_APP_ID='${KAKAO_APP_ID}' API_DOMAIN='${API_DOMAIN}' bash ~/deploy.sh"

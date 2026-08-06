@@ -72,6 +72,5 @@ async def list_unvisited_recommendations(
     start = (page - 1) * size
     page_rows = rows[start : start + size]
     return [
-        (region, int(matching), int(available))
-        for region, matching, available in page_rows
+        (region, int(matching), int(available)) for region, matching, available in page_rows
     ], total

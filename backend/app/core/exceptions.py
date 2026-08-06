@@ -69,6 +69,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def _handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
         import traceback
+
         traceback.print_exc()
         e = ErrorCode.INTERNAL_ERROR
         request_id = request_id_from_scope(request.scope)
