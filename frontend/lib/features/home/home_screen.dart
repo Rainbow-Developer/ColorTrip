@@ -482,6 +482,7 @@ class _InProgressDnaCard extends ConsumerWidget {
         .byId(progress.dnaType ?? 'nature');
 
     String? inProgressLabel;
+    String? inProgressRegionId;
     for (final region in kRegionsInMapOrder) {
       if (progress.tripStatusOf(region.id) != RegionTripStatus.inProgress) {
         continue;
@@ -489,6 +490,7 @@ class _InProgressDnaCard extends ConsumerWidget {
       final trip = progress.tripQuestsOf(region.id);
       final done = trip.where(progress.isCompleted).length;
       inProgressLabel = '${region.name} $done/${trip.length}';
+      inProgressRegionId = region.id;
       break;
     }
 
@@ -501,21 +503,29 @@ class _InProgressDnaCard extends ConsumerWidget {
       child: Column(
         children: [
           if (inProgressLabel != null) ...[
-            Text(
-              '진행중인 여행',
-              style: const TextStyle(
-                color: AppColors.tripActiveBadgeFg,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              inProgressLabel,
-              style: const TextStyle(
-                color: AppColors.tripActiveBadgeFg,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => context.push('/region/$inProgressRegionId'),
+              child: Column(
+                children: [
+                  Text(
+                    '진행중인 여행',
+                    style: const TextStyle(
+                      color: AppColors.tripActiveBadgeFg,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    inProgressLabel,
+                    style: const TextStyle(
+                      color: AppColors.tripActiveBadgeFg,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 10),
