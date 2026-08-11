@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
+import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/chungbuk_map.dart';
+import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../data/repositories/quest_repository.dart';
 import '../../data/repositories/region_repository.dart';
 import '../../state/progress_notifier.dart';
@@ -36,6 +40,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     final timeline = ref.watch(progressProvider).timeline;
     final questRepo = ref.watch(questRepositoryProvider);
     final regionRepo = ref.watch(regionRepositoryProvider);
+    final apiBaseUrl = ref.watch(appConfigProvider).apiBaseUrl;
 
     final monthLabels = <String>[];
     for (final entry in timeline) {
@@ -90,6 +95,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           isLast: i == filtered.length - 1,
                           questRepo: questRepo,
                           regionRepo: regionRepo,
+                          apiBaseUrl: apiBaseUrl,
                         ),
                     ],
                   ),
@@ -182,18 +188,43 @@ class _TimelineRow extends StatelessWidget {
     required this.isLast,
     required this.questRepo,
     required this.regionRepo,
+    required this.apiBaseUrl,
   });
 
   final TimelineEntry entry;
   final QuestRepository questRepo;
   final RegionRepository regionRepo;
   final bool isLast;
+  final String apiBaseUrl;
 
   @override
   Widget build(BuildContext context) {
     final quest = questRepo.byId(entry.questId);
     if (quest == null) return const SizedBox.shrink();
     final region = regionRepo.byId(quest.region);
+    final regionName = region?.name ?? quest.region;
+    final typeStyle = questTypeStyles[quest.type];
+    final tagColors = questTypeIconColors[quest.type];
+    final regionColor = mapFillColors(quest.region, 1);
+    final photoUrl = entry.photoUrl;
+    final resolvedPhotoUrl = photoUrl == null
+        ? null
+        : Uri.parse(apiBaseUrl).resolve(photoUrl).toString();
+    // 인증에 실제로 쓴 사진(로컬 → 서버) → 없으면 퀘스트 관련 사진(TourAPI) → placeholder.
+    final fallbackImage = AppNetworkImage(
+      url: quest.imageUrl,
+      placeholderEmoji: typeStyle?.emoji ?? '📍',
+      placeholderEmojiSize: 32,
+    );
+    final thumbnail = entry.photo != null
+        ? Image.memory(entry.photo!, fit: BoxFit.cover)
+        : resolvedPhotoUrl != null
+        ? Image.network(
+            resolvedPhotoUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallbackImage,
+          )
+        : fallbackImage;
 
     return IntrinsicHeight(
       child: Padding(
@@ -229,28 +260,96 @@ class _TimelineRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      quest.title,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${region?.name ?? quest.region} · ${entry.date}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.timelineDateText,
+              child: SizedBox(
+                height: questCardHeight,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(20),
+                            bottomRight: Radius.circular(20),
+                          ),
+                          child: AspectRatio(
+                            aspectRatio: 4 / 3,
+                            child: thumbnail,
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  quest.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  entry.date,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.timelineDateText,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    MiniBadge(
+                                      label: regionName,
+                                      background: regionColor.background,
+                                      foreground: regionColor.label,
+                                    ),
+                                    if (tagColors != null &&
+                                        typeStyle != null) ...[
+                                      const SizedBox(width: 6),
+                                      MiniBadge(
+                                        label: typeStyle.label,
+                                        background: tagColors.background,
+                                        foreground: tagColors.foreground,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.only(right: 14),
+                          child: Center(
+                            child: Icon(
+                              Icons.check_circle,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
