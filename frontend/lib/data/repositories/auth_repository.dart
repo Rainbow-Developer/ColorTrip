@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../auth/kakao_auth_gateway.dart';
@@ -11,6 +13,11 @@ abstract class AuthRepository {
   Future<UserProfile> fetchCurrentUser();
   Future<UserProfile> submitOnboardingProfile(OnboardingProfileInput input);
   Future<UserProfile> updateProfile(ProfileUpdateInput input);
+  Future<UserProfile> uploadProfileImage(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  });
+  Future<UserProfile> removeProfileImage();
   Future<void> logout();
   Future<void> withdraw();
 }
@@ -72,6 +79,39 @@ class DioAuthRepository implements AuthRepository {
     final response = await dio.patch<Map<String, dynamic>>(
       '/users/me',
       data: input.toJson(),
+    );
+    return UserProfile.fromJson(_data(response));
+  }
+
+  @override
+  Future<UserProfile> uploadProfileImage(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) async {
+    final mediaType = DioMediaType.parse(mimeType);
+    final extension = switch (mediaType.subtype) {
+      'png' => 'png',
+      'webp' => 'webp',
+      'heic' => 'heic',
+      _ => 'jpg',
+    };
+    final response = await dio.post<Map<String, dynamic>>(
+      '/users/me/profile-image',
+      data: FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: 'profile.$extension',
+          contentType: mediaType,
+        ),
+      }),
+    );
+    return UserProfile.fromJson(_data(response));
+  }
+
+  @override
+  Future<UserProfile> removeProfileImage() async {
+    final response = await dio.delete<Map<String, dynamic>>(
+      '/users/me/profile-image',
     );
     return UserProfile.fromJson(_data(response));
   }

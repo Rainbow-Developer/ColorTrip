@@ -56,7 +56,7 @@
 
 ### 프로필·동의 온보딩
 
-- 수집하는 인증/프로필 개인정보는 닉네임, 이메일, 생년월일로 제한한다.
+- 수집하는 인증/프로필 개인정보는 닉네임, 이메일, 생년월일로 제한한다. (이후 [080 프로필 이미지](../080-profile-image/)에서 선택 항목으로 프로필 이미지가 추가됐다. 현행 범위는 [인증 & 보안 컨벤션](../../conventions/auth-security.md)을 따른다.)
 - Kakao가 제공한 값은 백엔드가 검증한 응답만 초기값으로 사용하고, 누락 값은 사용자가 온보딩에서 입력한다.
 - 동의 버전은 클라이언트 입력을 받지 않고 서버 상수 `terms-v1`, `privacy-v1`, `marketing-v1`를 기록한다.
 - `PUT /api/v1/users/me/onboarding-profile`은 닉네임·이메일·생년월일과 필수·선택 동의를 하나의 DB 트랜잭션으로 저장하고 최신 `UserProfile`을 반환한다. 필수 동의가 `false`이면 아무것도 저장하지 않으며, 동일 요청과 응답 유실 후 재전송은 중복 consent 행 없이 같은 결과로 수렴한다.
@@ -74,7 +74,7 @@
 
 - `ActiveUser`: 유효한 access JWT를 가지고 탈퇴·익명화되지 않은 사용자. 내 프로필 조회, 프로필·동의 온보딩, 로그아웃, 탈퇴에 접근할 수 있다.
 - `ProfiledUser`: `ActiveUser`이면서 닉네임·이메일·생년월일과 현재 `terms-v1`, `privacy-v1` 동의가 완료된 사용자. 여행 DNA 질문 조회·답변 제출에 접근할 수 있다.
-- `CurrentUser`: `ProfiledUser`이면서 DNA가 완료된 사용자. 여행·퀘스트·지도·타임라인·공유·업로드 등 일반 보호 API에 접근할 수 있다.
+- `CurrentUser`: `ProfiledUser`이면서 DNA가 완료된 사용자. 여행·퀘스트·지도·타임라인·공유·업로드 등 일반 보호 API에 접근할 수 있다. (예외: 프로필 이미지 업로드·삭제는 온보딩 중 필요해 `ActiveUser`를 쓴다 — [080](../080-profile-image/))
 - 단계가 부족하면 HTTP 403 `ONBOARDING_REQUIRED`를 반환한다. 클라이언트는 `/users/me`를 다시 조회해 `onboarding_step`에 맞는 화면으로 이동한다.
 - `GET /api/v1/trip_dna/questions`와 답변 제출은 모두 `ProfiledUser`를 요구한다. 기존 `CurrentUser` 호출부는 일반 보호 API의 최종 단계 의미를 유지한다.
 - refresh는 만료된 access JWT를 전제로 하므로 access-JWT dependency 단계 밖에 둔다. refresh token 자체를 검증하고 연결된 사용자가 탈퇴·익명화되지 않았는지 DB에서 확인한 뒤에만 rotation한다.

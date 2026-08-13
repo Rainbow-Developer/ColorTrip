@@ -53,6 +53,44 @@ curl https://34-64-226-70.sslip.io/health
 | `KAKAO_NATIVE_APP_KEY` | 카카오 개발자 콘솔의 네이티브 앱 키 (`backend/.env` 참고) |
 | `API_BASE_URL` | 접속할 API 주소 (위 표) |
 
+### Kakao 앱 키와 Android 플랫폼 설정
+
+이 앱은 `kakao_flutter_sdk_user`로 Android SDK 로그인을 초기화하므로
+`KAKAO_NATIVE_APP_KEY`에는 Kakao Developers의 **네이티브 앱 키**만 넣어야 합니다.
+REST API 키나 Admin 키를 넣으면 로그인 화면에서 `KOE101 (Admin Settings Issue)`가
+발생합니다.
+
+| 사용 위치 | 사용해야 하는 키 |
+|------|------|
+| Flutter/Android SDK 초기화 | 네이티브 앱 키 |
+| Kakao REST API 호출 | REST API 키 |
+| Admin API 호출 | Admin 키 |
+
+Kakao Developers의 [앱] → [플랫폼 키]에서 네이티브 앱 키를 복사하고, [Android 플랫폼]
+설정에 다음 값을 등록합니다.
+
+- 패키지명: `io.vmonster.colortrip`
+- 키 해시: APK에 서명한 keystore의 SHA-1 해시(Base64)
+- Kakao Login: 사용 설정
+
+로컬 debug APK가 사용하는 기본 Android debug keystore의 키 해시는 macOS/Linux에서
+다음 명령으로 확인할 수 있습니다.
+
+```bash
+keytool -exportcert -alias androiddebugkey \
+  -keystore "$HOME/.android/debug.keystore" \
+  -storepass android -keypass android 2>/dev/null \
+  | openssl sha1 -binary | openssl base64
+```
+
+팀원이 각자 다른 keystore로 빌드하면 해당 keystore의 해시도 Kakao Developers에
+추가해야 합니다. release APK 또는 Google Play 배포본은 debug 해시가 아니라 실제
+서명 키(Play App Signing을 사용하면 Play Console에서 확인한 앱 서명 키)의 해시를
+등록합니다.
+
+자세한 오류 코드는 [Kakao Login 오류 코드 문서](https://developers.kakao.com/docs/ko/kakaologin/trouble-shooting)를
+참고합니다.
+
 ---
 
 ## 1. Windows PC — Android 에뮬레이터로 실행
@@ -202,6 +240,8 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 | 증상 | 원인 · 해결 |
 |------|------------|
 | 앱이 **설정 오류 화면**으로 뜸 | `KAKAO_NATIVE_APP_KEY` 또는 `API_BASE_URL` `--dart-define` 누락 → [인증은 카카오 로그인입니다](#인증은-카카오-로그인입니다) |
+| Kakao 로그인에서 **`KOE101 (Admin Settings Issue)`** | `KAKAO_NATIVE_APP_KEY`에 REST API 키/Admin 키를 넣었거나 키에 오타가 있음 → Kakao Developers의 **네이티브 앱 키**로 다시 빌드. 이후에도 실패하면 Android 패키지명 `io.vmonster.colortrip`, 키 해시, Kakao Login 사용 설정을 확인 |
+| Kakao 로그인에서 **`KOE009` / `invalid android_key_hash`** | APK 서명에 사용한 keystore의 키 해시가 Kakao Developers에 등록되지 않음 → 현재 debug/release 서명 키의 해시를 등록하고 APK를 다시 설치 |
 | 릴리스 빌드가 `KAKAO_NATIVE_APP_KEY is required` 로 실패 | Gradle이 릴리스 빌드에서 키를 강제합니다 → `--dart-define`으로 전달 |
 | **릴리스** APK에서 모든 네트워크 요청 실패 | 평문 HTTP 주소로 빌드함. 릴리스는 cleartext 차단 → HTTPS 주소로 빌드하거나 debug 빌드 사용 |
 | 보호 API가 모두 **401** | 카카오 로그인을 하지 않았거나 세션 만료 → 앱에서 다시 로그인 |

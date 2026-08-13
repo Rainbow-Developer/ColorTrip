@@ -34,7 +34,6 @@ class ColoredRegionItem(BaseModel):
 
 class ShareSummaryResponse(BaseModel):
     nickname: str | None = None
-    profile_image: str | None = None
     dna_type: str | None = None
     dna_name: str | None = None
     completed_region_count: int
@@ -44,10 +43,16 @@ class ShareSummaryResponse(BaseModel):
 
 
 class ShareReadResponse(BaseModel):
+    """공개(무인증) 공유 카드 응답.
+
+    소유자 프로필 이미지는 싣지 않는다. 이 endpoint는 공유 코드만 알면 누구나 호출할 수
+    있고 스토리지도 공개 읽기를 전제하므로, 사용자가 올린 사진 URL을 노출하지 않는다
+    (080-profile-image 의사결정 5).
+    """
+
     share_code: str
     share_style: str
     owner_nickname: str | None = None
-    owner_profile_image: str | None = None
     dna_type: str | None = None
     dna_name: str | None = None
     completed_region_count: int

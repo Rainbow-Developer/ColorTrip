@@ -60,6 +60,15 @@ class _AuthRepository implements AuthRepository {
   ) async => user = _profile(OnboardingStep.tripDna);
 
   @override
+  Future<UserProfile> uploadProfileImage(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) async => user!;
+
+  @override
+  Future<UserProfile> removeProfileImage() async => user!;
+
+  @override
   Future<UserProfile> updateProfile(ProfileUpdateInput input) async => user!;
 
   @override

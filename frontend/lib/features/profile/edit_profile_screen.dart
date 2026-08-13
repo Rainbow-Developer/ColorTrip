@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_form_field.dart';
 import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/profile_image_picker.dart';
 import '../../data/models/auth_models.dart';
 import '../../features/onboarding/profile_validation.dart';
 import '../../state/auth_controller.dart';
@@ -71,16 +73,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: AppColors.imagePlaceholderBg,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.checkboxBorder),
+              child: ProfileImagePicker(
+                imageUrl: ref.watch(resolveUploadUrlProvider)(
+                  user?.profileImage,
                 ),
-                alignment: Alignment.center,
-                child: const Text('👤', style: TextStyle(fontSize: 24)),
+                isBusy: auth.isBusy,
+                size: 80,
+                onPicked: (picked) => ref
+                    .read(authControllerProvider.notifier)
+                    .uploadProfileImage(
+                      picked.bytes,
+                      mimeType: picked.mimeType,
+                    ),
+                onRemoved: ref
+                    .read(authControllerProvider.notifier)
+                    .removeProfileImage,
               ),
             ),
             const SizedBox(height: 24),

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
+import '../../core/network/dio_client.dart';
+import '../../core/widgets/app_network_image.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/auth_controller.dart';
 import '../../state/progress_notifier.dart';
@@ -28,9 +30,13 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
-                radius: 32,
-                backgroundColor: AppColors.mapEmpty,
+              AppNetworkImage(
+                url: ref.watch(resolveUploadUrlProvider)(user?.profileImage),
+                width: 64,
+                height: 64,
+                borderRadius: BorderRadius.circular(32),
+                placeholderEmoji: '👤',
+                placeholderEmojiSize: 26,
               ),
               const SizedBox(width: 14),
               Column(

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_form_field.dart';
+import '../../core/widgets/profile_image_picker.dart';
 import '../../data/models/auth_models.dart';
 import '../../state/auth_controller.dart';
 import '../../state/progress_notifier.dart';
@@ -79,6 +80,31 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 ),
                 const SizedBox(height: 16),
                 const _StepProgress(totalSteps: 3, currentStep: 2),
+                const SizedBox(height: 20),
+                Center(
+                  child: ProfileImagePicker(
+                    imageUrl: ref.watch(resolveUploadUrlProvider)(
+                      ref.watch(currentUserProvider)?.profileImage,
+                    ),
+                    isBusy: auth.isBusy,
+                    onPicked: (picked) => ref
+                        .read(authControllerProvider.notifier)
+                        .uploadProfileImage(
+                          picked.bytes,
+                          mimeType: picked.mimeType,
+                        ),
+                    onRemoved: ref
+                        .read(authControllerProvider.notifier)
+                        .removeProfileImage,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Center(
+                  child: Text(
+                    '프로필 이미지 (선택)',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 AppFormField(
                   label: '닉네임',
@@ -256,9 +282,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       mode: LaunchMode.externalApplication,
     );
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('개인정보처리방침 페이지를 열 수 없어요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('개인정보처리방침 페이지를 열 수 없어요.')));
     }
   }
 

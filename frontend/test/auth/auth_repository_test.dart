@@ -431,6 +431,60 @@ void main() {
     );
     expect(storage.tokens, isNotNull);
   });
+
+  test('uploads a profile image with the picker-provided MIME type', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    late RequestOptions request;
+    dio.httpClientAdapter = _Adapter((options) async {
+      request = options;
+      return _response(200, {
+        'data': {
+          ..._profile,
+          'profile_image': '/uploads/avatars/2026/08/a.png',
+        },
+      });
+    });
+    final repository = DioAuthRepository(
+      dio: dio,
+      kakao: _Gateway(),
+      storage: _Storage(),
+    );
+
+    final user = await repository.uploadProfileImage(
+      Uint8List.fromList([0x89, 0x50, 0x4e, 0x47]),
+      mimeType: 'image/png',
+    );
+
+    expect(request.path, '/users/me/profile-image');
+    expect(request.method, 'POST');
+    final form = request.data as FormData;
+    expect(form.files.single.key, 'file');
+    expect(form.files.single.value.filename, 'profile.png');
+    expect(form.files.single.value.contentType.toString(), 'image/png');
+    expect(user.profileImage, '/uploads/avatars/2026/08/a.png');
+  });
+
+  test('removes a profile image and returns the cleared profile', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    late RequestOptions request;
+    dio.httpClientAdapter = _Adapter((options) async {
+      request = options;
+      return _response(200, {
+        'data': {..._profile, 'profile_image': null},
+      });
+    });
+    final repository = DioAuthRepository(
+      dio: dio,
+      kakao: _Gateway(),
+      storage: _Storage(),
+    );
+
+    final user = await repository.removeProfileImage();
+
+    expect(request.path, '/users/me/profile-image');
+    expect(request.method, 'DELETE');
+    expect(user.profileImage, isNull);
+  });
 }
 
 class _FailingGateway extends _Gateway {

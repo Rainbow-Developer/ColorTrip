@@ -31,7 +31,7 @@ Kakao Flutter SDK 로그인
 |------|------|------|
 | `ActiveUser` | 유효한 JWT, 탈퇴·익명화되지 않은 user | 내 프로필 조회, 프로필·동의 입력, 로그아웃, 탈퇴 |
 | `ProfiledUser` | `ActiveUser` + 프로필 + 현재 `terms-v1`, `privacy-v1` 동의 | 여행 DNA 질문 조회·답변 제출 |
-| `CurrentUser` | `ProfiledUser` + DNA 완료 | 여행·퀘스트·지도·타임라인·공유·업로드 등 일반 보호 API |
+| `CurrentUser` | `ProfiledUser` + DNA 완료 | 여행·퀘스트·지도·타임라인·공유·업로드 등 일반 보호 API (프로필 이미지 업로드·삭제는 예외로 `ActiveUser` — [080](../080-profile-image/)) |
 
 마케팅 동의(`marketing-v1`)는 선택이며 단계 판정에 사용하지 않는다. 세 consent 버전은 클라이언트가 보내지 않고 서버 상수로 기록한다. 단계가 부족한 보호 API는 HTTP 403 `ONBOARDING_REQUIRED`를 반환하며 앱은 `/users/me`의 `onboarding_step`을 다시 확인한다.
 
@@ -66,7 +66,7 @@ refresh API는 만료된 access token을 요구하지 않는다. refresh token�
 
 ### 프로필과 로그아웃
 
-프로필 SOT는 백엔드이며 수집 필드는 닉네임, 이메일, 생년월일이다. Kakao 닉네임·이메일·이미지는 신규 사용자 초기값으로만 사용하며 재로그인으로 기존 프로필을 덮어쓰지 않는다. `UserProfile`은 프로필과 DNA, `social_provider`, 계산된 `onboarding_step`, 항상 `false`인 호환 필드 `is_restored`를 반환한다.
+프로필 SOT는 백엔드이며 수집 필드는 닉네임, 이메일, 생년월일이다(이후 [080](../080-profile-image/)에서 선택 항목인 프로필 이미지가 추가됐다). Kakao 닉네임·이메일·이미지는 신규 사용자 초기값으로만 사용하며 재로그인으로 기존 프로필을 덮어쓰지 않는다. `UserProfile`은 프로필과 DNA, `social_provider`, 계산된 `onboarding_step`, 항상 `false`인 호환 필드 `is_restored`를 반환한다.
 
 로그아웃은 백엔드 refresh token 폐기를 제한 횟수 재시도하고 Kakao logout을 best-effort로 호출한 뒤 Flutter secure storage와 메모리 상태를 삭제한다. 백엔드 또는 Kakao logout이 실패해도 사용자가 해당 기기에서 로그아웃할 수 있도록 로컬 세션은 삭제한다.
 

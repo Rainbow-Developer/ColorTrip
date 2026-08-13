@@ -1,5 +1,10 @@
+import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:colortrip/core/config/app_config.dart';
+import 'package:colortrip/core/image_picking.dart';
+import 'package:colortrip/core/network/dio_client.dart';
+import 'package:colortrip/core/widgets/profile_image_picker.dart';
 import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/repositories/auth_repository.dart';
 import 'package:colortrip/features/onboarding/config_error_app.dart';
@@ -30,6 +35,19 @@ UserProfile _user(OnboardingStep step) => UserProfile(
   isRestored: false,
 );
 
+UserProfile _withProfileImage(UserProfile user, String? profileImage) =>
+    UserProfile(
+      id: user.id,
+      email: user.email,
+      nickname: user.nickname,
+      birthDate: user.birthDate,
+      profileImage: profileImage,
+      dna: user.dna,
+      socialProvider: user.socialProvider,
+      onboardingStep: user.onboardingStep,
+      isRestored: user.isRestored,
+    );
+
 class _Repository implements AuthRepository {
   _Repository(this.user);
 
@@ -39,6 +57,9 @@ class _Repository implements AuthRepository {
   Object? loginError;
   Object? submitError;
   Object? updateError;
+  Object? uploadImageError;
+  final List<String> uploadedImages = [];
+  int removeImageCalls = 0;
 
   @override
   Future<UserProfile> fetchCurrentUser() async => user;
@@ -70,6 +91,22 @@ class _Repository implements AuthRepository {
   }
 
   @override
+  Future<UserProfile> uploadProfileImage(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) async {
+    if (uploadImageError case final error?) throw error;
+    uploadedImages.add(mimeType);
+    return user = _withProfileImage(user, '/uploads/avatars/2026/08/a.png');
+  }
+
+  @override
+  Future<UserProfile> removeProfileImage() async {
+    removeImageCalls++;
+    return user = _withProfileImage(user, null);
+  }
+
+  @override
   Future<UserProfile> updateProfile(ProfileUpdateInput input) async {
     if (updateError case final error?) throw error;
     return user;
@@ -81,9 +118,16 @@ class _Repository implements AuthRepository {
   }
 }
 
+/// 프로필 이미지 URL 해석이 `apiBaseUrl`을 필요로 하므로 테스트에서도 설정을 제공한다.
+final _testConfig = AppConfig.fromValues(
+  kakaoNativeAppKey: 'test-native-key',
+  apiBaseUrl: 'https://api.example.com/api/v1',
+);
+
 Future<ProviderContainer> _container(_Repository repository) async {
   final container = ProviderContainer(
     overrides: [
+      appConfigProvider.overrideWithValue(_testConfig),
       authRepositoryProvider.overrideWithValue(repository),
       onboardingTourProvider.overrideWith(
         () => OnboardingTourNotifier(
@@ -154,6 +198,137 @@ void main() {
     expect(find.text('이름'), findsNothing);
     expect(find.text('[필수] 이용약관 동의'), findsOneWidget);
     expect(find.text('[선택] 마케팅 수신 동의'), findsOneWidget);
+  });
+
+  testWidgets('signup uploads the picked profile image immediately', (
+    tester,
+  ) async {
+    final repository = _Repository(_user(OnboardingStep.profile));
+    final container = await _container(repository);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: ProfileImagePicker(
+              imageUrl: null,
+              isBusy: false,
+              pickImage: (_) async =>
+                  PickedImage(Uint8List.fromList([1, 2, 3]), 'image/png'),
+              onPicked: (picked) => container
+                  .read(authControllerProvider.notifier)
+                  .uploadProfileImage(picked.bytes, mimeType: picked.mimeType),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byType(ProfileImagePicker));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('갤러리에서 선택'));
+    await tester.pumpAndSettle();
+
+    expect(repository.uploadedImages, ['image/png']);
+    expect(
+      container.read(authControllerProvider).user?.profileImage,
+      '/uploads/avatars/2026/08/a.png',
+    );
+  });
+
+  testWidgets('signup shows the optional profile image picker', (tester) async {
+    final container = await _container(
+      _Repository(_user(OnboardingStep.profile)),
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: SignupScreen()),
+      ),
+    );
+
+    expect(find.byType(ProfileImagePicker), findsOneWidget);
+    expect(find.text('프로필 이미지 (선택)'), findsOneWidget);
+  });
+
+  testWidgets('edit profile replaces the static avatar with the picker', (
+    tester,
+  ) async {
+    final container = await _container(
+      _Repository(_user(OnboardingStep.complete)),
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: EditProfileScreen()),
+      ),
+    );
+
+    expect(find.byType(ProfileImagePicker), findsOneWidget);
+  });
+
+  testWidgets('profile image picker hides removal when there is no image', (
+    tester,
+  ) async {
+    final container = await _container(
+      _Repository(_user(OnboardingStep.profile)),
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: ProfileImagePicker(
+              imageUrl: null,
+              onPicked: (_) async {},
+              onRemoved: () async {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byType(ProfileImagePicker));
+    await tester.pumpAndSettle();
+
+    expect(find.text('갤러리에서 선택'), findsOneWidget);
+    expect(find.text('기본 이미지로 변경'), findsNothing);
+  });
+
+  testWidgets('profile image picker removes an existing image', (tester) async {
+    final repository = _Repository(_user(OnboardingStep.profile));
+    final container = await _container(repository);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: ProfileImagePicker(
+              imageUrl: 'https://api.example.com/uploads/avatars/a.png',
+              onPicked: (_) async {},
+              onRemoved: container
+                  .read(authControllerProvider.notifier)
+                  .removeProfileImage,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byType(ProfileImagePicker));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('기본 이미지로 변경'));
+    await tester.pumpAndSettle();
+
+    expect(repository.removeImageCalls, 1);
   });
 
   testWidgets('signup birth date field opens a date picker', (tester) async {

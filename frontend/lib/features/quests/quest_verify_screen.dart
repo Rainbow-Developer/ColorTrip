@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/constants.dart';
+import '../../core/image_picking.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../data/location/location_gateway.dart';
@@ -580,55 +581,36 @@ class _PhotoVerifyBody extends StatefulWidget {
   final String questTitle;
 
   /// 완료 처리 콜백 — 사용자가 실제로 고른 사진을 함께 넘겨 히스토리에 남긴다.
-  final Future<bool> Function(_PickedPhoto photo) onVerified;
+  final Future<bool> Function(PickedImage photo) onVerified;
 
   @override
   State<_PhotoVerifyBody> createState() => _PhotoVerifyBodyState();
 }
 
 class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
-  // "업로드 가이드"에 안내한 상한과 맞춘다.
-  static const _maxPhotoBytes = 5 * 1024 * 1024;
-
   Uint8List? _photoBytes;
   String _photoMimeType = 'image/jpeg';
   bool _busy = false;
 
   Future<void> _pickPhoto(ImageSource source) async {
-    final XFile? picked;
+    final PickedImage? picked;
     try {
-      // maxWidth/imageQuality로 대부분의 카메라 사진을 5MB 이하로 미리 줄인다.
-      picked = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1920,
-        imageQuality: 85,
-      );
-    } catch (_) {
+      picked = await pickImageBytes(source);
+    } on PickImageException catch (error) {
       if (!mounted) return;
-      showAppToast(context, '사진을 불러오지 못했어요. 카메라·사진 접근 권한을 확인해주세요.');
+      showAppToast(context, switch (error.reason) {
+        PickImageFailure.permission => '사진을 불러오지 못했어요. 카메라·사진 접근 권한을 확인해주세요.',
+        PickImageFailure.read => '사진을 불러오지 못했어요. 다시 시도해주세요.',
+        PickImageFailure.tooLarge => '사진 용량은 5MB 이하만 가능해요.',
+      });
       return;
     }
-    final selected = picked;
-    if (selected == null) return; // 사용자가 선택을 취소함 — 에러 아님.
-
-    final Uint8List bytes;
-    try {
-      bytes = await selected.readAsBytes();
-    } catch (_) {
-      if (!mounted) return;
-      showAppToast(context, '사진을 불러오지 못했어요. 다시 시도해주세요.');
-      return;
-    }
-    if (bytes.length > _maxPhotoBytes) {
-      if (!mounted) return;
-      showAppToast(context, '사진 용량은 5MB 이하만 가능해요.');
-      return;
-    }
+    if (picked == null) return; // 사용자가 선택을 취소함 — 에러 아님.
 
     if (!mounted) return;
     setState(() {
-      _photoBytes = bytes;
-      _photoMimeType = selected.mimeType ?? _mimeTypeForName(selected.name);
+      _photoBytes = picked!.bytes;
+      _photoMimeType = picked.mimeType;
     });
   }
 
@@ -744,7 +726,7 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
                   ? () async {
                       setState(() => _busy = true);
                       await widget.onVerified(
-                        _PickedPhoto(photoBytes, _photoMimeType),
+                        PickedImage(photoBytes, _photoMimeType),
                       );
                       if (mounted) setState(() => _busy = false);
                     }
@@ -762,23 +744,6 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
       ),
     );
   }
-}
-
-class _PickedPhoto {
-  const _PickedPhoto(this.bytes, this.mimeType);
-
-  final Uint8List bytes;
-  final String mimeType;
-}
-
-String _mimeTypeForName(String name) {
-  final extension = name.split('.').last.toLowerCase();
-  return switch (extension) {
-    'png' => 'image/png',
-    'webp' => 'image/webp',
-    'heic' => 'image/heic',
-    _ => 'image/jpeg',
-  };
 }
 
 class _PhotoSourceButton extends StatelessWidget {

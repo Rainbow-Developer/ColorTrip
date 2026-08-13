@@ -193,6 +193,7 @@ dev 서버는 Caddy가 TLS를 종단하고 API 컨테이너는 호스트 포트�
 | **백엔드 공통 로깅** | JSON 앱 로그, 요청 메타데이터 로깅, request id 전파 | `backend/app/core/` · 스펙 [docs/specs/020-backend-logging/](docs/specs/020-backend-logging/) |
 | **도메인 상태 영속화(KAN-55)** | 여행·퀘스트 완료·지도·타임라인을 서버 SOT로 연결하고 앱 재시작 시 복원 | 계획 [docs/specs/040-domain-state-persistence/](docs/specs/040-domain-state-persistence/) |
 | **개인정보처리방침 페이지** | Google Play 등록용 공개 정적 페이지(`GET /privacy`), 회원가입 화면에서 링크 연결 | `backend/app/legal/`, `frontend/lib/features/onboarding/signup_screen.dart` · 스펙 [docs/specs/075-privacy-policy-page/](docs/specs/075-privacy-policy-page/) |
+| **프로필 이미지** | 회원가입 선택 등록·내 정보 수정에서 교체·제거, 마이 화면 표시 | `backend/app/auth/`, `backend/app/uploads/`, `frontend/lib/core/widgets/profile_image_picker.dart`, `frontend/lib/features/profile/` · 스펙 [docs/specs/080-profile-image/](docs/specs/080-profile-image/) |
 
 > 위 표는 기능이 **어디 있는지**를 가리킵니다. 개별 기능의 **상세 설명**은 이 README에 중복해 적지 않고, 해당 기능 스펙의 `description.md`를 단일 출처(SOT)로 둡니다. 지도 색칠·공유 등은 별도 도메인으로 진행 예정이며, 스펙이 만들어지면 이 표에 추가합니다.
 

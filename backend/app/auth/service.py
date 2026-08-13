@@ -3,6 +3,8 @@
 from datetime import datetime, timedelta
 from uuid import UUID
 
+from fastapi import UploadFile
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +22,8 @@ from app.core.base import now_kst
 from app.core.config import settings
 from app.core.exceptions import AppException, ErrorCode
 from app.core.security import create_access_token, create_refresh_token, hash_refresh_token
+from app.uploads import service as uploads_service
+from app.uploads.storage import PhotoStorage
 
 TERMS_CONSENT_VERSION = "terms-v1"
 PRIVACY_CONSENT_VERSION = "privacy-v1"
@@ -203,6 +207,48 @@ async def save_onboarding_profile(
     await session.commit()
     await session.refresh(current_user)
     return await build_user_profile(session, current_user)
+
+
+async def replace_profile_image(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    file: UploadFile,
+    storage: PhotoStorage,
+) -> UserProfile:
+    """프로필 이미지를 업로드하고 `users.profile_image`를 갱신한다.
+
+    온보딩 중에도 등록할 수 있어야 해서 `ActiveUser`만 요구한다. 퀘스트 인증 사진과 달리
+    `uploaded_photos` 소유권 행을 만들지 않는다 — 만들면 이 URL이 `require_owned_photo`를
+    통과해 사진 인증에 재사용될 수 있다 (080-profile-image 의사결정 4).
+    """
+    image = await uploads_service.store_uploaded_image(file, storage, prefix="avatars")
+    user = await require_active_user_for_update(session, current_user.id)
+    user.profile_image = image.url
+
+    async def is_persisted(check_session: AsyncSession) -> bool:
+        found = await check_session.scalar(
+            select(User.id).where(User.id == user.id, User.profile_image == image.url)
+        )
+        return found is not None
+
+    await uploads_service.commit_or_discard_image(
+        session, storage, image, is_persisted=is_persisted
+    )
+    await session.refresh(user)
+    return await build_user_profile(session, user)
+
+
+async def remove_profile_image(session: AsyncSession, *, current_user: User) -> UserProfile:
+    """프로필 이미지를 비운다. 이미 비어 있어도 성공한다(멱등).
+
+    이전에 저장된 스토리지 객체는 지우지 않는다 (080-profile-image 의사결정 2).
+    """
+    user = await require_active_user_for_update(session, current_user.id)
+    user.profile_image = None
+    await session.commit()
+    await session.refresh(user)
+    return await build_user_profile(session, user)
 
 
 async def update_current_user_profile(

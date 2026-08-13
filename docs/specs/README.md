@@ -40,4 +40,7 @@ docs/specs/
 | [040-domain-state-persistence](040-domain-state-persistence/) | 여행·퀘스트·지도·타임라인 서버 영속화와 앱 재시작 복원 |
 | [060-share-native-experience](060-share-native-experience/) | 공유 카드 실사용화(지도 미리보기·네이티브 공유 시트·공유 랜딩 페이지) |
 | [065-quest-recommendation-api](065-quest-recommendation-api/) | 서버 기반 미시작 지역·퀘스트 추천 API |
+| [065-dev-https](065-dev-https/) | dev 서버 HTTPS 적용(Caddy + Let's Encrypt) |
 | [070-municipal-open-api](070-municipal-open-api/) | 지자체 제공 오픈 API(지역 관광 통계, 서비스키 인증) |
+| [075-privacy-policy-page](075-privacy-policy-page/) | Google Play 등록용 개인정보처리방침 공개 페이지 |
+| [080-profile-image](080-profile-image/) | 프로필 이미지 등록·교체·제거(회원가입 선택 항목) |

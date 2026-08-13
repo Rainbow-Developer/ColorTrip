@@ -11,12 +11,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-UserProfile _user(OnboardingStep step) => UserProfile(
+UserProfile _user(OnboardingStep step, {String? profileImage}) => UserProfile(
   id: 'user-id',
   email: step == OnboardingStep.profile ? null : 'traveler@example.com',
   nickname: step == OnboardingStep.profile ? null : '컬러트립',
   birthDate: step == OnboardingStep.profile ? null : DateTime(2000, 1, 2),
-  profileImage: null,
+  profileImage: profileImage,
   dna: step == OnboardingStep.complete ? 'nature' : null,
   socialProvider: 'kakao',
   onboardingStep: step,
@@ -33,6 +33,13 @@ class _Repository implements AuthRepository {
   Object? restoreError;
   Object? submitError;
   Completer<UserProfile>? submitCompleter;
+  Object? uploadImageError;
+  Object? removeImageError;
+  UserProfile uploadedUser = _user(
+    OnboardingStep.profile,
+    profileImage: '/uploads/avatars/2026/08/a.png',
+  );
+  UserProfile removedUser = _user(OnboardingStep.profile);
 
   @override
   Future<UserProfile> fetchCurrentUser() async => loginUser;
@@ -64,6 +71,21 @@ class _Repository implements AuthRepository {
   ) async {
     if (submitError case final error?) throw error;
     return submitCompleter?.future ?? submittedUser;
+  }
+
+  @override
+  Future<UserProfile> uploadProfileImage(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) async {
+    if (uploadImageError case final error?) throw error;
+    return uploadedUser;
+  }
+
+  @override
+  Future<UserProfile> removeProfileImage() async {
+    if (removeImageError case final error?) throw error;
+    return removedUser;
   }
 
   @override
@@ -305,5 +327,70 @@ void main() {
       container.read(authControllerProvider).status,
       AuthStatus.tripDnaRequired,
     );
+  });
+
+  test('프로필 이미지 업로드는 온보딩 단계를 진행시키지 않는다', () async {
+    final repository = _Repository()..restored = _user(OnboardingStep.profile);
+    final container = ProviderContainer(
+      overrides: [authRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(authControllerProvider.notifier);
+    await controller.bootstrap();
+
+    final success = await controller.uploadProfileImage(
+      Uint8List.fromList([1, 2, 3]),
+      mimeType: 'image/png',
+    );
+
+    final state = container.read(authControllerProvider);
+    expect(success, isTrue);
+    expect(state.user?.profileImage, '/uploads/avatars/2026/08/a.png');
+    // 이미지 등록만으로 회원가입이 끝나면 안 된다.
+    expect(state.status, AuthStatus.profileRequired);
+    expect(state.isBusy, isFalse);
+  });
+
+  test('업로드 실패는 직전 사용자 상태를 유지한 채 오류만 알린다', () async {
+    final repository = _Repository()
+      ..restored = _user(OnboardingStep.tripDna)
+      ..uploadImageError = StateError('upload failed');
+    final container = ProviderContainer(
+      overrides: [authRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(authControllerProvider.notifier);
+    await controller.bootstrap();
+
+    final success = await controller.uploadProfileImage(
+      Uint8List.fromList([1, 2, 3]),
+      mimeType: 'image/png',
+    );
+
+    final state = container.read(authControllerProvider);
+    expect(success, isFalse);
+    expect(state.user, isNotNull);
+    expect(state.status, AuthStatus.tripDnaRequired);
+    expect(state.errorMessage, contains('프로필 이미지를 저장하지 못했습니다'));
+    expect(state.isBusy, isFalse);
+  });
+
+  test('프로필 이미지 제거는 이미지를 비운다', () async {
+    final repository = _Repository()
+      ..restored = _user(
+        OnboardingStep.profile,
+        profileImage: '/uploads/avatars/2026/08/a.png',
+      );
+    final container = ProviderContainer(
+      overrides: [authRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(authControllerProvider.notifier);
+    await controller.bootstrap();
+
+    final success = await controller.removeProfileImage();
+
+    expect(success, isTrue);
+    expect(container.read(authControllerProvider).user?.profileImage, isNull);
   });
 }

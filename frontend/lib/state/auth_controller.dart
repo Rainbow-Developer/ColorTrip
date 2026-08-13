@@ -147,6 +147,50 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// 프로필 이미지는 선택 즉시 저장한다 — 온보딩 제출과 분리된 요청이라
+  /// 성공해도 `onboarding_step`은 그대로다 (docs/specs/080-profile-image).
+  Future<bool> uploadProfileImage(
+    Uint8List bytes, {
+    required String mimeType,
+  }) => _applyProfileImageChange(
+    () => ref
+        .read(authRepositoryProvider)
+        .uploadProfileImage(bytes, mimeType: mimeType),
+    '프로필 이미지를 저장하지 못했습니다. 다시 시도해주세요.',
+  );
+
+  Future<bool> removeProfileImage() => _applyProfileImageChange(
+    () => ref.read(authRepositoryProvider).removeProfileImage(),
+    '프로필 이미지를 삭제하지 못했습니다. 다시 시도해주세요.',
+  );
+
+  Future<bool> _applyProfileImageChange(
+    Future<UserProfile> Function() action,
+    String errorMessage,
+  ) async {
+    final epoch = _epoch;
+    final previous = state;
+    state = AuthState(
+      status: previous.status,
+      user: previous.user,
+      isBusy: true,
+    );
+    try {
+      final user = await action();
+      if (epoch != _epoch) return false;
+      state = _stateForUser(user);
+      return true;
+    } on Object {
+      if (epoch != _epoch) return false;
+      state = AuthState(
+        status: previous.status,
+        user: previous.user,
+        errorMessage: errorMessage,
+      );
+      return false;
+    }
+  }
+
   Future<bool> refreshCurrentUser() async {
     final epoch = _epoch;
     try {
