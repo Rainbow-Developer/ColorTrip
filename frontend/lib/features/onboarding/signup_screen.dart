@@ -256,9 +256,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       mode: LaunchMode.externalApplication,
     );
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('개인정보처리방침 페이지를 열 수 없어요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('개인정보처리방침 페이지를 열 수 없어요.')));
     }
   }
 

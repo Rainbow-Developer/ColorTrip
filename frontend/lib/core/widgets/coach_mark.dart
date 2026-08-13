@@ -13,12 +13,18 @@ class CoachMarkOverlay extends ConsumerStatefulWidget {
     required this.stepIndex,
     required this.title,
     required this.body,
+    this.scrollAlignment = 0.5,
   });
 
   final GlobalKey targetKey;
   final int stepIndex;
   final String title;
   final String body;
+
+  /// [Scrollable.ensureVisible]에 넘기는 정렬 값. 기본은 화면 중앙(0.5)이지만,
+  /// 타겟이 화면의 상당 부분을 차지해 중앙 정렬 시 말풍선 놓을 위·아래 공간이
+  /// 모자라면(예: 홈 지도) 0.0(뷰포트 상단)으로 넘겨 아래쪽에 공간을 확보한다.
+  final double scrollAlignment;
 
   @override
   ConsumerState<CoachMarkOverlay> createState() => _CoachMarkOverlayState();
@@ -40,7 +46,7 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     await Scrollable.ensureVisible(
       ctx,
       duration: const Duration(milliseconds: 200),
-      alignment: 0.5,
+      alignment: widget.scrollAlignment,
     );
     if (!mounted || !ctx.mounted) return;
     final box = ctx.findRenderObject() as RenderBox?;
