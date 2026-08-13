@@ -103,11 +103,8 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
       child: Stack(
         children: [
           // CustomPaint는 히트테스트를 흡수하지 않으므로(시각 효과만 담당) 순수하게 그리기용
-          // — 화면 어디를 눌러도 실제 화면이 그대로 반응한다. 예를 들어 "여행 시작하기"
-          // 코치마크 단계에서는 그 버튼뿐 아니라 위쪽 퀘스트 목록(전제 조건)도 눌러야 하므로,
-          // hole 밖을 흡수해 막으면 오히려 투어를 진행할 수 없게 된다. 실제 타겟을 조작하는
-          // 것 자체가 다음 단계로의 진행 트리거다(각 화면의 onTap/onPressed에서 advance() 호출).
           IgnorePointer(child: CustomPaint(painter: _SpotlightPainter(hole))),
+          _SpotlightHitTestBlocker(passthroughRect: hole),
           switch (placement) {
             _BubblePlacement.below => Positioned(
               left: margin,
@@ -152,6 +149,46 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
 }
 
 enum _BubblePlacement { below, above, center }
+
+class _SpotlightHitTestBlocker extends LeafRenderObjectWidget {
+  const _SpotlightHitTestBlocker({required this.passthroughRect});
+
+  final Rect passthroughRect;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _RenderSpotlightHitTestBlocker(passthroughRect);
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant _RenderSpotlightHitTestBlocker renderObject,
+  ) {
+    renderObject.passthroughRect = passthroughRect;
+  }
+}
+
+class _RenderSpotlightHitTestBlocker extends RenderBox {
+  _RenderSpotlightHitTestBlocker(this._passthroughRect);
+
+  Rect _passthroughRect;
+
+  set passthroughRect(Rect value) {
+    if (_passthroughRect == value) return;
+    _passthroughRect = value;
+    markNeedsPaint();
+  }
+
+  @override
+  bool get sizedByParent => true;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
+
+  @override
+  bool hitTestSelf(Offset position) => !_passthroughRect.contains(position);
+}
 
 class _MessageCard extends ConsumerWidget {
   const _MessageCard({

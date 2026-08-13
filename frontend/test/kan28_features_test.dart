@@ -9,6 +9,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/static/quests_data.dart';
@@ -226,7 +227,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(today).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('선택'));
+    await tester.tap(find.text('선택 완료'));
     await tester.pumpAndSettle();
 
     // 시작 → 상태에 이름·기간이 저장되고 여행 목록으로 이동, 카드에 표시된다.
@@ -242,6 +243,52 @@ void main() {
     expect(find.text('단양 힐링 여행'), findsOneWidget);
     expect(find.text(info.periodLabel), findsOneWidget);
     expect(find.text('진행중인 여행'), findsOneWidget);
+  });
+
+  testWidgets('튜토리얼 코치마크는 배경을 막고 하이라이트된 버튼만 통과시킨다', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final tourStepTwoOverride = onboardingTourProvider.overrideWith(
+      () => OnboardingTourNotifier(
+        const OnboardingTourState(step: 2, skipped: false),
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        tourStepTwoOverride,
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      _wrap(
+        const RegionQuestSelectScreen(regionId: 'danyang'),
+        container: container,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행을 시작해보세요'), findsNothing);
+
+    await tester.tap(find.text('소백산 연화봉 전망대 인증'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행을 시작해보세요'), findsOneWidget);
+    expect(find.text('여행 시작하기 (1)'), findsOneWidget);
+
+    await tester.tap(find.text('도담삼봉에서 인생샷 남기기'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행 시작하기 (1)'), findsOneWidget);
+    expect(find.text('여행 시작하기 (2)'), findsNothing);
+
+    await tester.tap(find.text('여행 시작하기 (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행 정보를 입력해주세요'), findsOneWidget);
   });
 
   test('기간 표기는 같은 해면 연도를 한 번만 쓴다', () {

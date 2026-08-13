@@ -270,7 +270,7 @@ class _RegionQuestSelectScreenState
               ),
             ],
           ),
-          if (!tour.isDone && tour.step == 2)
+          if (!tour.isDone && tour.step == 2 && selectedCount > 0)
             CoachMarkOverlay(
               targetKey: _startTripButtonKey,
               stepIndex: 2,
