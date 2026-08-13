@@ -250,7 +250,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('회원가입을 중단할까요?'),
-        content: const Text('입력한 내용은 저장되지 않으며 로그아웃됩니다.'),
+        // 프로필 이미지는 선택 즉시 서버에 저장되므로(080-profile-image 의사결정 3)
+        // "저장되지 않는다"고 뭉뚱그리지 않는다.
+        content: const Text(
+          '입력한 닉네임·생년월일·이메일은 저장되지 않고 로그아웃됩니다.\n등록한 프로필 이미지는 계정에 남아 다음 로그인 때 그대로 보여요.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),

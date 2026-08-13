@@ -30,6 +30,32 @@ ALLOWED_IMAGE_TYPES = {
     "image/heic": ".heic",
 }
 
+# HEIC는 ISO-BMFF 컨테이너라 brand 값으로 판별한다. 같은 컨테이너를 쓰는 다른 brand도
+# image_picker가 HEIC로 넘길 수 있어 이미지 계열 brand를 함께 허용한다.
+_HEIF_BRANDS = frozenset(
+    {b"heic", b"heix", b"hevc", b"heim", b"heis", b"hevm", b"hevs", b"mif1", b"msf1"}
+)
+
+
+def _matches_declared_type(content: bytes, content_type: str) -> bool:
+    """선언된 content_type과 실제 바이트의 시그니처가 일치하는지 확인한다.
+
+    클라이언트 헤더만 믿으면 임의의 바이트가 `image/png`으로 저장돼, 렌더링되지 않는
+    URL이 프로필·인증 사진으로 남는다. 전체 디코딩은 새 의존성이 필요하고 이 목적에는
+    과하므로 매직 바이트만 검사한다.
+    """
+    match content_type:
+        case "image/jpeg":
+            return content.startswith(b"\xff\xd8\xff")
+        case "image/png":
+            return content.startswith(b"\x89PNG\r\n\x1a\n")
+        case "image/webp":
+            return len(content) >= 12 and content[:4] == b"RIFF" and content[8:12] == b"WEBP"
+        case "image/heic":
+            return len(content) >= 12 and content[4:8] == b"ftyp" and content[8:12] in _HEIF_BRANDS
+        case _:
+            return False
+
 
 @dataclass(frozen=True)
 class StoredImage:
@@ -74,6 +100,11 @@ async def store_uploaded_image(
             ErrorCode.VALIDATION_ERROR,
             f"파일이 너무 큽니다 (최대 {settings.max_upload_size_mb}MB).",
         )
+    if not _matches_declared_type(content, content_type):
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR,
+            f"이미지 파일이 아니거나 형식({content_type})과 내용이 일치하지 않습니다.",
+        )
 
     object_name = f"{prefix}/{now_kst():%Y/%m}/{new_uuid7().hex}{extension}"
     url = await storage.save(object_name, content, content_type)
@@ -110,6 +141,22 @@ async def commit_or_discard_image(
                     "업로드 DB 저장 실패로 스토리지 객체를 정리했습니다: %s", image.object_name
                 )
         raise
+
+
+async def discard_stored_image(storage: PhotoStorage, url: str | None) -> None:
+    """더 이상 참조되지 않는 이미지를 스토리지에서 지운다 (best-effort).
+
+    DB 반영이 끝난 뒤에 호출해야 한다 — 먼저 지우면 커밋 실패 시 살아 있는 URL이
+    가리키는 객체가 사라진다. 우리가 저장하지 않은 URL(Kakao CDN 등)은 건너뛰고,
+    삭제 실패는 로그만 남긴다. 사용자에게 성공한 작업을 실패로 되돌리지 않는다.
+    """
+    object_name = storage.owned_object_name(url)
+    if object_name is None:
+        return
+    try:
+        await storage.delete(object_name)
+    except Exception:
+        logger.exception("이전 이미지 정리 실패 — 고아 객체로 남습니다: %s", object_name)
 
 
 async def require_owned_photo(session: AsyncSession, user_id: UUID, photo_url: str | None) -> None:

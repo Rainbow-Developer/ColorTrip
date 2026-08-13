@@ -21,6 +21,15 @@ class PhotoStorage(Protocol):
         """저장에 실패한 객체를 정리한다."""
         ...
 
+    def owned_object_name(self, url: str | None) -> str | None:
+        """이 스토리지가 소유한 URL이면 object_name을, 아니면 None을 반환한다.
+
+        `users.profile_image`에는 Kakao CDN URL이 초기값으로 들어갈 수 있고, GCS↔로컬
+        전환 이력이 있으면 다른 형식의 URL도 남는다. 우리가 저장하지 않은 객체를 지우는
+        일이 없도록 소유 여부를 여기서 판별한다 (080-profile-image).
+        """
+        ...
+
 
 class LocalPhotoStorage:
     def __init__(self, base_dir: str) -> None:
@@ -35,6 +44,9 @@ class LocalPhotoStorage:
     async def delete(self, object_name: str) -> None:
         path = self._base / object_name
         await asyncio.to_thread(path.unlink, missing_ok=True)
+
+    def owned_object_name(self, url: str | None) -> str | None:
+        return _strip_prefix(url, "/uploads/")
 
 
 class GCSPhotoStorage:
@@ -54,6 +66,23 @@ class GCSPhotoStorage:
 
     async def delete(self, object_name: str) -> None:
         await asyncio.to_thread(self._bucket.blob(object_name).delete)
+
+    def owned_object_name(self, url: str | None) -> str | None:
+        return _strip_prefix(url, f"https://storage.googleapis.com/{self._bucket_name}/")
+
+
+def _strip_prefix(url: str | None, prefix: str) -> str | None:
+    """`prefix`로 시작하는 URL에서 object_name을 떼어낸다.
+
+    상위 경로 탈출(`..`)이 섞인 값은 소유 객체로 취급하지 않는다 — DB 값이 오염돼도
+    스토리지 바깥을 지우지 못하게 한다.
+    """
+    if url is None or not url.startswith(prefix):
+        return None
+    object_name = url[len(prefix) :]
+    if not object_name or ".." in object_name.split("/"):
+        return None
+    return object_name
 
 
 @lru_cache(maxsize=1)

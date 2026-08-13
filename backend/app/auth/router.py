@@ -124,8 +124,13 @@ async def post_my_profile_image(
 async def delete_my_profile_image(
     current_user: ActiveUser,
     session: AsyncSession = Depends(get_session),
+    storage: PhotoStorage = Depends(get_photo_storage),
 ) -> Envelope[UserProfile]:
-    data = await service.remove_profile_image(session, current_user=current_user)
+    data = await service.remove_profile_image(
+        session,
+        current_user=current_user,
+        storage=storage,
+    )
     return success(data, message="프로필 이미지를 삭제했습니다.")
 
 
@@ -133,6 +138,11 @@ async def delete_my_profile_image(
 async def delete_my_profile(
     current_user: ActiveUser,
     session: AsyncSession = Depends(get_session),
+    storage: PhotoStorage = Depends(get_photo_storage),
 ) -> Envelope[None]:
-    await service.withdraw_current_user(session, current_user=current_user)
+    await service.withdraw_current_user(
+        session,
+        current_user=current_user,
+        storage=storage,
+    )
     return success(None)

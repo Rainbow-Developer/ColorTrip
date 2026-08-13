@@ -87,9 +87,11 @@
 | `GET /api/v1/users/me` | `ActiveUser` |
 | `PUT /api/v1/users/me/onboarding-profile` | `ActiveUser` |
 | `PATCH /api/v1/users/me` | `CurrentUser` |
+| `POST /api/v1/users/me/profile-image` | `ActiveUser` ([080](../080-profile-image/)) |
+| `DELETE /api/v1/users/me/profile-image` | `ActiveUser` ([080](../080-profile-image/)) |
 | `DELETE /api/v1/users/me` | `ActiveUser` |
 | `GET /api/v1/trip_dna/questions`, DNA 답변 제출 | `ProfiledUser` |
-| 여행·퀘스트·지도·타임라인·공유·업로드 | `CurrentUser` |
+| 여행·퀘스트·지도·타임라인·공유·퀘스트 사진 업로드 | `CurrentUser` |
 
 ### 프로필·로그아웃·탈퇴
 

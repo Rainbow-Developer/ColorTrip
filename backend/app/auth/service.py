@@ -133,9 +133,16 @@ async def logout(
     await session.commit()
 
 
-async def withdraw_current_user(session: AsyncSession, *, current_user: User) -> None:
+async def withdraw_current_user(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    storage: PhotoStorage,
+) -> None:
     current_user = await require_active_user_for_update(session, current_user.id)
     now = now_kst()
+    # 익명화가 컬럼을 비우기 전에 잡아둔다 — 이후에는 URL을 알 수 없다.
+    profile_image_url = current_user.profile_image
     await repository.revoke_active_refresh_tokens(
         session,
         user_id=current_user.id,
@@ -146,6 +153,8 @@ async def withdraw_current_user(session: AsyncSession, *, current_user: User) ->
     current_user.deleted_at = now
     current_user.withdrawal_grace_until = None
     await session.commit()
+    # 컬럼만 비우면 공개 읽기 객체가 남아 "탈퇴 시 지체 없이 파기"와 어긋난다.
+    await uploads_service.discard_stored_image(storage, profile_image_url)
 
 
 async def build_user_profile(session: AsyncSession, user: User) -> UserProfile:
@@ -224,6 +233,7 @@ async def replace_profile_image(
     """
     image = await uploads_service.store_uploaded_image(file, storage, prefix="avatars")
     user = await require_active_user_for_update(session, current_user.id)
+    previous_url = user.profile_image
     user.profile_image = image.url
 
     async def is_persisted(check_session: AsyncSession) -> bool:
@@ -235,18 +245,28 @@ async def replace_profile_image(
     await uploads_service.commit_or_discard_image(
         session, storage, image, is_persisted=is_persisted
     )
+    # 새 URL이 확정된 뒤에 이전 객체를 지운다. Kakao CDN 초기값은 건너뛴다.
+    await uploads_service.discard_stored_image(storage, previous_url)
     await session.refresh(user)
     return await build_user_profile(session, user)
 
 
-async def remove_profile_image(session: AsyncSession, *, current_user: User) -> UserProfile:
-    """프로필 이미지를 비운다. 이미 비어 있어도 성공한다(멱등).
+async def remove_profile_image(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    storage: PhotoStorage,
+) -> UserProfile:
+    """프로필 이미지를 비우고 저장된 객체도 지운다. 이미 비어 있어도 성공한다(멱등).
 
-    이전에 저장된 스토리지 객체는 지우지 않는다 (080-profile-image 의사결정 2).
+    공개 읽기 스토리지라 컬럼만 비우면 URL을 아는 주체가 계속 읽을 수 있어,
+    개인정보처리방침의 파기 문구와 어긋난다 (080-profile-image 의사결정 2).
     """
     user = await require_active_user_for_update(session, current_user.id)
+    previous_url = user.profile_image
     user.profile_image = None
     await session.commit()
+    await uploads_service.discard_stored_image(storage, previous_url)
     await session.refresh(user)
     return await build_user_profile(session, user)
 

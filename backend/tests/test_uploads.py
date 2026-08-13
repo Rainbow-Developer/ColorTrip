@@ -55,6 +55,18 @@ async def test_upload_rejects_non_image(client: AsyncClient) -> None:
     assert response.status_code == 422
 
 
+async def test_upload_rejects_mime_spoofed_bytes(client: AsyncClient) -> None:
+    """content_type만 이미지인 파일은 거부한다 — 인증 사진도 같은 검증을 받는다."""
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        "/api/v1/uploads/photo",
+        files={"file": ("visit.png", b"not an image at all", "image/png")},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+
 async def test_upload_rejects_oversized(client: AsyncClient) -> None:
     from app.core.config import settings
 
