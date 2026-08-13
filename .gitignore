@@ -230,3 +230,10 @@ __marimo__/
 
 # 퀘스트 현장 QR 생성 산출물 (backend/scripts/generate_quest_qr.py)
 backend/qr_output/
+
+# 서명 키 — 저장소 전체 안전망.
+#   frontend/android/.gitignore가 이미 key.properties·*.jks·*.keystore를 막고 있으므로
+#   여기서는 그 디렉토리 **밖에** 실수로 키를 두는 경우만 추가로 막는다(중복 규칙 아님).
+#   유출되면 키를 교체할 수 없다(Play 업로드 키는 재설정 요청 필요).
+*.jks
+*.keystore
