@@ -18,7 +18,7 @@
 
 **2. 디버그 키스토어가 빌드마다 새로 생성된다.** [frontend/docker-compose.yml](../../../frontend/docker-compose.yml)이 `pub-cache`·`gradle-cache`·`android-sdk`만 볼륨으로 잡고 `/root/.android`는 빠뜨렸습니다. 컨테이너를 `--rm`으로 쓰기 때문에 키스토어가 매번 사라집니다. 실측:
 
-```
+```text
 1회차 SHA1: 30:2F:3A:CE:E8:59:3F:16:E9:7D:DE:62:14:97:40:25:C6:6E:64:26
 2회차 SHA1: 91:4A:69:EE:65:8D:A8:8D:4D:0D:52:1F:64:EE:3F:28:10:9E:A4:2A
 ```

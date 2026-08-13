@@ -41,8 +41,10 @@ flowchart TD
 1. 키스토어 생성 (담당자가 직접, **분실하면 앱 업데이트 영구 불가 — 반드시 백업**)
 
 ```bash
-keytool -genkeypair -v -keystore colortrip-release.jks -storepass <비밀번호> -alias colortrip -keypass <비밀번호> -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkeypair -v -keystore colortrip-release.jks -alias colortrip -keyalg RSA -keysize 2048 -validity 10000
 ```
+
+> 비밀번호는 `-storepass`·`-keypass` 인자로 넘기지 말고 **keytool이 물어볼 때 입력**하세요. 명령행 인자로 주면 셸 히스토리와 프로세스 목록(`ps`)에 그대로 남습니다. 여기서 입력한 값을 다음 단계의 `key.properties`에 적습니다.
 
 2. `frontend/android/`에 두고 `key.properties` 작성
 
@@ -56,7 +58,7 @@ cp frontend/android/key.properties.example frontend/android/key.properties
 
 아무것도 안 하면 됩니다. debug 키로 서명되고 아래 경고가 뜹니다.
 
-```
+```text
 경고: android/key.properties 가 없어 release APK를 debug 키로 서명합니다.
 스토어 업로드는 불가하며 내부 테스트 설치용입니다.
 ```
@@ -81,7 +83,7 @@ echo "<SHA-1 hex>" | tr -d ':' | xxd -r -p | openssl base64
 
 릴리스 키 경로가 실제로 동작하는지 임시 키로 검증한 결과:
 
-```
+```text
 생성한 키 SHA1 : 50:08:53:09:8A:6C:82:50:6A:DA:AF:16:39:88:C2:8C:8C:2F:05:8C
 APK 서명 DN    : C=KR, O=ColorTrip, CN=SigningPathTest
 APK SHA-1      : 500853098a6c82506adaaf163988c28c8c2f058c

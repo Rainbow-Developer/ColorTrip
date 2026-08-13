@@ -71,7 +71,7 @@ adb install -r build/app/outputs/flutter-apk/app-debug.apk
 | 내 PC의 로컬 백엔드에 붙이기 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` | **debug만** |
 | 서버 없이 화면만 보기 | 닿지 않는 주소(예: `http://127.0.0.1:1`) | debug |
 
-**기본값은 없습니다.** `KAKAO_NATIVE_APP_KEY`와 `API_BASE_URL`을 둘 다 `--dart-define`으로 주지 않으면 앱이 설정 오류 화면으로 뜹니다([app_config.dart](lib/core/config/app_config.dart)). 릴리스는 Gradle이 키 없이 빌드를 거부합니다.
+**기본값은 없습니다.** `KAKAO_NATIVE_APP_KEY`와 `API_BASE_URL`을 둘 다 `--dart-define`으로 주지 않으면 앱이 설정 오류 화면으로 뜹니다([app_config.dart](lib/core/config/app_config.dart)). 릴리스 빌드는 `KAKAO_NATIVE_APP_KEY`가 없으면 Gradle이 `KAKAO_NATIVE_APP_KEY is required for release builds.` 로 빌드를 거부합니다(서명 키가 아니라 카카오 앱 키입니다 — 서명은 아래 [서명](#서명) 참고).
 
 **릴리스 빌드는 평문 HTTP를 통신하지 못합니다** — `targetSdk=36`에 `usesCleartextTraffic` 미설정이라 Android가 cleartext를 차단합니다. 로컬 백엔드(HTTP)를 볼 때는 debug를 쓰세요. 배경: [065-dev-https](../docs/specs/065-dev-https/)
 
