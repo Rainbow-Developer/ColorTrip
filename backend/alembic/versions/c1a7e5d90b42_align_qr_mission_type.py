@@ -52,10 +52,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.get_bind().execute(
-        sa.text(
-            "UPDATE quests SET mission_type = 'photo', updated_at = NOW() "
-            "WHERE client_key = ANY(:keys) AND mission_type = 'qr'"
-        ),
-        {"keys": list(_QR_CLIENT_KEYS)},
-    )
+    """되돌리지 않는다 — 어떤 행을 바꿨는지 기록하지 않기 때문이다 (리뷰 반영).
+
+    대칭으로 `mission_type='qr'`인 행을 전부 `photo`로 돌리면, **원래부터 qr이던 행**과
+    배포 뒤 운영자가 qr로 바꾼 행까지 함께 망가진다. 특히 신규 설치에서는 카탈로그
+    스냅샷이 처음부터 qr로 시드하므로 upgrade가 아무 행도 바꾸지 않는데, downgrade만
+    11개를 photo로 바꿔버린다. 데이터 정합화는 비가역으로 둔다.
+    """

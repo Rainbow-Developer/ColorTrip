@@ -70,7 +70,7 @@ refresh API는 만료된 access token을 요구하지 않는다. refresh token�
 
 ### 프로필과 로그아웃
 
-프로필 SOT는 백엔드이며 수집 필드는 닉네임, 이메일, 생년월일이다. Kakao 닉네임·이메일·이미지는 신규 사용자 초기값으로만 사용하며 재로그인으로 기존 프로필을 덮어쓰지 않는다. `UserProfile`은 프로필과 DNA, `social_provider`, 계산된 `onboarding_step`, 항상 `false`인 호환 필드 `is_restored`를 반환한다.
+프로필 SOT는 백엔드이며 수집 필드는 닉네임, 이메일, 생년월일(선택)이다. Kakao 닉네임·이메일·이미지는 신규 사용자 초기값으로만 사용하며 재로그인으로 기존 프로필을 덮어쓰지 않는다. `UserProfile`은 프로필과 DNA, `social_provider`, 계산된 `onboarding_step`, 항상 `false`인 호환 필드 `is_restored`를 반환한다.
 
 로그아웃은 백엔드 refresh token 폐기를 제한 횟수 재시도하고 Kakao logout을 best-effort로 호출한 뒤 Flutter secure storage와 메모리 상태를 삭제한다. 백엔드 또는 Kakao logout이 실패해도 사용자가 해당 기기에서 로그아웃할 수 있도록 로컬 세션은 삭제한다.
 
@@ -132,7 +132,7 @@ Flutter 빌드에는 Kakao Native App Key와 Android package/key hash 설정이 
 1. 신규 사용자가 Android emulator에서 Kakao 로그인을 완료한다.
 2. 백엔드가 Kakao token info의 `app_id`가 설정값과 일치하는지 검증한다.
 3. 앱은 받은 ColorTrip JWT를 secure storage에 저장한다.
-4. 사용자는 닉네임·이메일·생년월일과 이용약관·개인정보 필수 동의를 한 번에 제출하고 선택적으로 마케팅에 동의한다.
+4. 사용자는 닉네임·이메일과 이용약관·개인정보 필수 동의를 한 번에 제출하고, 선택적으로 생년월일과 마케팅 동의를 함께 보낸다(생년월일은 보내지 않아도 다음 단계로 넘어간다).
 5. 서버가 사용자를 `ProfiledUser`로 판정하고 여행 DNA 질문·답변만 허용한다.
 6. DNA 완료 후 `CurrentUser`로 판정해 홈과 도메인 API 접근을 허용한다.
 7. 사용자가 탈퇴하면 Kakao unlink, 백엔드 즉시 익명화, 로컬 데이터 삭제 순서로 완료한다.

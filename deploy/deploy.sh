@@ -26,13 +26,42 @@ TOKEN="$(curl -s -H 'Metadata-Flavor: Google' \
   'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token' \
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')"
 
-# Secret Manager에서 값 읽기(없으면 빈 문자열)
+# Secret Manager에서 값 읽기.
+#
+# **시크릿 없음(404)과 조회 실패(권한·장애)를 구분한다** — 예전에는 둘 다 빈 문자열이라,
+# 403이나 5xx가 나도 "시크릿 미등록"으로 취급돼 배포가 그대로 진행됐다. 그러면 예컨대
+# QR_SECRET_KEY가 조용히 JWT 파생값으로 바뀌어 현장에 붙인 QR이 전부 무효화된다(리뷰 반영).
+#
+# 404: 빈 문자열 + exit 0 (선택 시크릿은 호출부가 경고만 하고 진행)
+# 그 외 오류(401·403·5xx·응답 파싱 실패·네트워크): exit 1 → set -e로 배포 중단
 read_secret() {
-  curl -s -H "Authorization: Bearer ${TOKEN}" \
-    "https://secretmanager.googleapis.com/v1/projects/${PROJECT}/secrets/$1/versions/latest:access" \
-  | python3 -c 'import sys,json,base64
-d=json.load(sys.stdin); p=d.get("payload",{}).get("data")
-sys.stdout.write(base64.b64decode(p).decode() if p else "")'
+  local name="$1" response status body
+  # --max-time 없이 두면 메타데이터·API 정체 시 배포가 무기한 매달린다.
+  response="$(curl -s --connect-timeout 5 --max-time 20 -w $'\n%{http_code}' \
+    -H "Authorization: Bearer ${TOKEN}" \
+    "https://secretmanager.googleapis.com/v1/projects/${PROJECT}/secrets/${name}/versions/latest:access")" || {
+    echo "ERROR: 시크릿(${name}) 조회 요청 실패 (네트워크·타임아웃)" >&2
+    return 1
+  }
+  status="${response##*$'\n'}"
+  body="${response%$'\n'*}"
+
+  if [ "${status}" = "404" ]; then
+    return 0 # 미등록 — 선택 시크릿이면 호출부가 경고 후 진행한다
+  fi
+  if [ "${status}" != "200" ]; then
+    echo "ERROR: 시크릿(${name}) 조회 실패 (HTTP ${status})" >&2
+    return 1
+  fi
+
+  BODY="${body}" python3 -c 'import sys,os,json,base64
+try:
+    payload = json.loads(os.environ["BODY"]).get("payload", {}).get("data")
+except json.JSONDecodeError:
+    sys.exit("ERROR: 시크릿 응답을 해석하지 못했습니다.")
+if payload is None:
+    sys.exit("ERROR: 시크릿 응답에 payload가 없습니다.")
+sys.stdout.write(base64.b64decode(payload).decode())'
 }
 
 DB_PW="$(read_secret "${DB_SECRET}")"
@@ -46,9 +75,10 @@ KAKAO_REDIRECT_URI="$(read_secret "${KAKAO_REDIRECT_SECRET}")"
 [ -n "${KAKAO_REDIRECT_URI}" ] || { echo "ERROR: Kakao redirect URI(${KAKAO_REDIRECT_SECRET}) 조회 실패"; exit 1; }
 KAKAO_CLIENT_SECRET="$(read_secret "${KAKAO_CLIENT_SECRET_NAME}")"
 
-# 퀘스트 인증 3종 관련 시크릿(docs/specs/050-quest-verification). 없어도 배포는 계속하되
-# 어떤 기능이 죽는지 로그로 드러낸다 — 조용히 넘어가면 "인증이 안 된다"를 나중에 앱에서
-# 발견하게 된다(KAN-75에서 실제로 그랬다).
+# 퀘스트 인증 3종 관련 시크릿(docs/specs/050-quest-verification). **미등록(404)일 때만**
+# 배포를 계속하되 어떤 기능이 죽는지 로그로 드러낸다 — 조용히 넘어가면 "인증이 안 된다"를
+# 나중에 앱에서 발견하게 된다(KAN-75에서 실제로 그랬다). 권한 오류·장애는 read_secret이
+# 실패로 처리해 여기서 배포가 멈춘다(set -e).
 GEMINI_KEY="$(read_secret "${GEMINI_SECRET}")"
 if [ -z "${GEMINI_KEY}" ]; then
   echo "WARNING: Gemini 키(${GEMINI_SECRET}) 없음 — APP_ENV=dev는 fail-closed라 사진 인증이 항상 거절됩니다."
