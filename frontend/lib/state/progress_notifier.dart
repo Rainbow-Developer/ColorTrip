@@ -59,8 +59,10 @@ class ProgressNotifier extends Notifier<ProgressState> {
       ...state.timeline.where((t) => t.questId != questId),
     ];
 
-    final wasTripCompleted =
-        state.tripStatusOf(quest.region) == RegionTripStatus.completed;
+    // 채색 집계는 "그 여행에서 완료한 퀘스트가 1개 이상인가"이므로(KAN-73), 이번 완료가
+    // 그 지역 여행의 첫 완료인지를 이번 완료 **전** 상태로 판단한다.
+    final trip = state.tripQuestsOf(quest.region);
+    final hadCompletedQuestInTrip = trip.any(state.isCompleted);
 
     var next = state.copyWith(
       completedQuestIds: completed,
@@ -68,11 +70,9 @@ class ProgressNotifier extends Notifier<ProgressState> {
       timeline: timeline,
     );
 
-    // 이 퀘스트로 지역 여행을 방금 완주했다면 로컬 완주 횟수를 1 올린다 — 지도 채색 기준
-    // ([055-journey-map-coloring]). 완주 "시점"에 누적해야, 완료한 지역에 퀘스트를 더 담아
-    // (KAN-46 재방문) 선택 집합이 다시 미완료가 되어도 이미 칠한 채색이 사라지지 않는다.
-    if (!wasTripCompleted &&
-        next.tripStatusOf(quest.region) == RegionTripStatus.completed) {
+    // 첫 완료라면 로컬 채색 카운트를 1 올린다 ([055-journey-map-coloring]). 누적으로 두는
+    // 이유: 완료한 지역에 퀘스트를 더 담아도(KAN-46 재방문) 이미 칠한 채색이 사라지지 않는다.
+    if (trip.contains(questId) && !hadCompletedQuestInTrip) {
       final completions = {...next.localTripCompletions};
       completions[quest.region] = (completions[quest.region] ?? 0) + 1;
       next = next.copyWith(localTripCompletions: completions);

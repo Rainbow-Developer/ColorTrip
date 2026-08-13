@@ -173,6 +173,15 @@ async def list_journeys_containing_quest(
     return (await session.execute(stmt)).scalars().all()
 
 
+async def list_all_journeys_for_user(session: AsyncSession, user_id: UUID) -> Sequence[Journey]:
+    """사용자의 삭제되지 않은 모든 여정 (조회 시점 상태 동기화용, 페이지네이션 없음)."""
+    stmt = select(Journey).where(
+        Journey.user_id == user_id,
+        Journey.deleted_at.is_(None),
+    )
+    return (await session.execute(stmt)).scalars().all()
+
+
 async def progress_summary_map(
     session: AsyncSession, user_id: UUID, journey_ids: list[UUID]
 ) -> dict[UUID, tuple[int, int]]:

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/dio_client.dart';
 import '../data/location/location_gateway.dart';
+import '../data/media/photo_picker_gateway.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/dna_repository.dart';
 import '../data/repositories/domain_repository.dart';
@@ -48,6 +49,10 @@ final domainRepositoryProvider = Provider<DomainRepository>(
 
 final locationGatewayProvider = Provider<LocationGateway>(
   (ref) => const GeolocatorLocationGateway(),
+);
+
+final photoPickerGatewayProvider = Provider<PhotoPickerGateway>(
+  (ref) => const ImagePickerPhotoPickerGateway(),
 );
 
 final shareRepositoryProvider = Provider<ShareRepository>(

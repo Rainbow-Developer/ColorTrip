@@ -1,7 +1,8 @@
 /// 퀘스트 인증 API 판정 결과 모델(docs/specs/050-quest-verification).
 library;
 
-/// 사진 AI 인증 판정(`POST /verifications/photo`) 결과.
+/// 사진 AI 판정 결과 — `POST /quests/{id}/verify` 응답의 `photo_verdict`.
+/// 서버가 업로드된 사진을 읽어 판정하고 함께 내려준다(KAN-73).
 class PhotoVerdict {
   const PhotoVerdict({
     required this.passed,
@@ -30,17 +31,4 @@ class PhotoVerdict {
 
   /// 스텁 판정 여부 — 결과 화면에서 "AI 미설정" 뱃지를 띄운다.
   bool get isStub => provider == 'stub';
-}
-
-/// QR 인증 검증(`POST /verifications/qr`) 결과.
-class QrVerdict {
-  const QrVerdict({required this.passed, required this.reason});
-
-  factory QrVerdict.fromJson(Map<String, dynamic> json) => QrVerdict(
-    passed: json['passed'] as bool? ?? false,
-    reason: json['reason'] as String? ?? '',
-  );
-
-  final bool passed;
-  final String reason;
 }

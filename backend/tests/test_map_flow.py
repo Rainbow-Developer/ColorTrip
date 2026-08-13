@@ -121,7 +121,7 @@ async def test_my_map_counts_completed_journeys(client: AsyncClient) -> None:
     # 퀘스트 인증 → 여정이 completed로 전이 (test_journey_flow.py 패턴).
     verify = await client.post(
         f"/api/v1/quests/{seed['gps_quest_id']}/verify",
-        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/x.jpg"},
+        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/photos/x.jpg"},
         headers=headers,
     )
     assert verify.json()["data"]["verified"] is True
@@ -142,6 +142,79 @@ async def test_my_map_counts_completed_journeys(client: AsyncClient) -> None:
     assert again[seed["region_id"]]["completed_journey_count"] == 2
 
 
+async def test_my_map_counts_journey_with_single_completed_quest(client: AsyncClient) -> None:
+    """퀘스트를 여러 개 담고 1개만 인증해도 그 여행이 채색 집계에 1회로 들어간다 (KAN-73).
+
+    여정이 진행중(in_progress)이어도 집계에 포함된다 — 채색은 status와 무관하다
+    (docs/specs/055-journey-map-coloring/description.md).
+    """
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    created = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [
+                seed["quiz_quest_id"],
+                seed["gps_only_quest_id"],
+                seed["food_quest_id"],
+            ],
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201
+
+    before = await _get_map_by_region(client, headers)
+    assert before[seed["region_id"]]["completed_journey_count"] == 0
+
+    # 3개 중 퀴즈 1개만 인증한다.
+    verify = await client.post(
+        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
+        json={"answer": "O"},
+        headers=headers,
+    )
+    assert verify.json()["data"]["verified"] is True
+
+    detail = await client.get(f"/api/v1/journeys/{created.json()['data']['id']}", headers=headers)
+    assert detail.json()["data"]["status"] == "in_progress"  # 기간이 남아 있고 부분 완료
+    assert detail.json()["data"]["progress"] == {"completed": 1, "total": 3}
+
+    after = await _get_map_by_region(client, headers)
+    assert after[seed["region_id"]]["completed_journey_count"] == 1
+    assert after[seed["other_region_id"]]["completed_journey_count"] == 0
+
+
+async def test_my_map_counts_one_per_journey_even_with_many_completed_quests(
+    client: AsyncClient,
+) -> None:
+    """한 여행에서 퀘스트를 2개 인증해도 채색 집계는 여행 단위로 1회다 (KAN-73)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["quiz_quest_id"], seed["gps_quest_id"]],
+        },
+        headers=headers,
+    )
+    await client.post(
+        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
+        json={"answer": "O"},
+        headers=headers,
+    )
+    await client.post(
+        f"/api/v1/quests/{seed['gps_quest_id']}/verify",
+        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/photos/x.jpg"},
+        headers=headers,
+    )
+
+    result = await _get_map_by_region(client, headers)
+    assert result[seed["region_id"]]["completed_journey_count"] == 1
+
+
 async def test_my_map_journey_count_is_private_to_owner(client: AsyncClient) -> None:
     """다른 유저의 완료 여정은 내 completed_journey_count에 포함되지 않는다."""
     seed = await seed_quest_fixture()
@@ -155,7 +228,7 @@ async def test_my_map_journey_count_is_private_to_owner(client: AsyncClient) -> 
     )
     await client.post(
         f"/api/v1/quests/{seed['gps_quest_id']}/verify",
-        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/x.jpg"},
+        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/photos/x.jpg"},
         headers=owner_headers,
     )
 

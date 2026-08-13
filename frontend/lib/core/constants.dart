@@ -59,6 +59,9 @@ class AppColors {
   static const verifyMapBg = Color(0xFFF0F0EA);
   static const verifyProgressTrack = Color(0xFFEEEEEA);
 
+  // 인증 진행 중 화면을 덮는 스크림(KAN-73) — 뒤 화면을 어둡게 눌러 진행 중임을 알린다.
+  static const verifyScrim = Color(0xB3333333);
+
   // 공유 카드 만들기(Figma) — 지도 미리보기 카드 배경.
   static const shareMapPreviewBg = Color(0xFFE0EDD8);
 

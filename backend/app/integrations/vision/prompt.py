@@ -12,8 +12,10 @@ def build_photo_judgement_prompt(title: str, place: str, conditions: list[str]) 
         "첨부된 사진이 아래 퀘스트의 인증 조건을 충족하는지 판정하세요.",
         "",
         f"퀘스트 제목: {title}",
-        f"장소: {place}",
     ]
+    # 장소명은 서버 퀘스트 데이터에 없을 수 있다(KAN-73 — 판정 맥락을 서버가 만든다).
+    if place.strip():
+        lines.append(f"장소: {place}")
     if conditions:
         lines.append("인증 조건:")
         lines.extend(f"- {condition}" for condition in conditions)

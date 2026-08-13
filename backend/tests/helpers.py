@@ -60,16 +60,35 @@ async def complete_auth_headers(
             # 사진 소유권 제약 아래에서도 해당 fixture 의도를 유지한다.
             session.add_all(
                 UploadedPhoto(user_id=user.id, photo_url=photo_url)
-                for photo_url in (
-                    "/uploads/photos/x.jpg",
-                    "/uploads/photos/legacy.jpg",
-                    "/uploads/photos/concurrent.jpg",
-                    "/uploads/photos/2026/07/test.jpg",
-                    "/uploads/photos/2026/07/photo.jpg",
-                )
+                for photo_url in FIXTURE_PHOTO_URLS
             )
             await session.commit()
+
+        # 사진 인증은 저장된 사진을 읽어 판정하므로(KAN-73) 파일도 함께 만들어 둔다.
+        await seed_fixture_photo_files()
     return headers
+
+
+# 인증 테스트가 photo_url로 참조하는 사진들 — DB 레코드와 실제 파일을 함께 준비한다.
+FIXTURE_PHOTO_URLS = (
+    "/uploads/photos/x.jpg",
+    "/uploads/photos/legacy.jpg",
+    "/uploads/photos/concurrent.jpg",
+    "/uploads/photos/2026/07/test.jpg",
+    "/uploads/photos/2026/07/photo.jpg",
+)
+
+# 최소 PNG 헤더 — 스텁 판정은 내용을 보지 않지만 이미지 바이트 형태는 유지한다.
+FIXTURE_PHOTO_BYTES = b"\x89PNG\r\n\x1a\n" + b"0" * 32
+
+
+async def seed_fixture_photo_files() -> None:
+    """[FIXTURE_PHOTO_URLS]에 대응하는 파일을 테스트 스토리지에 만든다."""
+    from app.uploads.storage import get_photo_storage
+
+    storage = get_photo_storage()
+    for photo_url in FIXTURE_PHOTO_URLS:
+        await storage.save(photo_url.removeprefix("/uploads/"), FIXTURE_PHOTO_BYTES, "image/png")
 
 
 # 도담삼봉 기준 좌표 — GPS 인증 테스트용

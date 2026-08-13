@@ -21,6 +21,11 @@ class PhotoStorage(Protocol):
         """저장에 실패한 객체를 정리한다."""
         ...
 
+    async def load(self, object_name: str) -> bytes:
+        """저장된 객체를 읽는다 — 사진 인증이 저장본으로 비전 판정을 수행한다
+        (docs/specs/050-quest-verification). 없거나 읽지 못하면 예외를 던진다."""
+        ...
+
 
 class LocalPhotoStorage:
     def __init__(self, base_dir: str) -> None:
@@ -35,6 +40,9 @@ class LocalPhotoStorage:
     async def delete(self, object_name: str) -> None:
         path = self._base / object_name
         await asyncio.to_thread(path.unlink, missing_ok=True)
+
+    async def load(self, object_name: str) -> bytes:
+        return await asyncio.to_thread((self._base / object_name).read_bytes)
 
 
 class GCSPhotoStorage:
@@ -54,6 +62,25 @@ class GCSPhotoStorage:
 
     async def delete(self, object_name: str) -> None:
         await asyncio.to_thread(self._bucket.blob(object_name).delete)
+
+    async def load(self, object_name: str) -> bytes:
+        return await asyncio.to_thread(self._bucket.blob(object_name).download_as_bytes)
+
+
+def object_name_from_url(photo_url: str) -> str | None:
+    """photo_url을 스토리지 객체 이름으로 되돌린다 — save()가 만든 URL의 역변환.
+
+    현재 설정의 스토리지가 만든 형태만 인정한다(로컬 `/uploads/{object}` / GCS 공개 URL).
+    형태가 맞지 않으면 None — 호출부는 판정 불가로 다뤄 통과시키지 않는다.
+    """
+    if settings.gcs_upload_bucket:
+        prefix = f"https://storage.googleapis.com/{settings.gcs_upload_bucket}/"
+        if photo_url.startswith(prefix):
+            return photo_url.removeprefix(prefix) or None
+        return None
+    if photo_url.startswith("/uploads/"):
+        return photo_url.removeprefix("/uploads/") or None
+    return None
 
 
 @lru_cache(maxsize=1)
