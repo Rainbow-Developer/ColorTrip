@@ -124,10 +124,10 @@ class ProgressState {
   /// [completedTripCountOf]가 max 병합으로 반영하므로 여기에는 서버 값만 담는다.
   final Map<String, int> regionTripCount;
 
-  /// 지역별 로컬 누적 완주 횟수 — 여행을 완주한 **시점에** 1씩 늘린다
-  /// (`ProgressNotifier.completeQuest`). 현재 선택 집합의 완주 여부로 파생하지 않는 이유:
-  /// 완료한 지역에 퀘스트를 더 담으면(KAN-46 재방문) 선택 집합이 다시 미완료가 되어
-  /// 이미 칠해진 채색이 사라지기 때문이다([055-journey-map-coloring]).
+  /// 지역별 로컬 채색 카운트 — 그 지역 여행에서 **첫 퀘스트를 완료한 시점에** 1씩 늘린다
+  /// (`ProgressNotifier.completeQuest`, KAN-73). 현재 선택 집합에서 파생하지 않고 누적하는
+  /// 이유: 완료한 지역에 퀘스트를 더 담아도(KAN-46 재방문) 이미 칠해진 채색이 사라지지
+  /// 않아야 하기 때문이다([055-journey-map-coloring]).
   final Map<String, int> localTripCompletions;
 
   bool isCompleted(String questId) => completedQuestIds.contains(questId);
@@ -146,9 +146,9 @@ class ProgressState {
   /// cap이 3이면 5단계 중 2개가 쓰이지 않는다([055-journey-map-coloring] 의사결정).
   static const _tripSaturationCap = 5;
 
-  /// 지역에서 완료한 여행 수(표시용) — 서버 동기화 값([regionTripCount])과 로컬 누적
-  /// 완주 횟수([localTripCompletions])의 max 병합이다. FE 정적 퀘스트 완료는 서버에
-  /// 기록되지 않아 서버 값으로 덮어쓰면 로컬 채색이 사라지기 때문이다
+  /// 지역의 채색 집계 값(표시용) — 서버 동기화 값([regionTripCount], 퀘스트를 1개 이상
+  /// 완료한 여행 수)과 로컬 누적값([localTripCompletions])의 max 병합이다. 서버 응답 전에도
+  /// 채색이 즉시 반영되어야 하므로 서버 값으로 덮어쓰지 않는다
   /// ([055-journey-map-coloring] 의사결정).
   int completedTripCountOf(String regionId) {
     return math.max(
@@ -179,11 +179,22 @@ class ProgressState {
   /// 지역의 여행 이름·기간(여행 시작 전이면 null).
   TripInfo? tripInfoOf(String regionId) => tripInfo[regionId];
 
-  RegionTripStatus tripStatusOf(String regionId) {
+  /// 지역 여행의 진행 상태 — 서버 `Journey.status` 판정 규칙과 같은 기준을 쓴다
+  /// (전부 완료, 또는 여행 기간이 지났고 완료 퀘스트가 1개 이상 →
+  /// [RegionTripStatus.completed]). 규칙의 단일 출처는
+  /// [docs/specs/010-journey/description.md]의 "여정 완료 판정"이다(KAN-73).
+  RegionTripStatus tripStatusOf(String regionId, {DateTime? now}) {
     final trip = tripQuestsOf(regionId);
     if (trip.isEmpty) return RegionTripStatus.notStarted;
-    final allDone = trip.every(isCompleted);
-    return allDone ? RegionTripStatus.completed : RegionTripStatus.inProgress;
+    if (trip.every(isCompleted)) return RegionTripStatus.completed;
+    final endDate = tripInfoOf(regionId)?.endDate;
+    if (endDate != null && trip.any(isCompleted)) {
+      final today = now ?? DateTime.now();
+      final endOfTrip = DateTime(endDate.year, endDate.month, endDate.day);
+      final startOfToday = DateTime(today.year, today.month, today.day);
+      if (endOfTrip.isBefore(startOfToday)) return RegionTripStatus.completed;
+    }
+    return RegionTripStatus.inProgress;
   }
 
   ProgressState copyWith({

@@ -5,7 +5,8 @@
 **여정(Journey)** 은 사용자가 한 지역(충북 시·군)을 여행하며 수행할 퀘스트 묶음이다.
 사용자는 지도에서 지역을 고르고, 본인 **여행 DNA**(카테고리 5종)에 맞게 추천된 퀘스트 중에서
 원하는 것을 골라 여정을 만든다. 여정 안에서 퀘스트를 관리(추가·제거)하고, 각 퀘스트를
-방식별(GPS+사진 / 퀴즈)로 **인증**하면 완료 처리된다. 여정의 모든 퀘스트가 완료되면 여정도 완료된다.
+방식별(GPS+사진 / 퀴즈)로 **인증**하면 완료 처리된다. 여정은 퀘스트를 전부 완료하거나, 여행 기간이
+지난 뒤 1개 이상 완료하면 완료된다(아래 [여정 완료 판정](#여정-완료-판정)).
 
 퀘스트 마스터 데이터(지역·카테고리·미션)는 [000-quest](../000-quest/)가, 사용자·토큰은
 [005-auth-member](../005-auth-member/)가 제공한다. 완료 기록(`quest_progress`)은 지도 색칠(MAP)·
@@ -35,7 +36,7 @@ flowchart LR
     S["POST /quests/{id}/start"] --> P[("quest_progress (in_progress)")]
     U["POST /uploads/photo"] -->|photo_url| V
     V["POST /quests/{id}/verify"] -->|"mission_type별 판정"| P2[("quest_progress (completed)")]
-    P2 -->|"여정 퀘스트 전부 완료?"| J[("journeys.status = completed")]
+    P2 -->|"완료 판정 재계산"| J[("journeys.status")]
 ```
 
 - `gps_photo`: 요청의 `lat`/`lng`가 퀘스트 좌표에서 `verify_radius`(m) 이내(하버사인 거리)이고
@@ -43,6 +44,27 @@ flowchart LR
 - `quiz`: 요청의 `answer`를 `mission_meta.quiz.answer`와 비교(공백·대소문자 정규화). OX/객관식 공용.
 - 인증 성공 시 `status=completed`·`completed_at` 기록. 같은 퀘스트 재인증은 409(CONFLICT).
 - 진행 레코드는 사용자×퀘스트당 1개(UNIQUE). `journey_id`는 어느 여정에서 수행했는지 추적(선택).
+
+### 여정 완료 판정
+
+`journeys.status`는 저장된 값이지만 **판정 규칙에서 파생**된다. 재계산(`recalculate_status`)은 퀘스트
+인증·여정 퀘스트 변경 시점, 그리고 **여정 목록·상세 조회 시점**에 실행되고, 값이 실제로 바뀔 때만 저장한다.
+조회 시점에도 재계산하는 이유는 "여행 기간이 지났다"는 조건이 시간 경과만으로 성립해 이벤트가 없기 때문이다
+(스케줄러·배치는 도입하지 않는다 — plan 의사결정 8).
+
+```mermaid
+flowchart TD
+    A{"완료 퀘스트 == 전체?"} -->|"예"| C["completed"]
+    A -->|"아니오"| B{"end_date < 오늘(KST) AND 완료 퀘스트 ≥ 1?"}
+    B -->|"예"| C
+    B -->|"아니오"| D["in_progress (completed_at = NULL)"]
+```
+
+- 퀘스트가 0개인 여정은 `in_progress`다(전체 완료로 보지 않는다).
+- `end_date`가 없는 여정(기간 미입력)은 기간 경과 조건을 적용하지 않는다 — 전부 완료해야 `completed`가 된다.
+- 완료 조건이 깨지면(완료한 여정에 퀘스트를 새로 담는 등) `in_progress`로 되돌리고 `completed_at`을 비운다.
+- 사용자가 직접 여행을 끝내는 완료 버튼·API는 이번 범위에서 만들지 않는다(plan 의사결정 9 — 보류).
+- 여정 완료는 지도 채색과 **독립**이다 — 채색은 "완료 퀘스트가 1개 이상인 여행 수"로 집계한다([055-journey-map-coloring](../055-journey-map-coloring/)).
 
 ## 테이블
 
@@ -57,7 +79,7 @@ flowchart LR
 | title | VARCHAR(100) | Y | | | 여정 이름(미입력 시 지역명 기반) |
 | start_date | DATE | Y | | | 여행 시작일(생성 시 입력) |
 | end_date | DATE | Y | | | 여행 종료일(start_date ≤ end_date 검증) |
-| status | VARCHAR(20) | N | | 'in_progress' | in_progress / completed |
+| status | VARCHAR(20) | N | | 'in_progress' | in_progress / completed (판정 규칙에서 파생·저장) |
 | completed_at | TIMESTAMP | Y | | | 완료 시각 |
 
 인덱스: (user_id, status)

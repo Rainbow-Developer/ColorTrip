@@ -184,9 +184,9 @@ dev 서버는 Caddy가 TLS를 종단하고 API 컨테이너는 호스트 포트�
 | **여행 DNA(Travel DNA)** | 여행 성향 질문·선택지 조회, 답변 제출 및 DNA 판정 | `backend/app/trip_dna/` · 스펙 [docs/specs/010-travel-dna/](docs/specs/010-travel-dna/) |
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
-| **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) — 채색 기준: 완료 여행 수 | `backend/app/maps/` · 스펙 [docs/specs/055-journey-map-coloring/](docs/specs/055-journey-map-coloring/) |
+| **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) — 채색 기준: 퀘스트를 1개 이상 완료한 여행 수 | `backend/app/maps/` · 스펙 [docs/specs/055-journey-map-coloring/](docs/specs/055-journey-map-coloring/) |
 | **홈·퀘스트 추천** | 미시작 지역과 DNA 기반 미완료 퀘스트 추천 (`GET /regions/unvisited`, `GET /quests/recommended`) | `backend/app/regions/`, `backend/app/quests/`, `frontend/lib/features/home/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/065-quest-recommendation-api/](docs/specs/065-quest-recommendation-api/) |
-| **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈)·완료 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
+| **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈), 여정 완료 판정·완료 처리 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
 | **퀘스트 인증 3종** | 사진 AI(Gemini)·온디바이스 위치·QR 인증 | `backend/app/verifications/`, `backend/app/integrations/vision/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/050-quest-verification/](docs/specs/050-quest-verification/) |
 | **퀘스트·지역 이미지** | TourAPI 이미지 표시·정적 데이터 보강 | `backend/scripts/enrich_frontend_quests.py`, `frontend/lib/core/widgets/app_network_image.dart` · 스펙 [docs/specs/045-quest-region-images/](docs/specs/045-quest-region-images/) |
 | **DB/데이터 모델 기반** | 여행 DNA 설문·퀘스트 진행·지도 진행·타임라인 기록을 위한 백엔드 데이터 모델 | `backend/app/auth/`, `backend/app/quests/`, `backend/app/progress/`, `backend/app/timeline/`, `backend/app/trip_dna/`, `backend/alembic/` · 스펙 [docs/specs/015-database-migration/](docs/specs/015-database-migration/) |
