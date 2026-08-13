@@ -230,3 +230,6 @@ __marimo__/
 
 # 퀘스트 현장 QR 생성 산출물 (backend/scripts/generate_quest_qr.py)
 backend/qr_output/
+
+# 릴리스 빌드 산출물 (서명된 apk/aab) — 저장소에 두지 않는다
+build-output/
