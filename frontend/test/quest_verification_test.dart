@@ -18,7 +18,6 @@ import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/models/verification.dart';
 import 'package:colortrip/data/repositories/domain_repository.dart';
 import 'package:colortrip/data/repositories/quest_repository.dart';
-import 'package:colortrip/data/repositories/verification_repository.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/features/quests/photo_verify_result_screen.dart';
 import 'package:colortrip/features/quests/quest_verify_screen.dart';
@@ -200,7 +199,6 @@ Widget _wrapVerifyScreen(String questId, ProviderContainer container) {
 ProviderContainer _container({
   List<Quest>? fakeQuests,
   DomainRepository? domainRepository,
-  VerificationRepository? verificationRepository,
   PhotoPickerGateway? photoPickerGateway,
 }) {
   final container = ProviderContainer(
@@ -211,10 +209,6 @@ ProviderContainer _container({
         ),
       if (domainRepository != null)
         domainRepositoryProvider.overrideWithValue(domainRepository),
-      if (verificationRepository != null)
-        verificationRepositoryProvider.overrideWithValue(
-          verificationRepository,
-        ),
       if (photoPickerGateway != null)
         photoPickerGatewayProvider.overrideWithValue(photoPickerGateway),
     ],
@@ -238,37 +232,16 @@ class _FakePhotoPickerGateway implements PhotoPickerGateway {
   );
 }
 
-/// 비전 판정 API 대역 — 판정값을 돌려주거나 오류를 던진다.
-class _FakeVerificationRepository implements VerificationRepository {
-  _FakeVerificationRepository({this.verdict, this.error});
-
-  final PhotoVerdict? verdict;
-  final Object? error;
-  int photoCalls = 0;
-
-  @override
-  Future<PhotoVerdict> verifyPhoto({
-    required Uint8List bytes,
-    required String filename,
-    required String title,
-    required String place,
-    required List<String> conditions,
-  }) async {
-    photoCalls++;
-    final failure = error;
-    if (failure != null) throw failure;
-    return verdict!;
-  }
-
-  @override
-  Future<QrVerdict> verifyQr({
-    required String payload,
-    required String questId,
-  }) => throw UnimplementedError();
-}
-
-/// 업로드·완료 처리 호출 여부를 기록하는 대역 — 판정에 거절되면 호출되지 않아야 한다.
+/// 업로드·인증 호출을 기록하고, 서버처럼 verify 응답에 사진 판정을 담아주는 대역.
 class _PhotoDomainRepository implements DomainRepository {
+  _PhotoDomainRepository({this.verdict, this.verifyError});
+
+  /// 서버가 돌려줄 판정 상세 — null이면 사진 미션이 아닌 응답을 흉내 낸다.
+  final PhotoVerdict? verdict;
+
+  /// verify 호출 시 던질 오류(네트워크 실패 재현용).
+  final Object? verifyError;
+
   int uploadCalls = 0;
   int verifyCalls = 0;
   final _completed = <String>{};
@@ -308,8 +281,18 @@ class _PhotoDomainRepository implements DomainRepository {
     String? qrPayload,
   }) async {
     verifyCalls++;
+    final failure = verifyError;
+    if (failure != null) throw failure;
+    final judged = verdict;
+    if (judged != null && !judged.passed) {
+      return QuestVerification(
+        verified: false,
+        reason: judged.reason,
+        photoVerdict: judged,
+      );
+    }
     _completed.add(questKey);
-    return const QuestVerification(verified: true);
+    return QuestVerification(verified: true, photoVerdict: judged);
   }
 
   @override
@@ -437,7 +420,7 @@ void main() {
     expect(hasScanner || hasFallback, isTrue);
   });
 
-  group('photo 분기 — 비전 판정을 거친 뒤에만 완료 처리한다 (050 · KAN-73 회귀 방지)', () {
+  group('photo 분기 — 서버 판정 결과로 완료·거절을 가른다 (050 · KAN-73)', () {
     /// 사진 인증 화면은 컨텐츠가 길어 기본 서피스(800x600)에서는 버튼이 잘린다.
     void useTallSurface(WidgetTester tester) {
       tester.view.physicalSize = const Size(1080, 2400);
@@ -456,8 +439,7 @@ void main() {
     testWidgets('판정을 통과하면 완료 처리하고 결과 화면에 판정값을 넘긴다', (tester) async {
       useTallSurface(tester);
       final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
-      final domain = _PhotoDomainRepository();
-      final verification = _FakeVerificationRepository(
+      final domain = _PhotoDomainRepository(
         verdict: const PhotoVerdict(
           passed: true,
           confidence: 0.87,
@@ -467,7 +449,6 @@ void main() {
       );
       final container = _container(
         domainRepository: domain,
-        verificationRepository: verification,
         photoPickerGateway: _FakePhotoPickerGateway(),
       );
       await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
@@ -475,10 +456,10 @@ void main() {
 
       await pickAndSubmit(tester);
 
-      expect(verification.photoCalls, 1, reason: '판정 API를 호출해야 한다');
-      expect(domain.uploadCalls, 1, reason: '통과 후 사진을 저장해야 한다');
-      expect(domain.verifyCalls, 1, reason: '통과 후 완료를 기록해야 한다');
-      // 결과 화면이 라우트 extra로 실제 판정값을 받아 표시한다.
+      // 사진은 한 번만 올라가고(판정 전용 요청 없음), 인증도 한 번만 호출된다.
+      expect(domain.uploadCalls, 1);
+      expect(domain.verifyCalls, 1);
+      // 결과 화면이 라우트 extra로 서버 판정값을 받아 표시한다.
       expect(find.text('사진 검증 결과'), findsOneWidget);
       expect(find.text('인증 성공!'), findsOneWidget);
       expect(find.text('87%'), findsOneWidget);
@@ -486,11 +467,32 @@ void main() {
       expect(find.text('AI 미설정(스텁 판정)'), findsNothing);
     });
 
-    testWidgets('판정이 거절하면 완료 처리하지 않고 사유를 화면에 남긴다', (tester) async {
+    testWidgets('스텁 판정이면 결과 화면에 "AI 미설정" 뱃지를 띄운다', (tester) async {
       useTallSurface(tester);
       final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
-      final domain = _PhotoDomainRepository();
-      final verification = _FakeVerificationRepository(
+      final container = _container(
+        domainRepository: _PhotoDomainRepository(
+          verdict: const PhotoVerdict(
+            passed: true,
+            confidence: 0,
+            reason: 'AI 미설정 — 스텁 판정으로 통과 처리했습니다.',
+            provider: 'stub',
+          ),
+        ),
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      expect(find.text('AI 미설정(스텁 판정)'), findsOneWidget);
+    });
+
+    testWidgets('판정이 거절하면 완료되지 않고 사유를 화면에 남긴다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final domain = _PhotoDomainRepository(
         verdict: const PhotoVerdict(
           passed: false,
           confidence: 0.12,
@@ -500,7 +502,6 @@ void main() {
       );
       final container = _container(
         domainRepository: domain,
-        verificationRepository: verification,
         photoPickerGateway: _FakePhotoPickerGateway(),
       );
       await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
@@ -508,9 +509,6 @@ void main() {
 
       await pickAndSubmit(tester);
 
-      expect(verification.photoCalls, 1);
-      expect(domain.uploadCalls, 0, reason: '거절된 사진은 저장하지 않는다');
-      expect(domain.verifyCalls, 0, reason: '거절이면 완료를 기록하지 않는다');
       expect(
         container.read(progressProvider).isCompleted(photoQuest.id),
         isFalse,
@@ -521,16 +519,13 @@ void main() {
       expect(find.text('사진 검증 결과'), findsNothing);
     });
 
-    testWidgets('판정 API가 실패하면 완료 처리하지 않고 재시도를 안내한다', (tester) async {
+    testWidgets('인증 요청이 실패하면 완료되지 않고 재시도를 안내한다', (tester) async {
       useTallSurface(tester);
       final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
-      final domain = _PhotoDomainRepository();
-      final verification = _FakeVerificationRepository(
-        error: Exception('network down'),
-      );
       final container = _container(
-        domainRepository: domain,
-        verificationRepository: verification,
+        domainRepository: _PhotoDomainRepository(
+          verifyError: Exception('network down'),
+        ),
         photoPickerGateway: _FakePhotoPickerGateway(),
       );
       await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
@@ -538,7 +533,10 @@ void main() {
 
       await pickAndSubmit(tester);
 
-      expect(domain.verifyCalls, 0);
+      expect(
+        container.read(progressProvider).isCompleted(photoQuest.id),
+        isFalse,
+      );
       expect(find.textContaining('다시 시도해주세요'), findsOneWidget);
     });
   });

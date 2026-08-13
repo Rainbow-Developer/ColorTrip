@@ -15,7 +15,7 @@ class PickedPhotoFile {
 
   final Uint8List bytes;
 
-  /// 판정 API가 이미지 형식을 판별하는 데 쓴다(`/verifications/photo` multipart).
+  /// 업로드 시 이미지 형식을 판별하는 데 쓴다(`POST /uploads/photo` multipart).
   final String filename;
   final String mimeType;
 }

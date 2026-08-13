@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import '../models/verification.dart';
+
 /// 추천 퀘스트를 요청·표시할 때 쓰는 기본 개수 — API 요청과 화면 표시 상한이 어긋나지
 /// 않도록 하나의 값으로 공유한다.
 const kRecommendedQuestSize = 3;
@@ -99,10 +101,18 @@ class DomainSnapshot {
 }
 
 class QuestVerification {
-  const QuestVerification({required this.verified, this.reason});
+  const QuestVerification({
+    required this.verified,
+    this.reason,
+    this.photoVerdict,
+  });
 
   final bool verified;
   final String? reason;
+
+  /// 사진 미션의 비전 판정 상세(신뢰도·사유·판정 제공자) — 그 밖의 미션에서는 null.
+  /// 서버가 저장된 사진을 읽어 판정하고 응답에 함께 담아준다(KAN-73).
+  final PhotoVerdict? photoVerdict;
 }
 
 abstract class DomainRepository {
@@ -303,11 +313,22 @@ class DioDomainRepository implements DomainRepository {
     final response = await _dio.post(
       '/quests/${catalog.questId(questKey)}/verify',
       data: payload,
+      // 사진 미션은 서버가 저장본을 읽어 비전 판정까지 수행하므로 기본 10초로는 부족하다.
+      options: photoUrl == null
+          ? null
+          : Options(
+              sendTimeout: const Duration(seconds: 30),
+              receiveTimeout: const Duration(seconds: 30),
+            ),
     );
     final data = _data(response);
+    final verdict = data['photo_verdict'];
     return QuestVerification(
       verified: data['verified'] as bool,
       reason: data['reason'] as String?,
+      photoVerdict: verdict is Map<String, dynamic>
+          ? PhotoVerdict.fromJson(verdict)
+          : null,
     );
   }
 

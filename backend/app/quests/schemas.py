@@ -5,9 +5,10 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.enums import Category, MissionType, ProgressStatus
+from app.integrations.vision.base import VisionVerdict
 
 
 class QuestListItem(BaseModel):
@@ -61,12 +62,14 @@ class QuestVerifyRequest(BaseModel):
     # gps / gps_photo
     lat: Decimal | None = None
     lng: Decimal | None = None
-    # photo / gps_photo
-    photo_url: str | None = None
+    # photo / gps_photo — 업로드 API가 돌려준 URL (길이 상한은 저장 컬럼과 맞춘다)
+    photo_url: str | None = Field(default=None, max_length=500)
     # quiz
-    answer: str | None = None
-    # qr — 현장 QR 스캔 페이로드 (docs/specs/050-quest-verification/)
-    qr_payload: str | None = None
+    answer: str | None = Field(default=None, max_length=200)
+    # qr — 현장 QR 스캔 페이로드 (docs/specs/050-quest-verification/).
+    # 상한은 페이로드 형식(`colortrip:quest:{id}:{서명 16자}`) 기준 여유값 — 과대 입력을
+    # 파싱 전에 막는다(판정 전용 엔드포인트에 있던 제약을 통합 경로로 옮김, KAN-73).
+    qr_payload: str | None = Field(default=None, max_length=256)
 
 
 class ProgressItem(BaseModel):
@@ -91,6 +94,10 @@ class VerifyResultData(BaseModel):
     verified: bool
     reason: str | None  # 실패 사유 (성공 시 None)
     progress: ProgressItem
+
+    # 사진 미션(photo·gps_photo)의 비전 판정 상세 — 신뢰도·사유·판정 제공자.
+    # 그 밖의 미션에서는 None (docs/specs/050-quest-verification).
+    photo_verdict: VisionVerdict | None = None
 
 
 class ProgressListData(BaseModel):

@@ -129,7 +129,7 @@ async def verify_quest(
     if quest.mission_type in {MissionType.PHOTO.value, MissionType.GPS_PHOTO.value}:
         await require_owned_photo(session, user_id, payload.photo_url)
 
-    verified, reason = verification.judge(
+    outcome = await verification.judge(
         quest,
         lat=payload.lat,
         lng=payload.lng,
@@ -137,6 +137,7 @@ async def verify_quest(
         answer=payload.answer,
         qr_payload=payload.qr_payload,
     )
+    verified, reason = outcome.passed, outcome.reason
 
     if progress is None:  # start 없이 바로 인증하는 경우 진행을 함께 생성
         progress = QuestProgress(user_id=user_id, quest_id=quest_id, journey_id=payload.journey_id)
@@ -177,10 +178,14 @@ async def verify_quest(
             verified=already_done,
             reason=None if already_done else reason,
             progress=ProgressItem.model_validate(existing),
+            photo_verdict=outcome.photo_verdict,
         )
 
     return VerifyResultData(
-        verified=verified, reason=reason, progress=ProgressItem.model_validate(progress)
+        verified=verified,
+        reason=reason,
+        progress=ProgressItem.model_validate(progress),
+        photo_verdict=outcome.photo_verdict,
     )
 
 

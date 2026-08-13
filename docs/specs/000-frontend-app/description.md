@@ -45,7 +45,7 @@ flowchart TD
 **핵심 인터랙션**
 - **여행 DNA**: 4문항 설문에서 각 선택지가 5개 유형(자연/미식/역사/액티비티/힐링) 중 하나에 매핑되고, 최다 선택 유형이 DNA가 된다.
 - **퀘스트 인증**: 사진(사진 선택→인증 요청 중에는 **화면을 덮는 "사진 확인 중" 모달**을 띄우고→**사진 검증 결과 화면**(통과 여부·완료 안내)→"지도에서 확인하기"로 홈 이동)·GPS(위치 확인 UI→완료 후 직전 화면 복귀)·OX퀴즈(정답 시 완료 후 직전 화면 복귀)·QR(스캔 성공 시 완료 후 직전 화면 복귀). 완료하면 `completed`/지역 `progress`/`timeline`이 갱신된다.
-  - 사진 인증은 **비전 판정을 먼저 받고 통과했을 때만** 완료 처리한다 — `POST /verifications/photo`로 사진+퀘스트 맥락을 보내 `{passed, confidence, reason, provider}`를 받고, 통과 시 사진을 저장(`/uploads/photo`)하고 완료를 기록(`/quests/{id}/verify`)한 뒤 판정값을 결과 화면에 넘겨 신뢰도·사유·"AI 미설정" 뱃지를 표시한다. 거절되면 저장·완료 없이 인증 화면에 판정 사유를 남겨 재시도하게 한다. 판정 계약의 SOT는 [050-quest-verification](../050-quest-verification/)이다.
+  - 사진 인증은 **사진을 한 번만 올리고** 서버 판정 결과로 완료·거절이 갈린다 — `POST /uploads/photo`로 올린 뒤 `POST /quests/{id}/verify`를 호출하면, 서버가 저장본을 읽어 비전 판정하고 통과 시 완료를 기록하며 판정 상세를 `photo_verdict`로 응답에 담아준다. FE는 그 값을 결과 화면에 넘겨 신뢰도·사유·"AI 미설정" 뱃지를 표시하고, 거절이면 인증 화면에 판정 사유를 남겨 재시도하게 한다. 판정 계약의 SOT는 [050-quest-verification](../050-quest-verification/)이다(KAN-73).
 - **지도 색칠**: 채색 기준(집계 단위·채도 계산·서버 동기화)의 SOT는 [055-journey-map-coloring](../055-journey-map-coloring/description.md)다. 회색(`#CCCCCC`)→진초록(`primaryDark` `#2D6A4F`) 단일 색조 보간과 지역별 팔레트·5단계 양자화는 `chungbuk_map.dart`가 담당한다(KAN-44·KAN-51).
 - **데이터 흐름**: 화면 → Riverpod 상태(Notifier) → Repository(정적 데이터). 외부 네트워크 호출 없음.
 

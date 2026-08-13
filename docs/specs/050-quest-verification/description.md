@@ -8,9 +8,15 @@
 
 ### 사진 AI 인증 (`verify: 'photo'`)
 
-1. 사용자가 갤러리/카메라로 사진 선택 → FE가 `POST /api/v1/verifications/photo`(multipart)로 사진 + 퀘스트 맥락(제목·장소·조건)을 전송.
-2. BE `VisionJudge`가 판정 — `GEMINI_API_KEY` 설정 시 Gemini(`generateContent`, 이미지 inline)로 `{passed, confidence, reason}` JSON을 받고, 미설정 시 `StubVisionJudge`가 통과 처리(사유에 "AI 미설정" 명시). 사진은 판정 후 저장하지 않는다.
-3. 통과 시 FE가 퀘스트 완료 처리 후 결과 화면에 실제 신뢰도·사유 표시. 실패 시 사유와 함께 재시도.
+1. 사용자가 갤러리/카메라로 사진 선택 → FE가 `POST /api/v1/uploads/photo`로 **사진을 한 번만** 올려 `photo_url`을 받고, 그 URL로 `POST /api/v1/quests/{id}/verify`를 호출한다.
+2. BE는 저장된 사진을 스토리지에서 읽어(`PhotoStorage.load`) `VisionJudge`에 넘긴다 — `GEMINI_API_KEY` 설정 시 Gemini(`generateContent`, 이미지 inline)로 `{passed, confidence, reason}` JSON을 받고, 미설정 시 `StubVisionJudge`가 통과 처리(사유에 "AI 미설정" 명시). local·test 외 환경에서 키가 없으면 `UnavailableVisionJudge`가 **거부**한다(fail-closed).
+3. **판정 맥락은 서버가 만든다** — 퀘스트 제목과 `mission_meta`(판정 프롬프트·조건 목록), 없으면 설명을 쓴다. 클라이언트가 조건을 보내지 않으므로 조건을 느슨하게 바꿔 통과를 유도할 수 없다.
+4. 통과하면 완료를 기록하고, 판정 상세를 `verify` 응답의 `photo_verdict`(passed·confidence·reason·provider)로 함께 내려준다 → FE가 결과 화면에 실제 신뢰도·사유·"AI 미설정" 뱃지를 표시. 거절이면 완료를 기록하지 않고 인증 화면에 사유를 남겨 재시도한다.
+5. 사진을 읽지 못하거나(파일 없음·스토리지 오류) `photo_url`이 스토리지 규약과 다르면 **거절**한다 — 판정 없이 통과시키지 않는다.
+
+> 사진 인증은 `POST /quests/{id}/verify` **한 경로**로만 수행한다. 판정 전용 엔드포인트
+> (`POST /verifications/photo`)는 같은 사진을 두 번 보내야 해서 제거했고(KAN-73), 판정 로직
+> (`verifications/service.judge_photo`)은 그대로 이 경로가 호출한다.
 
 ### 위치 기반 인증 (`verify: 'gps'`)
 
@@ -22,19 +28,21 @@
 
 1. 현장 QR에는 `colortrip:quest:{quest_id}:{HMAC-SHA256 서명 16자}` 페이로드가 담긴다 (`scripts/generate_quest_qr.py`로 생성).
 2. FE `mobile_scanner`로 스캔 → `POST /api/v1/verifications/qr` `{payload, quest_id}`.
-3. BE가 서명 재계산으로 위조·다른 퀘스트 QR 여부를 검증 → 통과 시 FE가 완료 처리.
+3. FE는 스캔한 페이로드를 `POST /api/v1/quests/{id}/verify`의 `qr_payload`로 보내고, BE가 서명 재계산으로 위조·다른 퀘스트 QR 여부를 검증한 뒤 통과 시 완료를 기록한다(서명 검증은 `verifications/service.verify_qr_payload` 재사용).
 
 ## 주요 구성 요소 / 위치
 
 | 구성 요소 | 역할 | 위치 |
 |-----------|------|------|
 | VisionJudge 추상화 | Gemini/스텁 판정 교체 지점 | `backend/app/integrations/vision/` |
-| 인증 API | 사진 판정·QR 검증 (스테이트리스) | `backend/app/verifications/` |
+| 판정·검증 로직 | 사진 판정(`judge_photo`)·QR 서명 검증(`verify_qr_payload`) | `backend/app/verifications/service.py` |
+| 인증 진입점 | `POST /quests/{id}/verify` — 미션별 판정 + 완료 기록 | `backend/app/quests/verification.py` · `service.py` |
+| 사진 읽기 | 저장된 인증 사진 로드(`PhotoStorage.load`)·URL 역변환 | `backend/app/uploads/storage.py` |
 | DB 퀘스트 인증 확장 | MissionType.QR·비전 연동 | `backend/app/quests/verification.py` |
 | QR 생성 | 서명 페이로드 → PNG | `backend/scripts/generate_quest_qr.py` |
 | 인증 화면 3분기 | 사진 업로드·GPS 측위·QR 스캔 | `frontend/lib/features/quests/quest_verify_screen.dart` |
 | 판정 결과 화면 | 실제 AI 판정값 표시 | `frontend/lib/features/quests/photo_verify_result_screen.dart` |
-| 인증 레포지토리 | 인증 API 호출 | `frontend/lib/data/repositories/verification_repository.dart` |
+| 사진 선택 seam | 갤러리·카메라 선택(테스트에서 대체 가능) | `frontend/lib/data/media/photo_picker_gateway.dart` |
 
 ## 설정 / 사용법
 
@@ -51,7 +59,7 @@ uv run python scripts/generate_quest_qr.py dy3 cj4 ...   # 인자 없으면 정�
 
 ## 예시
 
-- 사진 인증 결과 화면: "통과 — 신뢰도 87% · 도담삼봉 전경이 사진에서 확인됩니다."
+- 사진 인증 결과 화면: "통과 — 신뢰도 87% · 도담삼봉 전경이 사진에서 확인됩니다." (`verify` 응답의 `photo_verdict`)
 - 위치 인증 실패: "퀘스트 장소에서 약 2.4km 떨어져 있어요 (인증 반경 500m)".
 - QR 검증 실패: "이 퀘스트의 QR이 아니에요."
 

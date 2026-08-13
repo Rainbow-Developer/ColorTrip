@@ -39,8 +39,11 @@ flowchart LR
     P2 -->|"완료 판정 재계산"| J[("journeys.status")]
 ```
 
-- `gps_photo`: 요청의 `lat`/`lng`가 퀘스트 좌표에서 `verify_radius`(m) 이내(하버사인 거리)이고
-  `photo_url`이 있으면 성공. LLM 사진 판정은 후속(프롬프트는 `mission_meta.judgement_prompt`에 보관).
+- `gps_photo`: 요청의 `lat`/`lng`가 퀘스트 좌표에서 `verify_radius`(m) 이내(하버사인 거리)이고,
+  업로드한 사진이 비전 판정을 통과하면 성공(반경을 벗어나면 판정을 생략한다).
+- `photo`: 업로드한 사진(`photo_url`)을 스토리지에서 읽어 비전 판정한다 — 판정 상세는 응답의
+  `photo_verdict`(passed·confidence·reason·provider)로 함께 내려간다. 판정 계약의 SOT는
+  [050-quest-verification](../050-quest-verification/)이다(KAN-73).
 - `quiz`: 요청의 `answer`를 `mission_meta.quiz.answer`와 비교(공백·대소문자 정규화). OX/객관식 공용.
 - 인증 성공 시 `status=completed`·`completed_at` 기록. 같은 퀘스트 재인증은 409(CONFLICT).
 - 진행 레코드는 사용자×퀘스트당 1개(UNIQUE). `journey_id`는 어느 여정에서 수행했는지 추적(선택).

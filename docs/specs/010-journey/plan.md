@@ -79,7 +79,7 @@ API 명세서·테이블 설계(Notion)의 REC-01, VRF-01~04, UX-근처를 범�
 | JRN-02 | DELETE | `/journeys/{id}/quests/{quest_id}` | Y | 여정에서 퀘스트 제거 |
 | REC-01 | GET | `/quests/recommended` | Y | DNA 기반 추천 (region_id 필터) |
 | VRF-01 | POST | `/quests/{id}/start` | Y | 퀘스트 시작 (journey_id 선택 전달) |
-| VRF-02~04 | POST | `/quests/{id}/verify` | Y | 인증 (mission_type별 payload) → 완료 |
+| VRF-02~04 | POST | `/quests/{id}/verify` | Y | 인증 (mission_type별 payload) → 완료. 사진 미션은 저장본을 읽어 비전 판정하고 `photo_verdict`를 응답에 포함 (KAN-73) |
 | VRF-03 | POST | `/uploads/photo` | Y | 인증 사진 업로드 → photo_url 반환 |
 | VRF-01 | GET | `/users/me/progress` | Y | 내 진행/완료 목록 |
 

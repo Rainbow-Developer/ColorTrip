@@ -9,8 +9,7 @@ import '../../core/widgets/app_toast.dart';
 import '../../data/location/location_gateway.dart';
 import '../../data/media/photo_picker_gateway.dart';
 import '../../data/models/quest.dart';
-import '../../data/models/verification.dart';
-import '../../data/repositories/verification_repository.dart';
+import '../../data/repositories/domain_repository.dart';
 import '../../state/domain_controller.dart';
 import '../../state/repository_providers.dart';
 
@@ -159,9 +158,9 @@ class QuestVerifyScreen extends ConsumerWidget {
     }
   }
 
-  /// 사진 인증 — 비전 모델 판정을 먼저 받고, **통과했을 때만** 완료 처리한다
-  /// (docs/specs/050-quest-verification). 판정값은 결과 화면이 신뢰도·사유·판정 제공자를
-  /// 표시하는 데 쓰이므로 라우트 extra로 그대로 넘긴다.
+  /// 사진 인증 — 사진을 한 번만 올리고, 서버가 저장본을 읽어 비전 판정까지 수행한다
+  /// (docs/specs/050-quest-verification, KAN-73). 판정 상세는 verify 응답으로 함께 오며
+  /// 결과 화면이 신뢰도·사유·판정 제공자를 표시하도록 라우트 extra로 넘긴다.
   ///
   /// 실패는 화면 안에 사유를 남겨 재시도하게 하고(토스트는 사라져서 긴 판정 사유를 읽기
   /// 어렵다), 성공만 결과 화면으로 넘어간다. 반환값 = 표시할 실패 사유(null이면 성공).
@@ -172,30 +171,9 @@ class QuestVerifyScreen extends ConsumerWidget {
     PickedPhotoFile photo,
     String? journeyId,
   ) async {
-    final PhotoVerdict verdict;
+    final QuestVerification result;
     try {
-      verdict = await ref
-          .read(verificationRepositoryProvider)
-          .verifyPhoto(
-            bytes: photo.bytes,
-            filename: photo.filename,
-            title: quest.title,
-            place: quest.place,
-            conditions: quest.conditions,
-          );
-    } on Object {
-      return '사진을 확인하지 못했어요. 잠시 후 다시 시도해주세요.';
-    }
-
-    if (!verdict.passed) {
-      return verdict.reason.isEmpty
-          ? '퀘스트 조건에 맞는 사진인지 확인해주세요.'
-          : verdict.reason;
-    }
-
-    // 판정 통과 → 사진을 저장하고 서버에 완료를 기록한다(판정 API는 사진을 보관하지 않는다).
-    try {
-      final result = await ref
+      result = await ref
           .read(domainControllerProvider.notifier)
           .uploadAndVerifyPhoto(
             questKey: quest.id,
@@ -203,15 +181,20 @@ class QuestVerifyScreen extends ConsumerWidget {
             mimeType: photo.mimeType,
             journeyId: journeyId,
           );
-      if (!context.mounted) return null;
-      if (!result.verified) {
-        return result.reason ?? '사진 인증 조건을 확인해주세요.';
-      }
-      context.push('/quest/$questId/verify/result', extra: verdict);
-      return null;
     } on Object {
-      return '사진을 업로드하지 못했어요. 다시 시도해주세요.';
+      return '사진을 확인하지 못했어요. 잠시 후 다시 시도해주세요.';
     }
+    if (!context.mounted) return null;
+
+    if (!result.verified) {
+      // 판정 사유(있으면)를 그대로 보여준다 — 무엇이 부족했는지가 재시도에 필요하다.
+      final verdictReason = result.photoVerdict?.reason ?? '';
+      if (verdictReason.isNotEmpty) return verdictReason;
+      return result.reason ?? '퀘스트 조건에 맞는 사진인지 확인해주세요.';
+    }
+
+    context.push('/quest/$questId/verify/result', extra: result.photoVerdict);
+    return null;
   }
 
   Future<void> _showLocationFailure(
