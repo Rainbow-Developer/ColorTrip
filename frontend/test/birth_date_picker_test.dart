@@ -116,4 +116,27 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('picked=2026-08-13T00:00:00.000'), findsOneWidget);
   });
+
+  testWidgets('firstDate가 연중이어도 연도만 옮기면 월·일이 유지된다', (tester) async {
+    // 범위 보정(jumpToItem)이 낡은 목록으로 콜백을 되부르면 월·일이 연쇄 이동한다.
+    // 실제 호출부(minimumBirthDate)는 1월 1일이라 드러나지 않지만 잠재 버그였다.
+    await tester.pumpWidget(
+      _Host(
+        firstDate: DateTime(1980, 6, 15),
+        lastDate: DateTime(2030, 12, 31),
+        initial: DateTime(1980, 6, 20),
+      ),
+    );
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+
+    // 연도 휠만 한 칸(1980 → 1981) 올린다.
+    await tester.drag(find.byType(CupertinoPicker).first, const Offset(0, -40));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('선택 완료'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('picked=1981-06-20T00:00:00.000'), findsOneWidget);
+  });
 }

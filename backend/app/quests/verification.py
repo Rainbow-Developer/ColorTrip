@@ -10,10 +10,17 @@
 사진은 업로드(`POST /uploads/photo`) 때 한 번만 전송하고, 판정은 저장본을 읽어 수행한다
 (KAN-73 — 이전에는 판정 전용 API로 같은 사진을 한 번 더 보냈다). 사진을 읽지 못하거나
 URL 형태가 스토리지 규약과 다르면 **거절**한다(fail-closed — 판정 없이 통과시키지 않는다).
+
+판정 입력은 [QuestJudgeInput] 값 스냅샷으로 받는다 — 비전 판정(외부 API, 최대 30초) 동안
+DB 커넥션을 붙잡지 않으려면 호출자가 트랜잭션을 닫아야 하고, 그러면 ORM 객체는 expire되어
+async에서 속성 접근이 실패한다(`MissingGreenlet`).
 """
 
+import logging
 import math
+from dataclasses import dataclass
 from decimal import Decimal
+from typing import Any
 
 from app.core.config import settings
 from app.core.enums import MissionType
@@ -22,6 +29,8 @@ from app.integrations.vision.base import VisionVerdict
 from app.quests.models import Quest
 from app.uploads.storage import get_photo_storage, object_name_from_url
 from app.verifications.service import judge_photo, verify_qr_payload
+
+logger = logging.getLogger(__name__)
 
 _EARTH_RADIUS_M = 6_371_000
 
@@ -33,6 +42,39 @@ def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     d_lambda = math.radians(lng2 - lng1)
     a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
     return 2 * _EARTH_RADIUS_M * math.asin(math.sqrt(a))
+
+
+@dataclass(frozen=True)
+class QuestJudgeInput:
+    """판정에 필요한 퀘스트 값 — ORM 객체와 분리해 세션 수명에 묶이지 않게 한다."""
+
+    quest_id: str
+    mission_type: str
+    title: str
+    description: str | None
+    mission_meta: dict[str, Any] | None
+    lat: Decimal | None
+    lng: Decimal | None
+    verify_radius: int
+
+    @property
+    def needs_external_judgement(self) -> bool:
+        """비전 모델 호출(느린 외부 API)이 필요한 미션인지 — 호출자가 트랜잭션 종료를 판단."""
+        return self.mission_type in {MissionType.PHOTO.value, MissionType.GPS_PHOTO.value}
+
+
+def snapshot(quest: Quest) -> QuestJudgeInput:
+    """판정 입력을 ORM 객체에서 값으로 복사한다(세션을 닫기 전에 호출해야 한다)."""
+    return QuestJudgeInput(
+        quest_id=str(quest.id),
+        mission_type=quest.mission_type,
+        title=quest.title,
+        description=quest.description,
+        mission_meta=quest.mission_meta,
+        lat=quest.lat,
+        lng=quest.lng,
+        verify_radius=quest.verify_radius,
+    )
 
 
 class JudgeOutcome:
@@ -52,7 +94,7 @@ class JudgeOutcome:
 
 
 async def judge(
-    quest: Quest,
+    quest: QuestJudgeInput,
     *,
     lat: Decimal | None,
     lng: Decimal | None,
@@ -87,14 +129,18 @@ def _outcome(result: tuple[bool, str | None]) -> JudgeOutcome:
     return JudgeOutcome(passed, reason)
 
 
-async def _judge_photo(quest: Quest, photo_url: str | None) -> JudgeOutcome:
+async def _judge_photo(quest: QuestJudgeInput, photo_url: str | None) -> JudgeOutcome:
     """업로드된 사진을 스토리지에서 읽어 비전 판정한다 (읽기 실패 시 거절)."""
     object_name = object_name_from_url(photo_url or "")
     if object_name is None:
         return JudgeOutcome(False, "인증 사진을 찾을 수 없습니다. 다시 업로드해주세요.")
+
+    storage = get_photo_storage()  # 초기화 오류는 삼키지 않는다(설정 문제 → 500으로 드러냄)
     try:
-        image_bytes = await get_photo_storage().load(object_name)
+        image_bytes = await storage.load(object_name)
     except Exception:  # 파일 없음·스토리지 오류 — 판정 없이 통과시키지 않는다
+        # 조용히 거절하면 스토리지 장애(자격증명 만료 등)를 감지할 수 없다.
+        logger.exception("인증 사진 로드 실패 — 판정 없이 거절합니다 (object=%s)", object_name)
         return JudgeOutcome(False, "인증 사진을 불러오지 못했습니다. 다시 시도해주세요.")
 
     verdict = await judge_photo(
@@ -120,7 +166,7 @@ def _mime_type_for(object_name: str) -> str:
     }.get(extension, "image/jpeg")
 
 
-def _conditions_of(quest: Quest) -> list[str]:
+def _conditions_of(quest: QuestJudgeInput) -> list[str]:
     """판정 프롬프트에 넣을 조건 — **서버가 가진 데이터만** 쓴다.
 
     클라이언트가 판정 맥락을 보내던 이전 방식(`POST /verifications/photo`)에서는 조건을
@@ -141,7 +187,7 @@ def _conditions_of(quest: Quest) -> list[str]:
 
 
 def _judge_gps(
-    quest: Quest,
+    quest: QuestJudgeInput,
     lat: Decimal | None,
     lng: Decimal | None,
 ) -> tuple[bool, str | None]:
@@ -156,11 +202,11 @@ def _judge_gps(
     return True, None
 
 
-def _judge_qr(quest: Quest, qr_payload: str | None) -> tuple[bool, str | None]:
+def _judge_qr(quest: QuestJudgeInput, qr_payload: str | None) -> tuple[bool, str | None]:
     if qr_payload is None or not qr_payload.strip():
         raise AppException(ErrorCode.VALIDATION_ERROR, "QR 페이로드(qr_payload)가 필요합니다.")
 
-    passed, reason = verify_qr_payload(qr_payload, str(quest.id))
+    passed, reason = verify_qr_payload(qr_payload, quest.quest_id)
     return passed, None if passed else reason  # 성공 사유는 버린다(실패 사유만 반환하는 규약)
 
 
@@ -178,7 +224,7 @@ def _require_uploaded_photo(photo_url: str | None) -> None:
         raise AppException(ErrorCode.VALIDATION_ERROR, "허용되지 않은 인증 사진 경로입니다.")
 
 
-def _judge_quiz(quest: Quest, answer: str | None) -> tuple[bool, str | None]:
+def _judge_quiz(quest: QuestJudgeInput, answer: str | None) -> tuple[bool, str | None]:
     if answer is None or not answer.strip():
         raise AppException(ErrorCode.VALIDATION_ERROR, "퀴즈 답안(answer)이 필요합니다.")
 

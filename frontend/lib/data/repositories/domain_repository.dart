@@ -288,6 +288,9 @@ class DioDomainRepository implements DomainRepository {
           contentType: mediaType,
         ),
       }),
+      // 최대 5MB를 실제로 전송하는 요청이다 — 기본 설정에는 sendTimeout이 없어
+      // 느린 회선에서 전송이 정체되면 OS TCP 타임아웃까지 갇힌다(응답은 작은 JSON).
+      options: Options(sendTimeout: const Duration(seconds: 30)),
     );
     return _data(response)['photo_url'] as String;
   }
@@ -313,13 +316,11 @@ class DioDomainRepository implements DomainRepository {
     final response = await _dio.post(
       '/quests/${catalog.questId(questKey)}/verify',
       data: payload,
-      // 사진 미션은 서버가 저장본을 읽어 비전 판정까지 수행하므로 기본 10초로는 부족하다.
+      // 사진 미션은 서버가 저장본을 읽어 비전 판정까지 수행하므로 응답이 늦는다
+      // (본문은 작아서 receiveTimeout만 늘리면 된다 — 업로드 쪽은 sendTimeout 담당).
       options: photoUrl == null
           ? null
-          : Options(
-              sendTimeout: const Duration(seconds: 30),
-              receiveTimeout: const Duration(seconds: 30),
-            ),
+          : Options(receiveTimeout: const Duration(seconds: 30)),
     );
     final data = _data(response);
     final verdict = data['photo_verdict'];

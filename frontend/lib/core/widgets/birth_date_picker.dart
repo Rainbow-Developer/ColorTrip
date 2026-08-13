@@ -61,6 +61,11 @@ class _BirthDateWheelsState extends State<_BirthDateWheels> {
   late FixedExtentScrollController _monthController;
   late FixedExtentScrollController _dayController;
 
+  /// 범위 보정 중 여부 — `jumpToItem`은 리빌드 전에 `onSelectedItemChanged`를 동기로
+  /// 다시 부르고, 그 콜백은 **보정 전 목록**을 참조한다. 그대로 두면 연도를 한 칸 옮겼을 때
+  /// 월·일이 엉뚱한 값으로 연쇄 이동한다(firstDate가 1월 1일이 아닐 때 재현).
+  bool _syncing = false;
+
   @override
   void initState() {
     super.initState();
@@ -119,6 +124,7 @@ class _BirthDateWheelsState extends State<_BirthDateWheels> {
   /// 연/월을 바꾸면 월·일의 유효 범위가 달라진다. 벗어난 값은 가장 가까운 유효 값으로
   /// 옮기고 휠 위치도 함께 맞춘다(휠에 보이는 값과 선택 값이 어긋나지 않게).
   void _syncMonthAndDay() {
+    _syncing = true;
     final months = _months;
     if (!months.contains(_month)) {
       _month = _month < months.first ? months.first : months.last;
@@ -130,6 +136,7 @@ class _BirthDateWheelsState extends State<_BirthDateWheels> {
       _day = _day < days.first ? days.first : days.last;
     }
     _dayController.jumpToItem(days.indexOf(_day));
+    _syncing = false;
   }
 
   @override
@@ -220,7 +227,11 @@ class _BirthDateWheelsState extends State<_BirthDateWheels> {
         ),
       ),
       // 휠이 멈춘 위치가 곧 선택 값이다(별도 확인 탭 없이 "선택 완료"로 확정).
-      onSelectedItemChanged: (index) => onSelected(values[index]),
+      // 범위 보정이 유발한 콜백은 낡은 목록을 참조하므로 무시한다([_syncing]).
+      onSelectedItemChanged: (index) {
+        if (_syncing || index >= values.length) return;
+        onSelected(values[index]);
+      },
       itemBuilder: (context, index) => Center(
         child: Text(
           '${values[index]}$suffix',

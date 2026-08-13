@@ -129,8 +129,16 @@ async def verify_quest(
     if quest.mission_type in {MissionType.PHOTO.value, MissionType.GPS_PHOTO.value}:
         await require_owned_photo(session, user_id, payload.photo_url)
 
+    # 판정 입력을 값으로 복사한 뒤, 비전 판정(외부 API·최대 30초)이 필요한 미션은
+    # 트랜잭션을 닫고 판정한다 — 열어둔 채 기다리면 커넥션이 idle-in-transaction으로
+    # 묶여, 판정이 느릴 때 풀이 소진되고 무관한 API까지 함께 실패한다.
+    judge_input = verification.snapshot(quest)
+    mission_type = quest.mission_type
+    if judge_input.needs_external_judgement:
+        await session.rollback()  # 여기까지는 읽기만 했다
+
     outcome = await verification.judge(
-        quest,
+        judge_input,
         lat=payload.lat,
         lng=payload.lng,
         photo_url=payload.photo_url,
@@ -139,13 +147,24 @@ async def verify_quest(
     )
     verified, reason = outcome.passed, outcome.reason
 
+    if judge_input.needs_external_judgement:
+        # 트랜잭션을 닫은 사이 다른 요청이 같은 퀘스트를 완료했을 수 있다.
+        progress = await repository.get_progress(session, user_id, quest_id)
+        if progress is not None and progress.status == ProgressStatus.COMPLETED.value:
+            return VerifyResultData(
+                verified=True,
+                reason=None,
+                progress=ProgressItem.model_validate(progress),
+                photo_verdict=None,  # 먼저 완료된 쪽 결과다 — 이 요청의 판정값을 싣지 않는다
+            )
+
     if progress is None:  # start 없이 바로 인증하는 경우 진행을 함께 생성
         progress = QuestProgress(user_id=user_id, quest_id=quest_id, journey_id=payload.journey_id)
         session.add(progress)
     elif payload.journey_id is not None:
         progress.journey_id = payload.journey_id
 
-    if quest.mission_type == MissionType.QUIZ.value:
+    if mission_type == MissionType.QUIZ.value:
         progress.quiz_answer = payload.answer
     else:
         progress.verified_lat = payload.lat
@@ -178,7 +197,9 @@ async def verify_quest(
             verified=already_done,
             reason=None if already_done else reason,
             progress=ProgressItem.model_validate(existing),
-            photo_verdict=outcome.photo_verdict,
+            # 먼저 완료된 쪽 결과를 돌려주는 경로다 — 이 요청의 판정값을 실으면
+            # verified=true인데 photo_verdict.passed=false인 모순 응답이 될 수 있다.
+            photo_verdict=None if already_done else outcome.photo_verdict,
         )
 
     return VerifyResultData(

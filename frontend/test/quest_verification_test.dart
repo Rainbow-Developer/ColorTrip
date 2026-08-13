@@ -3,6 +3,7 @@
 /// 플랫폼 채널이 없는 환경에서도 안내 UI로 안전하게 내려앉는지를 본다.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -234,13 +235,24 @@ class _FakePhotoPickerGateway implements PhotoPickerGateway {
 
 /// 업로드·인증 호출을 기록하고, 서버처럼 verify 응답에 사진 판정을 담아주는 대역.
 class _PhotoDomainRepository implements DomainRepository {
-  _PhotoDomainRepository({this.verdict, this.verifyError});
+  _PhotoDomainRepository({
+    this.verdict,
+    this.verifyError,
+    this.verifyGate,
+    this.rejectWithoutVerdict = false,
+  });
 
   /// 서버가 돌려줄 판정 상세 — null이면 사진 미션이 아닌 응답을 흉내 낸다.
   final PhotoVerdict? verdict;
 
   /// verify 호출 시 던질 오류(네트워크 실패 재현용).
   final Object? verifyError;
+
+  /// 응답을 붙잡아 두는 게이트 — 요청 진행 중 UI를 검증할 때 쓴다.
+  final Future<void>? verifyGate;
+
+  /// 판정 상세 없이 거절하는 서버 응답(사진 미션이 아닌 사유로 거절되는 경우).
+  final bool rejectWithoutVerdict;
 
   int uploadCalls = 0;
   int verifyCalls = 0;
@@ -281,8 +293,16 @@ class _PhotoDomainRepository implements DomainRepository {
     String? qrPayload,
   }) async {
     verifyCalls++;
+    final gate = verifyGate;
+    if (gate != null) await gate;
     final failure = verifyError;
     if (failure != null) throw failure;
+    if (rejectWithoutVerdict) {
+      return const QuestVerification(
+        verified: false,
+        reason: '업로드한 인증 사진이 필요합니다.',
+      );
+    }
     final judged = verdict;
     if (judged != null && !judged.passed) {
       return QuestVerification(
@@ -538,6 +558,86 @@ void main() {
         isFalse,
       );
       expect(find.textContaining('다시 시도해주세요'), findsOneWidget);
+    });
+
+    testWidgets('확인 중에는 뒤로가기로 화면을 벗어날 수 없다', (tester) async {
+      // 스크림으로 조작을 막아도 뒤로가기가 열려 있으면, 서버 인증은 진행됐는데
+      // 결과 화면을 못 보고 나가게 된다(PopScope + leading 비활성의 의도).
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final gate = Completer<void>();
+      final container = _container(
+        domainRepository: _PhotoDomainRepository(
+          verdict: const PhotoVerdict(
+            passed: true,
+            confidence: 0.9,
+            reason: '통과',
+            provider: 'gemini',
+          ),
+          verifyGate: gate.future,
+        ),
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('🖼 갤러리'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('사진으로 인증하기'));
+      await tester.pump(); // 요청 진행 중(스크림 표시)
+
+      expect(find.text('사진 확인 중...'), findsWidgets);
+      // 시스템 뒤로가기를 시도해도 화면이 유지된다.
+      final popped = await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(popped, isTrue); // 라우터가 처리했지만 PopScope가 막았다
+      expect(find.text('사진 인증'), findsOneWidget);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('사진 검증 결과'), findsOneWidget);
+    });
+
+    testWidgets('판정값이 없는 거절 응답은 서버 reason으로 안내한다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final container = _container(
+        domainRepository: _PhotoDomainRepository(rejectWithoutVerdict: true),
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      expect(find.text('업로드한 인증 사진이 필요합니다.'), findsOneWidget);
+      expect(find.text('사진 검증 결과'), findsNothing);
+    });
+
+    testWidgets('사진을 다시 고르면 지난 판정 사유가 사라진다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final container = _container(
+        domainRepository: _PhotoDomainRepository(
+          verdict: const PhotoVerdict(
+            passed: false,
+            confidence: 0.1,
+            reason: '사진에서 퀘스트 장소를 확인할 수 없습니다.',
+            provider: 'gemini',
+          ),
+        ),
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+      expect(find.text('사진에서 퀘스트 장소를 확인할 수 없습니다.'), findsOneWidget);
+
+      // 새 사진을 고르면 지난 판정 사유는 지운다(현재 사진과 무관한 안내가 남지 않게).
+      await tester.tap(find.text('📷 카메라'));
+      await tester.pumpAndSettle();
+      expect(find.text('사진에서 퀘스트 장소를 확인할 수 없습니다.'), findsNothing);
     });
   });
 }

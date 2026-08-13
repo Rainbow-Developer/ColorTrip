@@ -606,3 +606,47 @@ async def test_verify_rejects_oversized_qr_payload(client: AsyncClient) -> None:
         headers=headers,
     )
     assert response.status_code == 422
+
+
+async def test_photo_verify_closes_transaction_before_vision_call(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """비전 판정 중에는 요청 세션이 트랜잭션을 열고 있지 않아야 한다.
+
+    열어둔 채 외부 API(최대 30초)를 기다리면 커넥션이 idle-in-transaction으로 묶여,
+    판정이 느릴 때 풀이 소진되고 사진 인증과 무관한 API까지 함께 실패한다.
+    """
+    from app.core import database
+
+    created_sessions = []
+    original_factory = database.AsyncSessionLocal
+
+    def tracking_factory(*args: object, **kwargs: object):
+        session = original_factory(*args, **kwargs)
+        created_sessions.append(session)
+        return session
+
+    monkeypatch.setattr(database, "AsyncSessionLocal", tracking_factory)
+
+    open_transactions: list[bool] = []
+
+    class _ProbeJudge:
+        async def judge(self, image_bytes: bytes, mime_type: str, prompt: str) -> VisionVerdict:
+            # 판정 시점(외부 호출 자리)에 열린 트랜잭션이 있는지 기록한다.
+            open_transactions.append(any(s.in_transaction() for s in created_sessions))
+            return VisionVerdict(passed=True, confidence=0.9, reason="통과", provider="gemini")
+
+    monkeypatch.setattr("app.verifications.service.get_vision_judge", lambda: _ProbeJudge())
+
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    response = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": "/uploads/photos/2026/07/photo.jpg"},
+        headers=headers,
+    )
+
+    assert response.json()["data"]["verified"] is True
+    assert open_transactions == [False], (
+        f"판정 중 열린 트랜잭션이 없어야 한다 (기록: {open_transactions!r})"
+    )
