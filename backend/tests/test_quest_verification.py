@@ -148,9 +148,32 @@ async def test_photo_verify_rejects_another_users_upload(client: AsyncClient) ->
     assert "본인이 업로드" in response.json()["message"]
 
 
-async def test_gps_only_verify_requires_location_but_not_photo(
+async def test_gps_only_verify_completes_without_coordinates(
     client: AsyncClient,
 ) -> None:
+    """gps 미션은 단말이 반경을 판정하고 서버는 완료만 기록한다 (KAN-77)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
+        json={},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["verified"] is True
+    assert response.json()["data"]["progress"]["status"] == "completed"
+
+
+async def test_gps_verify_rejects_coordinates(client: AsyncClient) -> None:
+    """gps 미션에 좌표를 보내면 거절한다 (회귀: KAN-77).
+
+    좌표는 저장하지 않더라도 **수신하는 것만으로** 위치정보법상 위치기반서비스사업
+    신고 대상이 된다(location-law-review.md의 B안). `a3df7fc`에서 FE가 좌표를 보내기
+    시작했는데 서버가 받아주는 바람에 아무도 모른 채 신고 대상 상태가 됐다. 무시가
+    아니라 거절해야 같은 이탈이 조용히 반복되지 않는다.
+    """
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
 
@@ -160,8 +183,38 @@ async def test_gps_only_verify_requires_location_but_not_photo(
         headers=headers,
     )
 
-    assert response.status_code == 200
-    assert response.json()["data"]["verified"] is True
+    assert response.status_code == 422
+    assert "좌표" in response.json()["message"]
+
+
+async def test_gps_verify_does_not_store_coordinates(client: AsyncClient) -> None:
+    """완료 기록에 좌표가 남지 않는다 (KAN-77)."""
+    from uuid import UUID
+
+    from sqlalchemy import select
+
+    from app.core.database import AsyncSessionLocal
+    from app.quests.models import QuestProgress
+
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    await client.post(
+        f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
+        json={},
+        headers=headers,
+    )
+
+    async with AsyncSessionLocal() as session:
+        progress = (
+            await session.scalars(
+                select(QuestProgress).where(
+                    QuestProgress.quest_id == UUID(seed["gps_only_quest_id"])
+                )
+            )
+        ).one()
+        assert progress.verified_lat is None
+        assert progress.verified_lng is None
 
 
 async def test_quiz_verify(client: AsyncClient) -> None:
@@ -185,14 +238,18 @@ async def test_quiz_verify(client: AsyncClient) -> None:
     assert correct.json()["data"]["progress"]["status"] == "completed"
 
 
-async def _seed_qr_quest(region_id: str) -> str:
-    """QR 미션 퀘스트를 추가 시드한다 (seed_quest_fixture는 010 스펙 소유라 여기서 직접)."""
+async def _seed_qr_quest(region_id: str, *, client_key: str | None = "qr-test-1") -> str:
+    """QR 미션 퀘스트를 추가 시드한다 (seed_quest_fixture는 010 스펙 소유라 여기서 직접).
+
+    client_key=None이면 QR 인증 정보가 없는 데이터 오류 상황을 만든다.
+    """
     from app.core.database import AsyncSessionLocal
     from app.quests.models import Quest
 
     async with AsyncSessionLocal() as session:
         quest = Quest(
             region_id=UUID(region_id),
+            client_key=client_key,
             title="수양개빛터널 현장 QR",
             category="activity",
             mission_type="qr",
@@ -205,22 +262,22 @@ async def _seed_qr_quest(region_id: str) -> str:
 async def test_qr_verify_completes_quest(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
-    qr_quest_id = await _seed_qr_quest(seed["region_id"])
+    qr_quest_id = await _seed_qr_quest(seed["region_id"], client_key="qr-danyang-1")
 
     # 다른 퀘스트용 QR로는 실패한다.
     wrong = await client.post(
         f"/api/v1/quests/{qr_quest_id}/verify",
-        json={"qr_payload": sign_quest_payload(seed["gps_quest_id"])},
+        json={"qr_payload": sign_quest_payload("qr-danyang-2")},
         headers=headers,
     )
     assert wrong.status_code == 200
     assert wrong.json()["data"]["verified"] is False
     assert "이 퀘스트의 QR" in wrong.json()["data"]["reason"]
 
-    # 해당 퀘스트의 서명 QR로 완료된다.
+    # 해당 퀘스트의 서명 QR로 완료된다 — 서명 대상은 client_key다(KAN-75).
     ok = await client.post(
         f"/api/v1/quests/{qr_quest_id}/verify",
-        json={"qr_payload": sign_quest_payload(qr_quest_id)},
+        json={"qr_payload": sign_quest_payload("qr-danyang-1")},
         headers=headers,
     )
     assert ok.status_code == 200
@@ -231,10 +288,49 @@ async def test_qr_verify_completes_quest(client: AsyncClient) -> None:
     assert data["progress"]["completed_at"] is not None
 
 
+async def test_qr_verify_matches_client_key_not_database_uuid(client: AsyncClient) -> None:
+    """UUID로 서명한 QR은 통과하지 않는다 (회귀: KAN-75).
+
+    인쇄 QR을 만드는 scripts/generate_quest_qr.py는 client_key로 서명하는데 서버가 DB
+    UUID와 대조하고 있어, 서명이 유효해도 현장 QR이 한 번도 통과할 수 없었다. 두 기준을
+    맞바꿔 쓰면 다시 같은 증상이 나므로 UUID 서명은 명시적으로 거절되어야 한다.
+    """
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    qr_quest_id = await _seed_qr_quest(seed["region_id"], client_key="qr-uuid-check")
+
+    response = await client.post(
+        f"/api/v1/quests/{qr_quest_id}/verify",
+        json={"qr_payload": sign_quest_payload(qr_quest_id)},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["verified"] is False
+
+
+async def test_qr_verify_rejects_quest_without_client_key(client: AsyncClient) -> None:
+    """client_key 없이 등록된 QR 퀘스트는 통과시키지 않는다 (fail-closed)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    qr_quest_id = await _seed_qr_quest(seed["region_id"], client_key=None)
+
+    response = await client.post(
+        f"/api/v1/quests/{qr_quest_id}/verify",
+        json={"qr_payload": sign_quest_payload("anything")},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["verified"] is False
+    assert "QR 인증 정보" in data["reason"]
+
+
 async def test_qr_verify_requires_payload(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
-    qr_quest_id = await _seed_qr_quest(seed["region_id"])
+    qr_quest_id = await _seed_qr_quest(seed["region_id"], client_key="qr-no-payload")
 
     response = await client.post(f"/api/v1/quests/{qr_quest_id}/verify", json={}, headers=headers)
     assert response.status_code == 422
@@ -254,7 +350,7 @@ async def test_concurrent_different_quest_completions_update_region_once_each(
         ),
         client.post(
             f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
-            json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG)},
+            json={},  # gps 미션은 좌표를 보내지 않는다 (KAN-77)
             headers=headers,
         ),
         return_exceptions=True,

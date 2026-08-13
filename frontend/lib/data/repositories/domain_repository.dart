@@ -141,11 +141,16 @@ abstract class DomainRepository {
 
   Future<String> uploadPhoto(Uint8List bytes, {String mimeType = 'image/jpeg'});
 
+  /// 퀘스트 인증 요청.
+  ///
+  /// **좌표 파라미터가 없는 것은 의도된 설계다** — 위치 인증은 단말에서 거리를 판정하고
+  /// 좌표를 서버로 보내지 않는다. 좌표를 전송하면 저장 여부와 무관하게 위치정보법상
+  /// 위치기반서비스사업 신고 대상이 된다
+  /// (docs/specs/050-quest-verification/location-law-review.md, KAN-77).
+  /// 서버도 gps 미션에 lat·lng이 오면 거절한다.
   Future<QuestVerification> verifyQuest({
     required String questKey,
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,
@@ -299,17 +304,14 @@ class DioDomainRepository implements DomainRepository {
   Future<QuestVerification> verifyQuest({
     required String questKey,
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,
   }) async {
     final catalog = await _loadCatalog();
+    // 이 payload에는 위도·경도가 들어가지 않는다(좌표 비전송 불변식 — 인터페이스 주석 참고).
     final payload = <String, dynamic>{};
     if (journeyId != null) payload['journey_id'] = journeyId;
-    if (latitude != null) payload['lat'] = latitude;
-    if (longitude != null) payload['lng'] = longitude;
     if (photoUrl != null) payload['photo_url'] = photoUrl;
     if (answer != null) payload['answer'] = answer;
     if (qrPayload != null) payload['qr_payload'] = qrPayload;

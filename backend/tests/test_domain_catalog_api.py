@@ -70,4 +70,5 @@ async def test_quests_expose_all_stable_keys_and_flutter_mission_types(
         "photo",
         "gps",
         "quiz",
+        "qr",  # 시·군당 1개는 현장 QR 인증이다 (KAN-75에서 정적 데이터와 정합화)
     }

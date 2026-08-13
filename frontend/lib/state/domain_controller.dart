@@ -74,11 +74,11 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
     await refresh();
   }
 
+  /// 좌표 파라미터는 없다 — 위치 인증은 단말에서 판정하고 좌표를 서버로 보내지 않는다
+  /// (docs/specs/050-quest-verification/location-law-review.md, KAN-77).
   Future<QuestVerification> verifyQuest({
     required String questKey,
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,
@@ -88,8 +88,6 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
         .verifyQuest(
           questKey: questKey,
           journeyId: journeyId,
-          latitude: latitude,
-          longitude: longitude,
           photoUrl: photoUrl,
           answer: answer,
           qrPayload: qrPayload,
@@ -109,16 +107,12 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
     required Uint8List bytes,
     String mimeType = 'image/jpeg',
     String? journeyId,
-    double? latitude,
-    double? longitude,
   }) async {
     final repository = ref.read(domainRepositoryProvider);
     final photoUrl = await repository.uploadPhoto(bytes, mimeType: mimeType);
     return verifyQuest(
       questKey: questKey,
       journeyId: journeyId,
-      latitude: latitude,
-      longitude: longitude,
       photoUrl: photoUrl,
     );
   }

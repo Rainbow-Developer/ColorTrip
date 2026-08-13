@@ -2,10 +2,12 @@
 
 규칙(docs/specs/010-journey/plan.md · docs/specs/050-quest-verification/):
 - photo: 업로드한 인증 사진을 **스토리지에서 읽어 비전 모델로 판정**한다.
-- gps: 퀘스트 좌표 기준 verify_radius(m) 이내.
-- gps_photo: 좌표 반경 이내 + 사진 비전 판정 통과.
+- gps: **단말이** 반경 판정을 끝내고 서버는 완료만 기록한다. 좌표를 보내면 거절한다
+  (좌표 비전송 — location-law-review.md의 B안. 수신만 해도 신고 대상이 된다).
+- gps_photo: 좌표 반경 이내 + 사진 비전 판정 통과 (FE 미사용 — 쓰려면 신고가 선행).
 - quiz: 제출 답안과 mission_meta["quiz"]["answer"]를 정규화(공백·대소문자) 비교.
 - qr: 현장 QR 페이로드의 HMAC 서명 검증 (app/verifications/service.py 재사용).
+  대조 기준은 client_key다 — 인쇄한 QR이 DB 재시딩(UUID 변경)에도 살아있어야 한다.
 
 사진은 업로드(`POST /uploads/photo`) 때 한 번만 전송하고, 판정은 저장본을 읽어 수행한다
 (KAN-73 — 이전에는 판정 전용 API로 같은 사진을 한 번 더 보냈다). 사진을 읽지 못하거나
@@ -49,6 +51,7 @@ class QuestJudgeInput:
     """판정에 필요한 퀘스트 값 — ORM 객체와 분리해 세션 수명에 묶이지 않게 한다."""
 
     quest_id: str
+    client_key: str | None
     mission_type: str
     title: str
     description: str | None
@@ -67,6 +70,7 @@ def snapshot(quest: Quest) -> QuestJudgeInput:
     """판정 입력을 ORM 객체에서 값으로 복사한다(세션을 닫기 전에 호출해야 한다)."""
     return QuestJudgeInput(
         quest_id=str(quest.id),
+        client_key=quest.client_key,
         mission_type=quest.mission_type,
         title=quest.title,
         description=quest.description,
@@ -114,7 +118,7 @@ async def judge(
         _require_uploaded_photo(photo_url)
         return await _judge_photo(quest, photo_url)
     if quest.mission_type == MissionType.GPS.value:
-        return _outcome(_judge_gps(quest, lat, lng))
+        return _outcome(_judge_gps_on_device(lat, lng))
     if quest.mission_type == MissionType.GPS_PHOTO.value:
         _require_uploaded_photo(photo_url)
         gps_passed, gps_reason = _judge_gps(quest, lat, lng)
@@ -186,11 +190,40 @@ def _conditions_of(quest: QuestJudgeInput) -> list[str]:
     return [description] if description else []
 
 
+def _judge_gps_on_device(
+    lat: Decimal | None,
+    lng: Decimal | None,
+) -> tuple[bool, str | None]:
+    """gps 미션 — 거리 판정은 **단말이** 끝냈고 서버는 완료만 기록한다 (KAN-77).
+
+    좌표는 받지 않는다. 저장하지 않더라도 **수신하는 것만으로** 위치정보법상
+    위치기반서비스사업 신고 대상이 되기 때문이다(팀 결정 B안 —
+    docs/specs/050-quest-verification/location-law-review.md). 그래서 좌표가 오면
+    무시가 아니라 **거절**한다 — 무시하면 클라이언트가 계속 보내도 아무도 모른 채
+    신고 대상 상태가 유지된다.
+
+    대가로 이 미션은 클라이언트 변조에 취약하다(위 문서의 B안 트레이드오프로 수용).
+    서버 검증이 필요해지는 시점 = 신고 시점이며, 그때 gps_photo의 `_judge_gps`
+    경로를 쓰면 된다.
+    """
+    if lat is not None or lng is not None:
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR,
+            "위치 인증은 단말에서 판정합니다. 좌표(lat·lng)를 보내지 마세요.",
+        )
+    return True, None
+
+
 def _judge_gps(
     quest: QuestJudgeInput,
     lat: Decimal | None,
     lng: Decimal | None,
 ) -> tuple[bool, str | None]:
+    """좌표 기반 서버 검증 — **gps_photo 전용**이며 FE는 사용하지 않는다.
+
+    이 경로를 쓰기 시작하는 순간 좌표를 수신하게 되므로 위치기반서비스사업 신고가
+    선행되어야 한다(location-law-review.md의 A안 전환 절차).
+    """
     if lat is None or lng is None:
         raise AppException(ErrorCode.VALIDATION_ERROR, "GPS 좌표(lat·lng)가 필요합니다.")
     if quest.lat is None or quest.lng is None:
@@ -203,10 +236,21 @@ def _judge_gps(
 
 
 def _judge_qr(quest: QuestJudgeInput, qr_payload: str | None) -> tuple[bool, str | None]:
+    """현장 QR 서명을 검증한다 — 대조 기준은 **client_key**다(KAN-75).
+
+    이전에는 DB의 UUID(`quest.quest_id`)와 대조했는데, QR을 만드는
+    `scripts/generate_quest_qr.py`는 client_key(`dy3` 등)로 서명하므로 서명이 유효해도
+    항상 "이 퀘스트의 QR이 아니에요"로 떨어졌다. client_key는 FE 정적 데이터와 공유하는
+    안정적인 식별자라, 퀘스트 행을 재시딩해 UUID가 바뀌어도 인쇄한 QR이 계속 유효하다.
+    """
     if qr_payload is None or not qr_payload.strip():
         raise AppException(ErrorCode.VALIDATION_ERROR, "QR 페이로드(qr_payload)가 필요합니다.")
+    if not quest.client_key:
+        # client_key 없이 QR 미션을 등록한 데이터 오류 — 통과시키지 않는다(fail-closed).
+        logger.error("QR 퀘스트에 client_key가 없습니다 (quest=%s)", quest.quest_id)
+        return False, "이 퀘스트의 QR 인증 정보가 준비되지 않았어요."
 
-    passed, reason = verify_qr_payload(qr_payload, quest.quest_id)
+    passed, reason = verify_qr_payload(qr_payload, quest.client_key)
     return passed, None if passed else reason  # 성공 사유는 버린다(실패 사유만 반환하는 규약)
 
 

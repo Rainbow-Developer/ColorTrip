@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'package:colortrip/data/location/location_gateway.dart';
 import 'package:colortrip/data/media/photo_picker_gateway.dart';
 import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/models/verification.dart';
@@ -38,6 +39,43 @@ const _gpsQuestWithoutCoords = Quest(
   desc: '',
   conditions: [],
 );
+
+/// 좌표가 있는 gps 퀘스트 — 도담삼봉 좌표(온디바이스 거리 판정 검증용).
+const _gpsQuest = Quest(
+  id: 'test-gps-coords',
+  region: 'danyang',
+  type: 'nature',
+  title: '좌표 있는 GPS 퀘스트',
+  place: '도담삼봉',
+  verify: 'gps',
+  reward: 10,
+  desc: '',
+  conditions: [],
+  lat: 37.0008,
+  lng: 128.3418,
+  verifyRadius: 300,
+);
+
+/// 측위를 대신하는 대역 — 플랫폼 채널 없이 임의 좌표를 돌려준다.
+class _FakeLocationGateway implements LocationGateway {
+  _FakeLocationGateway(this.latitude, this.longitude);
+
+  final double latitude;
+  final double longitude;
+  int calls = 0;
+
+  @override
+  Future<CurrentLocation> current() async {
+    calls++;
+    return CurrentLocation(latitude: latitude, longitude: longitude);
+  }
+
+  @override
+  Future<bool> openAppSettings() async => true;
+
+  @override
+  Future<bool> openLocationSettings() async => true;
+}
 
 const _qrQuest = Quest(
   id: 'test-qr',
@@ -111,8 +149,6 @@ class _QuizDomainRepository implements DomainRepository {
   Future<QuestVerification> verifyQuest({
     required String questKey,
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,
@@ -201,6 +237,7 @@ ProviderContainer _container({
   List<Quest>? fakeQuests,
   DomainRepository? domainRepository,
   PhotoPickerGateway? photoPickerGateway,
+  LocationGateway? locationGateway,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -212,6 +249,8 @@ ProviderContainer _container({
         domainRepositoryProvider.overrideWithValue(domainRepository),
       if (photoPickerGateway != null)
         photoPickerGatewayProvider.overrideWithValue(photoPickerGateway),
+      if (locationGateway != null)
+        locationGatewayProvider.overrideWithValue(locationGateway),
     ],
   );
   addTearDown(container.dispose);
@@ -286,8 +325,6 @@ class _PhotoDomainRepository implements DomainRepository {
   Future<QuestVerification> verifyQuest({
     required String questKey,
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,
@@ -639,5 +676,67 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('사진에서 퀘스트 장소를 확인할 수 없습니다.'), findsNothing);
     });
+  });
+
+  testWidgets('gps 분기 — 반경 밖이면 서버를 부르지 않고 거리만 안내한다', (tester) async {
+    // 위치 판정은 단말에서 끝난다(KAN-77). 반경 밖에서 서버를 부르면 좌표가 필요해지고,
+    // 좌표를 보내는 순간 위치정보법상 신고 대상이 된다(location-law-review.md).
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+
+    final repository = _PhotoDomainRepository();
+    // 도담삼봉에서 약 1.4km 떨어진 좌표(반경 300m 밖).
+    final gateway = _FakeLocationGateway(37.0130, 128.3418);
+    final container = _container(
+      fakeQuests: [_gpsQuest],
+      domainRepository: repository,
+      locationGateway: gateway,
+    );
+    await tester.pumpWidget(_wrapVerifyScreen(_gpsQuest.id, container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(ElevatedButton, '현재 위치로 인증하기'));
+    await tester.pumpAndSettle();
+
+    expect(gateway.calls, 1);
+    expect(repository.verifyCalls, 0); // 서버 호출 없음
+    expect(find.textContaining('떨어져 있어요'), findsOneWidget);
+    expect(find.textContaining('인증 반경 300m'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2)); // 토스트 타이머 소진
+  });
+
+  testWidgets('gps 분기 — 반경 이내면 좌표 없이 인증을 요청한다', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+
+    final repository = _PhotoDomainRepository();
+    // 퀘스트 좌표에서 약 20m 거리(반경 300m 이내).
+    final gateway = _FakeLocationGateway(37.00098, 128.3418);
+    final container = _container(
+      fakeQuests: [_gpsQuest],
+      domainRepository: repository,
+      locationGateway: gateway,
+    );
+    await tester.pumpWidget(_wrapVerifyScreen(_gpsQuest.id, container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(ElevatedButton, '현재 위치로 인증하기'));
+    await tester.pumpAndSettle();
+
+    expect(repository.verifyCalls, 1);
+    expect(find.text('퀘스트 완료! 지도가 칠해졌어요'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  test('distanceMeters는 하버사인 거리를 계산한다', () {
+    // 같은 지점은 0, 위도 1도 차이는 약 111km.
+    expect(distanceMeters(37.0, 128.0, 37.0, 128.0), 0);
+    expect(distanceMeters(37.0, 128.0, 38.0, 128.0), closeTo(111195, 500));
+    // 도담삼봉 기준 약 20m 떨어진 좌표.
+    expect(distanceMeters(37.0008, 128.3418, 37.00098, 128.3418), closeTo(20, 3));
   });
 }

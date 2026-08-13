@@ -1,3 +1,8 @@
+/// 퀘스트에 반경이 지정되지 않았을 때 쓰는 위치 인증 반경(m).
+///
+/// 위치 판정은 단말에서 수행되므로(좌표 비전송) **이 값이 실제 적용되는 반경**이다.
+const kDefaultVerifyRadiusMeters = 500;
+
 /// 퀘스트. `verify`는 photo/gps/quiz/qr 중 하나([core/constants.dart]의 verifyLabels 대응).
 class Quest {
   const Quest({
@@ -39,7 +44,7 @@ class Quest {
   final double? lat;
   final double? lng;
 
-  /// 위치 인증 반경(m). null이면 기본값(500m)을 쓴다.
+  /// 위치 인증 반경(m). null이면 [kDefaultVerifyRadiusMeters]를 쓴다.
   final int? verifyRadius;
 
   bool get isQuiz => verify == 'quiz';

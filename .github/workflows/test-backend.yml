@@ -1,0 +1,69 @@
+name: Test backend
+
+# dev로 향하는 PR과 dev 푸시에서 백엔드 테스트를 돌린다. 이 워크플로가 없던 동안
+# 정합성 가드(test_domain_catalog_contract 등)가 빨간 채로 머지돼, QR 인증이 전혀
+# 동작하지 않는 버그를 아무도 눈치채지 못했다 (KAN-76).
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - "backend/**"
+      # deploy 스크립트는 backend/tests/test_deploy_migration.py가 직접 읽어 검증한다.
+      - "deploy/**"
+      # FE 정적 퀘스트 데이터는 backend/tests/test_domain_catalog_contract.py가 읽어
+      # 서버 카탈로그와 대조한다 — 여기가 바뀌면 백엔드 테스트가 깨질 수 있다.
+      - "frontend/lib/data/static/**"
+      - ".github/workflows/test-backend.yml"
+  push:
+    branches: [dev]
+    paths:
+      - "backend/**"
+      - "deploy/**"
+      - "frontend/lib/data/static/**"
+      - ".github/workflows/test-backend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      # 테스트는 실제 PostgreSQL을 쓴다(backend/tests/conftest.py). 호스트 포트는
+      # conftest의 TEST_DATABASE_URL 기본값(5433)과 맞춘다.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: colortrip
+          POSTGRES_PASSWORD: colortrip
+          POSTGRES_DB: colortrip_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U colortrip -d colortrip_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --frozen --group dev
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Test (pytest)
+        run: uv run pytest -q

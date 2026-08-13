@@ -37,11 +37,15 @@ Kakao Flutter SDK 로그인
 
 `onboarding_step`은 별도 상태 컬럼 없이 현재 데이터로 계산한다.
 
-- `profile`: 닉네임·이메일·생년월일 중 누락이 있거나 현재 필수 consent가 없음
+- `profile`: 닉네임·이메일 중 누락이 있거나 현재 필수 consent가 없음 (생년월일은 **선택**이라 단계 판정에 쓰지 않는다 — KAN-75)
 - `trip_dna`: 프로필·필수 consent 완료, DNA 미완료
 - `complete`: 프로필·필수 consent·DNA 완료
 
 `PUT /api/v1/users/me/onboarding-profile`은 프로필과 consent를 한 트랜잭션으로 저장한다. 같은 요청은 멱등하며 필수 동의가 `false`이면 저장하지 않는다. `PATCH /api/v1/users/me`는 닉네임·생년월일만 수정하고 이메일은 읽기 전용이다.
+
+`birth_date`는 **선택 필드**다(KAN-75 — 가입 이탈을 줄이기 위해 필수에서 내렸다). 생략하거나 `null`로 보내면 저장하지 않으며, 이미 저장된 값이 있으면 **지우지 않고 유지**한다(값을 넣은 요청만 덮어쓴다). 지금은 이 API로 생년월일을 지울 수 없다.
+
+이메일 잠금(온보딩 후 변경 불가)의 기준은 "닉네임·이메일이 채워졌는가"가 아니라 **"필수 consent까지 마친 온보딩 완료 사용자인가"**다. Kakao가 닉네임·이메일을 미리 채워주므로, 필드 존재만으로 판단하면 신규 가입자가 첫 제출부터 막힌다.
 
 ```json
 {
@@ -66,7 +70,7 @@ refresh API는 만료된 access token을 요구하지 않는다. refresh token�
 
 ### 프로필과 로그아웃
 
-프로필 SOT는 백엔드이며 수집 필드는 닉네임, 이메일, 생년월일이다. Kakao 닉네임·이메일·이미지는 신규 사용자 초기값으로만 사용하며 재로그인으로 기존 프로필을 덮어쓰지 않는다. `UserProfile`은 프로필과 DNA, `social_provider`, 계산된 `onboarding_step`, 항상 `false`인 호환 필드 `is_restored`를 반환한다.
+프로필 SOT는 백엔드이며 수집 필드는 닉네임, 이메일, 생년월일(선택)이다. Kakao 닉네임·이메일·이미지는 신규 사용자 초기값으로만 사용하며 재로그인으로 기존 프로필을 덮어쓰지 않는다. `UserProfile`은 프로필과 DNA, `social_provider`, 계산된 `onboarding_step`, 항상 `false`인 호환 필드 `is_restored`를 반환한다.
 
 로그아웃은 백엔드 refresh token 폐기를 제한 횟수 재시도하고 Kakao logout을 best-effort로 호출한 뒤 Flutter secure storage와 메모리 상태를 삭제한다. 백엔드 또는 Kakao logout이 실패해도 사용자가 해당 기기에서 로그아웃할 수 있도록 로컬 세션은 삭제한다.
 
@@ -128,7 +132,7 @@ Flutter 빌드에는 Kakao Native App Key와 Android package/key hash 설정이 
 1. 신규 사용자가 Android emulator에서 Kakao 로그인을 완료한다.
 2. 백엔드가 Kakao token info의 `app_id`가 설정값과 일치하는지 검증한다.
 3. 앱은 받은 ColorTrip JWT를 secure storage에 저장한다.
-4. 사용자는 닉네임·이메일·생년월일과 이용약관·개인정보 필수 동의를 한 번에 제출하고 선택적으로 마케팅에 동의한다.
+4. 사용자는 닉네임·이메일과 이용약관·개인정보 필수 동의를 한 번에 제출하고, 선택적으로 생년월일과 마케팅 동의를 함께 보낸다(생년월일은 보내지 않아도 다음 단계로 넘어간다).
 5. 서버가 사용자를 `ProfiledUser`로 판정하고 여행 DNA 질문·답변만 허용한다.
 6. DNA 완료 후 `CurrentUser`로 판정해 홈과 도메인 API 접근을 허용한다.
 7. 사용자가 탈퇴하면 Kakao unlink, 백엔드 즉시 익명화, 로컬 데이터 삭제 순서로 완료한다.

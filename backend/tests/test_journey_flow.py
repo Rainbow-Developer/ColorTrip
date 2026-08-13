@@ -143,7 +143,7 @@ async def test_journey_stays_in_progress_during_period_with_partial_completion(
     # 남은 퀘스트까지 인증하면 기간과 무관하게 완료된다.
     await client.post(
         f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
-        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG)},
+        json={},  # gps 미션은 좌표를 보내지 않는다 (KAN-77)
         headers=headers,
     )
     completed = await client.get(f"/api/v1/journeys/{journey['id']}", headers=headers)

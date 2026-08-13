@@ -105,7 +105,8 @@ class OnboardingProfileRequest(BaseModel):
 
     nickname: str = Field(min_length=1, max_length=30)
     email: str = Field(min_length=3, max_length=255)
-    birth_date: date
+    # 생년월일은 선택 항목이다(KAN-75) — 보내지 않거나 null이면 저장하지 않는다.
+    birth_date: date | None = None
     terms_agreed: StrictBool
     privacy_agreed: StrictBool
     marketing_agreed: StrictBool
@@ -113,7 +114,12 @@ class OnboardingProfileRequest(BaseModel):
     _strip_nickname = field_validator("nickname", mode="before")(_normalize_nickname)
     _normalize_email = field_validator("email", mode="before")(_normalize_email)
     _valid_email = field_validator("email")(_validate_email)
-    _valid_birth_date = field_validator("birth_date")(_validate_birth_date)
+
+    @field_validator("birth_date")
+    @classmethod
+    def validate_optional_birth_date(cls, value: date | None) -> date | None:
+        """값이 있을 때만 미래 날짜를 막는다(없으면 검증 대상이 아니다)."""
+        return None if value is None else _validate_birth_date(value)
 
 
 class UserProfileUpdateRequest(BaseModel):

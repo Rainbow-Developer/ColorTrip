@@ -12,7 +12,8 @@
 | Python 타입 체크 | Pyright                           | |
 | 프론트엔드 포맷   | dart analyze + dart format        | |
 | 커밋 전 자동 검사 | pre-commit 프레임워크 (Back·Front 공통)  | 프론트엔드는 dart format/analyze 훅 |
-| 테스트 정책     | 초기엔 생략                            | |
+| PR 자동 검사   | GitHub Actions (`dev`로 향하는 PR·`dev` 푸시) | 백엔드 ruff+pytest, 프론트엔드 analyze+test |
+| 테스트 정책     | **작성·유지 필수** (2026-08-14 변경, 이전 "초기엔 생략") | 기능 변경에는 회귀 테스트를 함께 넣는다 |
 | 테스트 도구     | pytest(Back), flutter_test(Front) | |
 
 ## 규칙 / 적용
@@ -20,7 +21,14 @@
 - `[강제]` **커밋 전 자동 검사** — git hook은 **pre-commit 프레임워크 한 곳**으로 일원화합니다 (`.pre-commit-config.yaml`).
   - **백엔드**: `ruff-check` (린트), `ruff-format` (포맷팅), `pyright` (타입 체크) 훅이 활성화되어 있습니다.
   - **프론트엔드**: `dart-format` (포맷팅), `flutter-analyze` (코드 분석) 훅이 활성화되어 있습니다.
-- 테스트는 초기에는 생략하나, 도구는 pytest(백엔드)·flutter_test(프론트엔드)로 정합니다 (추후 도입).
+- `[강제]` **PR 자동 검사(CI)** — `dev`로 향하는 PR과 `dev` 푸시에서 GitHub Actions가 테스트를 실행합니다.
+  - **백엔드** ([test-backend.yml](../../.github/workflows/test-backend.yml)): PostgreSQL 서비스 컨테이너 + `ruff check`·`ruff format --check`·`pytest`.
+  - **프론트엔드** ([test-frontend.yml](../../.github/workflows/test-frontend.yml)): `flutter analyze`·`flutter test`.
+  - 경로 필터에 주의합니다. `frontend/lib/data/static/**`(정적 퀘스트 데이터)와 `deploy/**`는 **백엔드** 테스트가 직접 읽어 검증하므로 백엔드 워크플로의 트리거에도 포함되어 있습니다.
+  - pre-commit 훅은 로컬에서 건너뛸 수 있고(`SKIP=...`), Flutter SDK가 없는 환경에서는 dart 훅이 아예 돌지 않습니다. CI가 그 구멍을 메우는 최종 방어선입니다.
+- 테스트는 **작성·유지 대상**입니다. 도구는 pytest(백엔드)·flutter_test(프론트엔드)입니다.
+  - 기능을 바꾸면 그 동작을 고정하는 테스트를 함께 넣습니다. 특히 **버그를 고칠 때는 그 버그를 재현하는 테스트**를 먼저 추가합니다.
+  - 이미 실패 중인 테스트를 발견하면 "원래 깨져 있었다"로 넘기지 않습니다 — 실제 결함을 가리고 있을 수 있습니다. (KAN-75: `test_domain_catalog_contract`가 빨간 채 방치돼 QR 인증이 전혀 동작하지 않는 것을 아무도 몰랐습니다.)
 
 ## WHY?
 
