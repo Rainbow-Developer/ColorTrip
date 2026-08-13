@@ -199,7 +199,7 @@ ProviderContainer _container({
 }
 
 void main() {
-  testWidgets('quiz 분기 — 오답이면 안내, 정답이면 완료 처리 후 두 화면을 닫는다', (tester) async {
+  testWidgets('quiz 분기 — 오답이면 안내, 정답이면 완료 처리 후 직전 화면으로 돌아간다', (tester) async {
     // OX 퀴즈는 이번 작업의 비변경 대상 — 정적 데이터의 실제 퀴즈 퀘스트로 검증한다
     // (completeQuest가 정적 데이터의 questById를 쓰므로 합성 퀘스트로는 완료가 안 된다).
     final quizQuest = kQuests.firstWhere((q) => q.verify == 'quiz');
@@ -220,12 +220,14 @@ void main() {
     expect(find.text('다시 생각해보세요.'), findsOneWidget);
     expect(container.read(progressProvider).isCompleted(quizQuest.id), isFalse);
 
-    // 정답 → 완료 처리 후 지역 화면으로 이동.
+    // 정답 → 완료 처리 후 인증 화면을 닫고 직전 화면으로 돌아간다(KAN-73 — go로 스택을
+    // 교체하면 뒤로가기가 죽어 엉뚱한 화면에 남았다).
     await tester.tap(find.text(quizQuest.quizAnswer! ? 'O' : 'X'));
     await tester.pumpAndSettle();
     expect(container.read(progressProvider).isCompleted(quizQuest.id), isTrue);
     expect(find.text('퀘스트 완료! 지도가 칠해졌어요'), findsOneWidget);
-    expect(find.text('region'), findsOneWidget);
+    expect(find.text('OX 퀴즈'), findsNothing);
+    expect(find.text('detail'), findsOneWidget);
 
     // 토스트 제거 타이머(1.9초)를 소진시켜 pending timer 실패를 막는다.
     await tester.pump(const Duration(seconds: 2));

@@ -31,8 +31,10 @@ class QuestVerifyScreen extends ConsumerWidget {
       return const Scaffold(body: Center(child: Text('퀘스트를 찾을 수 없어요')));
     }
 
-    final journeyId =
-        this.journeyId ??
+    // 이 퀘스트를 담은 그 지역 여행을 찾아 인증을 여정에 연결한다. 진행중 여행을 먼저 보되,
+    // 없으면 완료된 여행도 쓴다 — 여행 기간이 지나 완료로 넘어간 뒤에 남은 퀘스트를 인증하면
+    // (KAN-73 완료 판정) 진행중 여행이 없어 여정 연결이 끊기고, 지도 채색 집계에도 빠진다.
+    final candidates =
         ref
             .watch(domainControllerProvider)
             .value
@@ -40,10 +42,16 @@ class QuestVerifyScreen extends ConsumerWidget {
             .where(
               (journey) =>
                   journey.regionKey == quest.region &&
-                  journey.questKeys.contains(quest.id) &&
-                  journey.status == 'in_progress',
+                  journey.questKeys.contains(quest.id),
             )
-            .firstOrNull
+            .toList() ??
+        const [];
+    final journeyId =
+        this.journeyId ??
+        (candidates
+                    .where((journey) => journey.status == 'in_progress')
+                    .firstOrNull ??
+                candidates.firstOrNull)
             ?.id;
 
     switch (quest.verify) {
@@ -56,7 +64,7 @@ class QuestVerifyScreen extends ConsumerWidget {
       case 'quiz':
         return _QuizVerifyBody(
           quest: quest,
-          successDestination: '/region/${quest.region}',
+          fallbackLocation: '/region/${quest.region}',
           onVerified: (answer) => _verify(
             context,
             ref,
@@ -67,6 +75,7 @@ class QuestVerifyScreen extends ConsumerWidget {
         );
       case 'qr':
         return _QrVerifyBody(
+          fallbackLocation: '/region/${quest.region}',
           onVerified: (payload) => _verify(
             context,
             ref,
@@ -145,7 +154,7 @@ class QuestVerifyScreen extends ConsumerWidget {
       );
       if (verified == true && context.mounted) {
         showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
-        context.go('/region/${quest.region}');
+        _leaveVerifyScreen(context, '/region/${quest.region}');
       }
     } on LocationFailure catch (error) {
       if (context.mounted) await _showLocationFailure(context, ref, error);
@@ -240,16 +249,31 @@ class QuestVerifyScreen extends ConsumerWidget {
   }
 }
 
+/// 인증 성공 후 인증 화면을 닫고 들어왔던 화면(지역 개요 등)으로 돌아간다.
+///
+/// `context.go`로 목적지를 지정하면 라우터 스택이 교체돼 뒤로가기가 동작하지 않고 엉뚱한
+/// 화면에 남았다(KAN-73 사용자 피드백). 스택이 비어 있는 경우(딥링크 등 직접 진입)에만
+/// [fallbackLocation]으로 이동한다.
+void _leaveVerifyScreen(BuildContext context, String fallbackLocation) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    context.go(fallbackLocation);
+  }
+}
+
 class _QuizVerifyBody extends StatefulWidget {
   const _QuizVerifyBody({
     required this.quest,
     required this.onVerified,
-    required this.successDestination,
+    required this.fallbackLocation,
   });
 
   final Quest quest;
   final Future<bool?> Function(bool answer) onVerified;
-  final String successDestination;
+
+  /// 돌아갈 화면이 스택에 없을 때만 쓰는 목적지.
+  final String fallbackLocation;
 
   @override
   State<_QuizVerifyBody> createState() => _QuizVerifyBodyState();
@@ -327,7 +351,7 @@ class _QuizVerifyBodyState extends State<_QuizVerifyBody> {
     if (!mounted) return;
     if (verified == true) {
       showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
-      context.go(widget.successDestination);
+      _leaveVerifyScreen(context, widget.fallbackLocation);
       return;
     }
     if (verified == null) {
@@ -516,9 +540,15 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
 }
 
 class _QrVerifyBody extends StatefulWidget {
-  const _QrVerifyBody({required this.onVerified});
+  const _QrVerifyBody({
+    required this.onVerified,
+    required this.fallbackLocation,
+  });
 
   final Future<bool?> Function(String payload) onVerified;
+
+  /// 돌아갈 화면이 스택에 없을 때만 쓰는 목적지.
+  final String fallbackLocation;
 
   @override
   State<_QrVerifyBody> createState() => _QrVerifyBodyState();
@@ -536,9 +566,10 @@ class _QrVerifyBodyState extends State<_QrVerifyBody> {
     if (!mounted) return;
     if (verified == true) {
       showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
-      context.go('/home');
+      _leaveVerifyScreen(context, widget.fallbackLocation);
+      return;
     }
-    if (mounted) setState(() => _busy = false);
+    setState(() => _busy = false);
   }
 
   @override
@@ -640,125 +671,137 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
         leading: const AppBackButton(),
         title: const Text('사진 인증'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              widget.questTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              '퀘스트 장소 사진을 업로드해주세요.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
-            ),
-            const SizedBox(height: 14),
-            InkWell(
-              onTap: () => _pickPhoto(ImageSource.gallery),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                height: 120,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: AppColors.uploadBoxBg,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: photoBytes != null
-                        ? AppColors.primaryDark
-                        : AppColors.uploadBoxBorder,
-                  ),
+      // 업로드 + AI 판정을 기다리는 동안 화면 전체를 스크림으로 덮는다 — 버튼만 비활성화하면
+      // 진행 중인지 알기 어렵다는 피드백(KAN-73).
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          _form(photoBytes),
+          if (_busy) const _VerifyingScrim(message: '사진 확인 중...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _form(Uint8List? photoBytes) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            widget.questTitle,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            '퀘스트 장소 사진을 업로드해주세요.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          InkWell(
+            onTap: () => _pickPhoto(ImageSource.gallery),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              height: 120,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: AppColors.uploadBoxBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: photoBytes != null
+                      ? AppColors.primaryDark
+                      : AppColors.uploadBoxBorder,
                 ),
-                alignment: Alignment.center,
-                child: photoBytes != null
-                    ? Image.memory(
-                        photoBytes,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Text('📷', style: TextStyle(fontSize: 28)),
-                          SizedBox(height: 4),
-                          Text(
-                            '사진 촬영 또는 갤러리 선택',
-                            style: TextStyle(
-                              color: AppColors.formPlaceholder,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
               ),
+              alignment: Alignment.center,
+              child: photoBytes != null
+                  ? Image.memory(
+                      photoBytes,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Text('📷', style: TextStyle(fontSize: 28)),
+                        SizedBox(height: 4),
+                        Text(
+                          '사진 촬영 또는 갤러리 선택',
+                          style: TextStyle(
+                            color: AppColors.formPlaceholder,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _PhotoSourceButton(
-                    label: '📷 카메라',
-                    onTap: () => _pickPhoto(ImageSource.camera),
-                  ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _PhotoSourceButton(
+                  label: '📷 카메라',
+                  onTap: () => _pickPhoto(ImageSource.camera),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _PhotoSourceButton(
-                    label: '🖼 갤러리',
-                    onTap: () => _pickPhoto(ImageSource.gallery),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _PhotoSourceButton(
+                  label: '🖼 갤러리',
+                  onTap: () => _pickPhoto(ImageSource.gallery),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '업로드 가이드',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+                SizedBox(height: 6),
+                Text(
+                  '• 퀘스트 장소가 잘 보이는 사진\n• 최근 24시간 이내 촬영\n• 5MB 이하 JPG/PNG',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                    height: 1.5,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.border),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '업로드 가이드',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    '• 퀘스트 장소가 잘 보이는 사진\n• 최근 24시간 이내 촬영\n• 5MB 이하 JPG/PNG',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 12,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
+          ),
+          const Spacer(),
+          ElevatedButton(
+            onPressed: photoBytes != null && !_busy
+                ? () async {
+                    setState(() => _busy = true);
+                    await widget.onVerified(
+                      _PickedPhoto(photoBytes, _photoMimeType),
+                    );
+                    if (mounted) setState(() => _busy = false);
+                  }
+                : null,
+            child: Text(
+              _busy
+                  ? '사진 확인 중...'
+                  : photoBytes != null
+                  ? '사진으로 인증하기'
+                  : '사진 선택 후 인증 가능',
             ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: photoBytes != null && !_busy
-                  ? () async {
-                      setState(() => _busy = true);
-                      await widget.onVerified(
-                        _PickedPhoto(photoBytes, _photoMimeType),
-                      );
-                      if (mounted) setState(() => _busy = false);
-                    }
-                  : null,
-              child: Text(
-                _busy
-                    ? '업로드 중...'
-                    : photoBytes != null
-                    ? '사진으로 인증하기'
-                    : '사진 선택 후 인증 가능',
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -769,6 +812,61 @@ class _PickedPhoto {
 
   final Uint8List bytes;
   final String mimeType;
+}
+
+/// 인증 진행 중 화면을 덮는 스크림 + 진행 카드(KAN-73).
+///
+/// 라우트(다이얼로그)가 아니라 화면 안의 레이어다 — 인증 성공 시 결과 화면을 push 하는데,
+/// 다이얼로그였다면 그 위에 남거나 pop 순서가 엉킬 수 있다.
+class _VerifyingScrim extends StatelessWidget {
+  const _VerifyingScrim({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return AbsorbPointer(
+      child: ColoredBox(
+        color: AppColors.verifyScrim,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textBody,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  '잠시만 기다려주세요',
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 String _mimeTypeForName(String name) {
