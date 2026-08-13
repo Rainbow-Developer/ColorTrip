@@ -57,3 +57,4 @@
 |------|------|
 | 2026-07-25 | 승인된 Kakao 통합 인증 범위의 계획 문서 최초 작성 |
 | 2026-07-28 | CodeRabbit 검토 범위 분리를 위해 백엔드·배포를 KAN-53, Flutter와 실제 Android E2E를 KAN-54로 분리 |
+| 2026-08-13 | **생년월일을 선택 필드로 전환(KAN-75)** — `OnboardingProfileRequest.birth_date`를 `date \| None`으로 내리고, `_profile_is_complete`(=`onboarding_step` 판정)에서 제외했다. 포함해 두면 생년월일을 건너뛴 사용자가 `profile` 단계에 영구히 묶인다. 함께 드러난 결함: 이메일 잠금 조건이 `_profile_is_complete`를 재사용하고 있어, 생년월일이 필수일 때만 우연히 동작했다(Kakao가 닉네임·이메일을 프리필하므로 선택 전환 즉시 신규 가입자가 첫 제출부터 422). 잠금 기준을 `is_profiled_user`(consent 포함)로 바꿨다. 재제출 시 기존 생년월일을 지우지 않는다. 테스트 3건 추가 |

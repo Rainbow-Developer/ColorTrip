@@ -174,7 +174,7 @@ dev 서버는 Caddy가 TLS를 종단하고 API 컨테이너는 호스트 포트�
 
 | 기능 | 설명 | 위치 |
 |------|------|------|
-| **온보딩·여행 DNA** | 스플래시·회원가입·초기 설문·DNA 결과 | `frontend/lib/features/onboarding/`, `frontend/lib/features/survey/` |
+| **온보딩·여행 DNA** | 스플래시·회원가입·초기 설문·DNA 결과 | `frontend/lib/features/onboarding/`, `frontend/lib/features/trip_dna/`, 설문 진행바 `frontend/lib/core/widgets/step_progress.dart` |
 | **홈 지도(색칠)** | 충북 11개 시·군 색칠 지도·통계 | `frontend/lib/features/home/`, 지도 위젯 `frontend/lib/core/widgets/chungbuk_map.dart` |
 | **여행 목록** | 진행중/지난 여행(지역 단위) 목록 | `frontend/lib/features/travel/` |
 | **퀘스트·인증** | 지역별·상세·인증(사진/GPS/OX퀴즈), 유형별 전체 목록(보조) | `frontend/lib/features/quests/` |

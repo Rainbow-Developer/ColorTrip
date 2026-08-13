@@ -50,7 +50,7 @@ class SplashScreen extends ConsumerWidget {
                   height: 80,
                 ),
                 const Text(
-                  '여행은 퀘스트,\n기록은 지도 위에.',
+                  '충북, 생각보다\n다채로울지도.',
                   style: TextStyle(
                     color: AppColors.splashHeading,
                     fontSize: 45,

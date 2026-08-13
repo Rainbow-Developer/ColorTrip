@@ -53,4 +53,36 @@ void main() {
       );
     },
   );
+
+  test('omits birth_date from onboarding payload when it is not provided', () {
+    // 선택 항목이라 null이면 키 자체를 보내지 않는다 — 서버는 birth_date: null을
+    // 거부하고, 보내지 않은 필드는 건드리지 않는다(KAN-75).
+    const input = OnboardingProfileInput(
+      nickname: '컬러트립',
+      email: 'traveler@example.com',
+      birthDate: null,
+      termsAgreed: true,
+      privacyAgreed: true,
+      marketingAgreed: false,
+    );
+
+    expect(input.toJson().containsKey('birth_date'), isFalse);
+    expect(
+      OnboardingProfileInput(
+        nickname: '컬러트립',
+        email: 'traveler@example.com',
+        birthDate: DateTime(2000, 1, 2),
+        termsAgreed: true,
+        privacyAgreed: true,
+        marketingAgreed: false,
+      ).toJson()['birth_date'],
+      '2000-01-02',
+    );
+  });
+
+  test('omits birth_date from profile update when it is not provided', () {
+    const input = ProfileUpdateInput(nickname: '컬러트립', birthDate: null);
+
+    expect(input.toJson(), {'nickname': '컬러트립'});
+  });
 }

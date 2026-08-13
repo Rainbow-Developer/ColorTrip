@@ -384,3 +384,75 @@ async def test_active_user_can_logout_and_withdraw_before_onboarding(client: Asy
 
     assert logout.status_code == 200
     assert withdrawal.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_onboarding_profile_accepts_missing_birth_date(client: AsyncClient) -> None:
+    """생년월일은 선택 항목이다 — 없이 제출해도 온보딩이 다음 단계로 넘어간다 (KAN-75).
+
+    프로필 완료 판정에 생년월일이 남아 있으면 건너뛴 사용자가 onboarding_step="profile"에
+    묶여 회원가입 화면을 벗어나지 못한다.
+    """
+    login_data = await login(client)
+    payload = _onboarding_payload()
+    del payload["birth_date"]
+
+    response = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers={"Authorization": f"Bearer {login_data['access_token']}"},
+        json=payload,
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["birth_date"] is None
+    assert data["onboarding_step"] == "trip_dna"
+
+
+@pytest.mark.asyncio
+async def test_onboarding_retry_without_birth_date_keeps_saved_value(
+    client: AsyncClient,
+) -> None:
+    """생년월일을 넣어 저장한 뒤 빼고 재제출해도 기존 값을 지우지 않는다 (KAN-75)."""
+    login_data = await login(client)
+    headers = {"Authorization": f"Bearer {login_data['access_token']}"}
+    first = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers=headers,
+        json=_onboarding_payload(),
+    )
+    assert first.status_code == 200
+
+    payload = _onboarding_payload()
+    del payload["birth_date"]
+    second = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers=headers,
+        json=payload,
+    )
+
+    assert second.status_code == 200
+    assert second.json()["data"]["birth_date"] == "2000-01-02"
+
+
+@pytest.mark.asyncio
+async def test_first_onboarding_submit_may_change_kakao_prefilled_email(
+    client: AsyncClient,
+) -> None:
+    """카카오가 채워준 이메일은 첫 온보딩 제출에서 바꿀 수 있어야 한다 (회귀: KAN-75).
+
+    이메일 잠금을 "필드가 채워졌는가"로 판단하면, 생년월일이 선택으로 바뀐 뒤 카카오
+    프리필만으로 잠금 조건이 성립해 신규 가입자가 첫 제출부터 막힌다. 잠금 기준은
+    "온보딩(동의 포함)을 마쳤는가"여야 한다.
+    """
+    login_data = await login(client)
+    assert login_data["user"]["email"] is not None  # 카카오 프리필 전제
+
+    response = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers={"Authorization": f"Bearer {login_data['access_token']}"},
+        json=_onboarding_payload(email="changed@example.com"),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["email"] == "changed@example.com"

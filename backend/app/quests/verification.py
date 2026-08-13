@@ -6,6 +6,7 @@
 - gps_photo: 좌표 반경 이내 + 사진 비전 판정 통과.
 - quiz: 제출 답안과 mission_meta["quiz"]["answer"]를 정규화(공백·대소문자) 비교.
 - qr: 현장 QR 페이로드의 HMAC 서명 검증 (app/verifications/service.py 재사용).
+  대조 기준은 client_key다 — 인쇄한 QR이 DB 재시딩(UUID 변경)에도 살아있어야 한다.
 
 사진은 업로드(`POST /uploads/photo`) 때 한 번만 전송하고, 판정은 저장본을 읽어 수행한다
 (KAN-73 — 이전에는 판정 전용 API로 같은 사진을 한 번 더 보냈다). 사진을 읽지 못하거나
@@ -49,6 +50,7 @@ class QuestJudgeInput:
     """판정에 필요한 퀘스트 값 — ORM 객체와 분리해 세션 수명에 묶이지 않게 한다."""
 
     quest_id: str
+    client_key: str | None
     mission_type: str
     title: str
     description: str | None
@@ -67,6 +69,7 @@ def snapshot(quest: Quest) -> QuestJudgeInput:
     """판정 입력을 ORM 객체에서 값으로 복사한다(세션을 닫기 전에 호출해야 한다)."""
     return QuestJudgeInput(
         quest_id=str(quest.id),
+        client_key=quest.client_key,
         mission_type=quest.mission_type,
         title=quest.title,
         description=quest.description,
@@ -203,10 +206,21 @@ def _judge_gps(
 
 
 def _judge_qr(quest: QuestJudgeInput, qr_payload: str | None) -> tuple[bool, str | None]:
+    """현장 QR 서명을 검증한다 — 대조 기준은 **client_key**다(KAN-75).
+
+    이전에는 DB의 UUID(`quest.quest_id`)와 대조했는데, QR을 만드는
+    `scripts/generate_quest_qr.py`는 client_key(`dy3` 등)로 서명하므로 서명이 유효해도
+    항상 "이 퀘스트의 QR이 아니에요"로 떨어졌다. client_key는 FE 정적 데이터와 공유하는
+    안정적인 식별자라, 퀘스트 행을 재시딩해 UUID가 바뀌어도 인쇄한 QR이 계속 유효하다.
+    """
     if qr_payload is None or not qr_payload.strip():
         raise AppException(ErrorCode.VALIDATION_ERROR, "QR 페이로드(qr_payload)가 필요합니다.")
+    if not quest.client_key:
+        # client_key 없이 QR 미션을 등록한 데이터 오류 — 통과시키지 않는다(fail-closed).
+        logger.error("QR 퀘스트에 client_key가 없습니다 (quest=%s)", quest.quest_id)
+        return False, "이 퀘스트의 QR 인증 정보가 준비되지 않았어요."
 
-    passed, reason = verify_qr_payload(qr_payload, quest.quest_id)
+    passed, reason = verify_qr_payload(qr_payload, quest.client_key)
     return passed, None if passed else reason  # 성공 사유는 버린다(실패 사유만 반환하는 규약)
 
 

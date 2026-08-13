@@ -18,6 +18,8 @@ TOUR_SECRET="colortrip-dev-tour-api-key" # 없으면 빈 값
 KAKAO_REST_SECRET="colortrip-dev-kakao-rest-api-key"
 KAKAO_REDIRECT_SECRET="colortrip-dev-kakao-redirect-uri"
 KAKAO_CLIENT_SECRET_NAME="colortrip-dev-kakao-client-secret"
+GEMINI_SECRET="colortrip-dev-gemini-api-key" # 없으면 사진 인증이 거절된다(경고)
+QR_SECRET_NAME="colortrip-dev-qr-secret-key" # 없으면 JWT 키에서 파생(경고)
 
 # 인스턴스 서비스 계정 액세스 토큰(메타데이터 서버)
 TOKEN="$(curl -s -H 'Metadata-Flavor: Google' \
@@ -43,6 +45,19 @@ KAKAO_REST_KEY="$(read_secret "${KAKAO_REST_SECRET}")"
 KAKAO_REDIRECT_URI="$(read_secret "${KAKAO_REDIRECT_SECRET}")"
 [ -n "${KAKAO_REDIRECT_URI}" ] || { echo "ERROR: Kakao redirect URI(${KAKAO_REDIRECT_SECRET}) 조회 실패"; exit 1; }
 KAKAO_CLIENT_SECRET="$(read_secret "${KAKAO_CLIENT_SECRET_NAME}")"
+
+# 퀘스트 인증 3종 관련 시크릿(docs/specs/050-quest-verification). 없어도 배포는 계속하되
+# 어떤 기능이 죽는지 로그로 드러낸다 — 조용히 넘어가면 "인증이 안 된다"를 나중에 앱에서
+# 발견하게 된다(KAN-75에서 실제로 그랬다).
+GEMINI_KEY="$(read_secret "${GEMINI_SECRET}")"
+if [ -z "${GEMINI_KEY}" ]; then
+  echo "WARNING: Gemini 키(${GEMINI_SECRET}) 없음 — APP_ENV=dev는 fail-closed라 사진 인증이 항상 거절됩니다."
+fi
+QR_KEY="$(read_secret "${QR_SECRET_NAME}")"
+if [ -z "${QR_KEY}" ]; then
+  echo "WARNING: QR 서명 키(${QR_SECRET_NAME}) 없음 — JWT_SECRET_KEY 파생값을 씁니다."
+  echo "         JWT 키를 교체하면 현장에 붙인 QR이 전부 무효화됩니다."
+fi
 DB_PW_ENCODED="$(DB_PW="${DB_PW}" python3 - <<'PY'
 import os
 from urllib.parse import quote
@@ -73,6 +88,11 @@ KAKAO_TOKEN_INFO_URL=https://kapi.kakao.com/v1/user/access_token_info
 KAKAO_CLIENT_SECRET=${KAKAO_CLIENT_SECRET}
 TOUR_API_KEY=${TOUR_KEY}
 TOUR_API_BASE_URL=https://apis.data.go.kr/B551011/KorService2
+GEMINI_API_KEY=${GEMINI_KEY}
+QR_SECRET_KEY=${QR_KEY}
+# 인증 사진 저장 위치. compose의 api-uploads 볼륨에 마운트해 재배포에도 남긴다
+# (GCS 전환 전까지의 임시 조치 — GCS_UPLOAD_BUCKET이 설정되면 이 값은 쓰이지 않는다).
+UPLOAD_DIR=/app/uploads
 # 아직 브라우저에서 호출하는 웹 프론트가 없어 화이트리스트 비움. 프론트 도메인이 정해지면 채운다.
 CORS_ALLOWED_ORIGINS=
 EOF
