@@ -50,16 +50,22 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     );
     if (!mounted || !ctx.mounted) return;
     final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
+    // 이 위젯 자신의 findRenderObject()가 아니라 부모(실제 Stack)를 써야 한다 — 측정 전
+    // build()는 SizedBox.shrink()(크기 0)를 반환하므로, 자기 자신을 기준 삼으면 항상
+    // 크기가 0으로 잡혀 스포트라이트가 그려지지 않는다.
+    final overlayBox = context.findRenderObject()?.parent as RenderBox?;
+    if (box == null || overlayBox == null) return;
     // Positioned은 이 위젯을 감싼 Stack 기준 좌표계를 쓰므로, 전역(root) 좌표가 아니라
-    // 그 Stack을 기준(ancestor)으로 변환해야 위치가 맞는다(AppBar 높이만큼 어긋나는 문제 방지).
-    final stackBox = context.findRenderObject()?.parent as RenderBox?;
-    final topLeft = stackBox != null
-        ? box.localToGlobal(Offset.zero, ancestor: stackBox)
-        : box.localToGlobal(Offset.zero);
+    // 그 Stack 기준 좌표로 변환해야 위치가 맞는다(AppBar 높이만큼 어긋나는 문제 방지).
+    // localToGlobal(ancestor:)는 실제 조상 관계를 요구해 assert로 죽으므로, 각자 전역
+    // 좌표를 구한 뒤 빼는 방식으로 계산한다. 단, targetKey는 반드시 이 CoachMarkOverlay와
+    // 같은 Stack 안에 있어야 한다 — Scaffold.bottomNavigationBar처럼 body Stack 밖에
+    // 있으면 좌표는 계산되어도 스포트라이트가 body 영역 밖이라 그려지지 않는다.
+    final topLeft =
+        box.localToGlobal(Offset.zero) - overlayBox.localToGlobal(Offset.zero);
     setState(() {
       _targetRect = topLeft & box.size;
-      _localSize = stackBox?.size;
+      _localSize = overlayBox.size;
     });
   }
 
@@ -68,7 +74,6 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     final rect = _targetRect;
     if (rect == null) return const SizedBox.shrink();
 
-    final isLastStep = widget.stepIndex >= kOnboardingTotalSteps - 1;
     final screenSize = _localSize ?? MediaQuery.sizeOf(context);
     const bubbleAllowance = 260.0;
     const margin = 16.0;
@@ -90,19 +95,19 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
       stepIndex: widget.stepIndex,
       title: widget.title,
       body: widget.body,
-      isLastStep: isLastStep,
     );
+
+    final hole = rect.inflate(8);
 
     return Positioned.fill(
       child: Stack(
         children: [
-          // AbsorbPointer로 스크림이 터치를 흡수해 뒤 화면의 탭·스크롤이 전달되지 않게 막는다
-          // (코치마크가 떠 있는 동안 실제 화면을 조작할 수 없어야 한다).
-          Positioned.fill(
-            child: AbsorbPointer(
-              child: CustomPaint(painter: _SpotlightPainter(rect.inflate(8))),
-            ),
-          ),
+          // CustomPaint는 히트테스트를 흡수하지 않으므로(시각 효과만 담당) 순수하게 그리기용
+          // — 화면 어디를 눌러도 실제 화면이 그대로 반응한다. 예를 들어 "여행 시작하기"
+          // 코치마크 단계에서는 그 버튼뿐 아니라 위쪽 퀘스트 목록(전제 조건)도 눌러야 하므로,
+          // hole 밖을 흡수해 막으면 오히려 투어를 진행할 수 없게 된다. 실제 타겟을 조작하는
+          // 것 자체가 다음 단계로의 진행 트리거다(각 화면의 onTap/onPressed에서 advance() 호출).
+          IgnorePointer(child: CustomPaint(painter: _SpotlightPainter(hole))),
           switch (placement) {
             _BubblePlacement.below => Positioned(
               left: margin,
@@ -153,13 +158,11 @@ class _MessageCard extends ConsumerWidget {
     required this.stepIndex,
     required this.title,
     required this.body,
-    required this.isLastStep,
   });
 
   final int stepIndex;
   final String title;
   final String body;
-  final bool isLastStep;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -195,31 +198,18 @@ class _MessageCard extends ConsumerWidget {
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton(
-                onPressed: () =>
-                    ref.read(onboardingTourProvider.notifier).skipForever(),
-                style: TextButton.styleFrom(minimumSize: const Size(48, 40)),
-                child: const Text(
-                  '다시 보지 않기',
-                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-                ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () =>
+                  ref.read(onboardingTourProvider.notifier).skipForever(),
+              style: TextButton.styleFrom(minimumSize: const Size(48, 40)),
+              child: const Text(
+                '다시 보지 않기',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
               ),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.read(onboardingTourProvider.notifier).advance(),
-                // 앱 전역 테마가 ElevatedButton에 Size.fromHeight(56)(가로 무한대)를 강제해
-                // 전체 폭 버튼을 기본값으로 삼는데, 이 버튼은 Row 안에서 옆 버튼과 나란히 쓰이므로
-                // 여기서만 좁은 minimumSize로 오버라이드한다.
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(64, 40),
-                ),
-                child: Text(isLastStep ? '확인했어요' : '다음'),
-              ),
-            ],
+            ),
           ),
         ],
       ),

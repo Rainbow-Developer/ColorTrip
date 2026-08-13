@@ -75,8 +75,12 @@ class HomeScreen extends ConsumerWidget {
                         for (final region in kRegions)
                           region.id: progress.regionSaturation(region.id),
                       },
-                      onRegionTap: (regionId) =>
-                          context.push('/region/$regionId'),
+                      onRegionTap: (regionId) {
+                        if (!tour.isDone && tour.step == 0) {
+                          ref.read(onboardingTourProvider.notifier).advance();
+                        }
+                        context.push('/region/$regionId');
+                      },
                     ),
                   ),
                   const SizedBox(height: 10),
