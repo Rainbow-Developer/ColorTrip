@@ -16,7 +16,7 @@
   - [x] 4) 진행·인증 API — POST `/quests/{id}/start`·`/verify`, GET `/users/me/progress` (VRF-01~04). gps_photo(하버사인 반경)·quiz(정규화 비교) 판정, 완료 시 여정 자동 완료.
   - [x] 5) 사진 업로드 — POST `/uploads/photo` + 스토리지 추상화(`GCS_UPLOAD_BUCKET` 설정 시 GCS, 미설정 시 로컬 디스크) (VRF-03).
   - [~] 6) 검증·문서 — pytest 40건·ruff·pyright 통과, README 갱신 완료. **Notion(테이블·API 명세) 역동기화 남음**.
-  - [x] 7) (KAN-73) 완료 판정 개정 — 판정을 순수 함수 `apply_status`로 분리(`_is_completed`: 전부 완료 OR 기간 경과 + 완료 퀘스트 ≥ 1), 여정 목록·상세 조회 시 `sync_journey_statuses`로 재계산(값이 바뀔 때만 commit). 마이그레이션·신규 API 없음(수동 완료 버튼은 보류 — plan 의사결정 9). 테스트 3건 추가(`tests/test_journey_flow.py`).
+  - [x] 7) (KAN-73) 완료 판정 개정 — 판정 규칙은 순수 함수 `_is_completed`(전부 완료 OR 기간 경과 + 완료 퀘스트 ≥ 1)에 두고, `apply_status`가 그 결과를 `journey.status`·`completed_at`에 반영하며 변경 여부를 반환한다(commit은 호출자). 여정 목록·상세 조회 시 `sync_journey_statuses`로 재계산하고 값이 바뀔 때만 commit 한다. 마이그레이션·신규 API 없음(수동 완료 버튼은 보류 — plan 의사결정 9). 테스트 3건 추가(`tests/test_journey_flow.py`).
 
 ## 구현된 항목
 
