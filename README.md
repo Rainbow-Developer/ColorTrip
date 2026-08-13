@@ -132,7 +132,7 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 │   │   ├── main.dart        # 진입점 (ProviderScope)
 │   │   ├── app/             # MaterialApp.router·GoRouter 라우트(app_shell 탭바 포함)·테마(디자인 토큰)
 │   │   ├── core/            # Dio 클라이언트(설정)·공용 위젯(ChungbukMap·토스트·배지·필터칩)
-│   │   ├── data/            # 모델·정적 카탈로그·서버 Repository
+│   │   ├── data/            # 모델·정적 카탈로그·서버 Repository·플랫폼 seam(location/·media/)
 │   │   ├── state/           # 전역 상태(Riverpod)·진행도 Notifier
 │   │   └── features/        # 화면 단위: onboarding·survey·home·travel·quests·timeline·profile
 │   ├── Dockerfile / docker-compose.yml  # Flutter SDK 미설치 환경 보조용

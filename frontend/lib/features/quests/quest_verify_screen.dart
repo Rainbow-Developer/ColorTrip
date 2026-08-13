@@ -1,16 +1,16 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../data/location/location_gateway.dart';
+import '../../data/media/photo_picker_gateway.dart';
 import '../../data/models/quest.dart';
+import '../../data/models/verification.dart';
+import '../../data/repositories/verification_repository.dart';
 import '../../state/domain_controller.dart';
 import '../../state/repository_providers.dart';
 
@@ -87,14 +87,8 @@ class QuestVerifyScreen extends ConsumerWidget {
       default:
         return _PhotoVerifyBody(
           questTitle: quest.title,
-          onVerified: (photo) => _verifyPhoto(
-            context,
-            ref,
-            quest,
-            photo.bytes,
-            photo.mimeType,
-            journeyId,
-          ),
+          onVerified: (photo) =>
+              _verifyPhoto(context, ref, quest, photo, journeyId),
         );
     }
   }
@@ -165,35 +159,58 @@ class QuestVerifyScreen extends ConsumerWidget {
     }
   }
 
-  Future<bool> _verifyPhoto(
+  /// 사진 인증 — 비전 모델 판정을 먼저 받고, **통과했을 때만** 완료 처리한다
+  /// (docs/specs/050-quest-verification). 판정값은 결과 화면이 신뢰도·사유·판정 제공자를
+  /// 표시하는 데 쓰이므로 라우트 extra로 그대로 넘긴다.
+  ///
+  /// 실패는 화면 안에 사유를 남겨 재시도하게 하고(토스트는 사라져서 긴 판정 사유를 읽기
+  /// 어렵다), 성공만 결과 화면으로 넘어간다. 반환값 = 표시할 실패 사유(null이면 성공).
+  Future<String?> _verifyPhoto(
     BuildContext context,
     WidgetRef ref,
     Quest quest,
-    Uint8List photo,
-    String mimeType,
+    PickedPhotoFile photo,
     String? journeyId,
   ) async {
+    final PhotoVerdict verdict;
+    try {
+      verdict = await ref
+          .read(verificationRepositoryProvider)
+          .verifyPhoto(
+            bytes: photo.bytes,
+            filename: photo.filename,
+            title: quest.title,
+            place: quest.place,
+            conditions: quest.conditions,
+          );
+    } on Object {
+      return '사진을 확인하지 못했어요. 잠시 후 다시 시도해주세요.';
+    }
+
+    if (!verdict.passed) {
+      return verdict.reason.isEmpty
+          ? '퀘스트 조건에 맞는 사진인지 확인해주세요.'
+          : verdict.reason;
+    }
+
+    // 판정 통과 → 사진을 저장하고 서버에 완료를 기록한다(판정 API는 사진을 보관하지 않는다).
     try {
       final result = await ref
           .read(domainControllerProvider.notifier)
           .uploadAndVerifyPhoto(
             questKey: quest.id,
-            bytes: photo,
-            mimeType: mimeType,
+            bytes: photo.bytes,
+            mimeType: photo.mimeType,
             journeyId: journeyId,
           );
-      if (!context.mounted) return false;
-      if (result.verified) {
-        context.push('/quest/$questId/verify/result');
-        return true;
+      if (!context.mounted) return null;
+      if (!result.verified) {
+        return result.reason ?? '사진 인증 조건을 확인해주세요.';
       }
-      showAppToast(context, result.reason ?? '사진 인증 조건을 확인해주세요.');
-      return false;
+      context.push('/quest/$questId/verify/result', extra: verdict);
+      return null;
     } on Object {
-      if (context.mounted) {
-        showAppToast(context, '사진을 업로드하지 못했어요. 다시 시도해주세요.');
-      }
-      return false;
+      return '사진을 업로드하지 못했어요. 다시 시도해주세요.';
     }
   }
 
@@ -605,67 +622,53 @@ class _QrVerifyBodyState extends State<_QrVerifyBody> {
   }
 }
 
-class _PhotoVerifyBody extends StatefulWidget {
+class _PhotoVerifyBody extends ConsumerStatefulWidget {
   const _PhotoVerifyBody({required this.questTitle, required this.onVerified});
 
   final String questTitle;
 
-  /// 완료 처리 콜백 — 사용자가 실제로 고른 사진을 함께 넘겨 히스토리에 남긴다.
-  final Future<bool> Function(_PickedPhoto photo) onVerified;
+  /// 인증 요청 콜백 — 고른 사진으로 판정·완료 처리를 수행하고, 화면에 보여줄 실패 사유를
+  /// 돌려준다(null이면 성공해 결과 화면으로 넘어갔다는 뜻).
+  final Future<String?> Function(PickedPhotoFile photo) onVerified;
 
   @override
-  State<_PhotoVerifyBody> createState() => _PhotoVerifyBodyState();
+  ConsumerState<_PhotoVerifyBody> createState() => _PhotoVerifyBodyState();
 }
 
-class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
+class _PhotoVerifyBodyState extends ConsumerState<_PhotoVerifyBody> {
   // "업로드 가이드"에 안내한 상한과 맞춘다.
   static const _maxPhotoBytes = 5 * 1024 * 1024;
 
-  Uint8List? _photoBytes;
-  String _photoMimeType = 'image/jpeg';
+  PickedPhotoFile? _photo;
   bool _busy = false;
 
-  Future<void> _pickPhoto(ImageSource source) async {
-    final XFile? picked;
-    try {
-      // maxWidth/imageQuality로 대부분의 카메라 사진을 5MB 이하로 미리 줄인다.
-      picked = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1920,
-        imageQuality: 85,
-      );
-    } catch (_) {
-      if (!mounted) return;
-      showAppToast(context, '사진을 불러오지 못했어요. 카메라·사진 접근 권한을 확인해주세요.');
-      return;
-    }
-    final selected = picked;
-    if (selected == null) return; // 사용자가 선택을 취소함 — 에러 아님.
+  /// 비전 모델이 거절한 사유(또는 통신 실패 안내) — 사진을 다시 고르면 지운다.
+  /// 토스트로는 사라져서 긴 판정 사유를 읽기 어려워 화면 안에 남긴다.
+  String? _failReason;
 
-    final Uint8List bytes;
+  Future<void> _pickPhoto(PhotoSource source) async {
+    final PickedPhotoFile? picked;
     try {
-      bytes = await selected.readAsBytes();
-    } catch (_) {
-      if (!mounted) return;
-      showAppToast(context, '사진을 불러오지 못했어요. 다시 시도해주세요.');
+      picked = await ref.read(photoPickerGatewayProvider).pick(source);
+    } on PhotoPickFailure catch (failure) {
+      if (mounted) showAppToast(context, failure.message);
       return;
     }
-    if (bytes.length > _maxPhotoBytes) {
-      if (!mounted) return;
+    if (picked == null || !mounted) return; // null = 사용자가 취소함(에러 아님)
+
+    if (picked.bytes.length > _maxPhotoBytes) {
       showAppToast(context, '사진 용량은 5MB 이하만 가능해요.');
       return;
     }
-
-    if (!mounted) return;
     setState(() {
-      _photoBytes = bytes;
-      _photoMimeType = selected.mimeType ?? _mimeTypeForName(selected.name);
+      _photo = picked;
+      _failReason = null; // 새 사진을 골랐으니 지난 판정 사유는 지운다.
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final photoBytes = _photoBytes;
+    final photo = _photo;
     // 확인 중에는 화면을 벗어나지 못하게 막는다 — 스크림으로 조작을 차단해두고 뒤로가기만
     // 열려 있으면, 서버 인증은 진행됐는데 결과 화면을 못 보고 나가게 된다.
     return PopScope(
@@ -685,7 +688,7 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
         body: Stack(
           fit: StackFit.expand,
           children: [
-            _form(photoBytes),
+            _form(photo),
             if (_busy) const _VerifyingScrim(message: '사진 확인 중...'),
           ],
         ),
@@ -693,7 +696,7 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
     );
   }
 
-  Widget _form(Uint8List? photoBytes) {
+  Widget _form(PickedPhotoFile? photo) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -710,7 +713,7 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
           ),
           const SizedBox(height: 14),
           InkWell(
-            onTap: () => _pickPhoto(ImageSource.gallery),
+            onTap: () => _pickPhoto(PhotoSource.gallery),
             borderRadius: BorderRadius.circular(12),
             child: Container(
               height: 120,
@@ -719,15 +722,15 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
                 color: AppColors.uploadBoxBg,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: photoBytes != null
+                  color: photo != null
                       ? AppColors.primaryDark
                       : AppColors.uploadBoxBorder,
                 ),
               ),
               alignment: Alignment.center,
-              child: photoBytes != null
+              child: photo != null
                   ? Image.memory(
-                      photoBytes,
+                      photo.bytes,
                       width: double.infinity,
                       fit: BoxFit.cover,
                     )
@@ -753,14 +756,14 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
               Expanded(
                 child: _PhotoSourceButton(
                   label: '📷 카메라',
-                  onTap: () => _pickPhoto(ImageSource.camera),
+                  onTap: () => _pickPhoto(PhotoSource.camera),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _PhotoSourceButton(
                   label: '🖼 갤러리',
-                  onTap: () => _pickPhoto(ImageSource.gallery),
+                  onTap: () => _pickPhoto(PhotoSource.gallery),
                 ),
               ),
             ],
@@ -792,21 +795,45 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
               ],
             ),
           ),
+          if (_failReason case final reason?) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.tripMutedBadgeBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                reason,
+                style: const TextStyle(
+                  color: AppColors.danger,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
           const Spacer(),
           ElevatedButton(
-            onPressed: photoBytes != null && !_busy
+            onPressed: photo != null && !_busy
                 ? () async {
-                    setState(() => _busy = true);
-                    await widget.onVerified(
-                      _PickedPhoto(photoBytes, _photoMimeType),
-                    );
-                    if (mounted) setState(() => _busy = false);
+                    setState(() {
+                      _busy = true;
+                      _failReason = null;
+                    });
+                    final failReason = await widget.onVerified(photo);
+                    if (!mounted) return;
+                    setState(() {
+                      _busy = false;
+                      _failReason = failReason;
+                    });
                   }
                 : null,
             child: Text(
               _busy
                   ? '사진 확인 중...'
-                  : photoBytes != null
+                  : photo != null
                   ? '사진으로 인증하기'
                   : '사진 선택 후 인증 가능',
             ),
@@ -815,13 +842,6 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
       ),
     );
   }
-}
-
-class _PickedPhoto {
-  const _PickedPhoto(this.bytes, this.mimeType);
-
-  final Uint8List bytes;
-  final String mimeType;
 }
 
 /// 인증 진행 중 화면을 덮는 스크림 + 진행 카드(KAN-73).
@@ -877,16 +897,6 @@ class _VerifyingScrim extends StatelessWidget {
       ),
     );
   }
-}
-
-String _mimeTypeForName(String name) {
-  final extension = name.split('.').last.toLowerCase();
-  return switch (extension) {
-    'png' => 'image/png',
-    'webp' => 'image/webp',
-    'heic' => 'image/heic',
-    _ => 'image/jpeg',
-  };
 }
 
 class _PhotoSourceButton extends StatelessWidget {

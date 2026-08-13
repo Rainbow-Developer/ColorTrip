@@ -45,7 +45,7 @@ flowchart TD
 **핵심 인터랙션**
 - **여행 DNA**: 4문항 설문에서 각 선택지가 5개 유형(자연/미식/역사/액티비티/힐링) 중 하나에 매핑되고, 최다 선택 유형이 DNA가 된다.
 - **퀘스트 인증**: 사진(사진 선택→인증 요청 중에는 **화면을 덮는 "사진 확인 중" 모달**을 띄우고→**사진 검증 결과 화면**(통과 여부·완료 안내)→"지도에서 확인하기"로 홈 이동)·GPS(위치 확인 UI→완료 후 직전 화면 복귀)·OX퀴즈(정답 시 완료 후 직전 화면 복귀)·QR(스캔 성공 시 완료 후 직전 화면 복귀). 완료하면 `completed`/지역 `progress`/`timeline`이 갱신된다.
-  - 사진 검증 결과 화면은 AI 판정 상세(신뢰도·판정 제공자)를 그릴 수 있게 만들어져 있지만, 인증에 쓰는 `POST /quests/{id}/verify`는 `verified`·`reason`만 돌려주고 화면으로 판정값을 전달하지도 않는다 — 그래서 지금은 판정 카드가 "판정 정보를 불러오지 못했어요"로 표시된다. 판정 상세를 실제로 보여주려면 [050-quest-verification](../050-quest-verification/)의 사진 판정 응답을 결과 화면까지 연결해야 한다(미연결, 후속).
+  - 사진 인증은 **비전 판정을 먼저 받고 통과했을 때만** 완료 처리한다 — `POST /verifications/photo`로 사진+퀘스트 맥락을 보내 `{passed, confidence, reason, provider}`를 받고, 통과 시 사진을 저장(`/uploads/photo`)하고 완료를 기록(`/quests/{id}/verify`)한 뒤 판정값을 결과 화면에 넘겨 신뢰도·사유·"AI 미설정" 뱃지를 표시한다. 거절되면 저장·완료 없이 인증 화면에 판정 사유를 남겨 재시도하게 한다. 판정 계약의 SOT는 [050-quest-verification](../050-quest-verification/)이다.
 - **지도 색칠**: 채색 기준(집계 단위·채도 계산·서버 동기화)의 SOT는 [055-journey-map-coloring](../055-journey-map-coloring/description.md)다. 회색(`#CCCCCC`)→진초록(`primaryDark` `#2D6A4F`) 단일 색조 보간과 지역별 팔레트·5단계 양자화는 `chungbuk_map.dart`가 담당한다(KAN-44·KAN-51).
 - **데이터 흐름**: 화면 → Riverpod 상태(Notifier) → Repository(정적 데이터). 외부 네트워크 호출 없음.
 

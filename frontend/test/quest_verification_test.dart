@@ -3,6 +3,8 @@
 /// 플랫폼 채널이 없는 환경에서도 안내 UI로 안전하게 내려앉는지를 본다.
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -11,10 +13,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'package:colortrip/data/media/photo_picker_gateway.dart';
 import 'package:colortrip/data/models/quest.dart';
+import 'package:colortrip/data/models/verification.dart';
 import 'package:colortrip/data/repositories/domain_repository.dart';
 import 'package:colortrip/data/repositories/quest_repository.dart';
+import 'package:colortrip/data/repositories/verification_repository.dart';
 import 'package:colortrip/data/static/quests_data.dart';
+import 'package:colortrip/features/quests/photo_verify_result_screen.dart';
 import 'package:colortrip/features/quests/quest_verify_screen.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/repository_providers.dart';
@@ -158,6 +164,17 @@ Widget _wrapVerifyScreen(String questId, ProviderContainer container) {
                 path: 'verify',
                 builder: (context, state) =>
                     QuestVerifyScreen(questId: state.pathParameters['id']!),
+                routes: [
+                  GoRoute(
+                    path: 'result',
+                    builder: (context, state) => PhotoVerifyResultScreen(
+                      questId: state.pathParameters['id']!,
+                      verdict: state.extra is PhotoVerdict
+                          ? state.extra as PhotoVerdict
+                          : null,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -183,6 +200,8 @@ Widget _wrapVerifyScreen(String questId, ProviderContainer container) {
 ProviderContainer _container({
   List<Quest>? fakeQuests,
   DomainRepository? domainRepository,
+  VerificationRepository? verificationRepository,
+  PhotoPickerGateway? photoPickerGateway,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -192,10 +211,132 @@ ProviderContainer _container({
         ),
       if (domainRepository != null)
         domainRepositoryProvider.overrideWithValue(domainRepository),
+      if (verificationRepository != null)
+        verificationRepositoryProvider.overrideWithValue(
+          verificationRepository,
+        ),
+      if (photoPickerGateway != null)
+        photoPickerGatewayProvider.overrideWithValue(photoPickerGateway),
     ],
   );
   addTearDown(container.dispose);
   return container;
+}
+
+/// 1x1 투명 PNG — Image.memory 미리보기가 실제로 디코딩되는 최소 바이트.
+final _pngBytes = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/wcAAwAB/1e9AAAAAElFTkSuQmCC',
+);
+
+/// 플랫폼 채널 없이 사진 선택을 대체한다(gateway seam).
+class _FakePhotoPickerGateway implements PhotoPickerGateway {
+  @override
+  Future<PickedPhotoFile?> pick(PhotoSource source) async => PickedPhotoFile(
+    bytes: _pngBytes,
+    filename: 'test.png',
+    mimeType: 'image/png',
+  );
+}
+
+/// 비전 판정 API 대역 — 판정값을 돌려주거나 오류를 던진다.
+class _FakeVerificationRepository implements VerificationRepository {
+  _FakeVerificationRepository({this.verdict, this.error});
+
+  final PhotoVerdict? verdict;
+  final Object? error;
+  int photoCalls = 0;
+
+  @override
+  Future<PhotoVerdict> verifyPhoto({
+    required Uint8List bytes,
+    required String filename,
+    required String title,
+    required String place,
+    required List<String> conditions,
+  }) async {
+    photoCalls++;
+    final failure = error;
+    if (failure != null) throw failure;
+    return verdict!;
+  }
+
+  @override
+  Future<QrVerdict> verifyQr({
+    required String payload,
+    required String questId,
+  }) => throw UnimplementedError();
+}
+
+/// 업로드·완료 처리 호출 여부를 기록하는 대역 — 판정에 거절되면 호출되지 않아야 한다.
+class _PhotoDomainRepository implements DomainRepository {
+  int uploadCalls = 0;
+  int verifyCalls = 0;
+  final _completed = <String>{};
+
+  @override
+  Future<DomainSnapshot> fetchSnapshot() async => DomainSnapshot(
+    catalog: const DomainCatalog(
+      regionIdsByKey: {},
+      regionKeysById: {},
+      questIdsByKey: {},
+      questKeysById: {},
+    ),
+    journeys: const [],
+    completedQuestKeys: _completed,
+    regionProgress: const {},
+    regionTripCount: const {},
+    timeline: const [],
+  );
+
+  @override
+  Future<String> uploadPhoto(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) async {
+    uploadCalls++;
+    return '/uploads/photos/test.png';
+  }
+
+  @override
+  Future<QuestVerification> verifyQuest({
+    required String questKey,
+    String? journeyId,
+    double? latitude,
+    double? longitude,
+    String? photoUrl,
+    String? answer,
+    String? qrPayload,
+  }) async {
+    verifyCalls++;
+    _completed.add(questKey);
+    return const QuestVerification(verified: true);
+  }
+
+  @override
+  Future<List<DomainRecommendedRegion>>
+  fetchUnvisitedRecommendedRegions() async => const [];
+
+  @override
+  Future<List<String>> fetchRecommendedQuestKeys({
+    required String regionKey,
+    int size = 2,
+  }) async => const [];
+
+  @override
+  Future<DomainJourney> createJourney({
+    required String clientRequestId,
+    required String regionKey,
+    required List<String> questKeys,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<DomainJourney> replaceJourneyQuests({
+    required String journeyId,
+    required List<String> questKeys,
+  }) => throw UnimplementedError();
 }
 
 void main() {
@@ -294,5 +435,111 @@ void main() {
         .evaluate()
         .isNotEmpty;
     expect(hasScanner || hasFallback, isTrue);
+  });
+
+  group('photo 분기 — 비전 판정을 거친 뒤에만 완료 처리한다 (050 · KAN-73 회귀 방지)', () {
+    /// 사진 인증 화면은 컨텐츠가 길어 기본 서피스(800x600)에서는 버튼이 잘린다.
+    void useTallSurface(WidgetTester tester) {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.reset);
+    }
+
+    /// 사진을 고르고 "사진으로 인증하기"까지 누른다.
+    Future<void> pickAndSubmit(WidgetTester tester) async {
+      await tester.tap(find.text('🖼 갤러리'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('사진으로 인증하기'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('판정을 통과하면 완료 처리하고 결과 화면에 판정값을 넘긴다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final domain = _PhotoDomainRepository();
+      final verification = _FakeVerificationRepository(
+        verdict: const PhotoVerdict(
+          passed: true,
+          confidence: 0.87,
+          reason: '도담삼봉 전경이 사진에서 확인됩니다.',
+          provider: 'gemini',
+        ),
+      );
+      final container = _container(
+        domainRepository: domain,
+        verificationRepository: verification,
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      expect(verification.photoCalls, 1, reason: '판정 API를 호출해야 한다');
+      expect(domain.uploadCalls, 1, reason: '통과 후 사진을 저장해야 한다');
+      expect(domain.verifyCalls, 1, reason: '통과 후 완료를 기록해야 한다');
+      // 결과 화면이 라우트 extra로 실제 판정값을 받아 표시한다.
+      expect(find.text('사진 검증 결과'), findsOneWidget);
+      expect(find.text('인증 성공!'), findsOneWidget);
+      expect(find.text('87%'), findsOneWidget);
+      expect(find.text('도담삼봉 전경이 사진에서 확인됩니다.'), findsOneWidget);
+      expect(find.text('AI 미설정(스텁 판정)'), findsNothing);
+    });
+
+    testWidgets('판정이 거절하면 완료 처리하지 않고 사유를 화면에 남긴다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final domain = _PhotoDomainRepository();
+      final verification = _FakeVerificationRepository(
+        verdict: const PhotoVerdict(
+          passed: false,
+          confidence: 0.12,
+          reason: '사진에서 퀘스트 장소를 확인할 수 없습니다.',
+          provider: 'gemini',
+        ),
+      );
+      final container = _container(
+        domainRepository: domain,
+        verificationRepository: verification,
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      expect(verification.photoCalls, 1);
+      expect(domain.uploadCalls, 0, reason: '거절된 사진은 저장하지 않는다');
+      expect(domain.verifyCalls, 0, reason: '거절이면 완료를 기록하지 않는다');
+      expect(
+        container.read(progressProvider).isCompleted(photoQuest.id),
+        isFalse,
+      );
+      // 인증 화면에 머무르며 판정 사유를 보여준다(재시도 가능).
+      expect(find.text('사진 인증'), findsOneWidget);
+      expect(find.text('사진에서 퀘스트 장소를 확인할 수 없습니다.'), findsOneWidget);
+      expect(find.text('사진 검증 결과'), findsNothing);
+    });
+
+    testWidgets('판정 API가 실패하면 완료 처리하지 않고 재시도를 안내한다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final domain = _PhotoDomainRepository();
+      final verification = _FakeVerificationRepository(
+        error: Exception('network down'),
+      );
+      final container = _container(
+        domainRepository: domain,
+        verificationRepository: verification,
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      expect(domain.verifyCalls, 0);
+      expect(find.textContaining('다시 시도해주세요'), findsOneWidget);
+    });
   });
 }
