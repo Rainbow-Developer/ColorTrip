@@ -6,6 +6,13 @@ import '../constants.dart';
 /// 지도 색칠 범례 — 지역마다 팔레트가 달라([core/widgets/chungbuk_map.dart]의 mapFillColors,
 /// KAN-51) 대표색 하나로 보여줄 수 없다. 그래서 여기서는 아이콘 링크만 두고, 실제 지역별
 /// 팔레트는 [_RegionPaletteDialog] 팝업에서 보여준다.
+///
+/// 팔레트의 5단계가 나타내는 값은 그 지역에서 **퀘스트를 1개 이상 인증한 여행(여정) 수**다
+/// ([ProgressState.regionSaturation], [055-journey-map-coloring], KAN-73) — 여행 1회가 한
+/// 단계씩 진해져 5회에 최대 채도가 된다. 여행을 완주해야 세는 게 아니다.
+///
+/// KAN-69 이전에는 범례 전용 파스텔 그린 톤 스와치(mapLegendColors)를 "인증한 여행 수"
+/// 라벨과 함께 인라인으로 보여줬는데, 지역별 실제 색을 확인할 수 없어 팝업으로 바꿨다.
 class MapLegend extends StatelessWidget {
   const MapLegend({super.key});
 
@@ -78,6 +85,19 @@ class _RegionPaletteDialog extends StatelessWidget {
                   child: const Text(
                     '지역별 색상 팔레트',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                // 팔레트만 보여주면 색이 무엇을 뜻하는지 알 수 없다. KAN-73에서 범례 문구를
+                // "인증한 여행 수"로 바로잡은 취지를 팝업에서도 유지한다.
+                Padding(
+                  padding: EdgeInsets.only(left: titleIndent),
+                  child: const Text(
+                    '왼쪽부터 인증한 여행 수 1회 → 5회+',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.tripMutedBadgeFg,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),

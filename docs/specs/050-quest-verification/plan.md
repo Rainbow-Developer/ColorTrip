@@ -40,8 +40,8 @@
 
 - **비전 판정 추상화** `app/integrations/vision/`(신규): `VisionJudge` 프로토콜(`judge(image_bytes, mime, prompt) -> VisionVerdict{passed, confidence, reason}`), 구현체 `GeminiVisionJudge`(httpx로 `generativelanguage.googleapis.com` `generateContent`, inline_data base64, JSON 응답 강제)와 `StubVisionJudge`(키 미설정 시 — 통과 처리 + "AI 미설정" 사유). 설정: `GEMINI_API_KEY`(빈값 허용), `GEMINI_MODEL`(기본 `gemini-2.5-flash`).
 - **스테이트리스 인증 API** `app/verifications/`(신규 도메인, 보호): FE 정적 카탈로그용이라 DB 퀘스트를 참조하지 않는다.
-  - `POST /api/v1/verifications/photo` — multipart(image) + form(title, place, conditions) → 비전 판정 결과. 이미지는 판정 후 저장하지 않음.
-  - `POST /api/v1/verifications/qr` — `{payload, quest_id}` → 서명 검증 결과. 페이로드 형식 `colortrip:quest:{quest_id}:{hmac_sha256_hex16}`, 키는 `QR_SECRET_KEY`(미설정 시 `JWT_SECRET_KEY`에서 파생).
+  - ~~`POST /api/v1/verifications/photo`~~ — multipart(image) + form(title, place, conditions) → 비전 판정 결과. **KAN-73에서 제거**: 같은 사진을 판정용·저장용으로 두 번 보내야 했고, 판정 맥락을 클라이언트가 정해 조건을 느슨하게 바꿀 수 있었다. 이제 `POST /quests/{id}/verify`가 업로드된 사진을 읽어 판정하고 `photo_verdict`를 응답에 담는다.
+  - ~~`POST /api/v1/verifications/qr`~~ — `{payload, quest_id}` → 서명 검증 결과. **KAN-73에서 제거**(FE는 처음부터 `/quests/{id}/verify`의 `qr_payload`로만 인증했다). 페이로드 형식 `colortrip:quest:{quest_id}:{hmac_sha256_hex16}`, 키는 `QR_SECRET_KEY`(미설정 시 `JWT_SECRET_KEY`에서 파생) — 서명 검증 로직(`verify_qr_payload`)은 그대로 유지된다.
 - **DB 퀘스트 경로 확장** `app/quests/verification.py`: `MissionType.QR` 추가·판정 분기, `gps_photo` 판정에 비전 판정 연동(옵션: `mission_meta.judgement_prompt` 존재 시). 기존 동작 하위호환.
 - **QR 생성 스크립트** `scripts/generate_quest_qr.py`: 퀘스트 id 목록 → 서명 페이로드 → PNG(qrcode, dev 의존성) 출력.
 
@@ -69,7 +69,7 @@
 ## 영향 범위
 
 - backend: `app/integrations/vision/`(신규), `app/verifications/`(신규), `app/core/enums.py`, `app/core/config.py`, `app/quests/verification.py`, `app/quests/schemas.py`, `app/main.py`, `scripts/generate_quest_qr.py`(신규), `pyproject.toml`(dev: qrcode), `.env.example`, `tests/`(verifications·vision·qr)
-- frontend: `pubspec.yaml`, `lib/data/repositories/verification_repository.dart`(신규), `lib/state/repository_providers.dart`, `lib/features/quests/quest_verify_screen.dart`, `photo_verify_result_screen.dart`, `lib/core/constants.dart`, `lib/data/static/quests_data.dart`(qr 전환), `android/app/src/main/AndroidManifest.xml`, `ios/Runner/Info.plist`
+- frontend: `pubspec.yaml`, ~~`lib/data/repositories/verification_repository.dart`~~(KAN-73에서 제거 — 판정은 verify 응답으로 온다), `lib/data/media/photo_picker_gateway.dart`(KAN-73 신규), `lib/state/repository_providers.dart`, `lib/features/quests/quest_verify_screen.dart`, `photo_verify_result_screen.dart`, `lib/core/constants.dart`, `lib/data/static/quests_data.dart`(qr 전환), `android/app/src/main/AndroidManifest.xml`, `ios/Runner/Info.plist`
 - 문서: README(환경변수·의존성·기능표), [external-apis.md](../../conventions/external-apis.md)(Gemini 추가), 본 spec
 
 ## 작업 단계

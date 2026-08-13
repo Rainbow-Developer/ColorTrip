@@ -7,6 +7,7 @@ import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
+import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../data/models/quest.dart';
 import '../../data/repositories/domain_repository.dart'
     show DomainJourney, kRecommendedQuestSize;
@@ -369,14 +370,14 @@ class _TripQuestTile extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            _MiniBadge(
+                            MiniBadge(
                               label: regionName,
                               background: regionColor.background,
                               foreground: regionColor.label,
                             ),
                             if (tagColors != null && typeStyle != null) ...[
                               const SizedBox(width: 6),
-                              _MiniBadge(
+                              MiniBadge(
                                 label: typeStyle.label,
                                 background: tagColors.background,
                                 foreground: tagColors.foreground,
@@ -481,14 +482,14 @@ class _RecommendedQuestTile extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            _MiniBadge(
+                            MiniBadge(
                               label: regionName,
                               background: regionColor.background,
                               foreground: regionColor.label,
                             ),
                             if (tagColors != null && typeStyle != null) ...[
                               const SizedBox(width: 6),
-                              _MiniBadge(
+                              MiniBadge(
                                 label: typeStyle.label,
                                 background: tagColors.background,
                                 foreground: tagColors.foreground,
@@ -505,30 +506,6 @@ class _RecommendedQuestTile extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _MiniBadge extends StatelessWidget {
-  const _MiniBadge({
-    required this.label,
-    required this.background,
-    required this.foreground,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(label, style: TextStyle(fontSize: 10, color: foreground)),
     );
   }
 }

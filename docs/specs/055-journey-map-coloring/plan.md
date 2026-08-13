@@ -1,45 +1,50 @@
-# [계획] 지도 채색 기준 전환 — 완료 여행 수
+# [계획] 지도 채색 기준 — 퀘스트를 1개 이상 완료한 여행 수
 
 | 항목 | 내용 |
 |------|------|
-| 기능명 | 지도 채색 기준 전환 (완료 퀘스트 개수 → 완료 여행 수) |
+| 기능명 | 지도 채색 기준 (완료 퀘스트 개수 → 완료 여행 수 → **퀘스트를 1개 이상 완료한 여행 수**) |
 | Spec 폴더 | `docs/specs/055-journey-map-coloring/` |
 | 영역 | 공통 (backend + frontend) |
-| 작성자 | Claude Code (KAN-58) |
-| 작성일 | 2026-07-30 |
-| 상태 | 구현 완료 (2026-07-31) |
+| 작성자 | Claude Code (KAN-58 → KAN-73) |
+| 작성일 | 2026-07-30 (KAN-73 개정 2026-08-13) |
+| 상태 | 구현 완료 (KAN-58 2026-07-31 / KAN-73 채색 단위 재정의 2026-08-13) |
 
 ## 배경 / 목적
 
-현재 지도 채색 진하기는 지역별 **완료 퀘스트 개수**(`MapProgress.completed_count`, FE `regionProgress`)를 기준선(6개)으로 나눈 비율이다. 제품 방향은 "여행(여정)을 완주할수록 그 지역이 진해지는" 경험이므로, 채색 기준을 **그 지역에서 완료한 여행(여정) 수**로 바꾼다.
+최초(KAN-58)에는 지도 채색 진하기가 지역별 **완료 퀘스트 개수**(`MapProgress.completed_count`, FE `regionProgress`)를 기준선(6개)으로 나눈 비율이었고, "여행(여정)을 완주할수록 그 지역이 진해지는" 경험을 위해 **완료한 여행 수**(`Journey.status='completed'` 집계)로 바꿨다.
+
+**개정(KAN-73, 2026-08-13)**: 여행에 담은 퀘스트를 **전부** 완료해야 여행이 `completed`가 되므로, 퀘스트 5개를 담고 1개만 인증한 지역은 지도가 전혀 칠해지지 않았다. 실사용 피드백에서 "1개라도 인증했으면 그 지역은 칠해져야 한다"가 확인되어, 채색 카운트 단위를 **그 지역에서 완료 퀘스트가 1개 이상인 여행 수**로 바꾼다. 채색은 여행 `status`와 분리되어, 여행이 진행 중이어도 첫 인증 시점부터 칠해진다.
 
 ## 목표 (Goals)
 
-- 지역 채도 = `완료한 여행 수 / 기준선(cap)` 으로 산출한다 (FE·BE 동일 정의).
-- `GET /users/me/map` 응답에 지역별 완료 여정 수(`completed_journey_count`)를 추가한다.
-- 홈 "완료 지역" 통계를 "여행을 1회 이상 완료한 지역 수"로 재정의한다.
+- 지역 채도 = `퀘스트를 1개 이상 완료한 여행 수 / 기준선(cap)` 으로 산출한다 (FE·BE 동일 정의).
+- `GET /users/me/map` 응답에 지역별 집계 값(`completed_journey_count`)을 내려준다.
+- 홈 "완료 지역" 통계를 "퀘스트를 1개 이상 완료한 여행이 있는 지역 수"로 정의한다.
+- 채색 기준을 여행 `status`(진행중/완료)와 분리한다 — 여행 완료 판정은 [010-journey](../010-journey/)가 SOT.
 
 ## 비목표 (Non-Goals)
 
 - `MapProgress`(완료 퀘스트 수) 테이블·필드 제거 — 기존 필드는 유지(하위호환, 다른 통계에서 사용).
-- 여행(journeys) 도메인 자체의 동작 변경.
+- 여행 `status` 판정 규칙 정의 — [010-journey](../010-journey/)가 SOT (KAN-73에서 함께 바뀌지만 그 문서가 권위).
+- 채도 기준선(cap=5)·색 보간 방식 변경.
 - FE 정적 퀘스트의 BE 연동 전환.
 
 ## 요구사항
 
-- 완료 여행이 0인 지역은 미채색(회색), 1회부터 채색 시작, cap 이상이면 최대 채도.
-- FE는 비로그인/서버 미접속에서도 로컬 여행 완료 상태로 채색이 동작해야 한다(기존 낙관적 갱신 유지).
+- 완료 퀘스트가 1개 이상인 여행이 없는 지역은 미채색(회색), 그런 여행이 1개 있으면 1단계 채색, cap 이상이면 최대 채도.
+- 같은 지역을 여러 번 여행하면(여정 여러 건) 각각 1회로 세어 진해진다.
+- FE는 서버 응답 전에도 로컬 완료 상태로 채색이 동작해야 한다(기존 낙관적 갱신 유지).
 - 서버 동기화 시 서버 값이 로컬 파생값보다 크면 서버 값을 쓴다.
 
 ## 설계 개요 / 접근 방식
 
-- **backend**: `app/maps/repository.py`에 `Journey(status='completed', deleted_at IS NULL)`를 `region_id`로 GROUP BY 집계하는 쿼리를 추가하고, `app/maps/schemas.py`의 `MapProgressRead`에 `completed_journey_count: int`(기본 0)를 추가한다. 기존 `completed_count`(퀘스트 수)는 그대로 내려준다.
+- **backend**: `app/maps/repository.py`의 집계를 `Journey.status='completed'` COUNT에서 **완료 퀘스트가 1개 이상인 여행 COUNT**로 바꾼다 — `Journey ⨝ JourneyQuest ⨝ QuestProgress(status='completed')`를 `region_id`로 GROUP BY 하고 `COUNT(DISTINCT Journey.id)`를 센다(soft delete 제외). 응답 필드명 `completed_journey_count`는 유지한다(FE 파싱·테스트가 이 키를 쓰고, 의미는 "채색으로 집계된 여행 수"로 문서에서 정의).
 - **frontend**:
-  - `MapRegionProgress` 모델에 `completedJourneyCount` 파싱 추가(`map_repository`).
-  - `ProgressState`에 서버 동기화용 `regionTripCount`와 로컬 누적 완주 횟수 `localTripCompletions`(둘 다 `Map<String,int>`)를 둔다. 표시용 완료 여행 수 = `max(서버값, 로컬 누적값)`.
-  - 로컬 누적값은 **완주 시점에** `ProgressNotifier.completeQuest`가 1씩 올린다. 현재 선택 집합의 완주 여부로 파생하지 않는 이유: 완료한 지역에 퀘스트를 더 담으면(KAN-46 재방문) 선택 집합이 다시 미완료가 되어 이미 칠한 채색이 사라진다.
-  - `regionSaturation` = `(완료 여행 수 / _tripSaturationCap).clamp(0,1)`, `_tripSaturationCap = 5`.
-  - `completedRegionCount` = 완료 여행 수 ≥ 1인 지역 수.
+  - `MapRegionProgress` 모델의 `completedJourneyCount` 파싱은 그대로 둔다(`map_repository`).
+  - `ProgressState`의 `regionTripCount`(서버 값)·`localTripCompletions`(로컬 누적)와 `max` 병합도 그대로 둔다.
+  - 로컬 누적값을 올리는 시점만 바꾼다: `ProgressNotifier.completeQuest`가 **그 지역 여행에서 첫 퀘스트를 완료한 시점**에 1 올린다(기존: 선택 퀘스트를 전부 완주한 시점). 완주 시점 누적이 아니게 되지만, "완료 지역에 퀘스트를 더 담아도 채색이 되돌아가지 않는다"는 성질은 누적 방식이므로 그대로 유지된다.
+  - `regionSaturation` = `(집계 값 / _tripSaturationCap).clamp(0,1)`, `_tripSaturationCap = 5` (변경 없음).
+  - `completedRegionCount` = 집계 값 ≥ 1인 지역 수 (변경 없음).
 
 ## 의사결정 (함께 논의 · 근거 필수)
 
@@ -49,21 +54,28 @@
 | 완료 지역 통계 의미 | 채도 100% 지역 / 여행 1회 이상 지역 | **여행 1회 이상 완료한 지역**. "완료 지역"의 직관(한 번이라도 완주)과 일치. 채도 100%(5회) 기준은 과도하게 엄격 | 합의됨(구현 승인) |
 | 로컬·서버 병합 규칙 | 서버 우선 덮어쓰기 / max 병합 | **max 병합**. FE 정적 퀘스트 완료는 서버에 기록되지 않으므로 서버 우선 덮어쓰기 시 로컬 채색이 사라진다 | 합의됨(구현 승인) |
 | 로컬 완주 값 산출 | 현재 선택 집합 완주 여부 파생 / 완주 시점 누적 | **완주 시점 누적**(`localTripCompletions`). 파생 방식은 완료 지역에 퀘스트를 추가할 때 선택 집합이 다시 미완료가 되어 채색이 0으로 되돌아간다(검증에서 발견). 누적이면 재방문 완주도 자연히 2회로 센다 | 합의됨(구현 중 변경) |
+| 채색 카운트 단위 (KAN-73) | 완료(`status='completed'`) 여행 수 / 퀘스트를 1개 이상 완료한 여행 수 | **퀘스트를 1개 이상 완료한 여행 수**. 사용자 요구("여행에 퀘스트가 5개 있어도 1개라도 완료하면 칠해져야 한다"). 채색을 `status`에서 떼어내면, 여행 완료 판정 규칙(기간 경과·수동 완료)이 바뀌어도 채색 기준이 흔들리지 않는다 | 합의됨(2026-08-13 사용자 확정) |
+| 응답 필드명 유지 여부 (KAN-73) | `completed_journey_count` 유지 / `colored_journey_count` 등으로 개명 | **유지**. 의미가 "완료한 여행 수"에서 "채색으로 집계된 여행 수"로 넓어지지만, 개명하면 BE·FE 모델·테스트를 동시에 갈아야 하고 배포 순서에 따라 필드 누락 구간이 생긴다. 의미는 본 문서에서 정의한다 | 합의됨(제안) |
 
 ## 영향 범위
 
-- backend: `app/maps/repository.py`, `app/maps/service.py`, `app/maps/schemas.py`, `tests/test_map_flow.py`
-- frontend: `lib/state/progress_state.dart`, `lib/state/progress_notifier.dart`, `lib/state/map_sync_provider.dart`, `lib/data/models/map_region_progress.dart`, `lib/data/repositories/map_repository.dart`, `lib/features/home/home_screen.dart`(통계), `lib/core/widgets/map_legend.dart`(범례 문구)
-- 문서: README `주요 기능과 위치`는 변화 없음(위치 동일), 본 spec이 SOT
+- backend: `app/maps/repository.py`(집계 쿼리), `app/maps/service.py`(주석·기준 서술), `tests/test_map_flow.py`
+- frontend: `lib/state/progress_notifier.dart`(로컬 누적 시점), `lib/state/progress_state.dart`(주석·기준 서술), `test/map_coloring_test.dart`
+- 문서: 본 spec이 채색 기준의 SOT. 참조하는 [README.md](../../../README.md) `주요 기능과 위치`(maps 행)·[docs/app-run-guide.md](../../app-run-guide.md) 채색 확인 항목·[docs/specs/README.md](../README.md) 요약을 함께 갱신
+- 여행 `status` 판정 변경은 [010-journey](../010-journey/)에서 다룬다(같은 KAN-73)
 
 ## 작업 단계
 
 - [x] BE: 완료 여정 수 집계 쿼리 + 응답 필드 + 테스트
 - [x] FE: 모델·동기화 파싱 + 채도/통계 로직 교체 + 위젯 테스트
 - [x] FE: 로컬 누적 완주 카운터(`localTripCompletions`) + 재방문 회귀 테스트
-- [x] 범례·통계 라벨 확인 (범례 "여행 완료 횟수" + 5단계 스와치 + "5회+")
+- [x] 범례·통계 라벨 확인 (5단계 스와치 + "5회+" — 라벨은 KAN-73에서 "인증한 여행 수"로 교체)
+- [x] (KAN-73) BE: 집계를 "완료 퀘스트 ≥ 1인 여행 수"로 교체 + 테스트(1개만 완료·한 여행 2개 완료·타 유저 격리)
+- [x] (KAN-73) FE: 로컬 누적 시점을 "지역 첫 퀘스트 완료"로 교체 + 회귀 테스트
+- [x] (KAN-73) 범례 문구 교체 — `map_legend.dart` 라벨을 "여행 완료 횟수" → **"인증한 여행 수"**로 바꿨다(CodeRabbit 리뷰 반영). 완주해야 세는 것으로 읽히면 새 기준과 어긋난다. 라벨은 지도 우측 한 줄(10px)에 들어가야 해 "퀘스트를 1개 이상 인증한 여행 수"를 축약했고, 전체 정의는 위젯 주석과 본 spec에 둔다. 회귀 테스트: `test/map_legend_test.dart`
 
 ## 리스크 / 미해결 질문
 
 - 로컬 누적값은 메모리 상태라 앱 재시작 시 초기화된다(서버 동기화 값은 재조회). 영속화는 후속 과제.
 - (해소) "로컬 단독은 0/1로 제한" 제약은 완주 시점 누적 방식으로 바꿔 없어졌다 — 같은 지역 재방문 완주도 2회로 센다.
+- (해소) 범례 라벨은 "인증한 여행 수"로 교체했다 — 5단계 스와치·"5회+" 표기는 cap=5와 일치하므로 그대로 두고, 라벨만 기준에 맞췄다.

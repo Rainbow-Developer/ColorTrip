@@ -226,7 +226,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(today).first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('선택'));
+    await tester.tap(find.text('선택 완료'));
     await tester.pumpAndSettle();
 
     // 시작 → 상태에 이름·기간이 저장되고 여행 목록으로 이동, 카드에 표시된다.

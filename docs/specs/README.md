@@ -26,7 +26,7 @@ docs/specs/
 | [000-frontend-app](000-frontend-app/) | Flutter 앱 프로토타입/프론트엔드               |
 | [000-quest](000-quest/) | 충북 시·군 퀘스트 조회 기반                    |
 | [005-auth-member](005-auth-member/) | 이전 Kakao 인증·JWT·7일 복구 정책 구현 기록 (035가 대체) |
-| [010-journey](010-journey/) | 여행 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈) |
+| [010-journey](010-journey/) | 여행 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈), 여정 완료 판정 |
 | [010-travel-dna](010-travel-dna/) | 여행 DNA 설문·판정 |
 | [015-database-migration](015-database-migration/) | 핵심 데이터 모델 Alembic 마이그레이션            |
 | [020-backend-logging](020-backend-logging/) | 백엔드 공통 JSON 로깅·요청 로깅 |
@@ -36,7 +36,7 @@ docs/specs/
 | [040-home-region-recommendation](040-home-region-recommendation/) | 홈 DNA 지역 추천 + 퀘스트 요약 (폐기 — 065가 대체, 구현 제거됨) |
 | [045-quest-region-images](045-quest-region-images/) | 퀘스트·지역 이미지(TourAPI) |
 | [050-quest-verification](050-quest-verification/) | 퀘스트 인증 3종(사진 AI·위치·QR) + 위치정보법 검토 |
-| [055-journey-map-coloring](055-journey-map-coloring/) | 지도 채색 기준 전환(완료 여행 수) |
+| [055-journey-map-coloring](055-journey-map-coloring/) | 지도 채색 기준(퀘스트를 1개 이상 완료한 여행 수) |
 | [040-domain-state-persistence](040-domain-state-persistence/) | 여행·퀘스트·지도·타임라인 서버 영속화와 앱 재시작 복원 |
 | [060-share-native-experience](060-share-native-experience/) | 공유 카드 실사용화(지도 미리보기·네이티브 공유 시트·공유 랜딩 페이지) |
 | [065-quest-recommendation-api](065-quest-recommendation-api/) | 서버 기반 미시작 지역·퀘스트 추천 API |

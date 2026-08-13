@@ -1,7 +1,9 @@
 """journeys — 비즈니스 로직 계층.
 
-여정 상태 규칙(docs/specs/010-journey/plan.md 의사결정 6):
-모든 퀘스트가 완료되면 자동 completed, 미완료 퀘스트가 다시 생기면 in_progress로 복귀.
+여정 상태 규칙(docs/specs/010-journey/description.md#여정-완료-판정):
+퀘스트를 전부 완료하거나, 여행 기간이 지났고(end_date < 오늘 KST) 완료 퀘스트가 1개 이상이면
+completed. 그 밖에는 in_progress로 되돌린다. "기간이 지났다"는 이벤트 없이 성립하므로
+여정 조회 시점에도 재계산한다(`sync_journey_statuses`).
 """
 
 from datetime import date
@@ -39,7 +41,7 @@ async def create_journey(
             session, user_id, client_request_id
         )
         if existing is not None:
-            return await get_journey_detail(session, user_id, existing.id)
+            return await _journey_detail(session, user_id, existing.id)
 
     unique_ids = list(dict.fromkeys(quest_ids))  # 중복 제거(순서 유지)
     quests = await repository.get_quests_by_ids(session, unique_ids)
@@ -80,9 +82,9 @@ async def create_journey(
         )
         if existing is None:
             raise
-        return await get_journey_detail(session, user_id, existing.id)
+        return await _journey_detail(session, user_id, existing.id)
 
-    return await get_journey_detail(session, user_id, journey.id)
+    return await _journey_detail(session, user_id, journey.id)
 
 
 async def list_journeys(
@@ -92,6 +94,7 @@ async def list_journeys(
     page: int,
     size: int,
 ) -> JourneyListData:
+    await sync_journey_statuses(session, user_id)
     journeys, total = await repository.list_journeys(
         session, user_id, status.value if status else None, page, size
     )
@@ -122,6 +125,13 @@ async def list_journeys(
 async def get_journey_detail(
     session: AsyncSession, user_id: UUID, journey_id: UUID
 ) -> JourneyDetail:
+    """여정 상세 (조회 시점에 완료 판정을 동기화한다)."""
+    await sync_journey_statuses(session, user_id)
+    return await _journey_detail(session, user_id, journey_id)
+
+
+async def _journey_detail(session: AsyncSession, user_id: UUID, journey_id: UUID) -> JourneyDetail:
+    """상세 응답 조립(동기화 없음) — 생성·퀘스트 변경 직후처럼 이미 재계산된 경로에서 쓴다."""
     journey = await _get_owned_journey(session, user_id, journey_id)
     journey_quests = await repository.list_journey_quests(session, journey_id)
     status_map = await repository.progress_status_map(
@@ -183,7 +193,7 @@ async def add_quest(
     await recalculate_status(session, journey)
     await session.commit()
 
-    return await get_journey_detail(session, user_id, journey_id)
+    return await _journey_detail(session, user_id, journey_id)
 
 
 async def remove_quest(
@@ -200,7 +210,7 @@ async def remove_quest(
     await recalculate_status(session, journey)
     await session.commit()
 
-    return await get_journey_detail(session, user_id, journey_id)
+    return await _journey_detail(session, user_id, journey_id)
 
 
 async def replace_quests(
@@ -255,20 +265,67 @@ async def replace_quests(
     await session.flush()
     await recalculate_status(session, journey)
     await session.commit()
-    return await get_journey_detail(session, user_id, journey_id)
+    return await _journey_detail(session, user_id, journey_id)
 
 
-async def recalculate_status(session: AsyncSession, journey: Journey) -> None:
+def _is_completed(journey: Journey, completed: int, total: int) -> bool:
+    """완료 판정 — docs/specs/010-journey/description.md#여정-완료-판정.
+
+    기간이 없는(end_date 미입력) 여정은 기간 조건을 적용하지 않아 전부 완료해야 완료된다.
+    """
+    if total == 0:
+        return False
+    if completed == total:
+        return True
+    if completed < 1 or journey.end_date is None:
+        return False
+    return journey.end_date < now_kst().date()
+
+
+def apply_status(journey: Journey, completed: int, total: int) -> bool:
+    """완료 판정 결과를 journey에 반영한다. 값이 바뀌었으면 True (호출자가 commit)."""
+    if _is_completed(journey, completed, total):
+        # 이미 완료면 완료 시각을 새로 덮어쓰지 않는다. 단 시각이 비어 있으면 채운다
+        # (status만 완료로 남은 레코드가 계속 시각 없이 유지되지 않게).
+        if journey.status == JourneyStatus.COMPLETED.value and journey.completed_at is not None:
+            return False
+        journey.status = JourneyStatus.COMPLETED.value
+        journey.completed_at = journey.completed_at or now_kst()
+        return True
+    if journey.status == JourneyStatus.IN_PROGRESS.value and journey.completed_at is None:
+        return False
+    journey.status = JourneyStatus.IN_PROGRESS.value
+    journey.completed_at = None
+    return True
+
+
+async def recalculate_status(session: AsyncSession, journey: Journey) -> bool:
     """여정 퀘스트 완료 현황으로 status를 재계산한다 (호출자가 commit)."""
     summary = await repository.progress_summary_map(session, journey.user_id, [journey.id])
     completed, total = summary.get(journey.id, (0, 0))
-    if total > 0 and completed == total:
-        if journey.status != JourneyStatus.COMPLETED.value:
-            journey.status = JourneyStatus.COMPLETED.value
-            journey.completed_at = now_kst()
-    elif journey.status != JourneyStatus.IN_PROGRESS.value:
-        journey.status = JourneyStatus.IN_PROGRESS.value
-        journey.completed_at = None
+    return apply_status(journey, completed, total)
+
+
+async def sync_journey_statuses(session: AsyncSession, user_id: UUID) -> None:
+    """조회 시점 상태 동기화 — 여행 기간 경과처럼 이벤트 없이 성립하는 조건을 반영한다.
+
+    사용자의 모든 여정을 한 번에 판정해 목록 필터·페이지네이션과 어긋나지 않게 하고,
+    실제로 바뀐 여정이 있을 때만 commit 한다(스케줄러·배치는 도입하지 않는다 —
+    docs/specs/010-journey/plan.md 의사결정 8).
+    """
+    journeys = await repository.list_all_journeys_for_user(session, user_id)
+    if not journeys:
+        return
+    summary = await repository.progress_summary_map(
+        session, user_id, [journey.id for journey in journeys]
+    )
+    changed = False
+    for journey in journeys:
+        completed, total = summary.get(journey.id, (0, 0))
+        if apply_status(journey, completed, total):
+            changed = True
+    if changed:
+        await session.commit()
 
 
 async def _get_owned_journey(session: AsyncSession, user_id: UUID, journey_id: UUID) -> Journey:

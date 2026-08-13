@@ -47,7 +47,7 @@ class ProgressStatus(StrEnum):
 
 
 class JourneyStatus(StrEnum):
-    """여정 상태 (journeys.status) — 모든 퀘스트 완료 시 자동 completed."""
+    """여정 상태 (journeys.status) — 완료 판정은 journeys.service.apply_status가 SOT."""
 
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"

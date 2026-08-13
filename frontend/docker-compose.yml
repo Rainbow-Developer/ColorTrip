@@ -19,6 +19,10 @@ services:
       # APK 빌드 중 설치되는 Android SDK 구성요소(platform-35·CMake 등)를 유지한다.
       # 첫 마운트 때 이미지의 기존 SDK 내용이 볼륨으로 복사되므로 잃는 것은 없다.
       - android-sdk:/opt/android-sdk-linux
+      # 디버그 키스토어(debug.keystore)를 유지한다. 이게 없으면 컨테이너가 --rm 으로
+      # 사라질 때 키도 같이 사라져 빌드마다 서명 키가 달라진다. 그러면 카카오 로그인용
+      # 키 해시가 매번 바뀌고, 재설치 시 INSTALL_FAILED_UPDATE_INCOMPATIBLE 이 난다.
+      - android-config:/root/.android
     working_dir: /app
     ports:
       - "5000:5000"
@@ -28,3 +32,4 @@ volumes:
   pub-cache:
   gradle-cache:
   android-sdk:
+  android-config:

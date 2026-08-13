@@ -70,3 +70,6 @@ sequenceDiagram
     ]
   }
   ```
+
+## 관련 문서
+* [080-timeline-journey-grouping](../080-timeline-journey-grouping/) — 이 API가 반환하는 타임라인을 화면(`/timeline`)에서 여행(journey) 단위로 그룹핑해 보여주는 프론트엔드 UI 스펙(이 문서의 비목표였던 프론트 화면 범위를 다룬다).

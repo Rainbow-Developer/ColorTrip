@@ -28,7 +28,6 @@ from app.shares.router import router as shares_router
 from app.timeline.router import router as timeline_router
 from app.trip_dna.router import router as trip_dna_router
 from app.uploads.router import router as uploads_router
-from app.verifications.router import router as verifications_router
 
 setup_logging(app_env=settings.app_env, log_level=settings.log_level)
 
@@ -54,7 +53,6 @@ app.include_router(uploads_router, prefix="/api/v1")
 app.include_router(trip_dna_router, prefix="/api/v1")
 app.include_router(timeline_router, prefix="/api/v1")
 app.include_router(shares_router, prefix="/api/v1")
-app.include_router(verifications_router, prefix="/api/v1")
 app.include_router(open_api_router, prefix="/api/v1")
 # 공유 랜딩 페이지는 사람이 직접 클릭하는 공개 URL이라 /api/v1 prefix 없이 최상위로 등록한다.
 app.include_router(shares_landing_router)

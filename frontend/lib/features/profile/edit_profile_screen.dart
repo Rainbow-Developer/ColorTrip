@@ -6,6 +6,7 @@ import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_form_field.dart';
 import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/birth_date_picker.dart';
 import '../../data/models/auth_models.dart';
 import '../../features/onboarding/profile_validation.dart';
 import '../../state/auth_controller.dart';
@@ -179,7 +180,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         parsed != null && !parsed.isBefore(firstDate) && !parsed.isAfter(today)
         ? parsed
         : DateTime(today.year - 26, today.month, today.day);
-    final selected = await showDatePicker(
+    final selected = await showBirthDatePicker(
       context: context,
       initialDate: initial,
       firstDate: firstDate,

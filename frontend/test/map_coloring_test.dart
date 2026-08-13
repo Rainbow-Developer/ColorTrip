@@ -1,4 +1,4 @@
-/// 지도 채색 기준 전환(완료 퀘스트 개수 → 완료 여행 수) 검증
+/// 지도 채색 기준(퀘스트를 1개 이상 완료한 여행 수) 검증
 /// ([docs/specs/055-journey-map-coloring]).
 library;
 
@@ -9,8 +9,8 @@ import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/progress_state.dart';
 
 void main() {
-  group('ProgressState.regionSaturation — 완료 여행 수 기반', () {
-    test('완료 여행 0회면 미채색(0.0)이고 완료 지역 통계도 0이다', () {
+  group('ProgressState.regionSaturation — 채색 집계 값 기반', () {
+    test('집계 0회면 미채색(0.0)이고 완료 지역 통계도 0이다', () {
       const state = ProgressState.empty();
       expect(state.completedTripCountOf('cheongju'), 0);
       expect(state.regionSaturation('cheongju'), 0.0);
@@ -43,7 +43,9 @@ void main() {
       expect(state.regionSaturation('danyang'), closeTo(2 / 5, 1e-9));
     });
 
-    test('진행 중(미완주) 여행은 서버 값이 없으면 채색하지 않는다', () {
+    test('채색은 집계 값으로만 결정되고 완료 퀘스트 집합에서 파생하지 않는다', () {
+      // 완료 퀘스트가 있어도 집계 값(로컬 누적·서버 동기화)이 없으면 0이다 — 집계는
+      // completeQuest·서버 응답에서만 올라간다.
       final state = const ProgressState.empty().copyWith(
         tripQuests: {
           'danyang': {'dy1', 'dy2'},
@@ -64,7 +66,7 @@ void main() {
     });
   });
 
-  group('ProgressNotifier.completeQuest — 로컬 완주 누적', () {
+  group('ProgressNotifier.completeQuest — 로컬 채색 카운트', () {
     /// 단양 여행을 [questIds]로 시작한 컨테이너.
     ProviderContainer startDanyangTrip(Set<String> questIds) {
       final container = ProviderContainer();
@@ -75,7 +77,7 @@ void main() {
       return container;
     }
 
-    test('여행을 완주하면 서버 값이 없어도 1회로 계산된다', () {
+    test('여행 퀘스트를 1개 완료하면 서버 값이 없어도 1회로 계산된다', () {
       final container = startDanyangTrip({'dy1'});
       container.read(progressProvider.notifier).completeQuest('dy1');
 
@@ -86,9 +88,33 @@ void main() {
       expect(state.completedRegionCount, 1);
     });
 
-    test('완주한 지역에 퀘스트를 더 담아도 이미 칠한 채색이 사라지지 않는다', () {
-      // KAN-46 재방문 흐름 — 완주 후 "퀘스트 더 선택하기"로 선택 집합이 교체되면
-      // 현재 집합은 다시 미완료가 되지만, 누적 완주 횟수는 유지되어야 한다.
+    test('퀘스트 5개를 담고 1개만 완료해도 그 여행이 1회로 집계된다 (KAN-73)', () {
+      // 사용자 요구: 여행에 퀘스트가 5개 있어도 1개라도 완료하면 지도가 칠해져야 한다.
+      final container = startDanyangTrip({'dy1', 'dy2', 'dy3', 'dy4', 'dy5'});
+      container.read(progressProvider.notifier).completeQuest('dy1');
+
+      final state = container.read(progressProvider);
+      expect(state.tripStatusOf('danyang'), RegionTripStatus.inProgress);
+      expect(state.completedTripCountOf('danyang'), 1);
+      expect(state.regionSaturation('danyang'), closeTo(1 / 5, 1e-9));
+      expect(state.completedRegionCount, 1);
+    });
+
+    test('같은 여행에서 퀘스트를 더 완료해도 집계는 여행 단위로 1회다 (KAN-73)', () {
+      final container = startDanyangTrip({'dy1', 'dy2'});
+      final notifier = container.read(progressProvider.notifier);
+      notifier.completeQuest('dy1');
+      notifier.completeQuest('dy2');
+
+      final state = container.read(progressProvider);
+      expect(state.tripStatusOf('danyang'), RegionTripStatus.completed);
+      expect(state.completedTripCountOf('danyang'), 1);
+      expect(state.regionSaturation('danyang'), closeTo(1 / 5, 1e-9));
+    });
+
+    test('완료한 지역에 퀘스트를 더 담아도 이미 칠한 채색이 사라지지 않는다', () {
+      // KAN-46 재방문 흐름 — "퀘스트 더 선택하기"로 선택 집합이 교체돼 현재 집합이 다시
+      // 미완료가 되어도, 누적한 채색 카운트는 유지되어야 한다.
       final container = startDanyangTrip({'dy1'});
       final notifier = container.read(progressProvider.notifier);
       notifier.completeQuest('dy1');
@@ -99,15 +125,9 @@ void main() {
       expect(afterAdd.completedTripCountOf('danyang'), 1);
       expect(afterAdd.regionSaturation('danyang'), closeTo(1 / 5, 1e-9));
       expect(afterAdd.completedRegionCount, 1);
-
-      // 추가한 퀘스트까지 완료하면 재방문 완주로 1회 더 누적된다.
-      notifier.completeQuest('dy2');
-      final afterSecond = container.read(progressProvider);
-      expect(afterSecond.completedTripCountOf('danyang'), 2);
-      expect(afterSecond.regionSaturation('danyang'), closeTo(2 / 5, 1e-9));
     });
 
-    test('여행을 시작하지 않은 채 완료한 퀘스트는 완주로 세지 않는다', () {
+    test('여행을 시작하지 않은 채 완료한 퀘스트는 채색에 세지 않는다', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       container.read(progressProvider.notifier).completeQuest('dy1');
