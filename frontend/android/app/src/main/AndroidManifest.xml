@@ -3,11 +3,16 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- gal 패키지: 공유 카드 이미지를 갤러리에 저장(KAN-072). API 30+(Android 11+)는 최신
+         MediaStore로 저장돼 이 권한이 필요 없고, minSdk인 API 29에서만 적용된다. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <application
         android:label="colortrip"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
+        android:requestLegacyExternalStorage="true"
         android:dataExtractionRules="@xml/backup_rules">
         <activity
             android:name=".MainActivity"

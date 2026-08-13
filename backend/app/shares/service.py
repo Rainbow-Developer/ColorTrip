@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.auth.models import User
+from app.core.config import settings
 from app.core.exceptions import AppException, ErrorCode
 from app.progress.models import MapProgress
 from app.regions.repository import list_regions
@@ -109,7 +110,7 @@ async def create_share_card(
     )
     await session.commit()
 
-    share_url = f"https://colortrip.app/share/{share.share_code}"
+    share_url = f"{settings.share_base_url}/share/{share.share_code}"
     return ShareCreateResponse(
         share_code=share.share_code,
         share_url=share_url,

@@ -14,6 +14,10 @@ services:
   api:
     image: ${API_IMAGE}
     env_file: .env
+    environment:
+      # 공유 링크(GET /share/{code})가 실제 공개 도메인을 가리키도록 API_DOMAIN에서 파생한다
+      # (KAN-072 — 하드코딩된 존재하지 않는 도메인 때문에 공유 링크가 열리지 않던 문제).
+      SHARE_BASE_URL: https://${API_DOMAIN}
     depends_on:
       - cloudsql-proxy
     restart: unless-stopped

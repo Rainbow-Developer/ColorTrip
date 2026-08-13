@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"  # 로컬 스토리지 경로(개발·테스트)
     max_upload_size_mb: int = 10
 
+    # 공유 링크 발급 시 붙일 공개 도메인(Caddy가 서비스하는 HTTPS 호스트) — 미설정 시
+    # 로컬 백엔드를 직접 가리킨다. 배포 환경에서는 deploy/docker-compose.yml이 API_DOMAIN에서
+    # 파생해 주입한다(KAN-072 — 존재하지 않는 도메인으로 하드코딩되어 공유 링크가 무효했던 문제).
+    share_base_url: str = "http://127.0.0.1:8000"
+
     # CORS — docs/conventions/auth-security.md (허용 도메인 화이트리스트)
     # 콤마 구분 도메인 목록. local/test는 "*" 허용, 그 외는 화이트리스트 필수
     cors_allowed_origins: str = "*"
