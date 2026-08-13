@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_form_field.dart';
+import '../../core/widgets/birth_date_picker.dart';
 import '../../data/models/auth_models.dart';
 import '../../state/auth_controller.dart';
 import '../../state/progress_notifier.dart';
@@ -209,7 +210,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         parsed != null && !parsed.isBefore(firstDate) && !parsed.isAfter(today)
         ? parsed
         : DateTime(today.year - 26, today.month, today.day);
-    final selected = await showDatePicker(
+    final selected = await showBirthDatePicker(
       context: context,
       initialDate: initial,
       firstDate: firstDate,
@@ -256,9 +257,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       mode: LaunchMode.externalApplication,
     );
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('개인정보처리방침 페이지를 열 수 없어요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('개인정보처리방침 페이지를 열 수 없어요.')));
     }
   }
 

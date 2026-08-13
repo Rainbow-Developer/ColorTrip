@@ -492,8 +492,11 @@ class _InProgressDnaCard extends ConsumerWidget {
       break;
     }
 
+    // 카드가 세로로 과하게 크다는 피드백(KAN-73)으로 여백·폰트·태그를 압축했다. 가로는
+    // 그대로 화면 폭을 쓰고, 설명은 두 줄까지만 보여 카드 높이가 DNA 문구 길이에 휘둘리지
+    // 않게 한다.
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.tripActiveBadgeBg,
         borderRadius: BorderRadius.circular(14),
@@ -502,53 +505,47 @@ class _InProgressDnaCard extends ConsumerWidget {
         children: [
           if (inProgressLabel != null) ...[
             Text(
-              '진행중인 여행',
+              '진행중인 여행 · $inProgressLabel',
               style: const TextStyle(
                 color: AppColors.tripActiveBadgeFg,
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              inProgressLabel,
-              style: const TextStyle(
-                color: AppColors.tripActiveBadgeFg,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
           ],
           Text(
             dna.desc,
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.primaryDark,
-              fontSize: 12,
-              height: 1.4,
+              fontSize: 11,
+              height: 1.25,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Wrap(
-            spacing: 6,
+            spacing: 5,
+            runSpacing: 4,
             alignment: WrapAlignment.center,
             children: [
               for (final tag in dna.tags.take(3))
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
+                    horizontal: 8,
+                    vertical: 3,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     tag,
                     style: const TextStyle(
                       color: AppColors.tripActiveBadgeFg,
-                      fontSize: 11,
+                      fontSize: 10,
                     ),
                   ),
                 ),
