@@ -666,19 +666,29 @@ class _PhotoVerifyBodyState extends State<_PhotoVerifyBody> {
   @override
   Widget build(BuildContext context) {
     final photoBytes = _photoBytes;
-    return Scaffold(
-      appBar: AppBar(
-        leading: const AppBackButton(),
-        title: const Text('사진 인증'),
-      ),
-      // 업로드 + AI 판정을 기다리는 동안 화면 전체를 스크림으로 덮는다 — 버튼만 비활성화하면
-      // 진행 중인지 알기 어렵다는 피드백(KAN-73).
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          _form(photoBytes),
-          if (_busy) const _VerifyingScrim(message: '사진 확인 중...'),
-        ],
+    // 확인 중에는 화면을 벗어나지 못하게 막는다 — 스크림으로 조작을 차단해두고 뒤로가기만
+    // 열려 있으면, 서버 인증은 진행됐는데 결과 화면을 못 보고 나가게 된다.
+    return PopScope(
+      canPop: !_busy,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: _busy
+              ? const IconButton(
+                  onPressed: null,
+                  icon: Icon(Icons.arrow_back_ios_new, size: 18),
+                )
+              : const AppBackButton(),
+          title: const Text('사진 인증'),
+        ),
+        // 업로드 + AI 판정을 기다리는 동안 화면 전체를 스크림으로 덮는다 — 버튼만
+        // 비활성화하면 진행 중인지 알기 어렵다는 피드백(KAN-73).
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            _form(photoBytes),
+            if (_busy) const _VerifyingScrim(message: '사진 확인 중...'),
+          ],
+        ),
       ),
     );
   }

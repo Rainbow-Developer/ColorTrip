@@ -285,10 +285,12 @@ def _is_completed(journey: Journey, completed: int, total: int) -> bool:
 def apply_status(journey: Journey, completed: int, total: int) -> bool:
     """완료 판정 결과를 journey에 반영한다. 값이 바뀌었으면 True (호출자가 commit)."""
     if _is_completed(journey, completed, total):
-        if journey.status == JourneyStatus.COMPLETED.value:
+        # 이미 완료면 완료 시각을 새로 덮어쓰지 않는다. 단 시각이 비어 있으면 채운다
+        # (status만 완료로 남은 레코드가 계속 시각 없이 유지되지 않게).
+        if journey.status == JourneyStatus.COMPLETED.value and journey.completed_at is not None:
             return False
         journey.status = JourneyStatus.COMPLETED.value
-        journey.completed_at = now_kst()
+        journey.completed_at = journey.completed_at or now_kst()
         return True
     if journey.status == JourneyStatus.IN_PROGRESS.value and journey.completed_at is None:
         return False
