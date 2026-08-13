@@ -43,12 +43,15 @@ def test_migration_command_failure_does_not_replace_running_api(tmp_path: Path) 
     fake_bin.mkdir()
     command_log = tmp_path / "commands.log"
 
+    # read_secret은 본문 뒤에 붙는 HTTP 상태 코드를 읽어 404(미등록)와 오류를 구분한다.
+    # 상태 코드를 붙이지 않으면 스크립트가 조회 실패로 보고 배포를 중단한다.
     (fake_bin / "curl").write_text(
         """#!/usr/bin/env bash
 if [[ "$*" == *metadata.google.internal* ]]; then
   echo '{"access_token":"test-token"}'
 elif [[ "$*" == *secretmanager.googleapis.com* ]]; then
-  echo '{"payload":{"data":"dmFsdWU="}}'
+  printf '{"payload":{"data":"dmFsdWU="}}
+200'
 else
   echo '{"status":"ok"}'
 fi

@@ -183,7 +183,9 @@ def test_birth_date_validation_uses_current_kst_date(
         ({"nickname": "가" * 31}, 422),
         ({"email": "not-an-email"}, 422),
         ({"email": "x" * 250 + "@a.com"}, 422),
-        ({"birth_date": (date.today() + timedelta(days=1)).isoformat()}, 422),
+        # 서버는 KST 기준으로 미래 날짜를 판정한다(`now_kst()`). 러너의 로컬 날짜(UTC)로
+        # 계산하면 00~09시 KST 구간에서 "내일"이 KST의 오늘과 같아져 통과해버린다.
+        ({"birth_date": (now_kst().date() + timedelta(days=1)).isoformat()}, 422),
         ({"terms_agreed": False}, 400),
         ({"privacy_agreed": False}, 400),
     ],
