@@ -78,3 +78,55 @@ def test_parse_verdict_text_only_accepts_explicit_true(raw: str, expected: bool)
     assert verdict.passed is expected
     assert 0.0 <= verdict.confidence <= 1.0
     assert verdict.reason
+
+
+@pytest.mark.asyncio
+async def test_gemini_api_key_is_stripped_before_becoming_a_header(monkeypatch) -> None:
+    """줄바꿈이 딸려 저장된 키로도 요청이 나가야 한다 (KAN-75).
+
+    Secret Manager에 키를 넣을 때 터미널에서 Enter로 입력하면 끝에 개행이 붙는다.
+    그대로 헤더 값에 넣으면 httpx가 헤더 주입으로 보고 요청 자체를 거부해, 원인을
+    찾기 어려운 500이 된다.
+    """
+    import httpx
+
+    from app.core.config import settings
+    from app.integrations.vision.gemini import GeminiVisionJudge
+
+    monkeypatch.setattr(settings, "gemini_api_key", "test-key\n", raising=False)
+    seen: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["key"] = request.headers["x-goog-api-key"]
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": (
+                                        '{"passed": true, "confidence": 0.9, "reason": "확인됨"}'
+                                    )
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    original_client = httpx.AsyncClient
+
+    def patched_client(*args, **kwargs):
+        kwargs["transport"] = transport
+        return original_client(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", patched_client)
+
+    verdict = await GeminiVisionJudge().judge(b"bytes", "image/jpeg", "prompt")
+
+    assert seen["key"] == "test-key"
+    assert verdict.passed is True
