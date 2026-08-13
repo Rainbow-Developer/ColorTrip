@@ -19,7 +19,7 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.exceptions import AppException, ErrorCode
 from app.uploads.models import UploadedPhoto
-from app.uploads.storage import PhotoStorage
+from app.uploads.storage import PhotoStorage, object_name_from_url
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +150,7 @@ async def discard_stored_image(storage: PhotoStorage, url: str | None) -> None:
     가리키는 객체가 사라진다. 우리가 저장하지 않은 URL(Kakao CDN 등)은 건너뛰고,
     삭제 실패는 로그만 남긴다. 사용자에게 성공한 작업을 실패로 되돌리지 않는다.
     """
-    object_name = storage.owned_object_name(url)
+    object_name = object_name_from_url(url)
     if object_name is None:
         return
     try:

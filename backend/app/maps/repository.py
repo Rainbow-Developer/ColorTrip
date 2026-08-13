@@ -6,9 +6,10 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.enums import JourneyStatus
-from app.journeys.models import Journey
+from app.core.enums import ProgressStatus
+from app.journeys.models import Journey, JourneyQuest
 from app.progress.models import MapProgress
+from app.quests.models import QuestProgress
 from app.regions.models import Region
 
 
@@ -31,19 +32,26 @@ async def list_regions_with_progress(
     return [(row[0], row[1]) for row in result.all()]
 
 
-async def count_completed_journeys_by_region(
-    session: AsyncSession, user_id: UUID
-) -> dict[UUID, int]:
-    """사용자가 완료한 여정 수를 region_id별로 집계한다 (soft delete 제외).
+async def count_colored_journeys_by_region(session: AsyncSession, user_id: UUID) -> dict[UUID, int]:
+    """완료 퀘스트가 1개 이상인 여정 수를 region_id별로 집계한다 (soft delete 제외).
 
-    지도 채색 기준(완료 여행 수) — docs/specs/055-journey-map-coloring/plan.md
+    지도 채색 기준 — docs/specs/055-journey-map-coloring/description.md.
+    여정 `status`(완료/진행중)와는 무관하다: 퀘스트를 5개 담고 1개만 인증한 진행중 여정도
+    1회로 센다. 한 여정에 완료 퀘스트가 여러 개여도 여정 단위로 1회다(DISTINCT).
     """
     stmt = (
-        select(Journey.region_id, func.count(Journey.id))
+        select(Journey.region_id, func.count(func.distinct(Journey.id)))
+        .join(JourneyQuest, JourneyQuest.journey_id == Journey.id)
+        .join(
+            QuestProgress,
+            (QuestProgress.quest_id == JourneyQuest.quest_id) & (QuestProgress.user_id == user_id),
+        )
         .where(
             Journey.user_id == user_id,
-            Journey.status == JourneyStatus.COMPLETED.value,
             Journey.deleted_at.is_(None),
+            JourneyQuest.deleted_at.is_(None),
+            QuestProgress.deleted_at.is_(None),
+            QuestProgress.status == ProgressStatus.COMPLETED.value,
         )
         .group_by(Journey.region_id)
     )

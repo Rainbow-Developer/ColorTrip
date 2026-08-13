@@ -170,7 +170,7 @@ flutter run
 | 내 PC의 로컬 백엔드 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` | **debug만** (평문) |
 | 서버 없이 화면만 보기 | 닿지 않는 주소(예: `http://127.0.0.1:1`) | debug |
 
-> **기본값은 없습니다.** `KAKAO_NATIVE_APP_KEY`와 `API_BASE_URL` 둘 다 `--dart-define`으로 주지 않으면 앱이 설정 오류 화면으로 뜹니다. 릴리스 빌드는 Gradle이 키 없이 아예 빌드를 거부합니다.
+> **기본값은 없습니다.** `KAKAO_NATIVE_APP_KEY`와 `API_BASE_URL` 둘 다 `--dart-define`으로 주지 않으면 앱이 설정 오류 화면으로 뜹니다. 릴리스 빌드는 `KAKAO_NATIVE_APP_KEY`가 없으면 Gradle이 아예 빌드를 거부합니다(서명 키가 아니라 카카오 앱 키입니다).
 >
 > 실기기로 팀 dev 서버를 쓰는 게 가장 간단합니다 — HTTPS라 릴리스 빌드가 그대로 붙고, LAN IP·방화벽 설정이 필요 없습니다.
 

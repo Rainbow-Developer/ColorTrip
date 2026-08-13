@@ -21,13 +21,9 @@ class PhotoStorage(Protocol):
         """저장에 실패한 객체를 정리한다."""
         ...
 
-    def owned_object_name(self, url: str | None) -> str | None:
-        """이 스토리지가 소유한 URL이면 object_name을, 아니면 None을 반환한다.
-
-        `users.profile_image`에는 Kakao CDN URL이 초기값으로 들어갈 수 있고, GCS↔로컬
-        전환 이력이 있으면 다른 형식의 URL도 남는다. 우리가 저장하지 않은 객체를 지우는
-        일이 없도록 소유 여부를 여기서 판별한다 (080-profile-image).
-        """
+    async def load(self, object_name: str) -> bytes:
+        """저장된 객체를 읽는다 — 사진 인증이 저장본으로 비전 판정을 수행한다
+        (docs/specs/050-quest-verification). 없거나 읽지 못하면 예외를 던진다."""
         ...
 
 
@@ -45,8 +41,8 @@ class LocalPhotoStorage:
         path = self._base / object_name
         await asyncio.to_thread(path.unlink, missing_ok=True)
 
-    def owned_object_name(self, url: str | None) -> str | None:
-        return _strip_prefix(url, "/uploads/")
+    async def load(self, object_name: str) -> bytes:
+        return await asyncio.to_thread((self._base / object_name).read_bytes)
 
 
 class GCSPhotoStorage:
@@ -67,19 +63,36 @@ class GCSPhotoStorage:
     async def delete(self, object_name: str) -> None:
         await asyncio.to_thread(self._bucket.blob(object_name).delete)
 
-    def owned_object_name(self, url: str | None) -> str | None:
-        return _strip_prefix(url, f"https://storage.googleapis.com/{self._bucket_name}/")
+    async def load(self, object_name: str) -> bytes:
+        return await asyncio.to_thread(self._bucket.blob(object_name).download_as_bytes)
 
 
-def _strip_prefix(url: str | None, prefix: str) -> str | None:
-    """`prefix`로 시작하는 URL에서 object_name을 떼어낸다.
+def object_name_from_url(photo_url: str | None) -> str | None:
+    """photo_url을 스토리지 객체 이름으로 되돌린다 — save()가 만든 URL의 역변환.
 
-    상위 경로 탈출(`..`)이 섞인 값은 소유 객체로 취급하지 않는다 — DB 값이 오염돼도
-    스토리지 바깥을 지우지 못하게 한다.
+    현재 설정의 스토리지가 만든 형태만 인정한다(로컬 `/uploads/{object}` / GCS 공개 URL).
+    형태가 맞지 않으면 None — 호출부는 판정 불가로 다뤄 통과시키지 않는다.
+
+    `users.profile_image`에는 Kakao CDN URL이 초기값으로 들어갈 수 있어, 프로필 이미지
+    삭제 경로도 이 판정으로 "우리가 저장한 객체"만 걸러낸다 (080-profile-image).
     """
-    if url is None or not url.startswith(prefix):
+    if photo_url is None:
         return None
-    object_name = url[len(prefix) :]
+    if settings.gcs_upload_bucket:
+        prefix = f"https://storage.googleapis.com/{settings.gcs_upload_bucket}/"
+        if photo_url.startswith(prefix):
+            return _safe_object_name(photo_url.removeprefix(prefix))
+        return None
+    if photo_url.startswith("/uploads/"):
+        return _safe_object_name(photo_url.removeprefix("/uploads/"))
+    return None
+
+
+def _safe_object_name(object_name: str) -> str | None:
+    """빈 이름과 상위 경로 탈출(`..`)을 거른다.
+
+    DB 값이 오염돼도 스토리지 바깥을 읽거나 지우지 못하게 하는 최후 방어선이다.
+    """
     if not object_name or ".." in object_name.split("/"):
         return None
     return object_name

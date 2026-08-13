@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_form_field.dart';
+import '../../core/widgets/birth_date_picker.dart';
 import '../../core/widgets/profile_image_picker.dart';
 import '../../data/models/auth_models.dart';
 import '../../state/auth_controller.dart';
@@ -235,7 +236,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         parsed != null && !parsed.isBefore(firstDate) && !parsed.isAfter(today)
         ? parsed
         : DateTime(today.year - 26, today.month, today.day);
-    final selected = await showDatePicker(
+    final selected = await showBirthDatePicker(
       context: context,
       initialDate: initial,
       firstDate: firstDate,

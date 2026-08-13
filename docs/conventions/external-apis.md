@@ -24,7 +24,7 @@
 
 ## Gemini (사진 AI 인증)
 
-- **용도**: 퀘스트 인증 사진이 조건에 맞는지 판정 (`backend/app/integrations/vision/`, `POST /api/v1/verifications/photo`).
+- **용도**: 퀘스트 인증 사진이 조건에 맞는지 판정 (`backend/app/integrations/vision/`). 호출 지점은 `POST /api/v1/quests/{id}/verify` — 업로드된 사진을 읽어 판정한다([050-quest-verification](../specs/050-quest-verification/)).
 - **키**: [Google AI Studio](https://aistudio.google.com/apikey)에서 발급 → 로컬 `backend/.env`의 `GEMINI_API_KEY`, 운영은 Secret Manager(생성 시 [deploy/deploy.sh](../../deploy/deploy.sh)에 반영 필요). 모델은 `GEMINI_MODEL`(기본 `gemini-2.5-flash`).
 - **미설정 시**: 스텁 판정(항상 통과 + "AI 미설정" 사유) — 데모·테스트는 키 없이 동작한다.
 - **쿼터**: 무료 티어는 분당 요청 제한이 있어 초과 시 오류를 그대로 반환한다(폴백 통과 처리하지 않음).

@@ -17,6 +17,7 @@ import 'package:colortrip/state/auth_controller.dart';
 import 'package:colortrip/state/onboarding_tour_notifier.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/repository_providers.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -331,7 +332,11 @@ void main() {
     expect(repository.removeImageCalls, 1);
   });
 
-  testWidgets('signup birth date field opens a date picker', (tester) async {
+  testWidgets('signup birth date field opens a year/month/day wheel picker', (
+    tester,
+  ) async {
+    // Material showDatePicker는 연도를 고르면 곧바로 일 달력으로 돌아가 월을 화살표로만
+    // 넘길 수 있었다 — 연·월·일 휠로 교체했다(KAN-73).
     final container = await _container(
       _Repository(_user(OnboardingStep.profile)),
     );
@@ -346,7 +351,16 @@ void main() {
     await tester.tap(find.widgetWithText(TextField, '2000-01-01'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DatePickerDialog), findsOneWidget);
+    expect(find.byType(DatePickerDialog), findsNothing);
+    expect(find.text('생년월일을 선택해주세요'), findsOneWidget);
+    // 연·월·일 휠 3개 — 월을 직접 고를 수 있다는 게 이번 변경의 핵심이다.
+    expect(find.byType(CupertinoPicker), findsNWidgets(3));
+
+    await tester.tap(find.text('선택 완료'));
+    await tester.pumpAndSettle();
+    // 선택 결과가 yyyy-MM-dd로 필드에 채워진다.
+    final field = tester.widget<TextField>(find.byType(TextField).at(1));
+    expect(field.controller?.text, matches(r'^\d{4}-\d{2}-\d{2}$'));
   });
 
   testWidgets('signup agreements expose checked semantics', (tester) async {

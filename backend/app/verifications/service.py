@@ -21,8 +21,9 @@ async def judge_photo(
 ) -> VisionVerdict:
     """퀘스트 맥락(제목·장소·조건)으로 사진을 판정한다.
 
-    사진은 판정에만 사용하고 어디에도 저장하지 않는다
-    (스펙 비목표 — GCS 보관은 후속 작업).
+    호출자는 `app/quests/verification.py` 하나이며, 업로드로 **이미 저장된** 사진을 읽어
+    넘긴다(KAN-73 — 판정 전용 엔드포인트를 없애고 인증 경로에 통합했다). 판정 맥락은
+    서버가 가진 퀘스트 데이터로만 구성한다.
     """
     prompt = build_photo_judgement_prompt(title, place, conditions)
     judge = get_vision_judge()

@@ -203,10 +203,9 @@ async def test_replace_removes_the_previous_object(client: AsyncClient) -> None:
 
 async def test_replace_keeps_the_kakao_initial_image(client: AsyncClient) -> None:
     """카카오 CDN URL은 우리 객체가 아니므로 삭제를 시도하지 않는다."""
-    from app.uploads.storage import get_photo_storage
+    from app.uploads.storage import object_name_from_url
 
-    storage = get_photo_storage()
-    assert storage.owned_object_name("https://example.com/one.png") is None
+    assert object_name_from_url("https://example.com/one.png") is None
 
     headers = _active_headers(await login(client))
     response = await client.post(
@@ -220,15 +219,14 @@ async def test_replace_keeps_the_kakao_initial_image(client: AsyncClient) -> Non
     assert _stored_path(response.json()["data"]["profile_image"]).exists()
 
 
-async def test_owned_object_name_rejects_path_traversal() -> None:
-    from app.uploads.storage import get_photo_storage
+async def test_object_name_from_url_rejects_path_traversal() -> None:
+    """DB 값이 오염돼도 스토리지 바깥을 지우지 못해야 한다."""
+    from app.uploads.storage import object_name_from_url
 
-    storage = get_photo_storage()
-
-    assert storage.owned_object_name("/uploads/../../etc/passwd") is None
-    assert storage.owned_object_name("/uploads/") is None
-    assert storage.owned_object_name(None) is None
-    assert storage.owned_object_name("/uploads/avatars/a.png") == "avatars/a.png"
+    assert object_name_from_url("/uploads/../../etc/passwd") is None
+    assert object_name_from_url("/uploads/") is None
+    assert object_name_from_url(None) is None
+    assert object_name_from_url("/uploads/avatars/a.png") == "avatars/a.png"
 
 
 async def test_avatar_is_not_usable_as_quest_verification_photo(client: AsyncClient) -> None:
