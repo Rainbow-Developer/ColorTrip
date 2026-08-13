@@ -8,7 +8,7 @@ import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../data/location/location_gateway.dart';
 import '../../data/media/photo_picker_gateway.dart';
-import '../../data/models/quest.dart';
+import '../../data/models/quest.dart' show Quest, kDefaultVerifyRadiusMeters;
 import '../../data/repositories/domain_repository.dart';
 import '../../state/domain_controller.dart';
 import '../../state/repository_providers.dart';
@@ -97,8 +97,6 @@ class QuestVerifyScreen extends ConsumerWidget {
     WidgetRef ref,
     Quest quest, {
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,
@@ -109,8 +107,6 @@ class QuestVerifyScreen extends ConsumerWidget {
           .verifyQuest(
             questKey: quest.id,
             journeyId: journeyId,
-            latitude: latitude,
-            longitude: longitude,
             photoUrl: photoUrl,
             answer: answer,
             qrPayload: qrPayload,
@@ -128,23 +124,44 @@ class QuestVerifyScreen extends ConsumerWidget {
     }
   }
 
+  /// 위치 인증 — 거리 판정을 **단말 안에서** 끝내고, 반경 이내일 때만 좌표 없이 완료를
+  /// 요청한다 (docs/specs/050-quest-verification/location-law-review.md, KAN-77).
+  ///
+  /// 좌표를 서버로 보내면 저장하지 않더라도 위치정보법상 위치기반서비스사업 **신고
+  /// 대상**이 된다. 팀이 채택한 설계(B안)는 좌표가 단말을 벗어나지 않는 것이고, 이
+  /// 함수가 그 불변식이 지켜지는 지점이다 — `_verify`에 latitude·longitude를 넘기지
+  /// 않는다. 서버도 gps 미션에 좌표가 오면 거절한다.
   Future<void> _verifyGps(
     BuildContext context,
     WidgetRef ref,
     Quest quest,
     String? journeyId,
   ) async {
+    final questLat = quest.lat;
+    final questLng = quest.lng;
+    if (questLat == null || questLng == null) return; // 버튼이 비활성이라 도달하지 않는다
+
     try {
       final location = await ref.read(locationGatewayProvider).current();
       if (!context.mounted) return;
-      final verified = await _verify(
-        context,
-        ref,
-        quest,
-        journeyId: journeyId,
-        latitude: location.latitude,
-        longitude: location.longitude,
+
+      final radius = quest.verifyRadius ?? kDefaultVerifyRadiusMeters;
+      final distance = distanceMeters(
+        location.latitude,
+        location.longitude,
+        questLat,
+        questLng,
       );
+      if (distance > radius) {
+        // 반경 밖이면 서버를 부르지 않는다 — 좌표는 여기서 버려진다.
+        showAppToast(
+          context,
+          '퀘스트 장소에서 약 ${_formatDistance(distance)} 떨어져 있어요 (인증 반경 ${radius}m)',
+        );
+        return;
+      }
+
+      final verified = await _verify(context, ref, quest, journeyId: journeyId);
       if (verified == true && context.mounted) {
         showAppToast(context, '퀘스트 완료! 지도가 칠해졌어요');
         _leaveVerifyScreen(context, '/region/${quest.region}');
@@ -248,6 +265,11 @@ class QuestVerifyScreen extends ConsumerWidget {
     );
   }
 }
+
+/// 반경 밖 안내에 쓰는 거리 표기 — 1km 이상은 km로 줄여 읽기 쉽게 한다.
+String _formatDistance(double meters) => meters >= 1000
+    ? '${(meters / 1000).toStringAsFixed(1)}km'
+    : '${meters.round()}m';
 
 /// 인증 성공 후 인증 화면을 닫고 들어왔던 화면(지역 개요 등)으로 돌아간다.
 ///
@@ -403,6 +425,12 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
             const Text(
               '퀘스트에 설정된 인증 반경 안에서 시도해주세요.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            // 좌표 비전송은 사용자에게도 알린다(스토어 데이터 안전 섹션·처리방침과 일치).
+            const Text(
+              '현재 위치는 이 기기에서만 확인하고 서버로 보내지 않아요.',
+              style: TextStyle(color: AppColors.primaryDark, fontSize: 12),
             ),
             const SizedBox(height: 16),
             AspectRatio(

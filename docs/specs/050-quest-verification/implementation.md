@@ -2,8 +2,8 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 완료 (KAN-75: QR·사진 인증 실동작 복구 — dev에서 3종 모두 동작) |
-| 최종 업데이트 | 2026-08-13 |
+| 상태 | 완료 (KAN-75 dev 실동작 복구 + KAN-77 좌표 비전송 불변식 복원) |
+| 최종 업데이트 | 2026-08-14 |
 
 ## 구현 규모 / 단위 분할
 
@@ -17,6 +17,7 @@
   - [x] 6) (KAN-73) FE 판정 연동 회귀 복원 + 사진 선택 gateway seam·위젯 테스트
   - [x] 7) (KAN-73) 사진 인증 경로 통합 — 업로드 1회 + `POST /quests/{id}/verify`가 저장본을 읽어 판정하고 `photo_verdict`를 응답에 포함. 판정 전용 라우터(`/verifications/photo`·`/verifications/qr`) 제거
   - [x] 8) (KAN-75) **dev 실동작 복구** — QR 대조 기준을 client_key로 통일, QR 퀘스트 11개 mission_type 정합화, 배포에 Gemini·QR 시크릿 주입
+  - [x] 9) (KAN-77) **좌표 비전송 불변식 복원** — FE 온디바이스 판정 복원 + 좌표 파라미터 삭제, 서버가 gps 미션의 좌표를 거절, 저장된 좌표 삭제 마이그레이션
 
 ## 구현된 항목
 
@@ -27,7 +28,7 @@
 - [x] `scripts/generate_quest_qr.py` — 서명 페이로드 → QR PNG 생성(실행 검증: 11개)
 - [x] FE 사진 인증 — 판정 API 연동, 결과 화면에 신뢰도·사유·제공자(stub 뱃지) 표시, 실패 시 완료 처리하지 않고 재시도 (KAN-73에서 회귀 복원 — 아래 변경 이력)
 - [x] `lib/data/media/photo_picker_gateway.dart` — 사진 선택 seam(`PhotoPickerGateway`·`photoPickerGatewayProvider`). 플러그인을 화면에서 직접 부르지 않아 위젯 테스트로 인증 흐름을 검증할 수 있다(KAN-73)
-- [x] FE 위치 인증 — geolocator 실측위 + `distanceBetween` **단말 내** 판정, 서비스 꺼짐·권한 거부·영구 거부(설정 이동)·좌표 없음 안내
+- [x] FE 위치 인증 — `LocationGateway` 실측위 + `distanceMeters`(순수 하버사인) **단말 내** 판정, 서비스 꺼짐·권한 거부·영구 거부(설정 이동)·좌표 없음 안내. 반경 밖이면 서버를 부르지 않는다(KAN-77)
 - [x] FE QR 인증 — mobile_scanner 스캔 → 서버 검증 → 완료
 - [x] 권한 — Android `INTERNET`/`CAMERA`/`ACCESS_FINE_LOCATION`/`ACCESS_COARSE_LOCATION`, iOS `NSLocationWhenInUseUsageDescription`
 - [x] 테스트 — BE `tests/test_verifications.py`(22건: 서명 왕복·변조·타 퀘스트·판정 텍스트 파싱·업로드 검증), `tests/test_quest_verification.py`, FE `test/quest_verification_test.dart`
@@ -46,9 +47,9 @@
 ## 알려진 한계 / TODO
 
 - 온디바이스 위치 검증은 GPS 스푸핑·클라이언트 변조에 취약 — 보상/랭킹이 걸리면 서버 검증(A안) + 위치기반서비스사업 신고로 전환 검토([location-law-review.md](location-law-review.md) 체크리스트).
-- **⚠️ 문서와 코드 불일치 — 미해결(KAN-75에서 발견, 결정 필요).** 이 스펙과 [location-law-review.md](location-law-review.md)는 위치 인증을 "좌표를 서버로 보내지 않는 온디바이스 판정"으로 서술하지만, 실제 코드는 **단말 좌표를 `POST /quests/{id}/verify`의 `lat`·`lng`로 서버에 전송하고 서버가 하버사인으로 판정**한다([quest_verify_screen.dart](../../../frontend/lib/features/quests/quest_verify_screen.dart) `_verifyGps` → [domain_repository.dart](../../../frontend/lib/data/repositories/domain_repository.dart) `verifyQuest`). `a3df7fc`(KAN-55 서버 영속화)에서 서버 판정으로 바뀌었는데 문서가 따라가지 않았다. 변조 저항은 좋아졌지만 위치정보법 검토의 전제("수집·전송 없음")가 깨졌으므로, **① 서버 전송을 유지하고 위치기반서비스사업 신고 절차를 밟거나 ② 온디바이스 판정으로 되돌리거나** 둘 중 하나를 정해야 한다. 정하기 전까지 이 문서의 "좌표 비전송" 서술은 현재 동작이 아니다.
+- (해소) 좌표 비전송 불변식 이탈 — KAN-75에서 발견하고 KAN-77에서 복원했다. 아래 변경 이력 참고.
 - 인증 사진은 서버에 저장하지 않는다(타임라인 사진은 FE 세션 메모리 보관 유지). GCS 업로드 연동은 후속.
-- BE `app/quests/verification.py`의 gps_photo 서버 검증 경로는 남아 있으나 FE는 사용하지 않는다(좌표 비전송 설계). 서버 검증 전환 시에만 사용할 것.
+- BE `app/quests/verification.py`의 gps_photo 서버 검증 경로(`_judge_gps`)는 남아 있으나 FE는 사용하지 않는다. **이 경로를 쓰는 순간 좌표를 수신하게 되므로 위치기반서비스사업 신고가 선행되어야 한다.** gps 미션은 `_judge_gps_on_device`가 처리하며 좌표가 오면 거절한다.
 - Gemini rate limit 초과 시 오류 반환(재시도 안내) — 폴백 통과 처리하지 않음.
 - (해소) 사진 이중 전송 — KAN-73에서 업로드 1회 + 저장본 판정으로 통합했다. 대가로 판정 시 스토리지 읽기가 1회 발생한다(GCS는 다운로드).
 - 타임아웃은 요청 성격에 맞춰 나눠 둔다 — 업로드(`/uploads/photo`)는 최대 5MB를 보내므로 `sendTimeout` 30초, 인증(`/quests/{id}/verify`)은 판정 시간 때문에 `receiveTimeout` 30초. dio 기본값에는 `sendTimeout`이 없어 전송 정체 시 무기한 대기했다(리뷰 반영).
@@ -65,3 +66,4 @@
 | 2026-08-13 | **사진 인증 경로 통합(KAN-73, 사용자 요청)**: 사진을 판정용·저장용으로 두 번 보내던 구조를 없앴다. 업로드(`/uploads/photo`) 1회 후 `POST /quests/{id}/verify`가 `photo_url`로 저장본을 읽어(`PhotoStorage.load`) 비전 판정하고, 결과를 `photo_verdict`로 응답에 담는다. 판정 맥락(제목·조건)을 **서버가** 구성하므로 클라이언트가 조건을 느슨하게 바꿔 통과를 유도할 수 없다(이전 방식의 취약점). 사진을 읽지 못하거나 URL 형태가 규약과 다르면 거절(fail-closed). 미사용이 된 판정 전용 라우터·스키마(`/verifications/photo`·`/verifications/qr`)와 FE `verification_repository.dart`·`QrVerdict`를 제거하고, 라우터에 있던 과대 QR 페이로드 차단(max_length=256)은 `QuestVerifyRequest`로 옮겼다. 테스트: BE 4건(판정값 응답·거절 시 미완료·저장본 없음 거절·반경 밖 판정 생략) + 과대 페이로드 1건, FE 4건(통과·스텁 뱃지·거절·요청 실패) |
 | 2026-08-13 | **dev 실동작 복구(KAN-75, 사용자 보고 "인증이 안 된다")**: 3종 중 GPS만 동작하고 있었다. ① **QR 대조 기준 불일치** — `_judge_qr`는 DB UUID와 대조하는데 `scripts/generate_quest_qr.py`는 client_key로 서명해, 유효 서명도 "이 퀘스트의 QR이 아니에요"로 거절됐다. client_key 기준으로 통일하고(인쇄물이 재시딩에도 유효), UUID 서명이 통과하지 않는 회귀 테스트를 넣었다. ② **QR 퀘스트 데이터 불일치** — FE 정적 데이터는 11개가 `verify: 'qr'`인데 DB는 전부 `mission_type='photo'`라, 앱이 QR 스캐너를 띄우고 `qr_payload`만 보내면 서버가 `photo_url`을 요구하며 400. 마이그레이션 `c1a7e5d90b42` + 카탈로그 스냅샷으로 정합화했다. 이 드리프트를 잡는 가드(`test_domain_catalog_contract`)는 이미 있었으나 **CI에 테스트 워크플로가 없어** 빨간 채로 방치돼 있었다. ③ **사진 판정 미설정** — dev `.env`에 `GEMINI_API_KEY`가 없고 `APP_ENV=dev`는 fail-closed라 사진 인증이 항상 거절됐다. `deploy.sh`에 Gemini·QR 시크릿 주입 + 미설정 경고를 넣었다(키 등록은 운영 작업으로 남음). ④ 업로드 사진이 재배포마다 사라지던 문제를 compose 볼륨으로 막았다. 테스트: BE 4건(client_key 통과·UUID 거절·client_key 없음 거절·배포 시크릿 배선) |
 | 2026-08-13 | **회귀 복원(KAN-73)**: FE 사진 인증이 판정 API를 호출하지 않고 있었다 — `a3df7fc`(KAN-55 서버 영속화)에서 `domainController.uploadAndVerifyPhoto`로 통합하면서 `verificationRepository.verifyPhoto` 호출이 빠졌고, 결과 화면에 판정값을 전달하지도 않아 판정 카드가 항상 "판정 정보를 불러오지 못했어요"로 떴다(서버 `/quests/{id}/verify`는 사진 경로만 확인하므로 사실상 사진 내용 검증 없이 통과). 판정 → 통과 시 저장·완료 → 결과 화면(extra로 판정값) 순서를 복원했다. 회귀가 잡히지 않은 이유는 사진 분기에 위젯 테스트가 없어서였고, 사진 선택을 `PhotoPickerGateway` seam(`lib/data/media/photo_picker_gateway.dart`, 위치 인증의 `LocationGateway`와 같은 패턴)으로 빼서 통과·거절·판정 실패 3케이스를 `test/quest_verification_test.dart`에 추가했다 |
+| 2026-08-14 | **좌표 비전송 불변식 복원(KAN-77)**: KAN-75에서 드러난 문서-코드 이탈을 코드 쪽으로 되돌렸다. `a3df7fc`(KAN-55) 이후 FE가 단말 좌표를 `lat`·`lng`로 서버에 보내고 서버가 판정했으며, `quest_progress.verified_lat/lng`에 **저장까지** 하고 있었다. law review의 결론은 B안(온디바이스)이고 그 근거는 "좌표가 단말을 벗어나지 않음"인데, 좌표는 **저장하지 않고 수신만 해도** 위치기반서비스사업 신고 대상이다(해설서 p.59~60). 신고는 이뤄지지 않았으므로 코드를 결정된 설계로 복원했다. ① FE가 `distanceMeters`(순수 하버사인)로 단말에서 판정하고 반경 이내일 때만 좌표 없이 완료를 요청한다. ② `DomainRepository.verifyQuest`·`DomainController.verifyQuest`에서 좌표 파라미터를 **삭제**했다 — 주석은 무시할 수 있지만 없는 파라미터는 보낼 수 없다. ③ 서버는 `mission_type='gps'`에 좌표가 오면 거절한다(무시하면 이탈이 조용히 반복된다). ④ 마이그레이션 `e8c3a91d7f04`로 그동안 저장된 좌표를 삭제했다(downgrade 없음). ⑤ GPS 인증 화면에 "현재 위치는 이 기기에서만 확인하고 서버로 보내지 않아요" 문구 추가. 테스트: BE 3건(좌표 거절·좌표 없이 완료·저장 안 됨), FE 3건(반경 밖 서버 미호출·반경 이내 인증·하버사인 단위) |
