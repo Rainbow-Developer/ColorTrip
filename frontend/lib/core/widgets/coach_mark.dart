@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +15,7 @@ class CoachMarkOverlay extends ConsumerStatefulWidget {
     required this.stepIndex,
     required this.title,
     required this.body,
+    this.scrollAlignment = 0.5,
   });
 
   final GlobalKey targetKey;
@@ -20,18 +23,42 @@ class CoachMarkOverlay extends ConsumerStatefulWidget {
   final String title;
   final String body;
 
+  /// [Scrollable.ensureVisible]에 넘기는 정렬 값. 기본은 화면 중앙(0.5)이지만,
+  /// 타겟이 화면의 상당 부분을 차지해 중앙 정렬 시 말풍선 놓을 위·아래 공간이
+  /// 모자라면(예: 홈 지도) 0.0(뷰포트 상단)으로 넘겨 아래쪽에 공간을 확보한다.
+  final double scrollAlignment;
+
   @override
   ConsumerState<CoachMarkOverlay> createState() => _CoachMarkOverlayState();
 }
 
 class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
+  final _overlayKey = GlobalKey();
   Rect? _targetRect;
   Size? _localSize;
+  bool _measureScheduled = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    _scheduleMeasure();
+  }
+
+  @override
+  void didUpdateWidget(covariant CoachMarkOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 추천 퀘스트처럼 비동기 데이터가 도착하면 부모 레이아웃 높이와 하단 CTA 위치가
+    // 달라질 수 있다. 부모가 다시 빌드될 때 실제 타겟 위치를 다음 프레임에서 갱신한다.
+    _scheduleMeasure();
+  }
+
+  void _scheduleMeasure() {
+    if (_measureScheduled) return;
+    _measureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureScheduled = false;
+      if (mounted) unawaited(_measure());
+    });
   }
 
   Future<void> _measure() async {
@@ -40,29 +67,35 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     await Scrollable.ensureVisible(
       ctx,
       duration: const Duration(milliseconds: 200),
-      alignment: 0.5,
+      alignment: widget.scrollAlignment,
     );
     if (!mounted || !ctx.mounted) return;
     final box = ctx.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    // Positioned은 이 위젯을 감싼 Stack 기준 좌표계를 쓰므로, 전역(root) 좌표가 아니라
-    // 그 Stack을 기준(ancestor)으로 변환해야 위치가 맞는다(AppBar 높이만큼 어긋나는 문제 방지).
-    final stackBox = context.findRenderObject()?.parent as RenderBox?;
-    final topLeft = stackBox != null
-        ? box.localToGlobal(Offset.zero, ancestor: stackBox)
-        : box.localToGlobal(Offset.zero);
+    final overlayBox =
+        _overlayKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || overlayBox == null) return;
+    // 타겟과 오버레이의 전역 좌표 차이를 사용해 오버레이 내부 좌표로 변환한다.
+    // StatefulElement에서 임의의 첫 RenderObject를 찾으면 빌드 결과에 따라 기준점이
+    // 달라질 수 있으므로, 화면 전체를 차지하는 [_overlayKey]를 고정 기준으로 사용한다.
+    final topLeft =
+        box.localToGlobal(Offset.zero) - overlayBox.localToGlobal(Offset.zero);
+    final nextRect = topLeft & box.size;
+    if (_targetRect == nextRect && _localSize == overlayBox.size) return;
     setState(() {
-      _targetRect = topLeft & box.size;
-      _localSize = stackBox?.size;
+      _targetRect = nextRect;
+      _localSize = overlayBox.size;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final rect = _targetRect;
-    if (rect == null) return const SizedBox.shrink();
+    if (rect == null) {
+      return Positioned.fill(
+        child: AbsorbPointer(child: SizedBox.expand(key: _overlayKey)),
+      );
+    }
 
-    final isLastStep = widget.stepIndex >= kOnboardingTotalSteps - 1;
     final screenSize = _localSize ?? MediaQuery.sizeOf(context);
     const bubbleAllowance = 260.0;
     const margin = 16.0;
@@ -84,57 +117,71 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
       stepIndex: widget.stepIndex,
       title: widget.title,
       body: widget.body,
-      isLastStep: isLastStep,
     );
 
+    final hole = rect.inflate(8);
+
     return Positioned.fill(
-      child: Stack(
-        children: [
-          // AbsorbPointer로 스크림이 터치를 흡수해 뒤 화면의 탭·스크롤이 전달되지 않게 막는다
-          // (코치마크가 떠 있는 동안 실제 화면을 조작할 수 없어야 한다).
-          Positioned.fill(
-            child: AbsorbPointer(
-              child: CustomPaint(painter: _SpotlightPainter(rect.inflate(8))),
-            ),
-          ),
-          switch (placement) {
-            _BubblePlacement.below => Positioned(
-              left: margin,
-              right: margin,
-              top: rect.bottom + margin,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Icon(Icons.arrow_upward, color: Colors.white, size: 26),
-                  bubble,
-                ],
+      child: SizedBox.expand(
+        key: _overlayKey,
+        child: Stack(
+          children: [
+            // Stack의 일반 자식인 CustomPaint는 기본 크기가 0이다. Positioned.fill로
+            // 오버레이 전체 크기를 강제해야 반투명 딤이 실제 화면 전체에 그려진다.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  key: const ValueKey('coach-mark-scrim'),
+                  painter: _SpotlightPainter(hole),
+                ),
               ),
             ),
-            _BubblePlacement.above => Positioned(
-              left: margin,
-              right: margin,
-              bottom: screenSize.height - rect.top + margin,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  bubble,
-                  const Icon(
-                    Icons.arrow_downward,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                ],
+            Positioned.fill(
+              child: _SpotlightHitTestBlocker(passthroughRect: hole),
+            ),
+            switch (placement) {
+              _BubblePlacement.below => Positioned(
+                left: margin,
+                right: margin,
+                top: rect.bottom + margin,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.arrow_upward,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                    bubble,
+                  ],
+                ),
               ),
-            ),
-            _BubblePlacement.center => Positioned(
-              left: margin,
-              right: margin,
-              top: margin,
-              bottom: margin,
-              child: Center(child: bubble),
-            ),
-          },
-        ],
+              _BubblePlacement.above => Positioned(
+                left: margin,
+                right: margin,
+                bottom: screenSize.height - rect.top + margin,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    bubble,
+                    const Icon(
+                      Icons.arrow_downward,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ],
+                ),
+              ),
+              _BubblePlacement.center => Positioned(
+                left: margin,
+                right: margin,
+                top: margin,
+                bottom: margin,
+                child: Center(child: bubble),
+              ),
+            },
+          ],
+        ),
       ),
     );
   }
@@ -142,18 +189,56 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
 
 enum _BubblePlacement { below, above, center }
 
+class _SpotlightHitTestBlocker extends LeafRenderObjectWidget {
+  const _SpotlightHitTestBlocker({required this.passthroughRect});
+
+  final Rect passthroughRect;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _RenderSpotlightHitTestBlocker(passthroughRect);
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant _RenderSpotlightHitTestBlocker renderObject,
+  ) {
+    renderObject.passthroughRect = passthroughRect;
+  }
+}
+
+class _RenderSpotlightHitTestBlocker extends RenderBox {
+  _RenderSpotlightHitTestBlocker(this._passthroughRect);
+
+  Rect _passthroughRect;
+
+  set passthroughRect(Rect value) {
+    if (_passthroughRect == value) return;
+    _passthroughRect = value;
+    markNeedsPaint();
+  }
+
+  @override
+  bool get sizedByParent => true;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
+
+  @override
+  bool hitTestSelf(Offset position) => !_passthroughRect.contains(position);
+}
+
 class _MessageCard extends ConsumerWidget {
   const _MessageCard({
     required this.stepIndex,
     required this.title,
     required this.body,
-    required this.isLastStep,
   });
 
   final int stepIndex;
   final String title;
   final String body;
-  final bool isLastStep;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -189,31 +274,18 @@ class _MessageCard extends ConsumerWidget {
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton(
-                onPressed: () =>
-                    ref.read(onboardingTourProvider.notifier).skipForever(),
-                style: TextButton.styleFrom(minimumSize: const Size(48, 40)),
-                child: const Text(
-                  '다시 보지 않기',
-                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-                ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () =>
+                  ref.read(onboardingTourProvider.notifier).skipForever(),
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              child: const Text(
+                '다시 보지 않기',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
               ),
-              ElevatedButton(
-                onPressed: () =>
-                    ref.read(onboardingTourProvider.notifier).advance(),
-                // 앱 전역 테마가 ElevatedButton에 Size.fromHeight(56)(가로 무한대)를 강제해
-                // 전체 폭 버튼을 기본값으로 삼는데, 이 버튼은 Row 안에서 옆 버튼과 나란히 쓰이므로
-                // 여기서만 좁은 minimumSize로 오버라이드한다.
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(64, 40),
-                ),
-                child: Text(isLastStep ? '확인했어요' : '다음'),
-              ),
-            ],
+            ),
           ),
         ],
       ),
