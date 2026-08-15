@@ -106,7 +106,7 @@ void main() {
     await tester.pumpWidget(_app(_TripRepository([_questions])));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(find.text('여행 DNA 진단을 중단할까요?'), findsOneWidget);
