@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import re
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import HTMLResponse
@@ -11,6 +12,7 @@ from app.core.database import get_session
 from app.core.exceptions import AppException
 from app.core.response import Envelope, success
 from app.shares import service
+from app.shares.public_map import PUBLIC_MAP_REGIONS, PUBLIC_MAP_VIEW_BOX
 from app.shares.schemas import (
     ShareCreateRequest,
     ShareCreateResponse,
@@ -28,20 +30,6 @@ landing_router = APIRouter(tags=["shares"])
 # 앱이 아직 스토어에 배포되지 않아 실제 URL이 없다. 배포 후 이 값을 채우면
 # 랜딩 페이지에 "앱 다운받기" 링크가 활성화된다.
 PLAY_STORE_URL = ""
-
-REGION_NAMES = (
-    "진천군",
-    "음성군",
-    "증평군",
-    "청주시",
-    "괴산군",
-    "충주시",
-    "제천시",
-    "단양군",
-    "보은군",
-    "옥천군",
-    "영동군",
-)
 
 DNA_DETAILS = {
     "nature": (
@@ -65,6 +53,8 @@ DNA_DETAILS = {
         "천천히 머무르며 충전하는 타입이에요. 여백이 있는 여행을 사랑하죠.",
     ),
 }
+
+SVG_COMMAND_RE = re.compile(r"([MLZ])([^MLZ]*)")
 
 
 @router.get("/users/me/share-summary", response_model=Envelope[ShareSummaryResponse])
@@ -114,23 +104,63 @@ def _render_not_found_page(share_code: str) -> str:
 </body></html>"""
 
 
+def _svg_path_points(path_data: str) -> list[tuple[float, float]]:
+    points: list[tuple[float, float]] = []
+    for token in SVG_COMMAND_RE.finditer(path_data):
+        command = token.group(1)
+        if command == "Z":
+            continue
+        coords = [float(part) for part in re.split(r"[\s,]+", token.group(2).strip()) if part]
+        points.extend((coords[i], coords[i + 1]) for i in range(0, len(coords) - 1, 2))
+    return points
+
+
+def _polygon_centroid(points: list[tuple[float, float]]) -> tuple[float, float]:
+    if len(points) < 3:
+        return points[0] if points else (0.0, 0.0)
+
+    area = 0.0
+    cx = 0.0
+    cy = 0.0
+    for i, (x0, y0) in enumerate(points):
+        x1, y1 = points[(i + 1) % len(points)]
+        cross = x0 * y1 - x1 * y0
+        area += cross
+        cx += (x0 + x1) * cross
+        cy += (y0 + y1) * cross
+
+    area *= 0.5
+    if abs(area) < 1e-6:
+        return (
+            sum(x for x, _ in points) / len(points),
+            sum(y for _, y in points) / len(points),
+        )
+    return (cx / (6 * area), cy / (6 * area))
+
+
 def _render_public_map(card: ShareReadResponse) -> str:
     if card.share_style not in {ShareStyle.MAP.value, ShareStyle.MAP_AND_DNA.value}:
         return ""
 
     colored_region_names = {region.name for region in card.colored_regions}
-    cells = []
-    for region_name in REGION_NAMES:
-        is_colored = region_name in colored_region_names
-        cell_style = (
-            "background:#2D6A4F;color:#FFFFFF;border:1px solid #2D6A4F;"
-            if is_colored
-            else "background:#F5F4EE;color:#8B8A81;border:1px solid #E4E1D6;"
+    paths = []
+    labels = []
+    for region in PUBLIC_MAP_REGIONS:
+        is_colored = region.name in colored_region_names
+        fill = region.filled_color if is_colored else "#F0F0F0"
+        label_fill = "#FFFFFF" if is_colored else "#9A9A90"
+        label_x, label_y = _polygon_centroid(_svg_path_points(region.path))
+
+        paths.append(
+            f'<path d="{html.escape(region.path, quote=True)}" '
+            f'fill="{fill}" stroke="#CCCCCC" stroke-width="1.4">'
+            f"<title>{html.escape(region.name)}</title></path>"
         )
-        cells.append(
-            '<div style="padding:10px 6px;border-radius:10px;text-align:center;'
-            f'font-size:12px;font-weight:700;{cell_style}">'
-            f"{html.escape(region_name)}</div>"
+        labels.append(
+            f'<text x="{label_x:.1f}" y="{label_y:.1f}" fill="{label_fill}" '
+            'font-size="11" font-weight="700" text-anchor="middle" '
+            'dominant-baseline="central">'
+            f"{html.escape(region.name)}</text>"
         )
 
     empty_state_html = (
@@ -150,9 +180,11 @@ def _render_public_map(card: ShareReadResponse) -> str:
                 <h2 style="font-size:15px;margin:0;color:#1F1F1B;">충북 여행 지도</h2>
                 <span style="font-size:12px;color:#777;">색칠 {card.completed_region_count}곳</span>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;">
-                {"".join(cells)}
-            </div>
+            <svg role="img" aria-label="충청북도 11개 시군 여행 지도" width="100%"
+                 viewBox="{PUBLIC_MAP_VIEW_BOX}" style="display:block;margin-top:12px;">
+                {"".join(paths)}
+                {"".join(labels)}
+            </svg>
             {empty_state_html}
         </section>
     """
