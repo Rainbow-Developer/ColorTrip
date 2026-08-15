@@ -2,15 +2,15 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 백엔드·배포 구현 완료 / Flutter는 KAN-54 후속 PR 예정 |
-| 최종 업데이트 | 2026-08-13 |
+| 상태 | 완료 (백엔드·배포·Flutter). 이메일 수집 폐지, 생년월일 필수 |
+| 최종 업데이트 | 2026-08-14 |
 
 ## 구현 단위
 
 - [x] **백엔드** — Kakao `app_id` 검증, 프로필·versioned consent, `ActiveUser`·`ProfiledUser`·`CurrentUser`, 즉시 익명화 탈퇴와 Alembic migration.
 - [x] **배포** — Kakao 설정 전달, 같은 이미지의 `alembic upgrade head` 성공 후 API 교체, 실패 시 교체 중단.
-- [ ] **Flutter (KAN-54)** — Kakao SDK, secure storage, Dio JWT/단일 refresh, 서버 상태 기반 온보딩·프로필·로그아웃·탈퇴.
-- [ ] **Android 실제 E2E (KAN-54)** — Flutter PR 병합 전 실제 Kakao 로그인부터 탈퇴까지의 흐름을 다시 검증한다.
+- [x] **Flutter (KAN-54)** — Kakao SDK, secure storage, Dio JWT/단일 refresh, 서버 상태 기반 온보딩·프로필·로그아웃·탈퇴. (완료 기록: [000-frontend-app](../000-frontend-app/implementation.md) 2026-07-27)
+- [x] **Android 실제 E2E (KAN-54)** — 실제 Kakao 로그인부터 탈퇴까지 emulator에서 검증 완료(2026-07-27~31).
 
 ## 구현된 항목
 
@@ -29,11 +29,11 @@
 - [x] `user_consents`와 기존 soft-deleted user 익명화 migration을 단일 Alembic head에 추가했다.
 - [x] 구버전 API와 신버전 migration이 겹치는 배포 구간에도 PII가 남지 않도록 DB trigger를 적용했다.
 
-### Flutter 후속 범위 (KAN-54)
+### Flutter 범위 (KAN-54, 완료)
 
-- [ ] KakaoTalk/Kakao Account 로그인·logout·unlink adapter와 플랫폼 callback 설정.
-- [ ] secure storage, Dio bearer·single-flight refresh, 서버 `onboarding_step` 기반 라우팅.
-- [ ] 프로필·동의·DNA·프로필 수정·로그아웃·탈퇴 재시도 화면과 사용자 상태 동기화.
+- [x] KakaoTalk/Kakao Account 로그인·logout·unlink adapter와 플랫폼 callback 설정.
+- [x] secure storage, Dio bearer·single-flight refresh, 서버 `onboarding_step` 기반 라우팅.
+- [x] 프로필·동의·DNA·프로필 수정·로그아웃·탈퇴 재시도 화면과 사용자 상태 동기화.
 
 ## 검증 결과
 
@@ -41,7 +41,8 @@
 - [x] backend Ruff check/format, Pyright: 통과.
 - [x] onboarding 원자성·멱등성·동시성, 접근 단계, refresh rotation, 탈퇴/익명화 회귀 테스트.
 - [x] migration 빈 DB·기존 head·legacy PII backfill·overlap trigger·단일 head·배포 실패 중단 테스트.
-- [ ] Flutter unit/widget 및 Android E2E 검증은 KAN-54에서 수행한다.
+- [x] Flutter unit/widget 및 Android E2E 검증 (KAN-54).
+- [x] 생년월일 선택 전환(KAN-75)은 BE 3건·FE 위젯 5건으로 검증했다. 실기기 E2E는 재수행하지 않았다.
 
 ## 알려진 한계 / TODO
 
@@ -57,4 +58,6 @@
 |------|------|
 | 2026-07-25 | 승인된 Kakao 통합 인증 범위의 계획 문서 최초 작성 |
 | 2026-07-28 | CodeRabbit 검토 범위 분리를 위해 백엔드·배포를 KAN-53, Flutter와 실제 Android E2E를 KAN-54로 분리 |
+| 2026-08-13 | **생년월일을 선택 필드로 전환(KAN-75)** — `OnboardingProfileRequest.birth_date`를 `date \| None`으로 내리고 `_profile_is_complete`에서 제외했다. 함께 드러난 결함으로 이메일 잠금 기준을 `is_profiled_user`(consent 포함)로 바꿨다. **아래 2026-08-14 항목에서 선택 전환은 되돌렸고, 이메일 잠금은 이메일 폐지로 소멸했다** |
 | 2026-08-13 | **이메일 수집 폐지**. 서비스 어디에서도 쓰이지 않는 PII라 온보딩 입력·`UserProfile` 응답·Kakao user-info 파싱·`users.email` 컬럼·익명화 trigger에서 모두 제거했다. `onboarding_step`의 `profile` 판정과 `ProfiledUser` 조건은 닉네임·생년월일 기준으로 축소됐고, 이메일 변경 차단 규칙과 형식 검증은 함께 소멸했다. 수집 범위 SOT는 [인증 & 보안 컨벤션](../../conventions/auth-security.md). 동의 버전은 수집 항목이 줄어드는 변경이라 `privacy-v1`을 유지했다 |
+| 2026-08-14 | 생년월일을 **다시 필수로 환원**(KAN-74 병합 시 결정). 이메일 폐지로 온보딩 필수 입력이 닉네임 하나만 남는 것을 피하기 위해 KAN-75의 선택 전환을 되돌렸다. `_profile_is_complete`는 닉네임·생년월일 기준이다 |

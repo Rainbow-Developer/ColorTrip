@@ -43,6 +43,8 @@ Kakao Flutter SDK 로그인
 
 `PUT /api/v1/users/me/onboarding-profile`은 프로필과 consent를 한 트랜잭션으로 저장한다. 같은 요청은 멱등하며 필수 동의가 `false`이면 저장하지 않는다. `PATCH /api/v1/users/me`는 닉네임·생년월일을 수정한다.
 
+`birth_date`는 **필수 필드**다. KAN-75에서 잠시 선택으로 내렸으나, 이메일 수집을 폐지하면서 필수 입력이 닉네임 하나만 남는 것을 피하기 위해 되돌렸다.
+
 ```json
 {
   "nickname": "컬러트립",

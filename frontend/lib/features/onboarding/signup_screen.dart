@@ -77,8 +77,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   '기본 정보를 입력해주세요',
                   style: TextStyle(color: AppColors.formLabel, fontSize: 14),
                 ),
-                const SizedBox(height: 16),
-                const _StepProgress(totalSteps: 3, currentStep: 2),
                 const SizedBox(height: 20),
                 Center(
                   child: ProfileImagePicker(
@@ -297,38 +295,6 @@ class _FieldError extends StatelessWidget {
       style: const TextStyle(color: AppColors.danger, fontSize: 12),
     ),
   );
-}
-
-/// 온보딩 단계 표시 막대(3칸 중 N칸 채움). 정확한 단계 정의는 Figma에 명시되지 않아
-/// 회원가입 화면 기준 2/3로 고정했다 — 실제 단계 수/의미가 확정되면 조정 필요.
-class _StepProgress extends StatelessWidget {
-  const _StepProgress({required this.totalSteps, required this.currentStep});
-
-  final int totalSteps;
-  final int currentStep;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < totalSteps; i++)
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: i == totalSteps - 1 ? 0 : 4),
-              child: Container(
-                height: 4,
-                decoration: BoxDecoration(
-                  color: i < currentStep
-                      ? AppColors.primaryDark
-                      : const Color(0xFFEEEEEE),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
 }
 
 class _AgreementCheckbox extends StatefulWidget {

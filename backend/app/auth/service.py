@@ -194,6 +194,7 @@ async def save_onboarding_profile(
         raise AppException(ErrorCode.REQUIRED_CONSENT_ERROR)
 
     current_user = await require_active_user_for_update(session, current_user.id)
+    # 이메일 수집을 폐지해 KAN-75의 이메일 잠금 로직도 함께 사라졌다.
     current_user.nickname = payload.nickname
     current_user.birth_date = payload.birth_date
     decided_at = now_kst()
@@ -371,4 +372,10 @@ async def require_active_user_for_update(session: AsyncSession, user_id: UUID) -
 
 
 def _profile_is_complete(user: User) -> bool:
+    """온보딩 프로필 입력이 끝났는지 — 닉네임과 생년월일 둘 다 있어야 한다.
+
+    이메일은 수집을 폐지해 제외한다. 생년월일은 KAN-75에서 잠시 선택이었으나 이
+    브랜치에서 다시 필수로 되돌렸다 — 회원가입 화면이 두 값을 모두 받으므로 여기서
+    비어 있을 수 없다.
+    """
     return bool(user.nickname and user.nickname.strip() and user.birth_date is not None)

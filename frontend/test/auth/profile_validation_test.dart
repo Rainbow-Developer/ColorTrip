@@ -58,4 +58,14 @@ void main() {
       contains('birthDate'),
     );
   });
+
+  test('rejects a malformed birth date', () {
+    final result = validateOnboardingProfile(
+      nickname: '컬러트립',
+      birthDate: '2000-1-2',
+      today: DateTime(2026, 7, 25),
+    );
+
+    expect(result.errors, contains('birthDate'));
+  });
 }

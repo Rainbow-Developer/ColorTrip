@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/step_progress.dart';
 import '../../data/models/category_vocabulary.dart';
 import '../../data/models/trip_dna_question.dart';
 import '../../state/progress_notifier.dart';
@@ -89,6 +90,22 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // 문항 수만큼 칸을 만들어 지금 몇 번째인지 보여준다(KAN-75).
+                  // 문항 수는 서버 응답에 달려 있어 하드코딩하지 않는다.
+                  Text(
+                    '${_step + 1} / ${questions.length}',
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  StepProgress(
+                    totalSteps: questions.length,
+                    currentStep: _step + 1,
+                  ),
+                  const SizedBox(height: 24),
                   Text(
                     'Q${_step + 1}. ${question.question}',
                     style: const TextStyle(

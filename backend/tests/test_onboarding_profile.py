@@ -179,7 +179,9 @@ def test_birth_date_validation_uses_current_kst_date(
     [
         ({"nickname": "   "}, 422),
         ({"nickname": "가" * 31}, 422),
-        ({"birth_date": (date.today() + timedelta(days=1)).isoformat()}, 422),
+        # 서버는 KST 기준으로 미래 날짜를 판정한다(`now_kst()`). 러너의 로컬 날짜(UTC)로
+        # 계산하면 00~09시 KST 구간에서 "내일"이 KST의 오늘과 같아져 통과해버린다.
+        ({"birth_date": (now_kst().date() + timedelta(days=1)).isoformat()}, 422),
         ({"terms_agreed": False}, 400),
         ({"privacy_agreed": False}, 400),
     ],
@@ -348,3 +350,44 @@ async def test_active_user_can_logout_and_withdraw_before_onboarding(client: Asy
 
     assert logout.status_code == 200
     assert withdrawal.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_onboarding_profile_requires_birth_date(client: AsyncClient) -> None:
+    """생년월일은 필수다 — KAN-75에서 잠시 선택이었으나 이메일 폐지와 함께 되돌렸다.
+
+    빼면 온보딩 필수 입력이 닉네임 하나만 남는다.
+    """
+    login_data = await login(client)
+    payload = _onboarding_payload()
+    payload.pop("birth_date")
+
+    response = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers={"Authorization": f"Bearer {login_data['access_token']}"},
+        json=payload,
+    )
+
+    assert response.status_code == 422
+
+    # null도 거부한다 — 저장된 값을 지우는 경로를 열지 않는다.
+    nulled = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers={"Authorization": f"Bearer {login_data['access_token']}"},
+        json=_onboarding_payload(birth_date=None),
+    )
+    assert nulled.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_onboarding_profile_rejects_unknown_email_field(client: AsyncClient) -> None:
+    """이메일 수집을 폐지했으므로 요청 본문에 email이 오면 거부한다(extra="forbid")."""
+    login_data = await login(client)
+
+    response = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers={"Authorization": f"Bearer {login_data['access_token']}"},
+        json=_onboarding_payload(email="traveler@example.com"),
+    )
+
+    assert response.status_code == 422

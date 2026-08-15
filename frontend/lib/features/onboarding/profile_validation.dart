@@ -2,6 +2,8 @@ class ProfileValidationResult {
   const ProfileValidationResult({required this.errors, this.birthDate});
 
   final Map<String, String> errors;
+
+  /// 파싱된 생년월일 — 필수 항목이라 [errors]가 비어 있으면 항상 non-null이다.
   final DateTime? birthDate;
 }
 
@@ -20,9 +22,10 @@ ProfileValidationResult validateOnboardingProfile({
     errors['nickname'] = '닉네임은 1~30자로 입력해주세요.';
   }
 
+  final normalizedBirthDate = birthDate.trim();
   final match = RegExp(
     r'^(\d{4})[-.](\d{2})[-.](\d{2})$',
-  ).firstMatch(birthDate.trim());
+  ).firstMatch(normalizedBirthDate);
   DateTime? parsedBirthDate;
   if (match != null) {
     final year = int.parse(match.group(1)!);

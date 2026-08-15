@@ -49,4 +49,10 @@ void main() {
       );
     },
   );
+
+  test('omits birth_date from profile update when it is not provided', () {
+    const input = ProfileUpdateInput(nickname: '컬러트립', birthDate: null);
+
+    expect(input.toJson(), {'nickname': '컬러트립'});
+  });
 }

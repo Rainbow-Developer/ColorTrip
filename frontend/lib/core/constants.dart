@@ -218,14 +218,3 @@ const Map<String, List<Color>> regionMapColors = {
     Color(0xFFE3D696),
   ],
 };
-
-/// 지도 범례([core/widgets/map_legend.dart]) 5단계 스와치 — 실제 지역 팔레트는 지역마다
-/// hue가 달라 대표색으로 못 쓰므로, 앱 기존 파스텔 그린 톤(splashCardBackground·
-/// questSelectedBg 계열)에 맞춘 별도 그라데이션을 쓴다(KAN-51).
-const List<Color> mapLegendColors = [
-  Color(0xFFEAF3E4),
-  Color(0xFFD2E7C6),
-  Color(0xFFB6D9A8),
-  Color(0xFF98CB8B),
-  Color(0xFF78BC6E),
-];

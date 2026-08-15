@@ -1,8 +1,12 @@
 """퀘스트 현장 QR 이미지 생성 스크립트 — docs/specs/050-quest-verification/
 
-서명 페이로드(colortrip:quest:{id}:{HMAC-SHA256 16자})를 만들어 PNG로 저장한다.
+서명 페이로드(colortrip:quest:{client_key}:{HMAC-SHA256 16자})를 만들어 PNG로 저장한다.
+식별자는 퀘스트의 **client_key**(`dy3` 등)이며 서버도 같은 기준으로 대조한다(KAN-75) —
+DB UUID가 아니라서 퀘스트를 재시딩해도 인쇄한 QR이 계속 유효하다.
+
 서명 키는 backend/.env의 QR_SECRET_KEY(미설정 시 JWT_SECRET_KEY 파생)를 쓰므로,
-서버와 같은 .env로 실행해야 서버 검증을 통과하는 QR이 나온다.
+서버와 같은 키로 실행해야 서버 검증을 통과하는 QR이 나온다. dev 서버의 키는 Secret
+Manager `colortrip-dev-qr-secret-key`에 있다(deploy/deploy.sh가 주입).
 
 실행 (dev 의존성 필요: uv sync --group dev):
     cd backend && uv run python scripts/generate_quest_qr.py dy3 cj4 ...

@@ -482,6 +482,7 @@ class _InProgressDnaCard extends ConsumerWidget {
         .byId(progress.dnaType ?? 'nature');
 
     String? inProgressLabel;
+    String? inProgressRegionId;
     for (final region in kRegionsInMapOrder) {
       if (progress.tripStatusOf(region.id) != RegionTripStatus.inProgress) {
         continue;
@@ -489,6 +490,7 @@ class _InProgressDnaCard extends ConsumerWidget {
       final trip = progress.tripQuestsOf(region.id);
       final done = trip.where(progress.isCompleted).length;
       inProgressLabel = '${region.name} $done/${trip.length}';
+      inProgressRegionId = region.id;
       break;
     }
 
@@ -504,12 +506,19 @@ class _InProgressDnaCard extends ConsumerWidget {
       child: Column(
         children: [
           if (inProgressLabel != null) ...[
-            Text(
-              '진행중인 여행 · $inProgressLabel',
-              style: const TextStyle(
-                color: AppColors.tripActiveBadgeFg,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+            // KAN-69: 카드를 눌러 해당 지역 "여행하기" 화면으로 이동한다.
+            // 레이아웃은 KAN-73의 압축안(한 줄 · fontSize 13 · 간격 4)을 유지한다 —
+            // 카드가 세로로 과하게 크다는 피드백을 되돌리지 않기 위함(위 주석 참고).
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => context.push('/region/$inProgressRegionId'),
+              child: Text(
+                '진행중인 여행 · $inProgressLabel',
+                style: const TextStyle(
+                  color: AppColors.tripActiveBadgeFg,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
             ),
             const SizedBox(height: 4),

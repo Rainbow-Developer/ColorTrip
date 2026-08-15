@@ -113,11 +113,14 @@ class ProfileUpdateInput {
   const ProfileUpdateInput({required this.nickname, required this.birthDate});
 
   final String nickname;
-  final DateTime birthDate;
+
+  /// null이면 요청에서 생략한다 — 서버는 보내지 않은 필드를 건드리지 않으므로
+  /// "생년월일을 비워둔 채 닉네임만 수정"이 가능해진다(KAN-75).
+  final DateTime? birthDate;
 
   Map<String, dynamic> toJson() => {
     'nickname': nickname.trim(),
-    'birth_date': _date(birthDate),
+    if (birthDate case final value?) 'birth_date': _date(value),
   };
 }
 

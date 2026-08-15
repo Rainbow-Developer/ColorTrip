@@ -102,14 +102,15 @@ def test_local_env_allows_local_defaults() -> None:
 
 
 def test_local_compose_passes_required_kakao_token_info_configuration() -> None:
-    compose = (BACKEND_ROOT / "docker-compose.yml").read_text()
+    compose = (BACKEND_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
 
     assert "KAKAO_APP_ID:" in compose
     assert "KAKAO_TOKEN_INFO_URL:" in compose
 
 
 def test_dev_workflow_validates_kakao_app_id_before_remote_shell() -> None:
-    workflow = (REPOSITORY_ROOT / ".github" / "workflows" / "deploy-dev.yml").read_text()
+    workflow_path = REPOSITORY_ROOT / ".github" / "workflows" / "deploy-dev.yml"
+    workflow = workflow_path.read_text(encoding="utf-8")
 
     assert "KAKAO_APP_ID: ${{ vars.KAKAO_APP_ID }}" in workflow
     assert '[[ ! "${KAKAO_APP_ID}" =~ ^[1-9][0-9]*$ ]]' in workflow

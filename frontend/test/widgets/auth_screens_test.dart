@@ -5,6 +5,7 @@ import 'package:colortrip/core/config/app_config.dart';
 import 'package:colortrip/core/image_picking.dart';
 import 'package:colortrip/core/network/dio_client.dart';
 import 'package:colortrip/core/widgets/profile_image_picker.dart';
+import 'package:colortrip/core/widgets/step_progress.dart';
 import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/repositories/auth_repository.dart';
 import 'package:colortrip/features/onboarding/config_error_app.dart';
@@ -58,6 +59,9 @@ class _Repository implements AuthRepository {
   final List<String> uploadedImages = [];
   int removeImageCalls = 0;
 
+  /// 마지막으로 제출된 온보딩 입력 — 생년월일이 실제로 비어 전송되는지 확인한다.
+  OnboardingProfileInput? submittedProfile;
+
   @override
   Future<UserProfile> fetchCurrentUser() async => user;
 
@@ -83,6 +87,7 @@ class _Repository implements AuthRepository {
   Future<UserProfile> submitOnboardingProfile(
     OnboardingProfileInput input,
   ) async {
+    submittedProfile = input;
     if (submitError case final error?) throw error;
     return user = _user(OnboardingStep.tripDna);
   }
@@ -564,4 +569,37 @@ void main() {
 
     expect(repository.withdrawalCalls, 1);
   });
+
+  testWidgets('signup drops the step bar and requires a birth date', (
+    tester,
+  ) async {
+    // 진행바는 회원가입에서 걷어내 여행 DNA 설문으로 옮겼다(2/3 고정이라 의미가 없었다 —
+    // KAN-75). 생년월일은 이메일 폐지와 함께 다시 필수가 됐다(KAN-74) — 비운 채 제출하면
+    // 서버로 넘어가지 않고 필드 오류가 뜬다.
+    final repository = _Repository(_user(OnboardingStep.profile));
+    final container = await _container(repository);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: SignupScreen()),
+      ),
+    );
+
+    expect(find.byType(StepProgress), findsNothing);
+    expect(find.text('생년월일'), findsOneWidget);
+    expect(find.text('생년월일 (선택)'), findsNothing);
+
+    await tester.tap(find.text('[필수] 이용약관 동의'));
+    await tester.tap(find.text('[필수] 개인정보 처리방침'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('다음'));
+    await tester.tap(find.text('다음'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('생년월일'), findsWidgets);
+    expect(repository.submittedProfile, isNull);
+  });
+
 }

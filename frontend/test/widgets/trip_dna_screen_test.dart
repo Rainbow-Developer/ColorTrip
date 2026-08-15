@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:colortrip/core/widgets/step_progress.dart';
 import 'package:colortrip/data/models/trip_dna_question.dart';
 import 'package:colortrip/data/repositories/trip_dna_repository.dart';
 import 'package:colortrip/features/trip_dna/trip_dna_screen.dart';
@@ -15,6 +16,41 @@ const _questions = [
     options: [
       TripDnaOption(id: 'option-1', label: '숲길을 걸어요'),
       TripDnaOption(id: 'option-2', label: '맛집을 찾아요'),
+    ],
+  ),
+];
+
+const _fourQuestions = [
+  TripDnaQuestion(
+    id: 'question-1',
+    question: '여행 계획을 세울 때 가장 먼저 찾아보는 것은?',
+    options: [
+      TripDnaOption(id: 'option-1', label: '자연 경관'),
+      TripDnaOption(id: 'option-2', label: '맛집'),
+    ],
+  ),
+  TripDnaQuestion(
+    id: 'question-2',
+    question: '아침에 일어나 하고 싶은 일은?',
+    options: [
+      TripDnaOption(id: 'option-3', label: '산책'),
+      TripDnaOption(id: 'option-4', label: '카페'),
+    ],
+  ),
+  TripDnaQuestion(
+    id: 'question-3',
+    question: '완벽한 하루의 마무리는?',
+    options: [
+      TripDnaOption(id: 'option-5', label: '노을'),
+      TripDnaOption(id: 'option-6', label: '야시장'),
+    ],
+  ),
+  TripDnaQuestion(
+    id: 'question-4',
+    question: '친구가 부르는 별명은?',
+    options: [
+      TripDnaOption(id: 'option-7', label: '탐험가'),
+      TripDnaOption(id: 'option-8', label: '미식가'),
     ],
   ),
 ];
@@ -89,6 +125,37 @@ void main() {
     expect(
       tester.getSemantics(option).flagsCollection.isSelected,
       Tristate.isTrue,
+    );
+  });
+
+  testWidgets('shows how far along the survey is across its questions', (
+    tester,
+  ) async {
+    // 회원가입에서 걷어낸 단계 진행바를 여기로 옮겼다 — 문항 수만큼 칸을 만들고
+    // 답할 때마다 채운다(KAN-75).
+    await tester.pumpWidget(_app(_TripRepository([_fourQuestions])));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 / 4'), findsOneWidget);
+    expect(find.byType(StepProgress), findsOneWidget);
+    expect(
+      tester.widget<StepProgress>(find.byType(StepProgress)).totalSteps,
+      4,
+    );
+    expect(
+      tester.widget<StepProgress>(find.byType(StepProgress)).currentStep,
+      1,
+    );
+
+    await tester.tap(find.text('자연 경관'));
+    await tester.pump();
+    await tester.tap(find.text('다음'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 / 4'), findsOneWidget);
+    expect(
+      tester.widget<StepProgress>(find.byType(StepProgress)).currentStep,
+      2,
     );
   });
 }

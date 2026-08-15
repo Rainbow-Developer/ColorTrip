@@ -1,7 +1,7 @@
 """drop users.email
 
 Revision ID: c3d4e5f6a7b8
-Revises: b2c3d4e5f6a7
+Revises: e8c3a91d7f04
 Create Date: 2026-08-13
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "c3d4e5f6a7b8"
-down_revision: str | Sequence[str] | None = "b2c3d4e5f6a7"
+down_revision: str | Sequence[str] | None = "e8c3a91d7f04"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
