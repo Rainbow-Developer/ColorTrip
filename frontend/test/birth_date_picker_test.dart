@@ -139,4 +139,62 @@ void main() {
 
     expect(find.text('picked=1981-06-20T00:00:00.000'), findsOneWidget);
   });
+
+  testWidgets('월 휠도 한 번에 여러 칸 넘어간다', (tester) async {
+    // KAN-89: 월 변경 콜백이 자기 컨트롤러를 jumpToItem 으로 되돌려, 굴려도 한 칸씩만
+    // 움직였다. 연·일 휠에는 같은 되돌림이 없어 증상이 월에만 나타났다.
+    await tester.pumpWidget(
+      _Host(
+        firstDate: DateTime(1980),
+        lastDate: DateTime(2030, 12, 31),
+        initial: DateTime(1990),
+      ),
+    );
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+
+    // 월 휠(두 번째)을 5칸 높이만큼 굴린다 — itemExtent 40 기준 1월 → 6월.
+    await tester.drag(
+      find.byType(CupertinoPicker).at(1),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('선택 완료'));
+    await tester.pumpAndSettle();
+
+    final text = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((t) => t.data ?? '')
+        .firstWhere((t) => t.startsWith('picked='));
+    final picked = DateTime.parse(text.substring('picked='.length));
+    expect(
+      picked.month,
+      greaterThan(2),
+      reason: '한 칸(2월)에서 멈추면 회귀다 (선택된 값: $picked)',
+    );
+  });
+
+  testWidgets('월을 옮겨도 그 달에 없는 일자는 남지 않는다', (tester) async {
+    // 일 범위 재조정은 계속 동작해야 한다 — 월 컨트롤러만 건드리지 않는 것이지
+    // 일 보정을 없앤 게 아니다. 1월 31일에서 2월로 가면 29일(윤년)로 내려와야 한다.
+    await tester.pumpWidget(
+      _Host(
+        firstDate: DateTime(1980),
+        lastDate: DateTime(2030, 12, 31),
+        initial: DateTime(2024, 1, 31), // 2024는 윤년
+      ),
+    );
+    await tester.tap(find.text('열기'));
+    await tester.pumpAndSettle();
+
+    // 월 휠을 한 칸(1월 → 2월) 올린다.
+    await tester.drag(find.byType(CupertinoPicker).at(1), const Offset(0, -40));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('선택 완료'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('picked=2024-02-29T00:00:00.000'), findsOneWidget);
+  });
 }

@@ -106,7 +106,6 @@ class QuestDetailScreen extends ConsumerWidget {
               spacing: 6,
               runSpacing: 6,
               children: [
-
                 QuestTypeBadge(type: quest.type),
                 VerifyBadge(verify: quest.verify),
               ],

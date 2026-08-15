@@ -121,22 +121,37 @@ class _BirthDateWheelsState extends State<_BirthDateWheels> {
     return [for (var day = first; day <= last; day++) day];
   }
 
-  /// 연/월을 바꾸면 월·일의 유효 범위가 달라진다. 벗어난 값은 가장 가까운 유효 값으로
+  /// 연도가 바뀌면 월·일의 유효 범위가 모두 달라진다. 벗어난 값은 가장 가까운 유효 값으로
   /// 옮기고 휠 위치도 함께 맞춘다(휠에 보이는 값과 선택 값이 어긋나지 않게).
-  void _syncMonthAndDay() {
+  void _syncForYearChange() {
     _syncing = true;
     final months = _months;
     if (!months.contains(_month)) {
       _month = _month < months.first ? months.first : months.last;
     }
     _monthController.jumpToItem(months.indexOf(_month));
+    _syncDay();
+    _syncing = false;
+  }
 
+  /// 월이 바뀌면 **일 범위만** 달라진다(월 범위는 연도에만 의존한다).
+  ///
+  /// 여기서 월 컨트롤러를 건드리면 안 된다 — 휠을 굴리는 동안 아이템마다
+  /// `onSelectedItemChanged`가 불리는데 그때마다 `jumpToItem`으로 되돌리면 관성이 끊겨
+  /// **한 칸씩만 움직인다**(KAN-89 사용자 보고). 연·일 휠에 같은 증상이 없던 이유도
+  /// 그쪽은 자기 컨트롤러를 되돌리지 않기 때문이다.
+  void _syncForMonthChange() {
+    _syncing = true;
+    _syncDay();
+    _syncing = false;
+  }
+
+  void _syncDay() {
     final days = _days;
     if (!days.contains(_day)) {
       _day = _day < days.first ? days.first : days.last;
     }
     _dayController.jumpToItem(days.indexOf(_day));
-    _syncing = false;
   }
 
   @override
@@ -170,7 +185,7 @@ class _BirthDateWheelsState extends State<_BirthDateWheels> {
                       suffix: '년',
                       onSelected: (value) => setState(() {
                         _year = value;
-                        _syncMonthAndDay();
+                        _syncForYearChange();
                       }),
                     ),
                   ),
@@ -182,7 +197,7 @@ class _BirthDateWheelsState extends State<_BirthDateWheels> {
                       suffix: '월',
                       onSelected: (value) => setState(() {
                         _month = value;
-                        _syncMonthAndDay();
+                        _syncForMonthChange();
                       }),
                     ),
                   ),
@@ -220,10 +235,15 @@ class _BirthDateWheelsState extends State<_BirthDateWheels> {
       scrollController: controller,
       itemExtent: _itemExtent,
       childCount: values.length,
+      // 선택 강조는 **글자가 비쳐야** 한다 — CupertinoPicker는 이 오버레이를 아이템 위에
+      // 겹쳐 그리므로, 불투명하게 채우면 선택된 값이 통째로 가려진다(KAN-89 사용자 보고).
       selectionOverlay: Container(
         decoration: BoxDecoration(
-          color: AppColors.surfaceMuted,
+          color: AppColors.primaryDark.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: AppColors.primaryDark.withValues(alpha: 0.35),
+          ),
         ),
       ),
       // 휠이 멈춘 위치가 곧 선택 값이다(별도 확인 탭 없이 "선택 완료"로 확정).

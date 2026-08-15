@@ -515,7 +515,6 @@ class _MonthSummaryCard extends StatelessWidget {
 /// 퀘스트 카드의 지역 배지에 쓰는 지역 팔레트 채도 — 5단계 중 3단계(부드러운 중간 톤)에
 /// 대응한다([core/widgets/chungbuk_map.dart]의 mapFillColors, `_mapColorLevel`).
 
-
 /// 지역 섹션 카드 배경에 쓰는 지역 팔레트 채도 — 5단계 중 가장 옅은 1단계.
 const _regionSectionSaturation = 0.1;
 

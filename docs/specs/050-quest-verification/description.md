@@ -20,9 +20,23 @@
 
 ### 위치 기반 인증 (`verify: 'gps'`)
 
-1. "현재 위치로 인증하기" → 위치 권한 요청(`geolocator`) → 현재 좌표 획득.
+1. 화면에 들어가면 **자동으로** 위치 권한 요청(`geolocator`) → 현재 좌표 획득 → 도식에 내 위치를 표시한다(KAN-87). 인증을 눌러야 측위하던 이전 방식으로는 "어느 쪽으로 얼마나 가야 하는지"를 인증 전에 알 수 없었다. 권한은 어차피 인증에 필요하므로 요청 시점만 앞당긴 것이다.
 2. 퀘스트 좌표(`lat`/`lng`, 045에서 보강)와의 하버사인 거리 계산 — 반경(`Quest.verifyRadius`, 미지정 시 `kDefaultVerifyRadiusMeters` = 500m) 이내면 통과. **이 계산은 전부 단말 안에서 수행되고 좌표는 어떤 서버로도 전송되지 않는다** (위치정보법상 신고 비대상 설계 — [location-law-review.md](location-law-review.md)).
 3. 반경 이내일 때만 `POST /quests/{id}/verify`를 **좌표 없이** 호출해 완료를 기록한다. 반경 밖이면 서버를 부르지 않고 실측 거리를 안내한다. 권한 거부·위치 서비스 꺼짐·좌표 없음은 각각 안내 문구를 표시한다.
+
+#### 위치 도식 (KAN-87)
+
+내 위치와 퀘스트 지점의 관계를 화면에 그린다. **외부 지도를 쓰지 않는다** — 구글·네이버·카카오·OSM 등은 현재 위치 기준으로 타일을 요청하므로 좌표가 지도 사업자에게 전송되고, 그 순간 위 불변식("단말을 벗어나면 안 된다")이 깨진다. 대신 `CustomPainter`로 직접 그린다(외부 패키지·네트워크 요청 0건 — 지도 채색의 [chungbuk_map.dart](../../../frontend/lib/core/widgets/chungbuk_map.dart)와 같은 방식).
+
+| 요소 | 표시 |
+|------|------|
+| 퀘스트 지점 | 도식 **중심에 고정** + 마커 |
+| 인증 반경 | 중심 기준 원(`verifyRadius`, 기본 500m) |
+| 내 위치 | 실제 방위·거리에 맞춘 점 — 반경 안이면 통과 색, 밖이면 중립 색 |
+| 축척 | 두 점이 항상 보이도록 자동 조정 |
+| 거리 | 실측 거리 텍스트 |
+
+위경도는 도식의 화면 좌표로 변환되어 painter에만 전달된다. 어떤 네트워크 호출에도 실리지 않으므로 좌표 비전송 불변식은 그대로 유지된다.
 
 이 불변식은 세 겹으로 강제된다(KAN-77 — `a3df7fc`에서 좌표를 전송하도록 이탈했던 회귀를 되돌리며 추가).
 
@@ -62,6 +76,7 @@
 | DB 퀘스트 인증 확장 | MissionType.QR·비전 연동 | `backend/app/quests/verification.py` |
 | QR 생성 | 서명 페이로드 → PNG | `backend/scripts/generate_quest_qr.py` |
 | 인증 화면 3분기 | 사진 업로드·GPS 측위·QR 스캔 | `frontend/lib/features/quests/quest_verify_screen.dart` |
+| 위치 도식 | 내 위치·퀘스트 지점·인증 반경을 그리는 `CustomPainter`(외부 지도 없음, KAN-87) | `frontend/lib/features/quests/gps_verify_map.dart` |
 | 판정 결과 화면 | 실제 AI 판정값 표시 | `frontend/lib/features/quests/photo_verify_result_screen.dart` |
 | 사진 선택 seam | 갤러리·카메라 선택(테스트에서 대체 가능) | `frontend/lib/data/media/photo_picker_gateway.dart` |
 
