@@ -102,6 +102,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
       // 전혀 보이지 않는다. (과거 이 버튼이 두 곳에 동시에 떠 있던 GlobalKey 중복 버그도
       // 함께 있었음 — 이제 body 쪽 하나만 남긴다.)
       body: Stack(
+        fit: StackFit.expand,
         children: [
           SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),

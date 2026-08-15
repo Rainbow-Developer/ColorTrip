@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:colortrip/core/widgets/coach_mark.dart';
 import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/features/home/home_screen.dart';
@@ -277,6 +278,12 @@ void main() {
     expect(find.text('여행을 시작해보세요'), findsOneWidget);
     expect(find.text('여행 시작하기 (1)'), findsOneWidget);
 
+    final paintedScrim = find.byKey(const ValueKey('coach-mark-scrim'));
+    expect(paintedScrim, findsOneWidget);
+    final scrimSize = tester.getSize(paintedScrim);
+    expect(scrimSize.width, tester.view.physicalSize.width);
+    expect(scrimSize.height, greaterThan(1000));
+
     await tester.tap(find.text('도담삼봉에서 인생샷 남기기'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
@@ -287,6 +294,71 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('여행 정보를 입력해주세요'), findsOneWidget);
+  });
+
+  testWidgets('비동기 레이아웃 변경 후 코치마크가 이동한 타겟을 다시 측정한다', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final targetKey = GlobalKey();
+    var targetTop = 120.0;
+    var tapCount = 0;
+    late StateSetter rebuild;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingTourProvider.overrideWith(
+            () => OnboardingTourNotifier(
+              const OnboardingTourState(step: 2, skipped: false),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                rebuild = setState;
+                return Stack(
+                  children: [
+                    Positioned(
+                      top: targetTop,
+                      left: 100,
+                      width: 240,
+                      child: ElevatedButton(
+                        key: targetKey,
+                        onPressed: () => tapCount++,
+                        child: const Text('움직이는 타겟'),
+                      ),
+                    ),
+                    CoachMarkOverlay(
+                      targetKey: targetKey,
+                      stepIndex: 2,
+                      title: '이동 테스트',
+                      body: '레이아웃 변경 후 새 위치를 사용합니다.',
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    rebuild(() => targetTop = 620);
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(const Offset(220, 148));
+    await tester.pump();
+    expect(tapCount, 0);
+
+    await tester.tap(find.text('움직이는 타겟'));
+    await tester.pump();
+    expect(tapCount, 1);
   });
 
   test('기간 표기는 같은 해면 연도를 한 번만 쓴다', () {

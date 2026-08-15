@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,13 +33,32 @@ class CoachMarkOverlay extends ConsumerStatefulWidget {
 }
 
 class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
+  final _overlayKey = GlobalKey();
   Rect? _targetRect;
   Size? _localSize;
+  bool _measureScheduled = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    _scheduleMeasure();
+  }
+
+  @override
+  void didUpdateWidget(covariant CoachMarkOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 추천 퀘스트처럼 비동기 데이터가 도착하면 부모 레이아웃 높이와 하단 CTA 위치가
+    // 달라질 수 있다. 부모가 다시 빌드될 때 실제 타겟 위치를 다음 프레임에서 갱신한다.
+    _scheduleMeasure();
+  }
+
+  void _scheduleMeasure() {
+    if (_measureScheduled) return;
+    _measureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureScheduled = false;
+      if (mounted) unawaited(_measure());
+    });
   }
 
   Future<void> _measure() async {
@@ -50,21 +71,18 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     );
     if (!mounted || !ctx.mounted) return;
     final box = ctx.findRenderObject() as RenderBox?;
-    // 이 위젯 자신의 findRenderObject()가 아니라 부모(실제 Stack)를 써야 한다 — 측정 전
-    // build()는 SizedBox.shrink()(크기 0)를 반환하므로, 자기 자신을 기준 삼으면 항상
-    // 크기가 0으로 잡혀 스포트라이트가 그려지지 않는다.
-    final overlayBox = context.findRenderObject()?.parent as RenderBox?;
+    final overlayBox =
+        _overlayKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || overlayBox == null) return;
-    // Positioned은 이 위젯을 감싼 Stack 기준 좌표계를 쓰므로, 전역(root) 좌표가 아니라
-    // 그 Stack 기준 좌표로 변환해야 위치가 맞는다(AppBar 높이만큼 어긋나는 문제 방지).
-    // localToGlobal(ancestor:)는 실제 조상 관계를 요구해 assert로 죽으므로, 각자 전역
-    // 좌표를 구한 뒤 빼는 방식으로 계산한다. 단, targetKey는 반드시 이 CoachMarkOverlay와
-    // 같은 Stack 안에 있어야 한다 — Scaffold.bottomNavigationBar처럼 body Stack 밖에
-    // 있으면 좌표는 계산되어도 스포트라이트가 body 영역 밖이라 그려지지 않는다.
+    // 타겟과 오버레이의 전역 좌표 차이를 사용해 오버레이 내부 좌표로 변환한다.
+    // StatefulElement에서 임의의 첫 RenderObject를 찾으면 빌드 결과에 따라 기준점이
+    // 달라질 수 있으므로, 화면 전체를 차지하는 [_overlayKey]를 고정 기준으로 사용한다.
     final topLeft =
         box.localToGlobal(Offset.zero) - overlayBox.localToGlobal(Offset.zero);
+    final nextRect = topLeft & box.size;
+    if (_targetRect == nextRect && _localSize == overlayBox.size) return;
     setState(() {
-      _targetRect = topLeft & box.size;
+      _targetRect = nextRect;
       _localSize = overlayBox.size;
     });
   }
@@ -72,7 +90,9 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   @override
   Widget build(BuildContext context) {
     final rect = _targetRect;
-    if (rect == null) return const SizedBox.shrink();
+    if (rect == null) {
+      return Positioned.fill(child: SizedBox.expand(key: _overlayKey));
+    }
 
     final screenSize = _localSize ?? MediaQuery.sizeOf(context);
     const bubbleAllowance = 260.0;
@@ -100,49 +120,66 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     final hole = rect.inflate(8);
 
     return Positioned.fill(
-      child: Stack(
-        children: [
-          // CustomPaint는 히트테스트를 흡수하지 않으므로(시각 효과만 담당) 순수하게 그리기용
-          IgnorePointer(child: CustomPaint(painter: _SpotlightPainter(hole))),
-          _SpotlightHitTestBlocker(passthroughRect: hole),
-          switch (placement) {
-            _BubblePlacement.below => Positioned(
-              left: margin,
-              right: margin,
-              top: rect.bottom + margin,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Icon(Icons.arrow_upward, color: Colors.white, size: 26),
-                  bubble,
-                ],
+      child: SizedBox.expand(
+        key: _overlayKey,
+        child: Stack(
+          children: [
+            // Stack의 일반 자식인 CustomPaint는 기본 크기가 0이다. Positioned.fill로
+            // 오버레이 전체 크기를 강제해야 반투명 딤이 실제 화면 전체에 그려진다.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  key: const ValueKey('coach-mark-scrim'),
+                  painter: _SpotlightPainter(hole),
+                ),
               ),
             ),
-            _BubblePlacement.above => Positioned(
-              left: margin,
-              right: margin,
-              bottom: screenSize.height - rect.top + margin,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  bubble,
-                  const Icon(
-                    Icons.arrow_downward,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                ],
+            Positioned.fill(
+              child: _SpotlightHitTestBlocker(passthroughRect: hole),
+            ),
+            switch (placement) {
+              _BubblePlacement.below => Positioned(
+                left: margin,
+                right: margin,
+                top: rect.bottom + margin,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.arrow_upward,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                    bubble,
+                  ],
+                ),
               ),
-            ),
-            _BubblePlacement.center => Positioned(
-              left: margin,
-              right: margin,
-              top: margin,
-              bottom: margin,
-              child: Center(child: bubble),
-            ),
-          },
-        ],
+              _BubblePlacement.above => Positioned(
+                left: margin,
+                right: margin,
+                bottom: screenSize.height - rect.top + margin,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    bubble,
+                    const Icon(
+                      Icons.arrow_downward,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ],
+                ),
+              ),
+              _BubblePlacement.center => Positioned(
+                left: margin,
+                right: margin,
+                top: margin,
+                bottom: margin,
+                child: Center(child: bubble),
+              ),
+            },
+          ],
+        ),
       ),
     );
   }
