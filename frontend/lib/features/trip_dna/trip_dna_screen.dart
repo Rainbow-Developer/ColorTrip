@@ -135,30 +135,28 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
                   const SizedBox(height: 20),
                   Row(
                     children: [
-                      if (_step > 0) ...[
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _submitting ? null : _previousQuestion,
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(56),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(17),
-                              ),
-                              side: const BorderSide(
-                                color: Color(0xFFB2C2AD),
-                                width: 1.5,
-                              ),
-                              foregroundColor: Colors.black87,
-                              textStyle: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                              ),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: (_submitting || _step == 0) ? null : _previousQuestion,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(17),
                             ),
-                            child: const Text('이전'),
+                            side: BorderSide(
+                              color: _step == 0 ? AppColors.checkboxBorder : const Color(0xFFB2C2AD),
+                              width: 1.5,
+                            ),
+                            foregroundColor: Colors.black87,
+                            textStyle: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
+                          child: const Text('이전'),
                         ),
-                        const SizedBox(width: 12),
-                      ],
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: _submitting
