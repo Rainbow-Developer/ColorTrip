@@ -3,6 +3,7 @@
 규약: docs/conventions/backend.md (설정/환경변수)
 """
 
+import ipaddress
 from typing import Self
 from urllib.parse import urlparse
 
@@ -11,6 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_JWT_SECRET_KEY = "change-me-in-production-32-byte-minimum"
 VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+LOCAL_SHARE_HOSTS = {"localhost", "10.0.2.2"}
 
 
 class Settings(BaseSettings):
@@ -117,7 +119,28 @@ class Settings(BaseSettings):
             raise ValueError(
                 "CORS_ALLOWED_ORIGINS must be a domain whitelist outside local/test environments."
             )
+        share_base_url = urlparse(self.share_base_url)
+        if share_base_url.scheme != "https":
+            raise ValueError("SHARE_BASE_URL must use HTTPS outside local/test environments.")
+        if _is_local_share_host(share_base_url.hostname):
+            raise ValueError(
+                "SHARE_BASE_URL must not use a local host outside local/test environments."
+            )
         return self
+
+
+def _is_local_share_host(hostname: str | None) -> bool:
+    if hostname is None:
+        return True
+
+    normalized = hostname.strip().strip("[]").lower()
+    if normalized in LOCAL_SHARE_HOSTS or normalized.endswith(".localhost"):
+        return True
+
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
 
 
 settings = Settings()  # pyright: ignore[reportCallIssue]  # values may come from environment

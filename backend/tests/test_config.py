@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
+import yaml
 
 from app.core.config import Settings
 
@@ -68,9 +69,54 @@ def test_non_local_env_accepts_required_auth_settings() -> None:
         kakao_rest_api_key="test-kakao-rest-api-key",
         kakao_redirect_uri="https://example.com/auth/kakao/callback",
         cors_allowed_origins="https://example.com",
+        share_base_url="https://colortrip.p-e.kr",
     )
 
     assert settings.app_env == "dev"
+    assert settings.share_base_url == "https://colortrip.p-e.kr"
+
+
+def test_non_local_env_rejects_default_share_base_url() -> None:
+    with pytest.raises(ValueError, match="SHARE_BASE_URL must use HTTPS"):
+        _settings(
+            app_env="dev",
+            jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
+            kakao_rest_api_key="test-kakao-rest-api-key",
+            kakao_redirect_uri="https://example.com/auth/kakao/callback",
+            cors_allowed_origins="https://example.com",
+        )
+
+
+def test_non_local_env_rejects_http_share_base_url() -> None:
+    with pytest.raises(ValueError, match="SHARE_BASE_URL must use HTTPS"):
+        _settings(
+            app_env="dev",
+            jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
+            kakao_rest_api_key="test-kakao-rest-api-key",
+            kakao_redirect_uri="https://example.com/auth/kakao/callback",
+            cors_allowed_origins="https://example.com",
+            share_base_url="http://colortrip.p-e.kr",
+        )
+
+
+@pytest.mark.parametrize(
+    "share_base_url",
+    [
+        "https://localhost:8000",
+        "https://127.0.0.1:8000",
+        "https://10.0.2.2:8000",
+    ],
+)
+def test_non_local_env_rejects_local_share_base_url(share_base_url: str) -> None:
+    with pytest.raises(ValueError, match="SHARE_BASE_URL must not use a local host"):
+        _settings(
+            app_env="dev",
+            jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
+            kakao_rest_api_key="test-kakao-rest-api-key",
+            kakao_redirect_uri="https://example.com/auth/kakao/callback",
+            cors_allowed_origins="https://example.com",
+            share_base_url=share_base_url,
+        )
 
 
 @pytest.mark.parametrize("kakao_app_id", [0, -1])
@@ -118,10 +164,15 @@ def test_local_env_allows_local_defaults() -> None:
 
 def test_local_compose_passes_required_kakao_token_info_configuration() -> None:
     compose = (BACKEND_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    data = yaml.safe_load(compose)
+    api_environment = data["services"]["api"]["environment"]
 
-    assert "KAKAO_APP_ID:" in compose
-    assert "KAKAO_TOKEN_INFO_URL:" in compose
-    assert "SHARE_BASE_URL:" in compose
+    assert api_environment["KAKAO_APP_ID"].startswith("${KAKAO_APP_ID:")
+    assert (
+        api_environment["KAKAO_TOKEN_INFO_URL"]
+        == "${KAKAO_TOKEN_INFO_URL:-https://kapi.kakao.com/v1/user/access_token_info}"
+    )
+    assert api_environment["SHARE_BASE_URL"] == "${SHARE_BASE_URL:-http://10.0.2.2:8000}"
 
 
 def test_dev_workflow_validates_kakao_app_id_before_remote_shell() -> None:

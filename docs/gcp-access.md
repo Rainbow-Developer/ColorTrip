@@ -64,7 +64,7 @@ GitHub repo Actions variables 에 넣을 값:
 | `KAKAO_APP_ID` | Kakao token info의 `app_id`와 일치하는 양의 정수 앱 ID |
 | `API_DOMAIN` | `colortrip.p-e.kr` — Caddy가 Let's Encrypt 인증서를 발급받을 호스트명 |
 
-> `API_DOMAIN`이 없거나 호스트명 형식이 아니면 배포가 시작 단계에서 실패합니다([deploy-dev.yml](../.github/workflows/deploy-dev.yml)). 도메인을 바꾸는 경우 이 값만 교체하면 됩니다 — [065-dev-https](specs/065-dev-https/).
+> 도메인을 바꾸기 전에 새 호스트의 DNS 레코드가 `34.64.226.70`을 가리키고 외부에서 80/443 포트에 도달하는지 확인해야 합니다. Caddy ACME 인증서 발급과 공개 공유 링크가 이 호스트를 전제로 하며, 확인 후 `API_DOMAIN`만 교체합니다 — [065-dev-https](specs/065-dev-https/).
 
 네 값은 인증 비밀값이 아니라 WIF provider·서비스 계정·Kakao 앱·API 호스트명을 가리키는 식별자이므로 GitHub repository variables 로 관리합니다. Actions 는 OIDC 토큰으로 단기 자격 증명을 발급받으며, 서비스 계정 키나 앱 시크릿을 GitHub 에 저장하지 않습니다. 실제 앱 시크릿은 아래 GCP Secret Manager 에서 관리합니다.
 

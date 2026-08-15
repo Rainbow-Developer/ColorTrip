@@ -51,7 +51,7 @@ sequenceDiagram
 
 | 이름 | 값 | 비고 |
 |------|-----|------|
-| `API_DOMAIN` | `colortrip.p-e.kr` | 도메인을 바꾸면 이 값만 교체 |
+| `API_DOMAIN` | `colortrip.p-e.kr` | 도메인을 바꾸기 전 DNS가 `34.64.226.70`을 가리키고 80/443이 외부에서 열려 있는지 확인 |
 
 **앱 빌드 측** — 릴리스 APK는 https 주소로 빌드한다.
 

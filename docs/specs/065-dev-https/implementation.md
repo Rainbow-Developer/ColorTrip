@@ -39,7 +39,7 @@
 
 ## 알려진 한계 / TODO
 
-- **DNS 설정 의존성**: `colortrip.p-e.kr`가 고정 퍼블릭 IP `34.64.226.70`을 가리켜야 한다. 교체 시 `API_DOMAIN` variable 값만 바꾸면 되도록 설계했다.
+- **DNS 설정 의존성**: `colortrip.p-e.kr`가 고정 퍼블릭 IP `34.64.226.70`을 가리켜야 한다. 도메인을 바꾸기 전 새 호스트의 DNS 레코드와 외부 80/443 포트 도달성을 확인해야 하며, Caddy ACME 인증서 발급과 공개 공유 링크가 이 호스트를 전제로 한다.
 - **`docs/app-run-guide.md`가 낡았다.** 하드코딩 Bearer 토큰 기준으로 쓰여 있는데 실제 코드는 카카오 로그인으로 전환됐다(`dio_client.dart`에 토큰 없음). 이 스펙 범위에서 함께 정리한다.
 - **prod 환경은 미적용.** 현재 배포 파이프라인이 dev 단일 환경만 다룬다.
 - 릴리스 APK는 여전히 **debug 키로 서명**된다 — 스토어 업로드 불가. [release.md](../../conventions/release.md) 경로 별개.
