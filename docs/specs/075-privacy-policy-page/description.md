@@ -10,7 +10,7 @@ Google Play 등록에 필요한 개인정보처리방침을 공개 URL(`GET /pri
 
 1. 사용자가 회원가입 화면에서 "[필수] 개인정보 수집 동의" 라벨을 탭한다.
 2. 앱이 `AppConfig.apiBaseUrl`의 origin(`scheme://host[:port]`)에 `/privacy`를 붙여 URL을
-   계산한다 (예: `API_BASE_URL=https://34-64-226-70.sslip.io/api/v1` → `https://34-64-226-70.sslip.io/privacy`).
+   계산한다 (예: `API_BASE_URL=https://colortrip.p-e.kr/api/v1` → `https://colortrip.p-e.kr/privacy`).
 3. `url_launcher`로 외부 브라우저를 열어 그 URL로 이동시킨다.
 4. backend `GET /privacy`가 인증 없이 정적 HTML을 반환한다. 본문 하단에 현재 동의 버전
    (`privacy-v1`)을 표시한다.
@@ -32,12 +32,12 @@ Play 심사 봇이나 사용자가 이 URL을 직접 열어도 동일하게 동�
 
 - 별도 환경변수·dart-define 없음 — 기존 `API_BASE_URL` 빌드값을 그대로 사용한다.
 - 로컬 확인: backend 기동 후 `curl http://localhost:8000/privacy` (또는 dev 서버
-  `https://34-64-226-70.sslip.io/privacy`).
+  `https://colortrip.p-e.kr/privacy`).
 
 ## 예시
 
 ```http
-GET https://34-64-226-70.sslip.io/privacy
+GET https://colortrip.p-e.kr/privacy
 
 200 OK
 Content-Type: text/html

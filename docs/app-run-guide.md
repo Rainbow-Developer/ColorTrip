@@ -34,12 +34,12 @@ docker compose exec api uv run python -m app.integrations.tour_api.loader
 로컬 백엔드를 띄우기 싫으면 팀 dev 서버를 그대로 쓰면 됩니다. HTTPS로 서비스됩니다.
 
 ```bash
-curl https://34-64-226-70.sslip.io/health
+curl https://colortrip.p-e.kr/health
 ```
 
 | 대상 | `API_BASE_URL` | 빌드 모드 |
 |------|----------------|----------|
-| 팀 dev 서버 (HTTPS) | `https://34-64-226-70.sslip.io/api/v1` | debug · release 모두 가능 |
+| 팀 dev 서버 (HTTPS) | `https://colortrip.p-e.kr/api/v1` | debug · release 모두 가능 |
 | 로컬 백엔드 (HTTP) | `http://10.0.2.2:8000/api/v1` | **debug만** — release는 평문 차단 |
 
 ### 인증은 카카오 로그인입니다
@@ -126,7 +126,7 @@ adb install -r frontend/build/app/outputs/flutter-apk/app-debug.apk
 팀 dev 서버(HTTPS)에 붙일 거라면 릴리스 빌드도 됩니다.
 
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://34-64-226-70.sslip.io/api/v1"
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://colortrip.p-e.kr/api/v1"
 ```
 
 > **주의 — 릴리스 빌드는 평문 HTTP를 통신하지 못합니다.** `targetSdk=36`인데 메인 매니페스트에 `usesCleartextTraffic`이 없어 Android가 cleartext를 차단합니다(`network_security_config`는 debug 매니페스트에만 있습니다). 즉 릴리스 APK로는 **로컬 백엔드(`http://...`)에 절대 붙지 않습니다.** 로컬을 보려면 debug를 쓰고, 릴리스는 HTTPS 주소(dev 서버)로만 빌드하세요. 배경: [065-dev-https](specs/065-dev-https/)
@@ -166,7 +166,7 @@ flutter run
 
 | 상황 | `API_BASE_URL` | 빌드 모드 |
 |------|----------------|----------|
-| 팀 dev 서버 (가장 쉬움) | `https://34-64-226-70.sslip.io/api/v1` | debug · release 모두 |
+| 팀 dev 서버 (가장 쉬움) | `https://colortrip.p-e.kr/api/v1` | debug · release 모두 |
 | 내 PC의 로컬 백엔드 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` | **debug만** (평문) |
 | 서버 없이 화면만 보기 | 닿지 않는 주소(예: `http://127.0.0.1:1`) | debug |
 
@@ -177,7 +177,7 @@ flutter run
 ### 3-0. 팀 dev 서버로 빌드 (권장)
 
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://34-64-226-70.sslip.io/api/v1"
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://colortrip.p-e.kr/api/v1"
 ```
 
 아래 3-1 ~ 3-3은 **로컬 백엔드에 붙일 때만** 필요합니다.
@@ -263,7 +263,7 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 
 2026-08-06에는 dev 서버 HTTPS 적용([065-dev-https](specs/065-dev-https/))과 함께 다음을 확인했습니다.
 
-- `https://34-64-226-70.sslip.io/health` 200, Let's Encrypt 인증서 유효(만료 2026-11-04), HTTP→HTTPS 308 리다이렉트
+- `https://colortrip.p-e.kr/health` 200, Let's Encrypt 인증서 유효(만료 2026-11-04), HTTP→HTTPS 308 리다이렉트
 - dev 서버 라우트 29개 정상 등록(이전 배포 실패로 4개에 멈춰 있던 상태 해소)
 - 릴리스 APK가 HTTPS dev 서버 주소로 빌드·설치·기동
 

@@ -1,6 +1,10 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/constants.dart';
@@ -12,8 +16,8 @@ import '../../state/progress_notifier.dart';
 import '../../state/auth_controller.dart';
 import '../../state/repository_providers.dart';
 
-/// 공유 카드 만들기 — Figma 스펙(2026-07-08 공유) 반영. 이미지 저장은 아직 실제 내보내기
-/// 없이 토스트로 흉내만 낸다(실 구현은 후속 작업, [implementation.md] 참고). 공유·링크 복사는
+/// 공유 카드 만들기 — Figma 스펙(2026-07-08 공유) 반영. 이미지 저장은 미리보기 카드를
+/// [RepaintBoundary]로 캡처해 `gal` 패키지로 갤러리에 저장한다(KAN-072). 공유·링크 복사는
 /// 실제 `POST /shares`로 링크를 발급받아 안드로이드 네이티브 공유 시트·클립보드에 사용한다
 /// ([060-share-native-experience]).
 class ShareCardScreen extends ConsumerStatefulWidget {
@@ -34,9 +38,67 @@ extension on _ShareStyle {
   };
 }
 
+typedef ShareImageSaver =
+    Future<void> Function(Uint8List bytes, {required String name});
+
+final shareImageSaverProvider = Provider<ShareImageSaver>(
+  (ref) =>
+      (bytes, {required name}) => Gal.putImageBytes(bytes, name: name),
+);
+
 class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
+  final _previewKey = GlobalKey();
   _ShareStyle _style = _ShareStyle.mapAndDna;
   bool _isLinking = false;
+  bool _isSaving = false;
+
+  Future<void> _saveImage() async {
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    setState(() => _isSaving = true);
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      final boundary =
+          _previewKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw StateError('Share preview is not ready.');
+      }
+      // 기기 배율(devicePixelRatio)로 캡처해야 저장된 이미지가 흐릿하지 않다.
+      final image = await boundary.toImage(pixelRatio: pixelRatio);
+      final ByteData? byteData;
+      try {
+        byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      } finally {
+        image.dispose();
+      }
+      if (byteData == null) {
+        throw StateError('Could not encode the share preview.');
+      }
+      final bytes = byteData.buffer.asUint8List(
+        byteData.offsetInBytes,
+        byteData.lengthInBytes,
+      );
+      await ref.read(shareImageSaverProvider)(
+        bytes,
+        name: 'colortrip_share_${DateTime.now().millisecondsSinceEpoch}',
+      );
+      if (!mounted) return;
+      showAppToast(context, '이미지가 저장되었어요');
+    } on GalException catch (error) {
+      if (!mounted) return;
+      final message = switch (error.type) {
+        GalExceptionType.accessDenied => '이미지 저장 권한이 필요해요. 설정에서 허용해주세요.',
+        GalExceptionType.notEnoughSpace => '저장 공간이 부족해요.',
+        GalExceptionType.notSupportedFormat ||
+        GalExceptionType.unexpected => '이미지 저장에 실패했어요. 다시 시도해주세요.',
+      };
+      showAppToast(context, message);
+    } catch (_) {
+      if (mounted) showAppToast(context, '이미지 저장에 실패했어요. 다시 시도해주세요.');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
 
   Future<String?> _createShareLink() async {
     setState(() => _isLinking = true);
@@ -93,58 +155,78 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.tripActiveBadgeBg,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    user?.nickname == null
-                        ? '나의 여행 지도'
-                        : '${user!.nickname}님의 여행 지도',
-                    style: TextStyle(
-                      color: AppColors.tripActiveBadgeFg,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  if (_style != _ShareStyle.dnaOnly)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.shareMapPreviewBg,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: ChungbukMap(
-                        regionSaturation: {
-                          for (final region in kRegions)
-                            region.id: progress.regionSaturation(region.id),
-                        },
+            RepaintBoundary(
+              key: _previewKey,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.tripActiveBadgeBg,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      user?.nickname == null
+                          ? '나의 여행 지도'
+                          : '${user!.nickname}님의 여행 지도',
+                      style: TextStyle(
+                        color: AppColors.tripActiveBadgeFg,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
                       ),
                     ),
-                  if (_style != _ShareStyle.dnaOnly) const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      if (_style != _ShareStyle.dnaOnly) ...[
-                        _ShareStat(
-                          label: '완료 지역',
-                          value: '${progress.completedRegionCount}',
+                    const SizedBox(height: 10),
+                    if (_style != _ShareStyle.dnaOnly)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.shareMapPreviewBg,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        _ShareStat(label: '진행률', value: '$progressPct%'),
-                      ],
-                      if (_style != _ShareStyle.mapOnly)
-                        _ShareStat(
-                          label: dna.name.replaceAll(' 여행자', ''),
-                          value: dna.icon,
+                        child: ChungbukMap(
+                          regionSaturation: {
+                            for (final region in kRegions)
+                              region.id: progress.regionSaturation(region.id),
+                          },
                         ),
+                      ),
+                    if (_style != _ShareStyle.dnaOnly)
+                      const SizedBox(height: 12),
+                    if (_style != _ShareStyle.dnaOnly)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _ShareStat(
+                            label: '완료 지역',
+                            value: '${progress.completedRegionCount}',
+                          ),
+                          _ShareStat(label: '진행률', value: '$progressPct%'),
+                        ],
+                      ),
+                    if (_style != _ShareStyle.mapOnly) ...[
+                      if (_style != _ShareStyle.dnaOnly)
+                        const SizedBox(height: 14),
+                      Text(
+                        dna.name,
+                        style: const TextStyle(
+                          color: AppColors.tripActiveBadgeFg,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        dna.desc,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.primaryDark,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
                     ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -157,7 +239,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
               children: [
                 Expanded(
                   child: _StyleOption(
-                    label: '지도 +\nDNA',
+                    label: '지도 + DNA',
                     selected: _style == _ShareStyle.mapAndDna,
                     onTap: () => setState(() => _style = _ShareStyle.mapAndDna),
                   ),
@@ -184,16 +266,18 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => showAppToast(context, '이미지가 저장되었어요'),
-                    child: const Text('📸 이미지 저장'),
+                  child: OutlinedButton.icon(
+                    onPressed: _isSaving ? null : _saveImage,
+                    icon: const Icon(Icons.download, size: 18),
+                    label: const Text('이미지 저장'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: OutlinedButton(
+                  child: OutlinedButton.icon(
                     onPressed: _isLinking ? null : _copyLink,
-                    child: const Text('🔗 링크 복사'),
+                    icon: const Icon(Icons.link, size: 18),
+                    label: const Text('링크 복사'),
                   ),
                 ),
               ],
@@ -267,6 +351,8 @@ class _StyleOption extends StatelessWidget {
         child: Text(
           label,
           textAlign: TextAlign.center,
+          maxLines: 1,
+          softWrap: false,
           style: TextStyle(
             color: selected
                 ? AppColors.primaryDark

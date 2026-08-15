@@ -103,6 +103,6 @@ sequenceDiagram
   Play Console 등록 전에 사람이 법적 유효성을 검토해야 한다. 페이지 자체에는 "초안" 표시를
   넣지 않는다(실사용자에게 노출되는 공개 문서이므로) — 대신 이 리스크를 PR·Jira에 명시하고
   검토 완료 전까지는 Play Console에 등록하지 않는다.
-- **정식 도메인 미확정**: 현재 URL은 `34-64-226-70.sslip.io`([065-dev-https](../065-dev-https/description.md))
-  기반 dev 서버 주소다. 정식 도메인이 생기면 이 페이지 URL도 함께 바뀌므로 Play Console 등록
+- **도메인 변경 의존성**: 현재 URL은 `colortrip.p-e.kr`([065-dev-https](../065-dev-https/description.md))
+  기반 dev 서버 주소다. 도메인을 바꾸면 이 페이지 URL도 함께 바뀌므로 Play Console 등록
   시점에 재확인이 필요하다.

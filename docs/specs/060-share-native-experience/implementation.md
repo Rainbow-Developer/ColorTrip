@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | 상태 | 진행 중 |
-| 최종 업데이트 | 2026-08-02 |
+| 최종 업데이트 | 2026-08-15 |
 
 ## 구현 규모 / 단위 분할
 
@@ -20,6 +20,9 @@
 - [x] `share_plus`로 네이티브 공유 시트 연동, `Clipboard.setData`로 실제 링크 복사(둘 다 로컬 백엔드 대상 Playwright로 검증 — 실제 `POST /api/v1/shares` 201 호출 확인, 클립보드에 실제 URL 기록 확인)
 - [x] `AndroidManifest.xml`에 `colortrip://share` 커스텀 스킴 intent-filter 추가(코드 작성만, 실기기 검증은 미완료)
 - [x] `GET /share/{share_code}` HTML 랜딩 라우트(`shares/router.py`) — 닉네임·진행률·DNA·색칠 지역 표시, "앱에서 열기"/"앱 다운받기" 버튼, 존재하지 않는 코드는 404 HTML(로컬에서 200/404 둘 다 curl로 검증). `MAP`/`DNA`/`MAP_AND_DNA` 스타일별 필터링(각각 DNA·색칠 지역이 빠지는지)은 `backend/tests/test_shares.py`에 자동화 테스트로 추가해 검증함.
+- [x] 공유 URL의 존재하지 않는 고정 도메인을 제거하고 `SHARE_BASE_URL` 설정으로 환경별 공개 origin을 주입
+- [x] 공유 스타일 라벨을 한 줄로 표시하고 DNA 아이콘 대신 유형명과 설명을 노출
+- [x] 공유 미리보기를 PNG로 캡처해 Android/iOS 사진 보관함에 저장
 
 ## 미구현 / 남은 항목
 - [ ] 실제 안드로이드 기기 또는 에뮬레이터에서 `colortrip://share/{code}` 링크가 앱을 실행하는지 검증 — 현재는 `AndroidManifest.xml` intent-filter 추가만 하고 실기기 확인 전.
@@ -35,3 +38,4 @@
 |------|------|
 | 2026-08-02 | 최초 작성 |
 | 2026-08-02 | 구현 완료 — 지도 미리보기·공유 API 연동·안드로이드 커스텀 스킴·공유 랜딩 페이지 |
+| 2026-08-15 | KAN-072 후속 — 공유 URL 환경설정·스타일/DNA 표현·이미지 저장 보완 |

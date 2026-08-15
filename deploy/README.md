@@ -16,7 +16,7 @@ Flutter 클라이언트 소스는 `frontend/`에 있지만 모바일 앱으로 �
 ### HTTPS
 
 `api`는 **호스트 포트를 열지 않는다.** 외부 노출은 `caddy`만 담당하므로 평문으로 API에
-직접 닿는 경로가 없다. 설계와 근거(왜 Caddy·왜 sslip.io)는
+직접 닿는 경로가 없다. 설계와 근거(왜 Caddy·왜 `colortrip.p-e.kr`)는
 [docs/specs/065-dev-https/](../docs/specs/065-dev-https/)에 있다.
 
 안드로이드 **릴리스 APK는 평문 HTTP를 차단**하므로(`targetSdk=36`, `usesCleartextTraffic`
@@ -66,7 +66,7 @@ PY
 | Variable | 값 | 용도 |
 |----------|-----|------|
 | `KAKAO_APP_ID` | `1522375` | Kakao access token의 `app_id` 검증 |
-| `API_DOMAIN` | `34-64-226-70.sslip.io` | Caddy 인증서 발급 호스트명 |
+| `API_DOMAIN` | `colortrip.p-e.kr` | Caddy 인증서 발급 호스트명 |
 
 `CORS_ALLOWED_ORIGINS`(콤마 구분 도메인 화이트리스트)는 `deploy.sh`에서 빈 값으로 고정한다.
 현재 브라우저에서 API를 호출하는 웹 프론트가 없어 화이트리스트를 비워도 검증(`local`/`test`
@@ -80,7 +80,7 @@ docker compose --env-file .env up -d
 docker compose logs -f api
 ```
 
-확인: `curl https://34-64-226-70.sslip.io/health` → `{"status":"ok"}` 형태의 Envelope 응답.
+확인: `curl https://colortrip.p-e.kr/health` → `{"status":"ok"}` 형태의 Envelope 응답.
 HTTP로 접근하면 Caddy가 HTTPS로 리다이렉트한다.
 
 ## 자동화

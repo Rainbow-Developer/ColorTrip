@@ -3,6 +3,7 @@
 규약: docs/conventions/backend.md (설정/환경변수)
 """
 
+import ipaddress
 from typing import Self
 from urllib.parse import urlparse
 
@@ -11,6 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_JWT_SECRET_KEY = "change-me-in-production-32-byte-minimum"
 VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+LOCAL_SHARE_HOSTS = {"localhost", "10.0.2.2"}
 
 
 class Settings(BaseSettings):
@@ -58,6 +60,11 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"  # 로컬 스토리지 경로(개발·테스트)
     max_upload_size_mb: int = 10
 
+    # 공유 링크 발급 시 붙일 공개 도메인(Caddy가 서비스하는 HTTPS 호스트) — 미설정 시
+    # 로컬 백엔드를 직접 가리킨다. 배포 환경에서는 deploy/docker-compose.yml이 API_DOMAIN에서
+    # 파생해 주입한다(KAN-072 — 존재하지 않는 도메인으로 하드코딩되어 공유 링크가 무효했던 문제).
+    share_base_url: str = "http://localhost:8000"
+
     # CORS — docs/conventions/auth-security.md (허용 도메인 화이트리스트)
     # 콤마 구분 도메인 목록. local/test는 "*" 허용, 그 외는 화이트리스트 필수
     cors_allowed_origins: str = "*"
@@ -73,6 +80,15 @@ class Settings(BaseSettings):
         parsed = urlparse(normalized)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             raise ValueError("KAKAO_TOKEN_INFO_URL must be a valid HTTP(S) URL.")
+        return normalized
+
+    @field_validator("share_base_url")
+    @classmethod
+    def validate_share_base_url(cls, value: str) -> str:
+        normalized = value.strip().rstrip("/")
+        parsed = urlparse(normalized)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("SHARE_BASE_URL must be an absolute HTTP(S) URL.")
         return normalized
 
     @model_validator(mode="after")
@@ -103,7 +119,28 @@ class Settings(BaseSettings):
             raise ValueError(
                 "CORS_ALLOWED_ORIGINS must be a domain whitelist outside local/test environments."
             )
+        share_base_url = urlparse(self.share_base_url)
+        if share_base_url.scheme != "https":
+            raise ValueError("SHARE_BASE_URL must use HTTPS outside local/test environments.")
+        if _is_local_share_host(share_base_url.hostname):
+            raise ValueError(
+                "SHARE_BASE_URL must not use a local host outside local/test environments."
+            )
         return self
+
+
+def _is_local_share_host(hostname: str | None) -> bool:
+    if hostname is None:
+        return True
+
+    normalized = hostname.strip().strip("[]").lower()
+    if normalized in LOCAL_SHARE_HOSTS or normalized.endswith(".localhost"):
+        return True
+
+    try:
+        return ipaddress.ip_address(normalized).is_loopback
+    except ValueError:
+        return False
 
 
 settings = Settings()  # pyright: ignore[reportCallIssue]  # values may come from environment
