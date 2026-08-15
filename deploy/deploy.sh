@@ -147,6 +147,16 @@ done
 echo "Alembic migration 적용"
 # migration 실패 시 set -e에 의해 기존 API를 교체하기 전에 종료한다.
 # 개인정보 익명화는 되돌릴 수 없으므로 자동 downgrade하지 않는다.
+#
+# ⚠️ 비-additive migration(컬럼·테이블 DROP, NOT NULL 추가, 타입 변경)은 이 순서에서
+#    아래 두 가지를 감수한다. 출시 후에는 2단계 배포로 나눠야 한다
+#    (docs/conventions/infra-deploy.md "비-additive 스키마 변경").
+#
+#    1. 짧은 5xx 구간 — 여기서 스키마가 바뀌고 나서 다음 줄의 컨테이너 교체가 끝날
+#       때까지, 구 이미지가 사라진 컬럼을 SELECT 하다 실패한다(보통 수 초).
+#    2. 롤백 불가 — 구 이미지는 새 스키마에서 아예 뜨지 않으므로 이미지만 되돌릴 수
+#       없다. 되돌리려면 alembic downgrade를 수동 실행해야 하고, DROP된 데이터는
+#       돌아오지 않는다. 사실상 fix-forward만 가능하다.
 sudo docker compose run --rm --no-deps api uv run alembic upgrade head
 
 sudo docker compose up -d --no-deps api

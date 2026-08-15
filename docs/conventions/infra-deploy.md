@@ -19,6 +19,7 @@
 | 시크릿 관리 | GCP Secret Manager | DB 비밀번호 등. SOT는 [auth-security](./auth-security.md) |
 | 컨테이너 레지스트리 | Artifact Registry | `asia-northeast3-docker.pkg.dev/colortrip/colortrip-<env>` |
 | CI/CD | GitHub Actions dev 자동 배포 | 이미지 빌드→Artifact Registry 푸시→Alembic migration→API 교체 |
+| 비-additive 스키마 변경 | 출시 전은 단일 배포 허용, **출시 후는 2단계 배포 필수** | 컬럼·테이블 DROP, NOT NULL 추가, 타입 변경. 근거는 아래 규칙 참고 |
 | HTTPS(TLS 종단) | **Caddy 리버스 프록시** + Let's Encrypt 자동 발급 | `api`는 호스트 포트를 열지 않고 Caddy만 80·443 노출. 설계: [065-dev-https](../specs/065-dev-https/) |
 | 도메인 | **sslip.io 와일드카드 DNS** (`34-64-226-70.sslip.io`) | 임시. 정식 도메인 구매는 후속 — GitHub variable `API_DOMAIN` 값만 교체하면 된다 |
 
@@ -34,6 +35,11 @@
 - 환경은 dev / prod 2환경으로 분리하되, 현재는 dev를 먼저 구축하고 prod는 이후 추가한다.
 - dev CI/CD는 GitHub Actions로 API 이미지를 만들고 Artifact Registry에 푸시한 뒤 인스턴스에 배포한다.
 - 새 API 교체 전 같은 이미지로 `alembic upgrade head`를 실행하며, migration 실패 시 기존 API를 유지하고 배포를 실패 처리한다.
+- **비-additive 스키마 변경**(컬럼·테이블 DROP, NOT NULL 추가, 타입 변경)은 이 순서에서 두 가지를 감수한다.
+  - migration이 끝난 뒤 컨테이너 교체가 끝날 때까지, 구 이미지가 없어진 컬럼을 조회하다 실패해 **짧은 5xx 구간**이 생긴다(보통 수 초).
+  - 구 이미지는 새 스키마에서 뜨지 않으므로 **이미지 롤백이 불가능**하다. 되돌리려면 `alembic downgrade`를 수동 실행해야 하고 DROP된 데이터는 돌아오지 않는다 — 사실상 fix-forward만 가능하다.
+  - **출시 전에는 그대로 진행해도 된다.** 출시 후에는 2단계로 나눈다 — ① 해당 컬럼을 더 이상 읽지 않는 코드를 먼저 배포하고 ② 다음 배포에서 컬럼을 삭제한다.
+  - 적용 사례: `users.email` 삭제(`c3d4e5f6a7b8`, KAN-74) — 출시 전이라 단일 배포로 진행했다.
 - 컨테이너 이미지는 Artifact Registry에 보관한다.
 - **API는 HTTPS로만 외부에 노출한다.** Caddy가 TLS를 종단하고 `api` 컨테이너는 compose 내부망에만 둔다(평문 우회 경로 제거). 안드로이드 릴리스 APK가 평문 HTTP를 차단하므로 HTTPS는 앱 연동의 전제 조건이다.
 - 인증서는 Let's Encrypt에서 자동 발급·갱신하고 `caddy-data` 볼륨에 영속화한다(재발급 rate limit 회피).
