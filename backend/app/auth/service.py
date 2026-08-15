@@ -227,7 +227,13 @@ async def replace_profile_image(
     통과해 사진 인증에 재사용될 수 있다 (080-profile-image 의사결정 4).
     """
     image = await uploads_service.store_uploaded_image(file, storage, prefix="avatars")
-    user = await require_active_user_for_update(session, current_user.id)
+    try:
+        user = await require_active_user_for_update(session, current_user.id)
+    except Exception:
+        # 업로드 도중 다른 기기에서 탈퇴가 끝나면 여기서 막힌다. 이미 저장된 객체는
+        # 어떤 행도 참조하지 않으므로 지우고 원래 예외를 그대로 올린다.
+        await uploads_service.discard_stored_image(storage, image.url)
+        raise
     previous_url = user.profile_image
     user.profile_image = image.url
 

@@ -31,18 +31,30 @@ class LocalPhotoStorage:
     def __init__(self, base_dir: str) -> None:
         self._base = Path(base_dir)
 
+    def _resolved(self, object_name: str) -> Path:
+        """object_name을 base 안의 경로로 확정한다. 벗어나면 거부한다.
+
+        `object_name_from_url`이 이미 걸러주지만, 이 클래스는 그 함수를 거치지 않은
+        호출도 받을 수 있어 마지막 방어선을 여기에 둔다 — 파일을 지우고 읽는 지점이다.
+        """
+        path = (self._base / object_name).resolve()
+        base = self._base.resolve()
+        if path != base and base not in path.parents:
+            raise ValueError(f"업로드 경로를 벗어난 객체 이름입니다: {object_name!r}")
+        return path
+
     async def save(self, object_name: str, content: bytes, content_type: str) -> str:
-        path = self._base / object_name
+        path = self._resolved(object_name)
         path.parent.mkdir(parents=True, exist_ok=True)
         await asyncio.to_thread(path.write_bytes, content)
         return f"/uploads/{object_name}"
 
     async def delete(self, object_name: str) -> None:
-        path = self._base / object_name
+        path = self._resolved(object_name)
         await asyncio.to_thread(path.unlink, missing_ok=True)
 
     async def load(self, object_name: str) -> bytes:
-        return await asyncio.to_thread((self._base / object_name).read_bytes)
+        return await asyncio.to_thread(self._resolved(object_name).read_bytes)
 
 
 class GCSPhotoStorage:
@@ -89,11 +101,20 @@ def object_name_from_url(photo_url: str | None) -> str | None:
 
 
 def _safe_object_name(object_name: str) -> str | None:
-    """빈 이름과 상위 경로 탈출(`..`)을 거른다.
+    """스토리지 루트를 벗어날 수 있는 이름을 거른다.
 
-    DB 값이 오염돼도 스토리지 바깥을 읽거나 지우지 못하게 하는 최후 방어선이다.
+    DB 값이 오염돼도 바깥 파일을 읽거나 지우지 못하게 하는 방어선이다. 거르는 것:
+
+    - 빈 이름
+    - 상위 경로 탈출(`..`)
+    - **절대 경로** — `/uploads//tmp/x`는 prefix 제거 후 `/tmp/x`가 되는데,
+      `Path(base) / "/tmp/x"`는 base를 통째로 무시하고 `/tmp/x`가 된다.
+    - 백슬래시 — 우리가 만드는 이름(`{prefix}/{YYYY}/{MM}/{uuid7}{ext}`)에는 없고,
+      Windows에서 경로 구분자로 해석될 수 있다.
     """
-    if not object_name or ".." in object_name.split("/"):
+    if not object_name or object_name.startswith(("/", "\\")):
+        return None
+    if "\\" in object_name or ".." in object_name.split("/"):
         return None
     return object_name
 

@@ -226,7 +226,74 @@ async def test_object_name_from_url_rejects_path_traversal() -> None:
     assert object_name_from_url("/uploads/../../etc/passwd") is None
     assert object_name_from_url("/uploads/") is None
     assert object_name_from_url(None) is None
+    # 절대 경로 — `Path(base) / "/tmp/x"`는 base를 통째로 무시하고 `/tmp/x`가 된다.
+    assert object_name_from_url("/uploads//tmp/passwd") is None
+    assert object_name_from_url("/uploads/\\windows\\system32") is None
     assert object_name_from_url("/uploads/avatars/a.png") == "avatars/a.png"
+
+
+async def test_local_storage_refuses_paths_outside_the_upload_root() -> None:
+    """이름 검사를 거치지 않고 직접 호출돼도 루트 밖을 건드리지 않아야 한다."""
+    import pytest
+
+    from app.uploads.storage import LocalPhotoStorage
+
+    storage = LocalPhotoStorage("/var/colortrip-uploads")
+
+    for escaping in ("/tmp/passwd", "../../etc/passwd"):
+        with pytest.raises(ValueError, match="업로드 경로를 벗어난"):
+            await storage.delete(escaping)
+        with pytest.raises(ValueError, match="업로드 경로를 벗어난"):
+            await storage.load(escaping)
+
+
+async def test_upload_cleans_up_when_the_user_becomes_inactive(
+    client: AsyncClient,
+) -> None:
+    """저장 뒤 사용자 재확인이 실패하면 방금 올린 객체를 남기지 않는다."""
+    import io
+
+    import pytest
+    from fastapi import UploadFile
+    from starlette.datastructures import Headers
+
+    from app.auth import service as auth_service
+    from app.auth.models import User
+    from app.core.base import now_kst
+    from app.core.config import settings
+    from app.core.database import AsyncSessionLocal
+    from app.core.exceptions import AppException
+    from app.uploads.storage import get_photo_storage
+
+    data = await login(client)
+    user_id = UUID(data["user"]["id"])
+    avatars = Path(settings.upload_dir) / "avatars"
+    before = set(avatars.rglob("*.png")) if avatars.exists() else set()
+
+    async with AsyncSessionLocal() as session:
+        user = await session.get(User, user_id)
+        assert user is not None
+        # 업로드 도중 다른 기기에서 탈퇴가 끝난 상황을 재현한다.
+        user.deleted_at = now_kst()
+        await session.commit()
+
+    async with AsyncSessionLocal() as session:
+        stale = await session.get(User, user_id)
+        assert stale is not None
+        with pytest.raises(AppException):
+            await auth_service.replace_profile_image(
+                session,
+                current_user=stale,
+                file=UploadFile(
+                    file=io.BytesIO(_PNG_BYTES),
+                    filename="profile.png",
+                    headers=Headers({"content-type": "image/png"}),
+                ),
+                storage=get_photo_storage(),
+            )
+
+    leaked = (set(avatars.rglob("*.png")) if avatars.exists() else set()) - before
+    assert leaked == set(), f"탈퇴 경합으로 고아 객체가 남았습니다: {leaked}"
 
 
 async def test_commit_failure_cleans_up_and_surfaces_the_original_error(
