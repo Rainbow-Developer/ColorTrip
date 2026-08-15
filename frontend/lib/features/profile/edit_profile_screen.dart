@@ -114,7 +114,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               enabled: false,
             ),
             const SizedBox(height: 14),
-            _DnaTypeField(label: dna.name, onTap: null),
+            _DnaTypeField(
+              label: dna.name,
+              onTap: () => context.push('/trip-dna'),
+            ),
             if (auth.errorMessage case final error?) ...[
               const SizedBox(height: 16),
               Text(
@@ -254,9 +257,9 @@ class _DnaTypeField extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             decoration: BoxDecoration(
-              color: AppColors.formFieldBg,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.formFieldBorder),
+              border: Border.all(color: AppColors.primaryDark, width: 1.5),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -268,12 +271,25 @@ class _DnaTypeField extends StatelessWidget {
                     color: Color(0xFF222222),
                   ),
                 ),
-                const Text(
-                  '›',
-                  style: TextStyle(
-                    color: AppColors.timelineDotGrey,
-                    fontSize: 16,
-                  ),
+                const Row(
+                  children: [
+                    Text(
+                      '다시하기',
+                      style: TextStyle(
+                        color: AppColors.primaryDark,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      '›',
+                      style: TextStyle(
+                        color: AppColors.primaryDark,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -170,7 +170,6 @@ String? authRedirect(AuthState auth, String location) {
   final authenticatedOnlyExit =
       location == '/splash' ||
       location == '/signup' ||
-      location == '/trip-dna' ||
       location == '/withdrawal-pending';
   return switch (auth.status) {
     AuthStatus.checking => location == '/splash' ? null : '/splash',
