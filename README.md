@@ -67,7 +67,7 @@ LOG_LEVEL=           # 선택: DEBUG/INFO/WARNING/ERROR/CRITICAL (미설정 시 
 TOUR_API_KEY=        # 한국관광공사 TourAPI
 NAVER_API_KEY=       # Naver 지도/지역 API
 GEMINI_API_KEY=      # 사진 AI 인증(Gemini) — 비우면 local/test는 스텁 판정, 그 외는 인증 거부 (docs/specs/050-quest-verification)
-GEMINI_MODEL=        # 선택: 기본 gemini-2.5-flash
+GEMINI_MODEL=        # 선택: 기본 gemini-3.5-flash
 QR_SECRET_KEY=       # QR 인증 서명 키 — 비우면 JWT_SECRET_KEY에서 파생
 
 # 인증

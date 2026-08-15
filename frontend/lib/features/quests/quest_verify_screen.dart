@@ -713,119 +713,140 @@ class _PhotoVerifyBodyState extends ConsumerState<_PhotoVerifyBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            widget.questTitle,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            '퀘스트 장소 사진을 업로드해주세요.',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 13),
-          ),
-          const SizedBox(height: 14),
-          InkWell(
-            onTap: () => _pickPhoto(PhotoSource.gallery),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              height: 120,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: AppColors.uploadBoxBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: photo != null
-                      ? AppColors.primaryDark
-                      : AppColors.uploadBoxBorder,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: photo != null
-                  ? Image.memory(
-                      photo.bytes,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Text('📷', style: TextStyle(fontSize: 28)),
-                        SizedBox(height: 4),
+          // 미리보기를 원본 비율로 그리면 세로 사진에서 내용이 화면을 넘치므로 스크롤한다.
+          // 인증 버튼은 스크롤 밖에 두어 사진 길이와 무관하게 같은 자리에 있게 한다.
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    widget.questTitle,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '퀘스트 장소 사진을 업로드해주세요.',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  ),
+                  const SizedBox(height: 14),
+                  InkWell(
+                    onTap: () => _pickPhoto(PhotoSource.gallery),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: AppColors.uploadBoxBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: photo != null
+                              ? AppColors.primaryDark
+                              : AppColors.uploadBoxBorder,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      // 고른 사진은 원본 비율 그대로 보여준다 — 고정 높이 + cover 로 채우면
+                      // 무엇을 올렸는지 잘려 보여 판정 대상 확인이 어렵다.
+                      child: photo != null
+                          ? Image.memory(
+                              photo.bytes,
+                              width: double.infinity,
+                              fit: BoxFit.fitWidth,
+                            )
+                          : const SizedBox(
+                              height: 120,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text('📷', style: TextStyle(fontSize: 28)),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    '사진 촬영 또는 갤러리 선택',
+                                    style: TextStyle(
+                                      color: AppColors.formPlaceholder,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _PhotoSourceButton(
+                          label: '📷 카메라',
+                          onTap: () => _pickPhoto(PhotoSource.camera),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _PhotoSourceButton(
+                          label: '🖼 갤러리',
+                          onTap: () => _pickPhoto(PhotoSource.gallery),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          '사진 촬영 또는 갤러리 선택',
+                          '업로드 가이드',
                           style: TextStyle(
-                            color: AppColors.formPlaceholder,
+                            fontWeight: FontWeight.w700,
                             fontSize: 13,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          '• 퀘스트 장소가 잘 보이는 사진\n• 최근 24시간 이내 촬영\n• 5MB 이하 JPG/PNG',
+                          style: TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 12,
+                            height: 1.5,
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  if (_failReason case final reason?) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.tripMutedBadgeBg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        reason,
+                        style: const TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _PhotoSourceButton(
-                  label: '📷 카메라',
-                  onTap: () => _pickPhoto(PhotoSource.camera),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _PhotoSourceButton(
-                  label: '🖼 갤러리',
-                  onTap: () => _pickPhoto(PhotoSource.gallery),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '업로드 가이드',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                ),
-                SizedBox(height: 6),
-                Text(
-                  '• 퀘스트 장소가 잘 보이는 사진\n• 최근 24시간 이내 촬영\n• 5MB 이하 JPG/PNG',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_failReason case final reason?) ...[
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.tripMutedBadgeBg,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                reason,
-                style: const TextStyle(
-                  color: AppColors.danger,
-                  fontSize: 13,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-          const Spacer(),
           ElevatedButton(
             onPressed: photo != null && !_busy
                 ? () async {

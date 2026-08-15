@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | 상태 | 완료 (KAN-75 dev 실동작 복구 + KAN-77 좌표 비전송 불변식 복원) |
-| 최종 업데이트 | 2026-08-14 |
+| 최종 업데이트 | 2026-08-15 |
 
 ## 구현 규모 / 단위 분할
 
@@ -42,7 +42,7 @@
 
 - [ ] 인증 사진의 GCS 보관 — 현재 dev는 인스턴스 볼륨(로컬 디스크)이다. 버킷 IaC와 함께 후속
 - [ ] 인증 사진 보존·삭제 정책 확정 및 개인정보처리방침 반영 — 지금은 무기한 보관이고 거절분도 남는다(아래 '알려진 한계'의 보존 정책 표)
-- [ ] 실제 Gemini 키로의 end-to-end 판정 확인 — 시크릿(`colortrip-dev-gemini-api-key`) 등록 후 dev에서 1회 확인 필요. 등록 전까지 dev 사진 인증은 fail-closed로 거절된다
+- [ ] 실제 Gemini 키로의 end-to-end 판정 확인 — 시크릿(`colortrip-dev-gemini-api-key`)은 등록됐고 키·모델 단독 호출까지 확인했다. 모델 교체(2026-08-15)를 dev에 배포한 뒤 앱에서 1회 확인이 남았다
 - [ ] 현장 QR 인쇄·부착 — `scripts/generate_quest_qr.py`로 11장 생성 후 운영 절차 필요(서버와 동일한 `QR_SECRET_KEY`로 생성할 것)
 
 ## 알려진 한계 / TODO
@@ -78,3 +78,4 @@
 | 2026-08-13 | **dev 실동작 복구(KAN-75, 사용자 보고 "인증이 안 된다")**: 3종 중 GPS만 동작하고 있었다. ① **QR 대조 기준 불일치** — `_judge_qr`는 DB UUID와 대조하는데 `scripts/generate_quest_qr.py`는 client_key로 서명해, 유효 서명도 "이 퀘스트의 QR이 아니에요"로 거절됐다. client_key 기준으로 통일하고(인쇄물이 재시딩에도 유효), UUID 서명이 통과하지 않는 회귀 테스트를 넣었다. ② **QR 퀘스트 데이터 불일치** — FE 정적 데이터는 11개가 `verify: 'qr'`인데 DB는 전부 `mission_type='photo'`라, 앱이 QR 스캐너를 띄우고 `qr_payload`만 보내면 서버가 `photo_url`을 요구하며 400. 마이그레이션 `c1a7e5d90b42` + 카탈로그 스냅샷으로 정합화했다. 이 드리프트를 잡는 가드(`test_domain_catalog_contract`)는 이미 있었으나 **CI에 테스트 워크플로가 없어** 빨간 채로 방치돼 있었다. ③ **사진 판정 미설정** — dev `.env`에 `GEMINI_API_KEY`가 없고 `APP_ENV=dev`는 fail-closed라 사진 인증이 항상 거절됐다. `deploy.sh`에 Gemini·QR 시크릿 주입 + 미설정 경고를 넣었다(키 등록은 운영 작업으로 남음). ④ 업로드 사진이 재배포마다 사라지던 문제를 compose 볼륨으로 막았다. 테스트: BE 4건(client_key 통과·UUID 거절·client_key 없음 거절·배포 시크릿 배선) |
 | 2026-08-13 | **회귀 복원(KAN-73)**: FE 사진 인증이 판정 API를 호출하지 않고 있었다 — `a3df7fc`(KAN-55 서버 영속화)에서 `domainController.uploadAndVerifyPhoto`로 통합하면서 `verificationRepository.verifyPhoto` 호출이 빠졌고, 결과 화면에 판정값을 전달하지도 않아 판정 카드가 항상 "판정 정보를 불러오지 못했어요"로 떴다(서버 `/quests/{id}/verify`는 사진 경로만 확인하므로 사실상 사진 내용 검증 없이 통과). 판정 → 통과 시 저장·완료 → 결과 화면(extra로 판정값) 순서를 복원했다. 회귀가 잡히지 않은 이유는 사진 분기에 위젯 테스트가 없어서였고, 사진 선택을 `PhotoPickerGateway` seam(`lib/data/media/photo_picker_gateway.dart`, 위치 인증의 `LocationGateway`와 같은 패턴)으로 빼서 통과·거절·판정 실패 3케이스를 `test/quest_verification_test.dart`에 추가했다 |
 | 2026-08-14 | **좌표 비전송 불변식 복원(KAN-77)**: KAN-75에서 드러난 문서-코드 이탈을 코드 쪽으로 되돌렸다. `a3df7fc`(KAN-55) 이후 FE가 단말 좌표를 `lat`·`lng`로 서버에 보내고 서버가 판정했으며, `quest_progress.verified_lat/lng`에 **저장까지** 하고 있었다. law review의 결론은 B안(온디바이스)이고 그 근거는 "좌표가 단말을 벗어나지 않음"인데, 좌표는 **저장하지 않고 수신만 해도** 위치기반서비스사업 신고 대상이다(해설서 p.59~60). 신고는 이뤄지지 않았으므로 코드를 결정된 설계로 복원했다. ① FE가 `distanceMeters`(순수 하버사인)로 단말에서 판정하고 반경 이내일 때만 좌표 없이 완료를 요청한다. ② `DomainRepository.verifyQuest`·`DomainController.verifyQuest`에서 좌표 파라미터를 **삭제**했다 — 주석은 무시할 수 있지만 없는 파라미터는 보낼 수 없다. ③ 서버는 `mission_type='gps'`에 좌표가 오면 거절한다(무시하면 이탈이 조용히 반복된다). ④ 마이그레이션 `e8c3a91d7f04`로 그동안 저장된 좌표를 삭제했다(downgrade 없음). ⑤ GPS 인증 화면에 "현재 위치는 이 기기에서만 확인하고 서버로 보내지 않아요" 문구 추가. 테스트: BE 3건(좌표 거절·좌표 없이 완료·저장 안 됨), FE 3건(반경 밖 서버 미호출·반경 이내 인증·하버사인 단위) |
+| 2026-08-15 | **판정 모델 교체** — dev 사진 인증이 "사진을 확인하지 못했어요"로 실패했다(판정 거절이 아니라 호출 실패 경로). 원인은 키가 아니라 모델이다: 등록된 시크릿 키로 실호출해 보면 `gemini-2.5-flash`의 `generateContent`가 404 `"This model ... is no longer available to new users"`를 반환한다. 기본 모델을 `gemini-3.5-flash`로 바꿨다 — 같은 키·같은 요청 형식으로 200 + 판정 JSON 정상 수신을 4초 간격 3회 확인했다. `GEMINI_MODEL`은 `deploy.sh`가 `.env`에 기록하지 않으므로 dev에는 코드 기본값이 그대로 쓰이고, 반영에 재배포가 필요하다. 함께: 인증 화면의 사진 미리보기가 고정 높이 120 + `BoxFit.cover`라 사진이 잘려 보이던 것을 원본 비율(`BoxFit.fitWidth`)로 바꾸고, 세로로 긴 사진이 화면을 넘치지 않도록 폼을 스크롤 영역 + 하단 고정 버튼 구조로 정리했다 |
