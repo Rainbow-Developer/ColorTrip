@@ -55,7 +55,9 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     final defaultIndex = _year == now.year ? now.month - 1 : 0;
     final idx = (_monthIndex ?? defaultIndex).clamp(0, 11);
 
-    final filtered = timeline.where((e) => e.month == monthLabels[idx]).toList();
+    final filtered = timeline
+        .where((e) => e.month == monthLabels[idx])
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -267,9 +269,8 @@ class _RegionGroup {
   bool isUpcoming;
   final List<TimelineEntry> entries;
 
-  DateTime get earliestCompletedAt => entries
-      .map((e) => e.completedAt)
-      .reduce((a, b) => a.isBefore(b) ? a : b);
+  DateTime get earliestCompletedAt =>
+      entries.map((e) => e.completedAt).reduce((a, b) => a.isBefore(b) ? a : b);
 }
 
 /// 월 필터링된 완료 퀘스트를 지역별로 묶고, 그룹 내 가장 이른 완료 시각 기준
@@ -301,7 +302,11 @@ List<_RegionGroup> _groupByRegion({
     );
     final group = groups.putIfAbsent(
       quest.region,
-      () => _RegionGroup(region: region, isActive: isActive, isUpcoming: isUpcoming),
+      () => _RegionGroup(
+        region: region,
+        isActive: isActive,
+        isUpcoming: isUpcoming,
+      ),
     );
     if (isActive) group.isActive = true;
     if (isUpcoming) group.isUpcoming = true;
@@ -378,7 +383,9 @@ class _MonthPillSelectorState extends State<_MonthPillSelector> {
         itemBuilder: (context, index) {
           final selected = index == widget.selectedIndex;
           final match = RegExp(r'(\d+)월').firstMatch(widget.months[index]);
-          final label = match != null ? '${match.group(1)}월' : widget.months[index];
+          final label = match != null
+              ? '${match.group(1)}월'
+              : widget.months[index];
           return ChoiceChip(
             label: Text(label),
             selected: selected,
@@ -439,72 +446,72 @@ class _MonthSummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 26,
-                        height: 26,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          color: AppColors.tripActiveBadgeBg,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.calendar_today,
-                          size: 13,
-                          color: AppColors.primaryDark,
-                        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.tripActiveBadgeBg,
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$shortLabel의 여행 기록',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: const Icon(
+                        Icons.calendar_today,
+                        size: 13,
+                        color: AppColors.primaryDark,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '$regionCount개 지역 · $completedQuestCount개 퀘스트',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
                     ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$shortLabel의 여행 기록',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '$regionCount개 지역 · $completedQuestCount개 퀘스트',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 8,
-                            backgroundColor: AppColors.verifyProgressTrack,
-                            valueColor: const AlwaysStoppedAnimation(
-                              AppColors.primaryDark,
-                            ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 8,
+                          backgroundColor: AppColors.verifyProgressTrack,
+                          valueColor: const AlwaysStoppedAnimation(
+                            AppColors.primaryDark,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '$done/$total 완료',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
-                        ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$done/$total 완료',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
+          ),
           // 카드 왼쪽 여백(16)과 같은 간격을 텍스트-지도 사이에도 준다.
           const SizedBox(width: 16),
           ClipRRect(
@@ -558,7 +565,10 @@ class _RegionTimelineSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final date = group.earliestCompletedAt;
     final dateLabel = '${date.month}.${date.day.toString().padLeft(2, '0')}';
-    final sectionColor = mapFillColors(group.region.id, _regionSectionSaturation);
+    final sectionColor = mapFillColors(
+      group.region.id,
+      _regionSectionSaturation,
+    );
     final accentColor = mapFillColors(group.region.id, _regionAccentSaturation);
     final statusLabel = group.isUpcoming
         ? '예정'
@@ -767,41 +777,41 @@ class _TimelineRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                  Text(
-                    quest.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    entry.date,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.timelineDateText,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      MiniBadge(
-                        label: regionName,
-                        background: regionColor.background,
-                        foreground: regionColor.label,
+                    Text(
+                      quest.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
                       ),
-                      if (tagColors != null && typeStyle != null) ...[
-                        const SizedBox(width: 6),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      entry.date,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.timelineDateText,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
                         MiniBadge(
-                          label: typeStyle.label,
-                          background: tagColors.background,
-                          foreground: tagColors.foreground,
+                          label: regionName,
+                          background: regionColor.background,
+                          foreground: regionColor.label,
                         ),
+                        if (tagColors != null && typeStyle != null) ...[
+                          const SizedBox(width: 6),
+                          MiniBadge(
+                            label: typeStyle.label,
+                            background: tagColors.background,
+                            foreground: tagColors.foreground,
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
+                    ),
                   ],
                 ),
               ),

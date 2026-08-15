@@ -54,6 +54,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
+    final authNotifier = ref.read(authControllerProvider.notifier);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -84,15 +85,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                       ref.watch(currentUserProvider)?.profileImage,
                     ),
                     isBusy: auth.isBusy,
-                    onPicked: (picked) => ref
-                        .read(authControllerProvider.notifier)
-                        .uploadProfileImage(
-                          picked.bytes,
-                          mimeType: picked.mimeType,
-                        ),
-                    onRemoved: ref
-                        .read(authControllerProvider.notifier)
-                        .removeProfileImage,
+                    // 콜백 안에서 `ref.read`를 하면 카메라·갤러리가 떠 있는 동안
+                    // Activity가 재생성됐을 때 이 화면이 unmount돼 업로드가 조용히
+                    // 사라진다. notifier를 build 시점에 잡아 넘긴다.
+                    onPicked: (picked) => authNotifier.uploadProfileImage(
+                      picked.bytes,
+                      mimeType: picked.mimeType,
+                    ),
+                    onRemoved: authNotifier.removeProfileImage,
                   ),
                 ),
                 const SizedBox(height: 8),

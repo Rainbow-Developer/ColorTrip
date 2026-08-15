@@ -737,6 +737,9 @@ void main() {
     expect(distanceMeters(37.0, 128.0, 37.0, 128.0), 0);
     expect(distanceMeters(37.0, 128.0, 38.0, 128.0), closeTo(111195, 500));
     // 도담삼봉 기준 약 20m 떨어진 좌표.
-    expect(distanceMeters(37.0008, 128.3418, 37.00098, 128.3418), closeTo(20, 3));
+    expect(
+      distanceMeters(37.0008, 128.3418, 37.00098, 128.3418),
+      closeTo(20, 3),
+    );
   });
 }

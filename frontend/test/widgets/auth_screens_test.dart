@@ -19,6 +19,7 @@ import 'package:colortrip/state/onboarding_tour_notifier.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/repository_providers.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -550,6 +551,48 @@ void main() {
     expect(find.textContaining('프로필을 저장하지 못했습니다'), findsOneWidget);
   });
 
+  testWidgets('edit profile returns to the my tab after a successful save', (
+    tester,
+  ) async {
+    // 저장 성공이 auth 상태를 바꾸면 GoRouter가 재평가돼 `/profile/edit`이 스택 없는
+    // 단독 경로가 되고, 그때 `pop()`은 아무것도 하지 않아 수정 화면에 남는다.
+    // 탭 경로로 직접 이동하는지 고정한다 — 경로는 '/profile'이 아니라 '/my'다.
+    final container = await _container(
+      _Repository(_user(OnboardingStep.complete)),
+    );
+    addTearDown(container.dispose);
+
+    final router = GoRouter(
+      initialLocation: '/profile/edit',
+      routes: [
+        GoRoute(
+          path: '/profile/edit',
+          builder: (_, _) => const EditProfileScreen(),
+        ),
+        GoRoute(
+          path: '/my',
+          builder: (_, _) => const Scaffold(body: Text('마이 화면')),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.tap(find.text('저장'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('마이 화면'), findsOneWidget);
+    expect(find.byType(EditProfileScreen), findsNothing);
+
+    // 저장 토스트가 1.9초 뒤 스스로 사라진다 — 그 타이머를 남기면 테스트가 실패한다.
+    await tester.pump(const Duration(seconds: 2));
+  });
+
   testWidgets('withdrawal pending screen offers a real retry action', (
     tester,
   ) async {
@@ -601,5 +644,4 @@ void main() {
     expect(find.textContaining('생년월일'), findsWidgets);
     expect(repository.submittedProfile, isNull);
   });
-
 }

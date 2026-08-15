@@ -52,6 +52,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final user = ref.watch(currentUserProvider);
     final dna = ref.watch(dnaRepositoryProvider).byId(user?.dna ?? dnaType);
     final auth = ref.watch(authControllerProvider);
+    final authNotifier = ref.read(authControllerProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(
@@ -77,15 +78,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
                 isBusy: auth.isBusy,
                 size: 80,
-                onPicked: (picked) => ref
-                    .read(authControllerProvider.notifier)
-                    .uploadProfileImage(
-                      picked.bytes,
-                      mimeType: picked.mimeType,
-                    ),
-                onRemoved: ref
-                    .read(authControllerProvider.notifier)
-                    .removeProfileImage,
+                // notifier를 build 시점에 잡아 콜백에 넘긴다. 콜백 안에서 `ref.read`를
+                // 하면, 카메라·갤러리가 떠 있는 동안 Android가 Activity를 재생성했을 때
+                // 이 화면이 unmount돼 "Using ref ... unmounted" 예외로 업로드가 조용히
+                // 사라진다. notifier 자체는 ProviderContainer가 들고 있어 안전하다.
+                onPicked: (picked) => authNotifier.uploadProfileImage(
+                  picked.bytes,
+                  mimeType: picked.mimeType,
+                ),
+                onRemoved: authNotifier.removeProfileImage,
               ),
             ),
             const SizedBox(height: 24),
@@ -155,13 +156,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         .updateProfile(
           // 생년월일이 비어 있으면 null → 요청에서 생략되어 서버 값이 유지된다.
           // (지우기는 지원하지 않는다 — 서버가 birth_date: null을 거부한다)
-          ProfileUpdateInput(nickname: nickname, birthDate: validation.birthDate),
+          ProfileUpdateInput(
+            nickname: nickname,
+            birthDate: validation.birthDate,
+          ),
         );
     if (!mounted) return;
     if (success) {
       ref.read(progressProvider.notifier).setNickname(nickname);
       showAppToast(context, '변경사항이 저장되었어요');
-      context.pop();
+      // 저장하면 수정 화면에 남지 않고 마이로 돌아간다.
+      //
+      // `pop()`만 쓰면 화면에 남는 경우가 있다. 저장 성공이 auth 상태를 바꾸고, 그게
+      // refreshListenable을 통해 GoRouter를 재평가시켜 `/profile/edit`이 스택 없는
+      // 단독 경로가 되기 때문이다(이때 canPop()은 false). 마이 탭 경로로 직접 이동해
+      // 스택 상태와 무관하게 같은 결과를 보장한다 — 탭 경로는 '/profile'이 아니라 '/my'다.
+      context.go('/my');
     }
   }
 

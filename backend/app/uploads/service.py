@@ -101,6 +101,14 @@ async def store_uploaded_image(
             f"파일이 너무 큽니다 (최대 {settings.max_upload_size_mb}MB).",
         )
     if not _matches_declared_type(content, content_type):
+        # 어떤 바이트가 거부됐는지 남긴다 — 클라이언트가 실제로 무엇을 보냈는지 모르면
+        # (예: 피커가 재인코딩해 확장자와 실제 포맷이 어긋난 경우) 원인을 못 찾는다.
+        logger.warning(
+            "이미지 시그니처 불일치로 거부: declared=%s filename=%s head=%s",
+            content_type,
+            file.filename,
+            content[:12].hex(),
+        )
         raise AppException(
             ErrorCode.VALIDATION_ERROR,
             f"이미지 파일이 아니거나 형식({content_type})과 내용이 일치하지 않습니다.",

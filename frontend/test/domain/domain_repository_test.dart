@@ -284,10 +284,9 @@ void main() {
       throw StateError('unexpected ${options.method} ${options.path}');
     });
 
-    final result = await DioDomainRepository(dio).verifyQuest(
-      questKey: 'dy4',
-      journeyId: 'journey-uuid',
-    );
+    final result = await DioDomainRepository(
+      dio,
+    ).verifyQuest(questKey: 'dy4', journeyId: 'journey-uuid');
 
     expect(result.verified, isTrue);
     expect(verificationRequest.method, 'POST');
