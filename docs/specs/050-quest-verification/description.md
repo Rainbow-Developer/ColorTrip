@@ -70,7 +70,7 @@
 ```bash
 # backend/.env
 GEMINI_API_KEY=   # local·test는 비우면 스텁 판정(항상 통과), dev·운영은 비우면 항상 거절
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.5-flash
 QR_SECRET_KEY=    # 비우면 JWT_SECRET_KEY에서 파생(권장하지 않음 — 위 QR 운영 표)
 
 # QR 이미지 생성 (개발 의존성 필요: uv sync --group dev)

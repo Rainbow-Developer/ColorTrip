@@ -43,7 +43,9 @@ class Settings(BaseSettings):
     # 사진 AI 인증 비전 판정 — docs/specs/050-quest-verification/
     # 키 미설정 시 스텁 판정(항상 통과 + "AI 미설정" 사유)으로 동작한다.
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    # gemini-2.5-flash 는 신규 사용자에게 더 이상 열리지 않는다(generateContent 가 404
+    # "no longer available to new users"). 2026-08-15 실호출로 확인해 교체했다.
+    gemini_model: str = "gemini-3.5-flash"
     gemini_base_url: str = "https://generativelanguage.googleapis.com"
 
     # QR 인증 페이로드 서명 키 — 미설정 시 JWT_SECRET_KEY에서 파생한다.
