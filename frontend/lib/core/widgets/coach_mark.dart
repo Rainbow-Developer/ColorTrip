@@ -91,7 +91,9 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   Widget build(BuildContext context) {
     final rect = _targetRect;
     if (rect == null) {
-      return Positioned.fill(child: SizedBox.expand(key: _overlayKey));
+      return Positioned.fill(
+        child: AbsorbPointer(child: SizedBox.expand(key: _overlayKey)),
+      );
     }
 
     final screenSize = _localSize ?? MediaQuery.sizeOf(context);
@@ -278,7 +280,7 @@ class _MessageCard extends ConsumerWidget {
             child: TextButton(
               onPressed: () =>
                   ref.read(onboardingTourProvider.notifier).skipForever(),
-              style: TextButton.styleFrom(minimumSize: const Size(48, 40)),
+              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
               child: const Text(
                 '다시 보지 않기',
                 style: TextStyle(fontSize: 12, color: AppColors.textMuted),

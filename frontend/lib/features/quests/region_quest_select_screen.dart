@@ -61,9 +61,6 @@ class _RegionQuestSelectScreenState
   /// 기존 이름·기간을 유지한 채 선택 퀘스트만 갱신한다.
   Future<void> _startTrip(String defaultName, OnboardingTourState tour) async {
     if (_saving) return;
-    if (!tour.isDone && tour.step == 2) {
-      ref.read(onboardingTourProvider.notifier).advance();
-    }
     final selected = {..._selectedQuestIds!};
     final journeys =
         ref.read(domainControllerProvider).value?.journeys ??
@@ -85,6 +82,7 @@ class _RegionQuestSelectScreenState
               journeyId: existingJourney.id,
               questKeys: selected.toList(),
             );
+        _advanceTourAfterSuccessfulSave(tour);
         if (mounted) context.go('/travel');
       } on Object {
         if (mounted) {
@@ -118,6 +116,7 @@ class _RegionQuestSelectScreenState
             startDate: info.startDate,
             endDate: info.endDate,
           );
+      _advanceTourAfterSuccessfulSave(tour);
       if (mounted) context.go('/travel');
     } on Object {
       if (mounted) {
@@ -125,6 +124,12 @@ class _RegionQuestSelectScreenState
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _advanceTourAfterSuccessfulSave(OnboardingTourState tour) {
+    if (!tour.isDone && tour.step == 2) {
+      ref.read(onboardingTourProvider.notifier).advance();
     }
   }
 

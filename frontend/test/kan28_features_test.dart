@@ -266,6 +266,9 @@ void main() {
       _wrap(
         const RegionQuestSelectScreen(regionId: 'danyang'),
         container: container,
+        extraRoutes: [
+          GoRoute(path: '/travel', builder: (_, _) => const SizedBox.shrink()),
+        ],
       ),
     );
     await tester.pumpAndSettle();
@@ -281,7 +284,10 @@ void main() {
     final paintedScrim = find.byKey(const ValueKey('coach-mark-scrim'));
     expect(paintedScrim, findsOneWidget);
     final scrimSize = tester.getSize(paintedScrim);
-    expect(scrimSize.width, tester.view.physicalSize.width);
+    expect(
+      scrimSize.width,
+      tester.view.physicalSize.width / tester.view.devicePixelRatio,
+    );
     expect(scrimSize.height, greaterThan(1000));
 
     await tester.tap(find.text('도담삼봉에서 인생샷 남기기'), warnIfMissed: false);
@@ -294,6 +300,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('여행 정보를 입력해주세요'), findsOneWidget);
+    expect(container.read(onboardingTourProvider).step, 2);
+
+    Navigator.of(tester.element(find.text('여행 정보를 입력해주세요'))).pop();
+    await tester.pumpAndSettle();
+    expect(container.read(onboardingTourProvider).step, 2);
+
+    await tester.tap(find.text('여행 시작하기 (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('시작일 ~ 종료일 선택'));
+    await tester.pumpAndSettle();
+
+    final today = DateTime.now().day.toString();
+    await tester.tap(find.text(today).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(today).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('선택 완료'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, '여행 시작하기'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(onboardingTourProvider).step, 3);
   });
 
   testWidgets('비동기 레이아웃 변경 후 코치마크가 이동한 타겟을 다시 측정한다', (tester) async {

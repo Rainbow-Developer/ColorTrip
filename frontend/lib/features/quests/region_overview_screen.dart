@@ -105,7 +105,12 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
         fit: StackFit.expand,
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              100 + MediaQuery.paddingOf(context).bottom,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
