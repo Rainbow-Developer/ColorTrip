@@ -3,6 +3,9 @@
 /// 플랫폼 채널이 없는 환경에서도 안내 UI로 안전하게 내려앉는지를 본다.
 library;
 
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -11,10 +14,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'package:colortrip/data/location/location_gateway.dart';
+import 'package:colortrip/data/media/photo_picker_gateway.dart';
 import 'package:colortrip/data/models/quest.dart';
+import 'package:colortrip/data/models/verification.dart';
 import 'package:colortrip/data/repositories/domain_repository.dart';
 import 'package:colortrip/data/repositories/quest_repository.dart';
 import 'package:colortrip/data/static/quests_data.dart';
+import 'package:colortrip/features/quests/photo_verify_result_screen.dart';
 import 'package:colortrip/features/quests/quest_verify_screen.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/repository_providers.dart';
@@ -32,6 +39,43 @@ const _gpsQuestWithoutCoords = Quest(
   desc: '',
   conditions: [],
 );
+
+/// 좌표가 있는 gps 퀘스트 — 도담삼봉 좌표(온디바이스 거리 판정 검증용).
+const _gpsQuest = Quest(
+  id: 'test-gps-coords',
+  region: 'danyang',
+  type: 'nature',
+  title: '좌표 있는 GPS 퀘스트',
+  place: '도담삼봉',
+  verify: 'gps',
+  reward: 10,
+  desc: '',
+  conditions: [],
+  lat: 37.0008,
+  lng: 128.3418,
+  verifyRadius: 300,
+);
+
+/// 측위를 대신하는 대역 — 플랫폼 채널 없이 임의 좌표를 돌려준다.
+class _FakeLocationGateway implements LocationGateway {
+  _FakeLocationGateway(this.latitude, this.longitude);
+
+  final double latitude;
+  final double longitude;
+  int calls = 0;
+
+  @override
+  Future<CurrentLocation> current() async {
+    calls++;
+    return CurrentLocation(latitude: latitude, longitude: longitude);
+  }
+
+  @override
+  Future<bool> openAppSettings() async => true;
+
+  @override
+  Future<bool> openLocationSettings() async => true;
+}
 
 const _qrQuest = Quest(
   id: 'test-qr',
@@ -105,8 +149,6 @@ class _QuizDomainRepository implements DomainRepository {
   Future<QuestVerification> verifyQuest({
     required String questKey,
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,
@@ -158,6 +200,17 @@ Widget _wrapVerifyScreen(String questId, ProviderContainer container) {
                 path: 'verify',
                 builder: (context, state) =>
                     QuestVerifyScreen(questId: state.pathParameters['id']!),
+                routes: [
+                  GoRoute(
+                    path: 'result',
+                    builder: (context, state) => PhotoVerifyResultScreen(
+                      questId: state.pathParameters['id']!,
+                      verdict: state.extra is PhotoVerdict
+                          ? state.extra as PhotoVerdict
+                          : null,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -183,6 +236,8 @@ Widget _wrapVerifyScreen(String questId, ProviderContainer container) {
 ProviderContainer _container({
   List<Quest>? fakeQuests,
   DomainRepository? domainRepository,
+  PhotoPickerGateway? photoPickerGateway,
+  LocationGateway? locationGateway,
 }) {
   final container = ProviderContainer(
     overrides: [
@@ -192,14 +247,140 @@ ProviderContainer _container({
         ),
       if (domainRepository != null)
         domainRepositoryProvider.overrideWithValue(domainRepository),
+      if (photoPickerGateway != null)
+        photoPickerGatewayProvider.overrideWithValue(photoPickerGateway),
+      if (locationGateway != null)
+        locationGatewayProvider.overrideWithValue(locationGateway),
     ],
   );
   addTearDown(container.dispose);
   return container;
 }
 
+/// 1x1 투명 PNG — Image.memory 미리보기가 실제로 디코딩되는 최소 바이트.
+final _pngBytes = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/wcAAwAB/1e9AAAAAElFTkSuQmCC',
+);
+
+/// 플랫폼 채널 없이 사진 선택을 대체한다(gateway seam).
+class _FakePhotoPickerGateway implements PhotoPickerGateway {
+  @override
+  Future<PickedPhotoFile?> pick(PhotoSource source) async => PickedPhotoFile(
+    bytes: _pngBytes,
+    filename: 'test.png',
+    mimeType: 'image/png',
+  );
+}
+
+/// 업로드·인증 호출을 기록하고, 서버처럼 verify 응답에 사진 판정을 담아주는 대역.
+class _PhotoDomainRepository implements DomainRepository {
+  _PhotoDomainRepository({
+    this.verdict,
+    this.verifyError,
+    this.verifyGate,
+    this.rejectWithoutVerdict = false,
+  });
+
+  /// 서버가 돌려줄 판정 상세 — null이면 사진 미션이 아닌 응답을 흉내 낸다.
+  final PhotoVerdict? verdict;
+
+  /// verify 호출 시 던질 오류(네트워크 실패 재현용).
+  final Object? verifyError;
+
+  /// 응답을 붙잡아 두는 게이트 — 요청 진행 중 UI를 검증할 때 쓴다.
+  final Future<void>? verifyGate;
+
+  /// 판정 상세 없이 거절하는 서버 응답(사진 미션이 아닌 사유로 거절되는 경우).
+  final bool rejectWithoutVerdict;
+
+  int uploadCalls = 0;
+  int verifyCalls = 0;
+  final _completed = <String>{};
+
+  @override
+  Future<DomainSnapshot> fetchSnapshot() async => DomainSnapshot(
+    catalog: const DomainCatalog(
+      regionIdsByKey: {},
+      regionKeysById: {},
+      questIdsByKey: {},
+      questKeysById: {},
+    ),
+    journeys: const [],
+    completedQuestKeys: _completed,
+    regionProgress: const {},
+    regionTripCount: const {},
+    timeline: const [],
+  );
+
+  @override
+  Future<String> uploadPhoto(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) async {
+    uploadCalls++;
+    return '/uploads/photos/test.png';
+  }
+
+  @override
+  Future<QuestVerification> verifyQuest({
+    required String questKey,
+    String? journeyId,
+    String? photoUrl,
+    String? answer,
+    String? qrPayload,
+  }) async {
+    verifyCalls++;
+    final gate = verifyGate;
+    if (gate != null) await gate;
+    final failure = verifyError;
+    if (failure != null) throw failure;
+    if (rejectWithoutVerdict) {
+      return const QuestVerification(
+        verified: false,
+        reason: '업로드한 인증 사진이 필요합니다.',
+      );
+    }
+    final judged = verdict;
+    if (judged != null && !judged.passed) {
+      return QuestVerification(
+        verified: false,
+        reason: judged.reason,
+        photoVerdict: judged,
+      );
+    }
+    _completed.add(questKey);
+    return QuestVerification(verified: true, photoVerdict: judged);
+  }
+
+  @override
+  Future<List<DomainRecommendedRegion>>
+  fetchUnvisitedRecommendedRegions() async => const [];
+
+  @override
+  Future<List<String>> fetchRecommendedQuestKeys({
+    required String regionKey,
+    int size = 2,
+  }) async => const [];
+
+  @override
+  Future<DomainJourney> createJourney({
+    required String clientRequestId,
+    required String regionKey,
+    required List<String> questKeys,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<DomainJourney> replaceJourneyQuests({
+    required String journeyId,
+    required List<String> questKeys,
+  }) => throw UnimplementedError();
+}
+
 void main() {
-  testWidgets('quiz 분기 — 오답이면 안내, 정답이면 완료 처리 후 두 화면을 닫는다', (tester) async {
+  testWidgets('quiz 분기 — 오답이면 안내, 정답이면 완료 처리 후 직전 화면으로 돌아간다', (tester) async {
     // OX 퀴즈는 이번 작업의 비변경 대상 — 정적 데이터의 실제 퀴즈 퀘스트로 검증한다
     // (completeQuest가 정적 데이터의 questById를 쓰므로 합성 퀘스트로는 완료가 안 된다).
     final quizQuest = kQuests.firstWhere((q) => q.verify == 'quiz');
@@ -220,12 +401,14 @@ void main() {
     expect(find.text('다시 생각해보세요.'), findsOneWidget);
     expect(container.read(progressProvider).isCompleted(quizQuest.id), isFalse);
 
-    // 정답 → 완료 처리 후 지역 화면으로 이동.
+    // 정답 → 완료 처리 후 인증 화면을 닫고 직전 화면으로 돌아간다(KAN-73 — go로 스택을
+    // 교체하면 뒤로가기가 죽어 엉뚱한 화면에 남았다).
     await tester.tap(find.text(quizQuest.quizAnswer! ? 'O' : 'X'));
     await tester.pumpAndSettle();
     expect(container.read(progressProvider).isCompleted(quizQuest.id), isTrue);
     expect(find.text('퀘스트 완료! 지도가 칠해졌어요'), findsOneWidget);
-    expect(find.text('region'), findsOneWidget);
+    expect(find.text('OX 퀴즈'), findsNothing);
+    expect(find.text('detail'), findsOneWidget);
 
     // 토스트 제거 타이머(1.9초)를 소진시켜 pending timer 실패를 막는다.
     await tester.pump(const Duration(seconds: 2));
@@ -292,5 +475,271 @@ void main() {
         .evaluate()
         .isNotEmpty;
     expect(hasScanner || hasFallback, isTrue);
+  });
+
+  group('photo 분기 — 서버 판정 결과로 완료·거절을 가른다 (050 · KAN-73)', () {
+    /// 사진 인증 화면은 컨텐츠가 길어 기본 서피스(800x600)에서는 버튼이 잘린다.
+    void useTallSurface(WidgetTester tester) {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.reset);
+    }
+
+    /// 사진을 고르고 "사진으로 인증하기"까지 누른다.
+    Future<void> pickAndSubmit(WidgetTester tester) async {
+      await tester.tap(find.text('🖼 갤러리'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('사진으로 인증하기'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('판정을 통과하면 완료 처리하고 결과 화면에 판정값을 넘긴다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final domain = _PhotoDomainRepository(
+        verdict: const PhotoVerdict(
+          passed: true,
+          confidence: 0.87,
+          reason: '도담삼봉 전경이 사진에서 확인됩니다.',
+          provider: 'gemini',
+        ),
+      );
+      final container = _container(
+        domainRepository: domain,
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      // 사진은 한 번만 올라가고(판정 전용 요청 없음), 인증도 한 번만 호출된다.
+      expect(domain.uploadCalls, 1);
+      expect(domain.verifyCalls, 1);
+      // 결과 화면이 라우트 extra로 서버 판정값을 받아 표시한다.
+      expect(find.text('사진 검증 결과'), findsOneWidget);
+      expect(find.text('인증 성공!'), findsOneWidget);
+      expect(find.text('87%'), findsOneWidget);
+      expect(find.text('도담삼봉 전경이 사진에서 확인됩니다.'), findsOneWidget);
+      expect(find.text('AI 미설정(스텁 판정)'), findsNothing);
+    });
+
+    testWidgets('스텁 판정이면 결과 화면에 "AI 미설정" 뱃지를 띄운다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final container = _container(
+        domainRepository: _PhotoDomainRepository(
+          verdict: const PhotoVerdict(
+            passed: true,
+            confidence: 0,
+            reason: 'AI 미설정 — 스텁 판정으로 통과 처리했습니다.',
+            provider: 'stub',
+          ),
+        ),
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      expect(find.text('AI 미설정(스텁 판정)'), findsOneWidget);
+    });
+
+    testWidgets('판정이 거절하면 완료되지 않고 사유를 화면에 남긴다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final domain = _PhotoDomainRepository(
+        verdict: const PhotoVerdict(
+          passed: false,
+          confidence: 0.12,
+          reason: '사진에서 퀘스트 장소를 확인할 수 없습니다.',
+          provider: 'gemini',
+        ),
+      );
+      final container = _container(
+        domainRepository: domain,
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      expect(
+        container.read(progressProvider).isCompleted(photoQuest.id),
+        isFalse,
+      );
+      // 인증 화면에 머무르며 판정 사유를 보여준다(재시도 가능).
+      expect(find.text('사진 인증'), findsOneWidget);
+      expect(find.text('사진에서 퀘스트 장소를 확인할 수 없습니다.'), findsOneWidget);
+      expect(find.text('사진 검증 결과'), findsNothing);
+    });
+
+    testWidgets('인증 요청이 실패하면 완료되지 않고 재시도를 안내한다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final container = _container(
+        domainRepository: _PhotoDomainRepository(
+          verifyError: Exception('network down'),
+        ),
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      expect(
+        container.read(progressProvider).isCompleted(photoQuest.id),
+        isFalse,
+      );
+      expect(find.textContaining('다시 시도해주세요'), findsOneWidget);
+    });
+
+    testWidgets('확인 중에는 뒤로가기로 화면을 벗어날 수 없다', (tester) async {
+      // 스크림으로 조작을 막아도 뒤로가기가 열려 있으면, 서버 인증은 진행됐는데
+      // 결과 화면을 못 보고 나가게 된다(PopScope + leading 비활성의 의도).
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final gate = Completer<void>();
+      final container = _container(
+        domainRepository: _PhotoDomainRepository(
+          verdict: const PhotoVerdict(
+            passed: true,
+            confidence: 0.9,
+            reason: '통과',
+            provider: 'gemini',
+          ),
+          verifyGate: gate.future,
+        ),
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('🖼 갤러리'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('사진으로 인증하기'));
+      await tester.pump(); // 요청 진행 중(스크림 표시)
+
+      expect(find.text('사진 확인 중...'), findsWidgets);
+      // 시스템 뒤로가기를 시도해도 화면이 유지된다.
+      final popped = await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(popped, isTrue); // 라우터가 처리했지만 PopScope가 막았다
+      expect(find.text('사진 인증'), findsOneWidget);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('사진 검증 결과'), findsOneWidget);
+    });
+
+    testWidgets('판정값이 없는 거절 응답은 서버 reason으로 안내한다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final container = _container(
+        domainRepository: _PhotoDomainRepository(rejectWithoutVerdict: true),
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+
+      expect(find.text('업로드한 인증 사진이 필요합니다.'), findsOneWidget);
+      expect(find.text('사진 검증 결과'), findsNothing);
+    });
+
+    testWidgets('사진을 다시 고르면 지난 판정 사유가 사라진다', (tester) async {
+      useTallSurface(tester);
+      final photoQuest = kQuests.firstWhere((q) => q.verify == 'photo');
+      final container = _container(
+        domainRepository: _PhotoDomainRepository(
+          verdict: const PhotoVerdict(
+            passed: false,
+            confidence: 0.1,
+            reason: '사진에서 퀘스트 장소를 확인할 수 없습니다.',
+            provider: 'gemini',
+          ),
+        ),
+        photoPickerGateway: _FakePhotoPickerGateway(),
+      );
+      await tester.pumpWidget(_wrapVerifyScreen(photoQuest.id, container));
+      await tester.pumpAndSettle();
+
+      await pickAndSubmit(tester);
+      expect(find.text('사진에서 퀘스트 장소를 확인할 수 없습니다.'), findsOneWidget);
+
+      // 새 사진을 고르면 지난 판정 사유는 지운다(현재 사진과 무관한 안내가 남지 않게).
+      await tester.tap(find.text('📷 카메라'));
+      await tester.pumpAndSettle();
+      expect(find.text('사진에서 퀘스트 장소를 확인할 수 없습니다.'), findsNothing);
+    });
+  });
+
+  testWidgets('gps 분기 — 반경 밖이면 서버를 부르지 않고 거리만 안내한다', (tester) async {
+    // 위치 판정은 단말에서 끝난다(KAN-77). 반경 밖에서 서버를 부르면 좌표가 필요해지고,
+    // 좌표를 보내는 순간 위치정보법상 신고 대상이 된다(location-law-review.md).
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+
+    final repository = _PhotoDomainRepository();
+    // 도담삼봉에서 약 1.4km 떨어진 좌표(반경 300m 밖).
+    final gateway = _FakeLocationGateway(37.0130, 128.3418);
+    final container = _container(
+      fakeQuests: [_gpsQuest],
+      domainRepository: repository,
+      locationGateway: gateway,
+    );
+    await tester.pumpWidget(_wrapVerifyScreen(_gpsQuest.id, container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(ElevatedButton, '현재 위치로 인증하기'));
+    await tester.pumpAndSettle();
+
+    expect(gateway.calls, 1);
+    expect(repository.verifyCalls, 0); // 서버 호출 없음
+    expect(find.textContaining('떨어져 있어요'), findsOneWidget);
+    expect(find.textContaining('인증 반경 300m'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2)); // 토스트 타이머 소진
+  });
+
+  testWidgets('gps 분기 — 반경 이내면 좌표 없이 인증을 요청한다', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+
+    final repository = _PhotoDomainRepository();
+    // 퀘스트 좌표에서 약 20m 거리(반경 300m 이내).
+    final gateway = _FakeLocationGateway(37.00098, 128.3418);
+    final container = _container(
+      fakeQuests: [_gpsQuest],
+      domainRepository: repository,
+      locationGateway: gateway,
+    );
+    await tester.pumpWidget(_wrapVerifyScreen(_gpsQuest.id, container));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(ElevatedButton, '현재 위치로 인증하기'));
+    await tester.pumpAndSettle();
+
+    expect(repository.verifyCalls, 1);
+    expect(find.text('퀘스트 완료! 지도가 칠해졌어요'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  test('distanceMeters는 하버사인 거리를 계산한다', () {
+    // 같은 지점은 0, 위도 1도 차이는 약 111km.
+    expect(distanceMeters(37.0, 128.0, 37.0, 128.0), 0);
+    expect(distanceMeters(37.0, 128.0, 38.0, 128.0), closeTo(111195, 500));
+    // 도담삼봉 기준 약 20m 떨어진 좌표.
+    expect(
+      distanceMeters(37.0008, 128.3418, 37.00098, 128.3418),
+      closeTo(20, 3),
+    );
   });
 }

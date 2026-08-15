@@ -1,0 +1,45 @@
+name: Test frontend
+
+# dev로 향하는 PR과 dev 푸시에서 Flutter 정적 분석·테스트를 돌린다 (KAN-76).
+# 로컬에 Flutter SDK가 없는 팀원은 컨테이너로 돌리는데(frontend/docker-compose.yml)
+# analyze가 10분 넘게 걸려 건너뛰기 쉽다 — CI가 그 자리를 대신한다.
+on:
+  pull_request:
+    branches: [dev]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/test-frontend.yml"
+  push:
+    branches: [dev]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/test-frontend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # 팀이 로컬에서 쓰는 컨테이너 이미지(cirruslabs/flutter:stable)와 같은 채널.
+          # 요구 버전은 README(Flutter 3.44+ / Dart 3.12+)를 따른다.
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test

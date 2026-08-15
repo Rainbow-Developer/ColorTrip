@@ -10,8 +10,9 @@ from app.maps.schemas import MapProgressRead
 
 async def get_my_map(session: AsyncSession, user_id: UUID) -> list[MapProgressRead]:
     rows = await repository.list_regions_with_progress(session, user_id)
-    # 채색 기준: 지역별 완료 여정 수 (docs/specs/055-journey-map-coloring/)
-    journey_counts = await repository.count_completed_journeys_by_region(session, user_id)
+    # 채색 기준: 지역별로 완료 퀘스트가 1개 이상인 여정 수 (docs/specs/055-journey-map-coloring/).
+    # 응답 필드명은 completed_journey_count를 유지한다(FE 파싱 호환 — plan 의사결정 참고).
+    journey_counts = await repository.count_colored_journeys_by_region(session, user_id)
     return [
         MapProgressRead(
             region_id=region.id,

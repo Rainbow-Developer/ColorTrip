@@ -1,15 +1,12 @@
-"""스테이트리스 인증 API·QR 서명 테스트 (docs/specs/050-quest-verification/)."""
+"""QR 서명·Gemini 판정 파싱 단위 테스트 (docs/specs/050-quest-verification/).
+
+사진·QR 인증은 `POST /quests/{id}/verify` 한 경로로만 수행하므로(KAN-73) 판정 전용
+엔드포인트 테스트는 `test_quest_verification.py`로 옮겨졌다."""
 
 import pytest
-from httpx import AsyncClient
 
-from app.core.config import settings
 from app.integrations.vision.gemini import _parse_verdict_text
 from app.verifications.service import sign_quest_payload, verify_qr_payload
-from tests.helpers import auth_headers
-
-_PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"0" * 32
-
 
 # --- QR 서명 (단위) ---
 
@@ -59,103 +56,7 @@ def test_qr_malformed_payload_fails(bad_payload: str) -> None:
     assert passed is False
 
 
-# --- POST /api/v1/verifications/qr ---
-
-
-async def test_verify_qr_endpoint(client: AsyncClient) -> None:
-    headers = await auth_headers(client)
-    payload = sign_quest_payload("dy3")
-
-    ok = await client.post(
-        "/api/v1/verifications/qr",
-        json={"payload": payload, "quest_id": "dy3"},
-        headers=headers,
-    )
-    assert ok.status_code == 200
-    assert ok.json()["data"]["passed"] is True
-
-    wrong = await client.post(
-        "/api/v1/verifications/qr",
-        json={"payload": payload, "quest_id": "cj1"},
-        headers=headers,
-    )
-    assert wrong.status_code == 200
-    data = wrong.json()["data"]
-    assert data["passed"] is False
-    assert "이 퀘스트의 QR" in data["reason"]
-
-
-async def test_verify_qr_requires_auth(client: AsyncClient) -> None:
-    response = await client.post(
-        "/api/v1/verifications/qr",
-        json={"payload": sign_quest_payload("dy3"), "quest_id": "dy3"},
-    )
-    assert response.status_code == 401
-
-
-# --- POST /api/v1/verifications/photo ---
-
-
-async def test_verify_photo_stub_judgement(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    # 로컬 .env에 GEMINI_API_KEY가 있어도 스텁 판정을 검증하도록 고정한다.
-    monkeypatch.setattr(settings, "gemini_api_key", "")
-    headers = await auth_headers(client)
-
-    response = await client.post(
-        "/api/v1/verifications/photo",
-        files={"image": ("visit.png", _PNG_BYTES, "image/png")},
-        data={
-            "title": "도담삼봉 인증샷",
-            "place": "도담삼봉",
-            "conditions": "도담삼봉에서 촬영\n주변 풍경이 보이는 구도",
-        },
-        headers=headers,
-    )
-    assert response.status_code == 200
-    data = response.json()["data"]
-    assert data["provider"] == "stub"
-    assert data["passed"] is True
-    assert data["confidence"] == 0.0
-    assert "AI 판정 미설정" in data["reason"]
-
-
-async def test_verify_photo_rejects_non_image(client: AsyncClient) -> None:
-    headers = await auth_headers(client)
-
-    response = await client.post(
-        "/api/v1/verifications/photo",
-        files={"image": ("note.txt", b"hello", "text/plain")},
-        data={"title": "도담삼봉 인증샷", "place": "도담삼봉"},
-        headers=headers,
-    )
-    assert response.status_code == 422
-
-
-async def test_verify_photo_rejects_oversized(client: AsyncClient) -> None:
-    headers = await auth_headers(client)
-    oversized = b"\x89PNG\r\n\x1a\n" + b"0" * (settings.max_upload_size_mb * 1024 * 1024 + 1)
-
-    response = await client.post(
-        "/api/v1/verifications/photo",
-        files={"image": ("big.png", oversized, "image/png")},
-        data={"title": "도담삼봉 인증샷", "place": "도담삼봉"},
-        headers=headers,
-    )
-    assert response.status_code == 422
-
-
-async def test_verify_photo_requires_auth(client: AsyncClient) -> None:
-    response = await client.post(
-        "/api/v1/verifications/photo",
-        files={"image": ("visit.png", _PNG_BYTES, "image/png")},
-        data={"title": "도담삼봉 인증샷", "place": "도담삼봉"},
-    )
-    assert response.status_code == 401
-
-
-# --- Gemini 판정 텍스트 파싱 (제공자 응답이 지시를 어길 때의 안전성) ---
+# --- Gemini 판정 텍스트 파싱 (단위) ---
 
 
 @pytest.mark.parametrize(
@@ -179,12 +80,53 @@ def test_parse_verdict_text_only_accepts_explicit_true(raw: str, expected: bool)
     assert verdict.reason
 
 
-async def test_verify_qr_rejects_oversized_payload(client: AsyncClient) -> None:
-    headers = await auth_headers(client)
+@pytest.mark.asyncio
+async def test_gemini_api_key_is_stripped_before_becoming_a_header(monkeypatch) -> None:
+    """줄바꿈이 딸려 저장된 키로도 요청이 나가야 한다 (KAN-75).
 
-    response = await client.post(
-        "/api/v1/verifications/qr",
-        json={"payload": "colortrip:quest:" + "0" * 500, "quest_id": "dy3"},
-        headers=headers,
-    )
-    assert response.status_code == 422
+    Secret Manager에 키를 넣을 때 터미널에서 Enter로 입력하면 끝에 개행이 붙는다.
+    그대로 헤더 값에 넣으면 httpx가 헤더 주입으로 보고 요청 자체를 거부해, 원인을
+    찾기 어려운 500이 된다.
+    """
+    import httpx
+
+    from app.core.config import settings
+    from app.integrations.vision.gemini import GeminiVisionJudge
+
+    monkeypatch.setattr(settings, "gemini_api_key", "test-key\n", raising=False)
+    seen: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["key"] = request.headers["x-goog-api-key"]
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": (
+                                        '{"passed": true, "confidence": 0.9, "reason": "확인됨"}'
+                                    )
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    original_client = httpx.AsyncClient
+
+    def patched_client(*args, **kwargs):
+        kwargs["transport"] = transport
+        return original_client(*args, **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", patched_client)
+
+    verdict = await GeminiVisionJudge().judge(b"bytes", "image/jpeg", "prompt")
+
+    assert seen["key"] == "test-key"
+    assert verdict.passed is True

@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import '../models/verification.dart';
+
 /// 추천 퀘스트를 요청·표시할 때 쓰는 기본 개수 — API 요청과 화면 표시 상한이 어긋나지
 /// 않도록 하나의 값으로 공유한다.
 const kRecommendedQuestSize = 3;
@@ -99,10 +101,18 @@ class DomainSnapshot {
 }
 
 class QuestVerification {
-  const QuestVerification({required this.verified, this.reason});
+  const QuestVerification({
+    required this.verified,
+    this.reason,
+    this.photoVerdict,
+  });
 
   final bool verified;
   final String? reason;
+
+  /// 사진 미션의 비전 판정 상세(신뢰도·사유·판정 제공자) — 그 밖의 미션에서는 null.
+  /// 서버가 저장된 사진을 읽어 판정하고 응답에 함께 담아준다(KAN-73).
+  final PhotoVerdict? photoVerdict;
 }
 
 abstract class DomainRepository {
@@ -131,11 +141,16 @@ abstract class DomainRepository {
 
   Future<String> uploadPhoto(Uint8List bytes, {String mimeType = 'image/jpeg'});
 
+  /// 퀘스트 인증 요청.
+  ///
+  /// **좌표 파라미터가 없는 것은 의도된 설계다** — 위치 인증은 단말에서 거리를 판정하고
+  /// 좌표를 서버로 보내지 않는다. 좌표를 전송하면 저장 여부와 무관하게 위치정보법상
+  /// 위치기반서비스사업 신고 대상이 된다
+  /// (docs/specs/050-quest-verification/location-law-review.md, KAN-77).
+  /// 서버도 gps 미션에 lat·lng이 오면 거절한다.
   Future<QuestVerification> verifyQuest({
     required String questKey,
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,
@@ -278,6 +293,9 @@ class DioDomainRepository implements DomainRepository {
           contentType: mediaType,
         ),
       }),
+      // 최대 5MB를 실제로 전송하는 요청이다 — 기본 설정에는 sendTimeout이 없어
+      // 느린 회선에서 전송이 정체되면 OS TCP 타임아웃까지 갇힌다(응답은 작은 JSON).
+      options: Options(sendTimeout: const Duration(seconds: 30)),
     );
     return _data(response)['photo_url'] as String;
   }
@@ -286,28 +304,34 @@ class DioDomainRepository implements DomainRepository {
   Future<QuestVerification> verifyQuest({
     required String questKey,
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,
   }) async {
     final catalog = await _loadCatalog();
+    // 이 payload에는 위도·경도가 들어가지 않는다(좌표 비전송 불변식 — 인터페이스 주석 참고).
     final payload = <String, dynamic>{};
     if (journeyId != null) payload['journey_id'] = journeyId;
-    if (latitude != null) payload['lat'] = latitude;
-    if (longitude != null) payload['lng'] = longitude;
     if (photoUrl != null) payload['photo_url'] = photoUrl;
     if (answer != null) payload['answer'] = answer;
     if (qrPayload != null) payload['qr_payload'] = qrPayload;
     final response = await _dio.post(
       '/quests/${catalog.questId(questKey)}/verify',
       data: payload,
+      // 사진 미션은 서버가 저장본을 읽어 비전 판정까지 수행하므로 응답이 늦는다
+      // (본문은 작아서 receiveTimeout만 늘리면 된다 — 업로드 쪽은 sendTimeout 담당).
+      options: photoUrl == null
+          ? null
+          : Options(receiveTimeout: const Duration(seconds: 30)),
     );
     final data = _data(response);
+    final verdict = data['photo_verdict'];
     return QuestVerification(
       verified: data['verified'] as bool,
       reason: data['reason'] as String?,
+      photoVerdict: verdict is Map<String, dynamic>
+          ? PhotoVerdict.fromJson(verdict)
+          : null,
     );
   }
 

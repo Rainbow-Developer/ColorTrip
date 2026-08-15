@@ -2,6 +2,9 @@ class ProfileValidationResult {
   const ProfileValidationResult({required this.errors, this.birthDate});
 
   final Map<String, String> errors;
+
+  /// 파싱된 생년월일 — **선택 항목**이라 입력이 비었으면 오류 없이 null이다(KAN-75).
+  /// 오류 없이 null인 경우와 오류가 있어 null인 경우는 [errors]로 구분한다.
   final DateTime? birthDate;
 }
 
@@ -26,9 +29,16 @@ ProfileValidationResult validateOnboardingProfile({
     errors['email'] = '올바른 이메일을 입력해주세요.';
   }
 
+  // 생년월일은 선택 항목이다(KAN-75) — 비워두면 검증 없이 통과하고 null을 돌려준다.
+  // 값이 있을 때만 형식·범위를 따진다.
+  final normalizedBirthDate = birthDate.trim();
+  if (normalizedBirthDate.isEmpty) {
+    return ProfileValidationResult(errors: errors, birthDate: null);
+  }
+
   final match = RegExp(
     r'^(\d{4})[-.](\d{2})[-.](\d{2})$',
-  ).firstMatch(birthDate.trim());
+  ).firstMatch(normalizedBirthDate);
   DateTime? parsedBirthDate;
   if (match != null) {
     final year = int.parse(match.group(1)!);

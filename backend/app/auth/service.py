@@ -181,14 +181,20 @@ async def save_onboarding_profile(
         raise AppException(ErrorCode.REQUIRED_CONSENT_ERROR)
 
     current_user = await require_active_user_for_update(session, current_user.id)
-    if _profile_is_complete(current_user) and current_user.email != payload.email:
+    # 이메일 잠금은 **온보딩을 마친** 사용자에게만 건다 — 필드 채워짐(_profile_is_complete)
+    # 만으로 판단하면, 카카오가 닉네임·이메일을 미리 채워준 신규 가입자가 첫 제출부터
+    # "이메일 변경 불가"로 막힌다(생년월일이 필수였을 때는 그 값이 비어 있어 우연히
+    # 걸러지고 있었다 — KAN-75에서 선택 항목으로 바꾸며 드러났다).
+    if await is_profiled_user(session, current_user) and current_user.email != payload.email:
         raise AppException(
             ErrorCode.VALIDATION_ERROR,
             "Email cannot be changed after onboarding.",
         )
     current_user.nickname = payload.nickname
     current_user.email = payload.email
-    current_user.birth_date = payload.birth_date
+    if payload.birth_date is not None:
+        # 선택 항목이므로 값이 올 때만 덮어쓴다 — 재제출 시 기존 값을 지우지 않는다(KAN-75).
+        current_user.birth_date = payload.birth_date
     decided_at = now_kst()
     await repository.upsert_current_consents(
         session,
@@ -313,10 +319,9 @@ async def require_active_user_for_update(session: AsyncSession, user_id: UUID) -
 
 
 def _profile_is_complete(user: User) -> bool:
-    return bool(
-        user.nickname
-        and user.nickname.strip()
-        and user.email
-        and user.email.strip()
-        and user.birth_date is not None
-    )
+    """온보딩 프로필 입력이 끝났는지 — 생년월일은 **선택**이라 포함하지 않는다(KAN-75).
+
+    포함하면 생년월일을 건너뛴 사용자가 onboarding_step="profile"에 영구히 묶여
+    회원가입 화면을 벗어나지 못한다.
+    """
+    return bool(user.nickname and user.nickname.strip() and user.email and user.email.strip())

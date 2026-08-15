@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:colortrip/core/widgets/step_progress.dart';
 import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/repositories/auth_repository.dart';
 import 'package:colortrip/features/onboarding/config_error_app.dart';
@@ -12,6 +13,7 @@ import 'package:colortrip/state/auth_controller.dart';
 import 'package:colortrip/state/onboarding_tour_notifier.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/repository_providers.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,6 +42,9 @@ class _Repository implements AuthRepository {
   Object? submitError;
   Object? updateError;
 
+  /// 마지막으로 제출된 온보딩 입력 — 생년월일이 실제로 비어 전송되는지 확인한다.
+  OnboardingProfileInput? submittedProfile;
+
   @override
   Future<UserProfile> fetchCurrentUser() async => user;
 
@@ -65,6 +70,7 @@ class _Repository implements AuthRepository {
   Future<UserProfile> submitOnboardingProfile(
     OnboardingProfileInput input,
   ) async {
+    submittedProfile = input;
     if (submitError case final error?) throw error;
     return user = _user(OnboardingStep.tripDna);
   }
@@ -156,7 +162,11 @@ void main() {
     expect(find.text('[선택] 마케팅 수신 동의'), findsOneWidget);
   });
 
-  testWidgets('signup birth date field opens a date picker', (tester) async {
+  testWidgets('signup birth date field opens a year/month/day wheel picker', (
+    tester,
+  ) async {
+    // Material showDatePicker는 연도를 고르면 곧바로 일 달력으로 돌아가 월을 화살표로만
+    // 넘길 수 있었다 — 연·월·일 휠로 교체했다(KAN-73).
     final container = await _container(
       _Repository(_user(OnboardingStep.profile)),
     );
@@ -168,10 +178,19 @@ void main() {
         child: const MaterialApp(home: SignupScreen()),
       ),
     );
-    await tester.tap(find.widgetWithText(TextField, '2000-01-01'));
+    await tester.tap(find.widgetWithText(TextField, '입력하지 않아도 가입할 수 있어요'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DatePickerDialog), findsOneWidget);
+    expect(find.byType(DatePickerDialog), findsNothing);
+    expect(find.text('생년월일을 선택해주세요'), findsOneWidget);
+    // 연·월·일 휠 3개 — 월을 직접 고를 수 있다는 게 이번 변경의 핵심이다.
+    expect(find.byType(CupertinoPicker), findsNWidgets(3));
+
+    await tester.tap(find.text('선택 완료'));
+    await tester.pumpAndSettle();
+    // 선택 결과가 yyyy-MM-dd로 필드에 채워진다.
+    final field = tester.widget<TextField>(find.byType(TextField).at(1));
+    expect(field.controller?.text, matches(r'^\d{4}-\d{2}-\d{2}$'));
   });
 
   testWidgets('signup agreements expose checked semantics', (tester) async {
@@ -381,5 +400,68 @@ void main() {
     await tester.pump();
 
     expect(repository.withdrawalCalls, 1);
+  });
+
+  testWidgets('signup drops the step bar and accepts an empty birth date', (
+    tester,
+  ) async {
+    // 진행바는 회원가입에서 걷어내 여행 DNA 설문으로 옮겼고(2/3 고정이라 의미가 없었다),
+    // 생년월일은 선택 항목이 됐다 — 비운 채로도 다음 단계로 넘어가야 한다(KAN-75).
+    // 제출 성공 뒤에는 화면이 GoRouter로 이동하는데 이 테스트는 라우터 없이 화면만
+    // 띄운다 — 입력이 서버로 넘어간 것까지만 확인하고 이동 직전에 멈춘다.
+    final repository = _Repository(_user(OnboardingStep.profile))
+      ..submitError = StateError('stop before navigation');
+    final container = await _container(repository);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: SignupScreen()),
+      ),
+    );
+
+    expect(find.byType(StepProgress), findsNothing);
+    expect(find.text('생년월일 (선택)'), findsOneWidget);
+
+    await tester.tap(find.text('[필수] 이용약관 동의'));
+    await tester.tap(find.text('[필수] 개인정보 처리방침'));
+    await tester.pump();
+    await tester.ensureVisible(find.text('다음'));
+    await tester.tap(find.text('다음'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('유효한 생년월일'), findsNothing);
+    expect(repository.submittedProfile?.birthDate, isNull);
+  });
+
+  testWidgets('signup can clear a chosen birth date back to unset', (
+    tester,
+  ) async {
+    // readOnly 필드라 키보드로는 지울 수 없다 — 지우기 버튼이 없으면 한 번 고른 뒤
+    // '선택'으로 되돌릴 방법이 사라진다.
+    final container = await _container(
+      _Repository(_user(OnboardingStep.profile)),
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: SignupScreen()),
+      ),
+    );
+    await tester.tap(find.widgetWithText(TextField, '입력하지 않아도 가입할 수 있어요'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('선택 완료'));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byType(TextField).at(1));
+    expect(field.controller?.text, isNotEmpty);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    expect(field.controller?.text, isEmpty);
   });
 }

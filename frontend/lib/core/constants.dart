@@ -59,6 +59,9 @@ class AppColors {
   static const verifyMapBg = Color(0xFFF0F0EA);
   static const verifyProgressTrack = Color(0xFFEEEEEA);
 
+  // 인증 진행 중 화면을 덮는 스크림(KAN-73) — 뒤 화면을 어둡게 눌러 진행 중임을 알린다.
+  static const verifyScrim = Color(0xB3333333);
+
   // 공유 카드 만들기(Figma) — 지도 미리보기 카드 배경.
   static const shareMapPreviewBg = Color(0xFFE0EDD8);
 
@@ -215,14 +218,3 @@ const Map<String, List<Color>> regionMapColors = {
     Color(0xFFE3D696),
   ],
 };
-
-/// 지도 범례([core/widgets/map_legend.dart]) 5단계 스와치 — 실제 지역 팔레트는 지역마다
-/// hue가 달라 대표색으로 못 쓰므로, 앱 기존 파스텔 그린 톤(splashCardBackground·
-/// questSelectedBg 계열)에 맞춘 별도 그라데이션을 쓴다(KAN-51).
-const List<Color> mapLegendColors = [
-  Color(0xFFEAF3E4),
-  Color(0xFFD2E7C6),
-  Color(0xFFB6D9A8),
-  Color(0xFF98CB8B),
-  Color(0xFF78BC6E),
-];

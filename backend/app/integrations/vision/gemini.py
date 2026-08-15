@@ -48,7 +48,12 @@ class GeminiVisionJudge:
         try:
             async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
                 response = await client.post(
-                    url, json=body, headers={"x-goog-api-key": settings.gemini_api_key}
+                    url,
+                    json=body,
+                    # 키는 반드시 strip 한다 — Secret Manager에 줄바꿈이 딸려 저장되기 쉬운데
+                    # (터미널에서 Enter로 입력하면 그렇게 된다), 헤더 값에 개행이 있으면
+                    # httpx가 헤더 주입으로 보고 요청 자체를 거부한다.
+                    headers={"x-goog-api-key": settings.gemini_api_key.strip()},
                 )
                 response.raise_for_status()
                 data = response.json()

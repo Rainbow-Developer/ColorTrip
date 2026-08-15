@@ -284,19 +284,15 @@ void main() {
       throw StateError('unexpected ${options.method} ${options.path}');
     });
 
-    final result = await DioDomainRepository(dio).verifyQuest(
-      questKey: 'dy4',
-      journeyId: 'journey-uuid',
-      latitude: 36.977,
-      longitude: 128.337,
-    );
+    final result = await DioDomainRepository(
+      dio,
+    ).verifyQuest(questKey: 'dy4', journeyId: 'journey-uuid');
 
     expect(result.verified, isTrue);
     expect(verificationRequest.method, 'POST');
+    // 좌표는 어떤 인증에서도 전송되지 않는다 — 위치 판정은 단말에서 끝난다(KAN-77).
     expect(Map<String, dynamic>.from(verificationRequest.data as Map), {
       'journey_id': 'journey-uuid',
-      'lat': 36.977,
-      'lng': 128.337,
     });
   });
 

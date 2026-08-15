@@ -79,7 +79,8 @@ ColorTrip은 **backend(Python) + frontend(Flutter)** 를 함께 관리하는 **�
 | 세션 시작 시 핵심 지침 리마인드 | `session_context.py` | SessionStart | — |
 
 - **Claude Code hooks**: [`.claude/settings.json`](../.claude/settings.json) — 커밋되어 팀이 Claude Code로 작업할 때 공유됩니다. (개인 설정은 `.claude/settings.local.json`)
-- **git hooks**: [`.pre-commit-config.yaml`](../.pre-commit-config.yaml) — 사람·도구 무관 최종 방어선. 최초 1회 설치가 필요합니다([코드 품질](conventions/code-quality.md) 참고).
+- **git hooks**: [`.pre-commit-config.yaml`](../.pre-commit-config.yaml) — 최초 1회 설치가 필요합니다([코드 품질](conventions/code-quality.md) 참고).
+- **CI**: `dev`로 향하는 PR·`dev` 푸시에서 [test-backend.yml](../.github/workflows/test-backend.yml)·[test-frontend.yml](../.github/workflows/test-frontend.yml)이 테스트를 실행합니다 — **사람·도구·환경 무관 최종 방어선**. 로컬 훅은 `SKIP=`으로 건너뛸 수 있고 Flutter SDK가 없으면 dart 훅이 아예 돌지 않으므로, 로컬 통과만으로 검증됐다고 보지 마세요.
 
 ### SKILL (절차 안내)
 

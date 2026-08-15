@@ -6,10 +6,12 @@ QR 미션 분기(MissionType.QR)는 docs/specs/050-quest-verification/에서 추
 import asyncio
 from uuid import UUID
 
+import pytest
 from httpx import AsyncClient
 
 from app.auth.models import User
 from app.core.database import AsyncSessionLocal
+from app.integrations.vision.base import VisionVerdict
 from app.quests.dna import get_user_primary_category
 from app.quests.models import Quest
 from app.verifications.service import sign_quest_payload
@@ -146,9 +148,32 @@ async def test_photo_verify_rejects_another_users_upload(client: AsyncClient) ->
     assert "본인이 업로드" in response.json()["message"]
 
 
-async def test_gps_only_verify_requires_location_but_not_photo(
+async def test_gps_only_verify_completes_without_coordinates(
     client: AsyncClient,
 ) -> None:
+    """gps 미션은 단말이 반경을 판정하고 서버는 완료만 기록한다 (KAN-77)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
+        json={},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["verified"] is True
+    assert response.json()["data"]["progress"]["status"] == "completed"
+
+
+async def test_gps_verify_rejects_coordinates(client: AsyncClient) -> None:
+    """gps 미션에 좌표를 보내면 거절한다 (회귀: KAN-77).
+
+    좌표는 저장하지 않더라도 **수신하는 것만으로** 위치정보법상 위치기반서비스사업
+    신고 대상이 된다(location-law-review.md의 B안). `a3df7fc`에서 FE가 좌표를 보내기
+    시작했는데 서버가 받아주는 바람에 아무도 모른 채 신고 대상 상태가 됐다. 무시가
+    아니라 거절해야 같은 이탈이 조용히 반복되지 않는다.
+    """
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
 
@@ -158,8 +183,38 @@ async def test_gps_only_verify_requires_location_but_not_photo(
         headers=headers,
     )
 
-    assert response.status_code == 200
-    assert response.json()["data"]["verified"] is True
+    assert response.status_code == 422
+    assert "좌표" in response.json()["message"]
+
+
+async def test_gps_verify_does_not_store_coordinates(client: AsyncClient) -> None:
+    """완료 기록에 좌표가 남지 않는다 (KAN-77)."""
+    from uuid import UUID
+
+    from sqlalchemy import select
+
+    from app.core.database import AsyncSessionLocal
+    from app.quests.models import QuestProgress
+
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    await client.post(
+        f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
+        json={},
+        headers=headers,
+    )
+
+    async with AsyncSessionLocal() as session:
+        progress = (
+            await session.scalars(
+                select(QuestProgress).where(
+                    QuestProgress.quest_id == UUID(seed["gps_only_quest_id"])
+                )
+            )
+        ).one()
+        assert progress.verified_lat is None
+        assert progress.verified_lng is None
 
 
 async def test_quiz_verify(client: AsyncClient) -> None:
@@ -183,14 +238,18 @@ async def test_quiz_verify(client: AsyncClient) -> None:
     assert correct.json()["data"]["progress"]["status"] == "completed"
 
 
-async def _seed_qr_quest(region_id: str) -> str:
-    """QR 미션 퀘스트를 추가 시드한다 (seed_quest_fixture는 010 스펙 소유라 여기서 직접)."""
+async def _seed_qr_quest(region_id: str, *, client_key: str | None = "qr-test-1") -> str:
+    """QR 미션 퀘스트를 추가 시드한다 (seed_quest_fixture는 010 스펙 소유라 여기서 직접).
+
+    client_key=None이면 QR 인증 정보가 없는 데이터 오류 상황을 만든다.
+    """
     from app.core.database import AsyncSessionLocal
     from app.quests.models import Quest
 
     async with AsyncSessionLocal() as session:
         quest = Quest(
             region_id=UUID(region_id),
+            client_key=client_key,
             title="수양개빛터널 현장 QR",
             category="activity",
             mission_type="qr",
@@ -203,22 +262,22 @@ async def _seed_qr_quest(region_id: str) -> str:
 async def test_qr_verify_completes_quest(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
-    qr_quest_id = await _seed_qr_quest(seed["region_id"])
+    qr_quest_id = await _seed_qr_quest(seed["region_id"], client_key="qr-danyang-1")
 
     # 다른 퀘스트용 QR로는 실패한다.
     wrong = await client.post(
         f"/api/v1/quests/{qr_quest_id}/verify",
-        json={"qr_payload": sign_quest_payload(seed["gps_quest_id"])},
+        json={"qr_payload": sign_quest_payload("qr-danyang-2")},
         headers=headers,
     )
     assert wrong.status_code == 200
     assert wrong.json()["data"]["verified"] is False
     assert "이 퀘스트의 QR" in wrong.json()["data"]["reason"]
 
-    # 해당 퀘스트의 서명 QR로 완료된다.
+    # 해당 퀘스트의 서명 QR로 완료된다 — 서명 대상은 client_key다(KAN-75).
     ok = await client.post(
         f"/api/v1/quests/{qr_quest_id}/verify",
-        json={"qr_payload": sign_quest_payload(qr_quest_id)},
+        json={"qr_payload": sign_quest_payload("qr-danyang-1")},
         headers=headers,
     )
     assert ok.status_code == 200
@@ -229,10 +288,49 @@ async def test_qr_verify_completes_quest(client: AsyncClient) -> None:
     assert data["progress"]["completed_at"] is not None
 
 
+async def test_qr_verify_matches_client_key_not_database_uuid(client: AsyncClient) -> None:
+    """UUID로 서명한 QR은 통과하지 않는다 (회귀: KAN-75).
+
+    인쇄 QR을 만드는 scripts/generate_quest_qr.py는 client_key로 서명하는데 서버가 DB
+    UUID와 대조하고 있어, 서명이 유효해도 현장 QR이 한 번도 통과할 수 없었다. 두 기준을
+    맞바꿔 쓰면 다시 같은 증상이 나므로 UUID 서명은 명시적으로 거절되어야 한다.
+    """
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    qr_quest_id = await _seed_qr_quest(seed["region_id"], client_key="qr-uuid-check")
+
+    response = await client.post(
+        f"/api/v1/quests/{qr_quest_id}/verify",
+        json={"qr_payload": sign_quest_payload(qr_quest_id)},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["verified"] is False
+
+
+async def test_qr_verify_rejects_quest_without_client_key(client: AsyncClient) -> None:
+    """client_key 없이 등록된 QR 퀘스트는 통과시키지 않는다 (fail-closed)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    qr_quest_id = await _seed_qr_quest(seed["region_id"], client_key=None)
+
+    response = await client.post(
+        f"/api/v1/quests/{qr_quest_id}/verify",
+        json={"qr_payload": sign_quest_payload("anything")},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["verified"] is False
+    assert "QR 인증 정보" in data["reason"]
+
+
 async def test_qr_verify_requires_payload(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
-    qr_quest_id = await _seed_qr_quest(seed["region_id"])
+    qr_quest_id = await _seed_qr_quest(seed["region_id"], client_key="qr-no-payload")
 
     response = await client.post(f"/api/v1/quests/{qr_quest_id}/verify", json={}, headers=headers)
     assert response.status_code == 422
@@ -252,7 +350,7 @@ async def test_concurrent_different_quest_completions_update_region_once_each(
         ),
         client.post(
             f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
-            json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG)},
+            json={},  # gps 미션은 좌표를 보내지 않는다 (KAN-77)
             headers=headers,
         ),
         return_exceptions=True,
@@ -464,3 +562,187 @@ async def test_recommendations_exclude_quests_without_a_client_key(
     )
     assert danyang_after["available_quest_count"] == danyang_before["available_quest_count"]
     assert danyang_after["matching_quest_count"] == danyang_before["matching_quest_count"]
+
+
+# --- 사진 비전 판정 (KAN-73 — 저장된 사진을 읽어 판정) ---
+
+
+class _FixedVisionJudge:
+    """지정한 판정 결과만 돌려주는 대역 — 실제 모델 호출 없이 분기를 검증한다."""
+
+    def __init__(self, verdict: VisionVerdict) -> None:
+        self._verdict = verdict
+        self.calls = 0
+
+    async def judge(self, image_bytes: bytes, mime_type: str, prompt: str) -> VisionVerdict:
+        self.calls += 1
+        assert image_bytes, "저장된 사진 바이트가 판정기까지 전달돼야 한다"
+        assert prompt, "서버가 만든 판정 프롬프트가 있어야 한다"
+        return self._verdict
+
+
+async def test_photo_verify_returns_vision_verdict_in_response(client: AsyncClient) -> None:
+    """사진 인증 응답에 판정 상세(신뢰도·사유·제공자)가 함께 내려온다."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": "/uploads/photos/2026/07/photo.jpg"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["verified"] is True
+    # 키 미설정 + APP_ENV=test → 스텁 판정(통과)
+    assert data["photo_verdict"]["passed"] is True
+    assert data["photo_verdict"]["provider"] == "stub"
+    assert data["photo_verdict"]["reason"]
+
+
+async def test_photo_verify_rejected_by_vision_does_not_complete(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """비전 판정이 거절하면 완료 처리하지 않고 판정 사유를 돌려준다."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    judge = _FixedVisionJudge(
+        VisionVerdict(
+            passed=False,
+            confidence=0.1,
+            reason="사진에서 퀘스트 장소를 확인할 수 없습니다.",
+            provider="gemini",
+        )
+    )
+    monkeypatch.setattr("app.verifications.service.get_vision_judge", lambda: judge)
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": "/uploads/photos/2026/07/photo.jpg"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert judge.calls == 1
+    assert data["verified"] is False
+    assert data["reason"] == "사진에서 퀘스트 장소를 확인할 수 없습니다."
+    assert data["photo_verdict"]["passed"] is False
+    assert data["progress"]["status"] != "completed"
+
+    # 완료되지 않았으므로 진행 목록에도 완료로 남지 않는다.
+    progress = await client.get("/api/v1/users/me/progress", headers=headers)
+    statuses = [item["status"] for item in progress.json()["data"]["items"]]
+    assert "completed" not in statuses
+
+
+async def test_photo_verify_rejects_when_stored_photo_is_missing(client: AsyncClient) -> None:
+    """업로드 기록은 있어도 저장된 파일을 읽지 못하면 거절한다(fail-closed)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    # 소유권 기록만 만들고 파일은 만들지 않은 photo_url.
+    from app.auth.models import User as _User
+    from app.core.database import AsyncSessionLocal as _Session
+    from app.uploads.models import UploadedPhoto as _UploadedPhoto
+
+    me = await client.get("/api/v1/users/me", headers=headers)
+    async with _Session() as session:
+        user = await session.get(_User, UUID(me.json()["data"]["id"]))
+        assert user is not None
+        session.add(_UploadedPhoto(user_id=user.id, photo_url="/uploads/photos/ghost.jpg"))
+        await session.commit()
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": "/uploads/photos/ghost.jpg"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["verified"] is False
+    assert "사진" in data["reason"]
+    assert data["progress"]["status"] != "completed"
+
+
+async def test_gps_photo_out_of_radius_skips_vision_judgement(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """반경을 벗어나면 판정 비용을 쓰지 않고 거절한다."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    judge = _FixedVisionJudge(
+        VisionVerdict(passed=True, confidence=1.0, reason="통과", provider="gemini")
+    )
+    monkeypatch.setattr("app.verifications.service.get_vision_judge", lambda: judge)
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['gps_quest_id']}/verify",
+        json={
+            "lat": "37.5665000",
+            "lng": "126.9780000",
+            "photo_url": "/uploads/photos/x.jpg",
+        },
+        headers=headers,
+    )
+    assert response.json()["data"]["verified"] is False
+    assert judge.calls == 0
+
+
+async def test_verify_rejects_oversized_qr_payload(client: AsyncClient) -> None:
+    """과대 QR 페이로드는 파싱 전에 422로 막는다(판정 전용 엔드포인트에서 옮겨온 보호).
+
+    본문 검증이 핸들러보다 먼저 도므로 어떤 퀘스트 id로 보내도 422다.
+    """
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"qr_payload": "colortrip:quest:" + "0" * 500},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+
+async def test_photo_verify_closes_transaction_before_vision_call(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """비전 판정 중에는 요청 세션이 트랜잭션을 열고 있지 않아야 한다.
+
+    열어둔 채 외부 API(최대 30초)를 기다리면 커넥션이 idle-in-transaction으로 묶여,
+    판정이 느릴 때 풀이 소진되고 사진 인증과 무관한 API까지 함께 실패한다.
+    """
+    from app.core import database
+
+    created_sessions = []
+    original_factory = database.AsyncSessionLocal
+
+    def tracking_factory(*args: object, **kwargs: object):
+        session = original_factory(*args, **kwargs)
+        created_sessions.append(session)
+        return session
+
+    monkeypatch.setattr(database, "AsyncSessionLocal", tracking_factory)
+
+    open_transactions: list[bool] = []
+
+    class _ProbeJudge:
+        async def judge(self, image_bytes: bytes, mime_type: str, prompt: str) -> VisionVerdict:
+            # 판정 시점(외부 호출 자리)에 열린 트랜잭션이 있는지 기록한다.
+            open_transactions.append(any(s.in_transaction() for s in created_sessions))
+            return VisionVerdict(passed=True, confidence=0.9, reason="통과", provider="gemini")
+
+    monkeypatch.setattr("app.verifications.service.get_vision_judge", lambda: _ProbeJudge())
+
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    response = await client.post(
+        f"/api/v1/quests/{seed['photo_quest_id']}/verify",
+        json={"photo_url": "/uploads/photos/2026/07/photo.jpg"},
+        headers=headers,
+    )
+
+    assert response.json()["data"]["verified"] is True
+    assert open_transactions == [False], (
+        f"판정 중 열린 트랜잭션이 없어야 한다 (기록: {open_transactions!r})"
+    )

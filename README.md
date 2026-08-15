@@ -132,7 +132,7 @@ frontend(Flutter 앱) → REST API(`/api/v1`) → backend(FastAPI) → PostgreSQ
 │   │   ├── main.dart        # 진입점 (ProviderScope)
 │   │   ├── app/             # MaterialApp.router·GoRouter 라우트(app_shell 탭바 포함)·테마(디자인 토큰)
 │   │   ├── core/            # Dio 클라이언트(설정)·공용 위젯(ChungbukMap·토스트·배지·필터칩)
-│   │   ├── data/            # 모델·정적 카탈로그·서버 Repository
+│   │   ├── data/            # 모델·정적 카탈로그·서버 Repository·플랫폼 seam(location/·media/)
 │   │   ├── state/           # 전역 상태(Riverpod)·진행도 Notifier
 │   │   └── features/        # 화면 단위: onboarding·survey·home·travel·quests·timeline·profile
 │   ├── Dockerfile / docker-compose.yml  # Flutter SDK 미설치 환경 보조용
@@ -174,7 +174,7 @@ dev 서버는 Caddy가 TLS를 종단하고 API 컨테이너는 호스트 포트�
 
 | 기능 | 설명 | 위치 |
 |------|------|------|
-| **온보딩·여행 DNA** | 스플래시·회원가입·초기 설문·DNA 결과 | `frontend/lib/features/onboarding/`, `frontend/lib/features/survey/` |
+| **온보딩·여행 DNA** | 스플래시·회원가입·초기 설문·DNA 결과 | `frontend/lib/features/onboarding/`, `frontend/lib/features/trip_dna/`, 설문 진행바 `frontend/lib/core/widgets/step_progress.dart` |
 | **홈 지도(색칠)** | 충북 11개 시·군 색칠 지도·통계 | `frontend/lib/features/home/`, 지도 위젯 `frontend/lib/core/widgets/chungbuk_map.dart` |
 | **여행 목록** | 진행중/지난 여행(지역 단위) 목록 | `frontend/lib/features/travel/` |
 | **퀘스트·인증** | 지역별·상세·인증(사진/GPS/OX퀴즈), 유형별 전체 목록(보조) | `frontend/lib/features/quests/` |
@@ -184,10 +184,10 @@ dev 서버는 Caddy가 TLS를 종단하고 API 컨테이너는 호스트 포트�
 | **여행 DNA(Travel DNA)** | 여행 성향 질문·선택지 조회, 답변 제출 및 DNA 판정 | `backend/app/trip_dna/` · 스펙 [docs/specs/010-travel-dna/](docs/specs/010-travel-dna/) |
 | **퀘스트(Quest)** | 충북 시·군 관광 퀘스트 목록·상세·카테고리 조회 | `backend/app/quests/` · 스펙 [docs/specs/000-quest/](docs/specs/000-quest/) |
 | **시·군(regions)** | 충북 11개 시·군 마스터·시드 | `backend/app/regions/` |
-| **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) — 채색 기준: 완료 여행 수 | `backend/app/maps/` · 스펙 [docs/specs/055-journey-map-coloring/](docs/specs/055-journey-map-coloring/) |
+| **지도(maps)** | 내 지도 조회 (`GET /users/me/map`) — 채색 기준: 퀘스트를 1개 이상 완료한 여행 수 | `backend/app/maps/` · 스펙 [docs/specs/055-journey-map-coloring/](docs/specs/055-journey-map-coloring/) |
 | **홈·퀘스트 추천** | 미시작 지역과 DNA 기반 미완료 퀘스트 추천 (`GET /regions/unvisited`, `GET /quests/recommended`) | `backend/app/regions/`, `backend/app/quests/`, `frontend/lib/features/home/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/065-quest-recommendation-api/](docs/specs/065-quest-recommendation-api/) |
-| **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈)·완료 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
-| **퀘스트 인증 3종** | 사진 AI(Gemini)·온디바이스 위치·QR 인증 | `backend/app/verifications/`, `backend/app/integrations/vision/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/050-quest-verification/](docs/specs/050-quest-verification/) |
+| **여정·퀘스트 인증(Journey)** | 여정 생성·관리, DNA 추천, 퀘스트 인증(GPS·사진·퀴즈), 여정 완료 판정·완료 처리 | `backend/app/journeys/`, `backend/app/quests/`, `backend/app/uploads/` · 스펙 [docs/specs/010-journey/](docs/specs/010-journey/) |
+| **퀘스트 인증 3종** | 사진 AI(Gemini)·온디바이스 위치·QR 인증 — 인증 진입점은 `POST /quests/{id}/verify` 하나 | `backend/app/quests/verification.py`, `backend/app/verifications/service.py`, `backend/app/integrations/vision/`, `frontend/lib/features/quests/` · 스펙 [docs/specs/050-quest-verification/](docs/specs/050-quest-verification/) |
 | **퀘스트·지역 이미지** | TourAPI 이미지 표시·정적 데이터 보강 | `backend/scripts/enrich_frontend_quests.py`, `frontend/lib/core/widgets/app_network_image.dart` · 스펙 [docs/specs/045-quest-region-images/](docs/specs/045-quest-region-images/) |
 | **DB/데이터 모델 기반** | 여행 DNA 설문·퀘스트 진행·지도 진행·타임라인 기록을 위한 백엔드 데이터 모델 | `backend/app/auth/`, `backend/app/quests/`, `backend/app/progress/`, `backend/app/timeline/`, `backend/app/trip_dna/`, `backend/alembic/` · 스펙 [docs/specs/015-database-migration/](docs/specs/015-database-migration/) |
 | **백엔드 공통 로깅** | JSON 앱 로그, 요청 메타데이터 로깅, request id 전파 | `backend/app/core/` · 스펙 [docs/specs/020-backend-logging/](docs/specs/020-backend-logging/) |

@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
-import '../../data/models/region.dart';
+import '../../core/widgets/trip_card.dart';
 import '../../data/repositories/domain_repository.dart';
-import '../../data/static/quests_data.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/domain_controller.dart';
-import '../../state/progress_notifier.dart';
 
 /// 여행 목록 — 진행 중인 여행(여행 시작함, 선택한 퀘스트 중 미완료 있음) / 지난 여행(선택한 퀘스트 전부 완료)
 /// ([Figma] 여행 목록 화면, 2026-07-09 "여행 시작하기" 도입으로 지역 진행도 기준에서 변경).
@@ -74,7 +72,7 @@ Widget _journeyCard(DomainJourney journey, {required bool isActive}) {
       child: Text('여행 지역 정보를 불러오지 못했어요.'),
     );
   }
-  return _TripCard(journey: journey, region: region, isActive: isActive);
+  return TripCard(journey: journey, region: region, isActive: isActive);
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -92,137 +90,6 @@ class _SectionHeader extends StatelessWidget {
           fontSize: 15,
           fontWeight: FontWeight.w700,
           color: Color(0xFF222222),
-        ),
-      ),
-    );
-  }
-}
-
-class _TripCard extends ConsumerWidget {
-  const _TripCard({
-    required this.journey,
-    required this.region,
-    required this.isActive,
-  });
-
-  final DomainJourney journey;
-  final Region region;
-  final bool isActive;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final progress = ref.watch(progressProvider);
-    final trip = journey.questKeys;
-    final total = trip.length;
-    final done = trip.where(progress.isCompleted).length;
-    final dominantType = dominantTypeForRegion(region.id);
-    final typeLabel = questTypeStyles[dominantType]?.label ?? dominantType;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: () =>
-            context.push('/region/${region.id}?journeyId=${journey.id}'),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                journey.title ?? tripTitleFor(region),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (journey.startDate != null && journey.endDate != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  _periodLabel(journey.startDate!, journey.endDate!),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.timelineDateText,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  _Badge(
-                    label: region.name,
-                    background: isActive
-                        ? AppColors.tripActiveBadgeBg
-                        : AppColors.tripMutedBadgeBg,
-                    foreground: isActive
-                        ? AppColors.tripActiveBadgeFg
-                        : AppColors.tripMutedBadgeFg,
-                  ),
-                  const SizedBox(width: 6),
-                  if (typeLabel != null)
-                    _Badge(
-                      label: typeLabel,
-                      background: AppColors.tripMutedBadgeBg,
-                      foreground: AppColors.tripMutedBadgeFg,
-                    ),
-                  if (isActive) ...[
-                    const Spacer(),
-                    Text(
-                      '퀘스트 $done/$total',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.tripProgressText,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _periodLabel(DateTime start, DateTime end) {
-    String md(DateTime value) =>
-        '${value.month.toString().padLeft(2, '0')}.'
-        '${value.day.toString().padLeft(2, '0')}';
-    return '${start.year}.${md(start)} ~ ${md(end)}';
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({
-    required this.label,
-    required this.background,
-    required this.foreground,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          color: foreground,
-          fontWeight: FontWeight.w500,
         ),
       ),
     );

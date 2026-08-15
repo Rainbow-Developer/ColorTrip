@@ -109,8 +109,6 @@ class _DomainRepository implements DomainRepository {
   Future<QuestVerification> verifyQuest({
     required String questKey,
     String? journeyId,
-    double? latitude,
-    double? longitude,
     String? photoUrl,
     String? answer,
     String? qrPayload,

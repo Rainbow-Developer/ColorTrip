@@ -6,6 +6,7 @@ import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_form_field.dart';
 import '../../core/widgets/app_toast.dart';
+import '../../core/widgets/birth_date_picker.dart';
 import '../../data/models/auth_models.dart';
 import '../../features/onboarding/profile_validation.dart';
 import '../../state/auth_controller.dart';
@@ -95,9 +96,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             if (_errors['nickname'] case final error?) _ErrorText(error),
             const SizedBox(height: 14),
             AppFormField(
-              label: '생년월일',
+              label: '생년월일 (선택)',
               controller: _birthdateController,
-              hint: '2000-01-01',
+              hint: '입력하지 않아도 저장할 수 있어요',
               enabled: !auth.isBusy,
               readOnly: true,
               onTap: _pickBirthDate,
@@ -158,9 +159,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final success = await ref
         .read(authControllerProvider.notifier)
         .updateProfile(
+          // 생년월일이 비어 있으면 null → 요청에서 생략되어 서버 값이 유지된다.
+          // (지우기는 지원하지 않는다 — 서버가 birth_date: null을 거부한다)
           ProfileUpdateInput(
             nickname: nickname,
-            birthDate: validation.birthDate!,
+            birthDate: validation.birthDate,
           ),
         );
     if (!mounted) return;
@@ -179,7 +182,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         parsed != null && !parsed.isBefore(firstDate) && !parsed.isAfter(today)
         ? parsed
         : DateTime(today.year - 26, today.month, today.day);
-    final selected = await showDatePicker(
+    final selected = await showBirthDatePicker(
       context: context,
       initialDate: initial,
       firstDate: firstDate,

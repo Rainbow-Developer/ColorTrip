@@ -1,10 +1,12 @@
 """여정 생성·관리 플로우 테스트 (docs/specs/010-journey/ JRN-01·02)."""
 
 import asyncio
+from datetime import timedelta
 from uuid import uuid4
 
 from httpx import AsyncClient
 
+from app.core.base import now_kst
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
 
@@ -53,6 +55,99 @@ async def test_create_and_get_journey(client: AsyncClient) -> None:
     detail_response = await client.get(f"/api/v1/journeys/{data['id']}", headers=headers)
     assert detail_response.status_code == 200
     assert detail_response.json()["data"]["id"] == data["id"]
+
+
+async def _create_journey_with_period(
+    client: AsyncClient,
+    headers: dict[str, str],
+    seed: dict[str, str],
+    *,
+    end_offset_days: int,
+) -> dict:
+    """오늘(KST) 기준 상대 기간으로 퀘스트 2개짜리 여정을 만든다 (완료 판정 테스트용)."""
+    today = now_kst().date()
+    end = today + timedelta(days=end_offset_days)
+    start = min(today - timedelta(days=1), end)
+    response = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["quiz_quest_id"], seed["gps_only_quest_id"]],
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+        },
+        headers=headers,
+    )
+    assert response.status_code == 201
+    return response.json()["data"]
+
+
+async def test_journey_completes_when_period_passed_with_one_completed_quest(
+    client: AsyncClient,
+) -> None:
+    """여행 기간이 지났고 완료 퀘스트가 1개 이상이면 completed로 전이한다 (KAN-73)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    journey = await _create_journey_with_period(client, headers, seed, end_offset_days=-2)
+
+    verify = await client.post(
+        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
+        json={"answer": "O"},
+        headers=headers,
+    )
+    assert verify.json()["data"]["verified"] is True
+
+    detail = await client.get(f"/api/v1/journeys/{journey['id']}", headers=headers)
+    data = detail.json()["data"]
+    assert data["progress"] == {"completed": 1, "total": 2}
+    assert data["status"] == "completed"
+    assert data["completed_at"] is not None
+
+    # 목록도 같은 판정을 쓴다 (조회 시점 동기화).
+    listed = await client.get("/api/v1/journeys", headers=headers)
+    assert listed.json()["data"]["items"][0]["status"] == "completed"
+
+
+async def test_journey_stays_in_progress_when_period_passed_without_completion(
+    client: AsyncClient,
+) -> None:
+    """기간이 지났어도 완료 퀘스트가 0개면 in_progress를 유지한다 (KAN-73)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    journey = await _create_journey_with_period(client, headers, seed, end_offset_days=-2)
+
+    detail = await client.get(f"/api/v1/journeys/{journey['id']}", headers=headers)
+    data = detail.json()["data"]
+    assert data["progress"] == {"completed": 0, "total": 2}
+    assert data["status"] == "in_progress"
+    assert data["completed_at"] is None
+
+
+async def test_journey_stays_in_progress_during_period_with_partial_completion(
+    client: AsyncClient,
+) -> None:
+    """기간이 남아 있으면 부분 완료는 in_progress다 — 전부 완료해야 완료된다 (KAN-73)."""
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    journey = await _create_journey_with_period(client, headers, seed, end_offset_days=7)
+
+    await client.post(
+        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
+        json={"answer": "O"},
+        headers=headers,
+    )
+
+    detail = await client.get(f"/api/v1/journeys/{journey['id']}", headers=headers)
+    assert detail.json()["data"]["status"] == "in_progress"
+
+    # 남은 퀘스트까지 인증하면 기간과 무관하게 완료된다.
+    await client.post(
+        f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
+        json={},  # gps 미션은 좌표를 보내지 않는다 (KAN-77)
+        headers=headers,
+    )
+    completed = await client.get(f"/api/v1/journeys/{journey['id']}", headers=headers)
+    assert completed.json()["data"]["status"] == "completed"
 
 
 async def test_create_journey_is_idempotent_per_client_request(

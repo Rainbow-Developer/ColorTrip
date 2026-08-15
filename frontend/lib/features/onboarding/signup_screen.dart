@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_form_field.dart';
+import '../../core/widgets/birth_date_picker.dart';
 import '../../data/models/auth_models.dart';
 import '../../state/auth_controller.dart';
 import '../../state/progress_notifier.dart';
@@ -77,8 +78,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   '기본 정보를 입력해주세요',
                   style: TextStyle(color: AppColors.formLabel, fontSize: 14),
                 ),
-                const SizedBox(height: 16),
-                const _StepProgress(totalSteps: 3, currentStep: 2),
                 const SizedBox(height: 20),
                 AppFormField(
                   label: '닉네임',
@@ -91,16 +90,25 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 if (_errors['nickname'] case final error?) _FieldError(error),
                 const SizedBox(height: 14),
                 AppFormField(
-                  label: '생년월일',
+                  label: '생년월일 (선택)',
                   controller: _birthdateController,
-                  hint: '2000-01-01',
+                  hint: '입력하지 않아도 가입할 수 있어요',
                   enabled: !auth.isBusy,
                   readOnly: true,
                   onTap: _pickBirthDate,
-                  suffixIcon: const Icon(
-                    Icons.calendar_today_outlined,
-                    size: 18,
-                  ),
+                  // 값이 있을 때만 지우기 버튼을 보여준다 — readOnly라 키보드로는
+                  // 지울 수 없어, 없으면 한 번 고른 뒤에는 '선택'으로 되돌릴 수 없다.
+                  suffixIcon: _birthdateController.text.isEmpty
+                      ? const Icon(Icons.calendar_today_outlined, size: 18)
+                      : IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          tooltip: '생년월일 지우기',
+                          onPressed: auth.isBusy
+                              ? null
+                              : () => setState(
+                                  () => _birthdateController.clear(),
+                                ),
+                        ),
                   onChanged: (_) => setState(() {}),
                 ),
                 if (_errors['birthDate'] case final error?) _FieldError(error),
@@ -188,7 +196,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           OnboardingProfileInput(
             nickname: nickname,
             email: _emailController.text.trim(),
-            birthDate: validation.birthDate!,
+            birthDate: validation.birthDate, // 선택 항목 — 비워두면 null
             termsAgreed: _agreeTerms,
             privacyAgreed: _agreePrivacy,
             marketingAgreed: _agreeMarketing,
@@ -209,7 +217,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         parsed != null && !parsed.isBefore(firstDate) && !parsed.isAfter(today)
         ? parsed
         : DateTime(today.year - 26, today.month, today.day);
-    final selected = await showDatePicker(
+    final selected = await showBirthDatePicker(
       context: context,
       initialDate: initial,
       firstDate: firstDate,
@@ -281,38 +289,6 @@ class _FieldError extends StatelessWidget {
       style: const TextStyle(color: AppColors.danger, fontSize: 12),
     ),
   );
-}
-
-/// 온보딩 단계 표시 막대(3칸 중 N칸 채움). 정확한 단계 정의는 Figma에 명시되지 않아
-/// 회원가입 화면 기준 2/3로 고정했다 — 실제 단계 수/의미가 확정되면 조정 필요.
-class _StepProgress extends StatelessWidget {
-  const _StepProgress({required this.totalSteps, required this.currentStep});
-
-  final int totalSteps;
-  final int currentStep;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var i = 0; i < totalSteps; i++)
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: i == totalSteps - 1 ? 0 : 4),
-              child: Container(
-                height: 4,
-                decoration: BoxDecoration(
-                  color: i < currentStep
-                      ? AppColors.primaryDark
-                      : const Color(0xFFEEEEEE),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
 }
 
 class _AgreementCheckbox extends StatefulWidget {
