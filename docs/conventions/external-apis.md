@@ -29,6 +29,17 @@
 - **미설정 시**: 스텁 판정(항상 통과 + "AI 미설정" 사유) — 데모·테스트는 키 없이 동작한다.
 - **쿼터**: 무료 티어는 분당 요청 제한이 있어 초과 시 오류를 그대로 반환한다(폴백 통과 처리하지 않음).
 
+## VWorld (GPS 인증 화면의 지도 배경)
+
+- **용도**: GPS 인증 화면에 깔 정적 지도 이미지. 호출 지점은 `GET /api/v1/quests/{id}/map` — 서버가 VWorld를 부르고 결과를 디스크에 캐시한다(`backend/app/quests/static_map.py`).
+- **키**: [VWorld 오픈API 신청](https://www.vworld.kr/dev/v4api.do)에서 활용 API **"이미지 API"** 로 발급 → 로컬 `backend/.env`의 `VWORLD_API_KEY`, dev는 Secret Manager `colortrip-dev-vworld-api-key`([deploy/deploy.sh](../../deploy/deploy.sh)).
+- **키를 앱이 아니라 서버가 든다**: ① 앱에 넣으면 APK에서 추출된다 ② GPS 퀘스트는 좌표가 고정이라 서버 캐시가 곧 호출 상한이 된다(앱이 직접 부르면 사용자 수만큼 나간다).
+- **좌표 비전송 불변식**: 지도는 **퀘스트 좌표로만** 요청한다. 사용자 위치는 이 경로에 들어오지 않고, 단말이 받은 이미지 위에 오버레이로 그린다. 지도 SDK의 "내 위치 표시"나 "내 위치로 이동"을 쓰면 좌표가 지도 사업자에게 나가므로 **금지**한다([location-law-review.md](../specs/050-quest-verification/location-law-review.md)).
+- **요청 형식**(2026-08-15 실호출 검증): `GET {base}/req/image?service=image&request=getmap&key=…&format=png&basemap=GRAPHIC&center={경도},{위도}&crs=EPSG:4326&zoom=…&size={w},{h}`. **center는 경도,위도 순서**다.
+- **축척**: 웹 메르카토르 표준 `156543.03392 × cos(위도) / 2^zoom`을 따른다(실측 확인 — center를 256px에 해당하는 경도만큼 옮긴 이미지가 원본의 절반과 픽셀 단위로 일치). 앱의 오버레이가 같은 공식을 쓰므로 **서버의 `map_zoom`·`map_image_width/height`를 바꾸면 FE 상수(`gps_verify_map.dart`)도 함께 고쳐야 한다** — 백엔드 테스트가 이 일치를 강제한다.
+- **미설정 시**: 지도 배경 없이 도식만 그린다(fail-soft). 배경은 참고용이고 인증 판정과 무관하다.
+- **주의**: VWorld는 오류를 200 + 텍스트로 돌려주기도 한다. PNG 시그니처를 확인한 뒤에만 캐시한다(안 그러면 깨진 응답이 캐시에 눌러앉는다). 이미지 좌하단의 워터마크는 저작권 표시이므로 가리거나 잘라내지 않는다.
+
 ## TourAPI 활용신청 현황 (공공데이터포털, 2026-07-17 승인 · 2028-07-17 만료)
 
 하나의 data.go.kr 계정 인증키로 아래 서비스가 모두 승인되어 있다.

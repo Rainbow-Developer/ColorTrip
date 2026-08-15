@@ -20,6 +20,7 @@ KAKAO_REDIRECT_SECRET="colortrip-dev-kakao-redirect-uri"
 KAKAO_CLIENT_SECRET_NAME="colortrip-dev-kakao-client-secret"
 GEMINI_SECRET="colortrip-dev-gemini-api-key" # 없으면 사진 인증이 거절된다(경고)
 QR_SECRET_NAME="colortrip-dev-qr-secret-key" # 없으면 JWT 키에서 파생(경고)
+VWORLD_SECRET="colortrip-dev-vworld-api-key" # 없으면 GPS 화면 지도 배경만 빠진다(경고)
 
 # 인스턴스 서비스 계정 액세스 토큰(메타데이터 서버)
 TOKEN="$(curl -s -H 'Metadata-Flavor: Google' \
@@ -88,6 +89,11 @@ if [ -z "${QR_KEY}" ]; then
   echo "WARNING: QR 서명 키(${QR_SECRET_NAME}) 없음 — JWT_SECRET_KEY 파생값을 씁니다."
   echo "         JWT 키를 교체하면 현장에 붙인 QR이 전부 무효화됩니다."
 fi
+VWORLD_KEY="$(read_secret "${VWORLD_SECRET}")"
+if [ -z "${VWORLD_KEY}" ]; then
+  echo "WARNING: VWorld 키(${VWORLD_SECRET}) 없음 — GPS 인증 화면에 지도 배경이 안 깔립니다."
+  echo "         인증 자체는 동작합니다(배경은 참고용)."
+fi
 DB_PW_ENCODED="$(DB_PW="${DB_PW}" python3 - <<'PY'
 import os
 from urllib.parse import quote
@@ -120,6 +126,10 @@ TOUR_API_KEY=${TOUR_KEY}
 TOUR_API_BASE_URL=https://apis.data.go.kr/B551011/KorService2
 GEMINI_API_KEY=${GEMINI_KEY}
 QR_SECRET_KEY=${QR_KEY}
+VWORLD_API_KEY=${VWORLD_KEY}
+# 지도 이미지 캐시. 퀘스트 좌표가 고정이라 재배포로 사라져도 다시 받으면 그만이지만,
+# 볼륨에 두면 배포마다 VWorld를 다시 부르지 않는다.
+MAP_CACHE_DIR=/app/map_cache
 # 인증 사진 저장 위치. compose의 api-uploads 볼륨에 마운트해 재배포에도 남긴다
 # (GCS 전환 전까지의 임시 조치 — GCS_UPLOAD_BUCKET이 설정되면 이 값은 쓰이지 않는다).
 UPLOAD_DIR=/app/uploads

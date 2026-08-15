@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/constants.dart';
+import '../../core/network/dio_client.dart' show appConfigProvider;
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../data/location/location_gateway.dart';
@@ -63,6 +64,9 @@ class QuestVerifyScreen extends ConsumerWidget {
           questLat: quest.lat,
           questLng: quest.lng,
           radiusMeters: quest.verifyRadius ?? kDefaultVerifyRadiusMeters,
+          // 배경 지도는 **퀘스트 id만** 담아 서버에 요청한다 — 내 위치는 실리지 않는다.
+          mapImageUrl:
+              '${ref.watch(appConfigProvider).apiBaseUrl}/quests/$questId/map',
           onVerified: () => _verifyGps(context, ref, quest, journeyId),
         );
       case 'quiz':
@@ -398,6 +402,7 @@ class _GpsVerifyBody extends ConsumerStatefulWidget {
     required this.questLat,
     required this.questLng,
     required this.radiusMeters,
+    required this.mapImageUrl,
     required this.onVerified,
   });
 
@@ -408,6 +413,9 @@ class _GpsVerifyBody extends ConsumerStatefulWidget {
   /// 인증 반경(m) — `Quest.verifyRadius`가 int라 여기도 int로 받고, 그리기에 넘길 때만
   /// double로 바꾼다.
   final int radiusMeters;
+
+  /// 배경 지도 URL. 서버가 퀘스트 좌표로 만들어 주며 내 위치는 담기지 않는다.
+  final String mapImageUrl;
   final Future<void> Function() onVerified;
 
   bool get isReady => questLat != null && questLng != null;
@@ -501,6 +509,7 @@ class _GpsVerifyBodyState extends ConsumerState<_GpsVerifyBody> {
                 questLat: widget.questLat!,
                 questLng: widget.questLng!,
                 radiusMeters: widget.radiusMeters.toDouble(),
+                mapImageUrl: widget.mapImageUrl,
                 myLat: _myLocation?.latitude,
                 myLng: _myLocation?.longitude,
                 distanceMeters: _distance,

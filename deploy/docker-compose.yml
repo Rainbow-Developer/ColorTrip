@@ -29,6 +29,9 @@ services:
       # 인증 사진(로컬 스토리지 폴백)을 컨테이너 밖에 남긴다. 이게 없으면 재배포마다
       # 업로드분이 사라져 타임라인 사진이 깨진다. GCS_UPLOAD_BUCKET 설정 시에는 미사용.
       - api-uploads:/app/uploads
+      # GPS 인증 배경 지도 캐시(KAN-90). 퀘스트 좌표가 고정이라 한 번 받으면 그만이므로,
+      # 볼륨에 두어 재배포마다 VWorld를 다시 부르지 않게 한다.
+      - api-map-cache:/app/map_cache
 
   caddy:
     # 이동 가능한 태그(2-alpine)를 쓰면 재배포마다 다른 패치 이미지를 받을 수 있어
@@ -52,5 +55,6 @@ services:
 
 volumes:
   api-uploads:
+  api-map-cache:
   caddy-data:
   caddy-config:
