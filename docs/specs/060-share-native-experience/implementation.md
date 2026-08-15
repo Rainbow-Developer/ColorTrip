@@ -18,8 +18,8 @@
 - [x] 공유 화면 지도 미리보기를 실제 `ChungbukMap` 위젯으로 교체(`share_card_screen.dart`), DNA만 스타일 선택 시 숨김
 - [x] `ShareRepository`(`data/repositories/share_repository.dart`) 추가, `POST /shares` 실제 호출로 공유 링크 발급
 - [x] `share_plus`로 네이티브 공유 시트 연동, `Clipboard.setData`로 실제 링크 복사(둘 다 로컬 백엔드 대상 Playwright로 검증 — 실제 `POST /api/v1/shares` 201 호출 확인, 클립보드에 실제 URL 기록 확인)
-- [x] `AndroidManifest.xml`에 `colortrip://share` 커스텀 스킴 intent-filter 추가(코드 작성만, 실기기 검증은 미완료)
-- [x] `GET /share/{share_code}` HTML 랜딩 라우트(`shares/router.py`) — 닉네임·진행률·공개용 지도 그리드·DNA 설명 표시, "앱에서 열기"/"앱 다운받기" 버튼, 존재하지 않는 코드는 404 HTML(로컬에서 200/404 둘 다 curl로 검증). `MAP`/`DNA`/`MAP_AND_DNA` 스타일별 필터링(각각 DNA·지도 영역이 빠지는지)은 `backend/tests/test_shares.py`에 자동화 테스트로 추가해 검증함.
+- [x] `AndroidManifest.xml`에 `colortrip://share` 커스텀 스킴 intent-filter 추가. 앱 라우터는 `/share/{code}`와 `/{code}` 형태로 들어오는 공유 딥링크를 공유 화면으로 열고 코드는 무시한다.
+- [x] `GET /share/{share_code}` HTML 랜딩 라우트(`shares/router.py`) — 닉네임·진행률·공개용 SVG 지도·DNA 설명 표시, "앱에서 열기"/"앱 다운받기" 버튼, 존재하지 않는 코드는 404 HTML(로컬에서 200/404 둘 다 curl로 검증). `MAP`/`DNA`/`MAP_AND_DNA` 스타일별 필터링(각각 DNA·지도 영역이 빠지는지)은 `backend/tests/test_shares.py`에 자동화 테스트로 추가해 검증함.
 - [x] 공유 URL의 존재하지 않는 고정 도메인을 제거하고 `SHARE_BASE_URL` 설정으로 환경별 공개 origin을 주입
 - [x] 공유 스타일 라벨을 한 줄로 표시하고 DNA 아이콘 대신 유형명과 설명을 노출
 - [x] 공유 미리보기를 PNG로 캡처해 Android/iOS 사진 보관함에 저장
@@ -29,8 +29,8 @@
 
 ## 알려진 한계 / TODO
 * 앱스토어 CTA 링크는 placeholder(`PLAY_STORE_URL = ""`) — 실제 앱 배포 후 `shares/router.py`에서 교체 필요.
-* 공유 랜딩은 Flutter의 SVG 지도와 동일한 도형을 복제하지 않고, 백엔드 HTML 전용 11개 시·군 지도 그리드로 표시한다. 색칠 지역이 0개여도 지도 영역은 유지한다.
-* "앱에서 열기" 버튼(커스텀 스킴)은 로컬에서 실제 안드로이드 기기/에뮬레이터로 미검증 — intent-filter 설정만 추가한 상태. 다음 APK 빌드·설치 시 실기기 확인 필요.
+* 공유 랜딩은 앱 홈 화면 지도와 같은 11개 시·군 SVG path를 백엔드 HTML에 인라인 렌더링한다. 색칠 지역이 0개여도 지도 영역과 지역 라벨은 유지한다.
+* "앱에서 열기" 버튼(커스텀 스킴)은 공유 코드를 앱 안에서 조회하지 않고 앱을 깨우는 용도다. 앱 설치 여부와 브라우저 구현에 따라 들어오는 path 형태가 달라질 수 있어 `/share/{code}`와 `/{code}`를 모두 공유 화면으로 수용한다.
 
 ## 변경 이력
 
@@ -40,3 +40,5 @@
 | 2026-08-02 | 구현 완료 — 지도 미리보기·공유 API 연동·안드로이드 커스텀 스킴·공유 랜딩 페이지 |
 | 2026-08-15 | KAN-072 후속 — 공유 URL 환경설정·스타일/DNA 표현·이미지 저장 보완 |
 | 2026-08-15 | KAN-086 후속 — 공유 랜딩에서 0/11 상태에도 지도 그리드와 DNA 설명이 보이도록 보완 |
+| 2026-08-15 | KAN-088 후속 — 공유 랜딩 지도를 그리드에서 앱 홈 화면과 같은 SVG path 지도로 교체 |
+| 2026-08-15 | KAN-088 후속 — 앱에서 열기 딥링크가 not found로 빠지지 않도록 공유 path 라우팅 보완 |

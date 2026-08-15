@@ -122,6 +122,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/share',
         builder: (context, state) =>
             const DomainStateGate(child: ShareCardScreen()),
+        routes: [
+          GoRoute(
+            path: ':shareCode',
+            builder: (context, state) =>
+                const DomainStateGate(child: ShareCardScreen()),
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -152,6 +159,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      // Android custom-scheme links may arrive with the host stripped, so
+      // colortrip://share/{code} can become /{code}. The code is intentionally
+      // ignored; the CTA only wakes the app and hands routing to auth state.
+      GoRoute(
+        path: '/:shareCode',
+        builder: (context, state) =>
+            const DomainStateGate(child: ShareCardScreen()),
       ),
     ],
   );

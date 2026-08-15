@@ -61,6 +61,23 @@ void main() {
     );
   });
 
+  test('authenticated users can open share deep link routes', () {
+    expect(
+      authRedirect(
+        const AuthState(status: AuthStatus.authenticated),
+        '/share/WI135Hbj',
+      ),
+      isNull,
+    );
+    expect(
+      authRedirect(
+        const AuthState(status: AuthStatus.authenticated),
+        '/WI135Hbj',
+      ),
+      isNull,
+    );
+  });
+
   test('withdrawal pending state always opens retry route', () {
     expect(
       authRedirect(

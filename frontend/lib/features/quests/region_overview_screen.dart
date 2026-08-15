@@ -426,11 +426,7 @@ class _TripQuestTile extends StatelessWidget {
 }
 
 class _RecommendedQuestTile extends StatelessWidget {
-  const _RecommendedQuestTile({
-    required this.quest,
-
-    required this.onTap,
-  });
+  const _RecommendedQuestTile({required this.quest, required this.onTap});
 
   final Quest quest;
 

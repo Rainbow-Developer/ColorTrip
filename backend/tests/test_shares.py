@@ -158,6 +158,8 @@ async def test_share_landing_page_map_and_dna(client: AsyncClient) -> None:
 
     html = await _create_share_and_get_landing(client, headers, "MAP_AND_DNA")
     assert "충북 여행 지도" in html
+    assert 'viewBox="10 10 480 460"' in html
+    assert 'aria-label="충청북도 11개 시군 여행 지도"' in html
     assert "단양군" in html
     assert "자연탐험형 여행자" in html
     assert "대자연 속에서 에너지를 얻고 조용한 힐링을 즐기는 탐험가예요." in html
@@ -171,6 +173,8 @@ async def test_share_landing_page_map_and_dna_shows_empty_map(client: AsyncClien
     html = await _create_share_and_get_landing(client, headers, "MAP_AND_DNA")
     assert "0/11" in html
     assert "충북 여행 지도" in html
+    assert 'viewBox="10 10 480 460"' in html
+    assert "<path" in html
     assert "진천군" in html
     assert "영동군" in html
     assert "아직 색칠한 지역이 없어요." in html
