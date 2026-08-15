@@ -59,6 +59,16 @@ void main() {
     );
   });
 
+  test('rejects a birth date for a user younger than fourteen', () {
+    final result = validateOnboardingProfile(
+      nickname: '컬러트립',
+      birthDate: '2013-07-26',
+      today: DateTime(2026, 7, 25),
+    );
+
+    expect(result.errors, contains('birthDate'));
+  });
+
   test('rejects a malformed birth date', () {
     final result = validateOnboardingProfile(
       nickname: '컬러트립',

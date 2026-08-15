@@ -109,7 +109,6 @@ async def test_kakao_relogin_does_not_overwrite_completed_colortrip_profile(
             "birth_date": "1999-12-31",
             "terms_agreed": True,
             "privacy_agreed": True,
-            "marketing_agreed": False,
         },
     )
 
@@ -153,7 +152,6 @@ async def test_withdrawal_immediately_anonymizes_and_never_restores(
             "birth_date": "2000-01-02",
             "terms_agreed": True,
             "privacy_agreed": True,
-            "marketing_agreed": False,
         },
     )
     async with AsyncSessionLocal() as session:

@@ -84,3 +84,12 @@ Android 플랫폼에는 앱 패키지명 `io.vmonster.colortrip`과 현재 APK �
 - [035 Kakao 통합 인증](../specs/035-kakao-auth-integration/)
 - [080 프로필 이미지](../specs/080-profile-image/)
 - [005 이전 백엔드 인증/회원 기반](../specs/005-auth-member/)
+# 법적 동의 및 연령 제한 (v2)
+
+- 가입 완료에는 `terms-v2`, `privacy-v2`의 명시적 동의와 만 14세 이상 생년월일이 필요하다.
+- 동의 증빙은 문서 버전, SHA-256 다이제스트, 결정 시각, 출처(`explicit` 또는
+  `prelaunch_migration`)를 `user_consents`에 저장한다. `prelaunch_migration`은 사용자
+  자발 동의가 아니라 출시 전 테스트 계정 전환 기록이다.
+- 마케팅 수신 동의는 수집·저장·API 계약에 포함하지 않는다.
+- 만 14세 미만 값이 서버에 제출되면 `UNDERAGE_SIGNUP_NOT_ALLOWED`로 응답하고, 해당
+  미완료 계정의 토큰·동의·프로필 정보를 익명화한다.

@@ -19,7 +19,7 @@ def _active_headers(data: dict) -> dict[str, str]:
     return {"Authorization": f"Bearer {data['access_token']}"}
 
 
-async def test_upload_before_onboarding_updates_profile(client: AsyncClient) -> None:
+async def test_upload_before_onboarding_is_rejected(client: AsyncClient) -> None:
     data = await login(client)
     headers = _active_headers(data)
 
@@ -29,21 +29,13 @@ async def test_upload_before_onboarding_updates_profile(client: AsyncClient) -> 
         headers=headers,
     )
 
-    assert response.status_code == 200
-    profile = response.json()["data"]
-    assert profile["profile_image"].startswith("/uploads/avatars/")
-    assert profile["profile_image"].endswith(".png")
-    # 이미지 등록만으로 온보딩이 끝나지 않는다 — 닉네임·생년월일·동의는 그대로 남는다.
-    assert profile["onboarding_step"] == "profile"
-
-    me = await client.get("/api/v1/users/me", headers=headers)
-    assert me.json()["data"]["profile_image"] == profile["profile_image"]
+    assert response.status_code == 403
 
 
 async def test_upload_replaces_kakao_initial_image(client: AsyncClient) -> None:
     data = await login(client)
     assert data["user"]["profile_image"] == "https://example.com/one.png"
-    headers = _active_headers(data)
+    headers = await auth_headers(client)
 
     response = await client.post(
         "/api/v1/users/me/profile-image",
@@ -56,7 +48,7 @@ async def test_upload_replaces_kakao_initial_image(client: AsyncClient) -> None:
 
 
 async def test_upload_rejects_non_image(client: AsyncClient) -> None:
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
 
     response = await client.post(
         "/api/v1/users/me/profile-image",
@@ -69,7 +61,7 @@ async def test_upload_rejects_non_image(client: AsyncClient) -> None:
 async def test_upload_rejects_oversized(client: AsyncClient) -> None:
     from app.core.config import settings
 
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
     oversized = b"\x89PNG\r\n\x1a\n" + b"0" * (settings.max_upload_size_mb * 1024 * 1024 + 1)
 
     response = await client.post(
@@ -82,7 +74,7 @@ async def test_upload_rejects_oversized(client: AsyncClient) -> None:
 
 async def test_upload_rejects_mime_spoofed_bytes(client: AsyncClient) -> None:
     """헤더만 이미지로 위장한 바이트는 저장하지 않는다 — 렌더링 불가한 URL이 남는다."""
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
 
     response = await client.post(
         "/api/v1/users/me/profile-image",
@@ -98,7 +90,7 @@ async def test_upload_rejects_mime_spoofed_bytes(client: AsyncClient) -> None:
 
 async def test_upload_rejects_mismatched_image_format(client: AsyncClient) -> None:
     """실제 PNG를 image/jpeg로 선언하면 거부한다."""
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
 
     response = await client.post(
         "/api/v1/users/me/profile-image",
@@ -109,7 +101,7 @@ async def test_upload_rejects_mismatched_image_format(client: AsyncClient) -> No
 
 
 async def test_upload_rejects_empty_file(client: AsyncClient) -> None:
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
 
     response = await client.post(
         "/api/v1/users/me/profile-image",
@@ -128,7 +120,7 @@ async def test_upload_requires_auth(client: AsyncClient) -> None:
 
 
 async def test_delete_resets_to_null(client: AsyncClient) -> None:
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
     uploaded = await client.post(
         "/api/v1/users/me/profile-image",
         files={"file": ("profile.png", _PNG_BYTES, "image/png")},
@@ -143,7 +135,7 @@ async def test_delete_resets_to_null(client: AsyncClient) -> None:
 
 
 async def test_delete_is_idempotent(client: AsyncClient) -> None:
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
 
     first = await client.delete("/api/v1/users/me/profile-image", headers=headers)
     second = await client.delete("/api/v1/users/me/profile-image", headers=headers)
@@ -166,7 +158,7 @@ def _stored_path(photo_url: str) -> Path:
 
 async def test_delete_removes_the_stored_object(client: AsyncClient) -> None:
     """컬럼만 비우면 공개 읽기 객체가 남아 URL을 아는 주체가 계속 읽을 수 있다."""
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
     uploaded = await client.post(
         "/api/v1/users/me/profile-image",
         files={"file": ("profile.png", _PNG_BYTES, "image/png")},
@@ -181,7 +173,7 @@ async def test_delete_removes_the_stored_object(client: AsyncClient) -> None:
 
 
 async def test_replace_removes_the_previous_object(client: AsyncClient) -> None:
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
     first = await client.post(
         "/api/v1/users/me/profile-image",
         files={"file": ("profile.png", _PNG_BYTES, "image/png")},
@@ -207,7 +199,7 @@ async def test_replace_keeps_the_kakao_initial_image(client: AsyncClient) -> Non
 
     assert object_name_from_url("https://example.com/one.png") is None
 
-    headers = _active_headers(await login(client))
+    headers = await auth_headers(client)
     response = await client.post(
         "/api/v1/users/me/profile-image",
         files={"file": ("profile.png", _PNG_BYTES, "image/png")},
@@ -266,6 +258,7 @@ async def test_upload_cleans_up_when_the_user_becomes_inactive(
     from app.uploads.storage import get_photo_storage
 
     data = await login(client)
+    await auth_headers(client)
     user_id = UUID(data["user"]["id"])
     avatars = Path(settings.upload_dir) / "avatars"
     before = set(avatars.rglob("*.png")) if avatars.exists() else set()
@@ -319,6 +312,7 @@ async def test_commit_failure_cleans_up_and_surfaces_the_original_error(
     from app.uploads.storage import get_photo_storage
 
     data = await login(client)
+    await auth_headers(client)
     user_id = UUID(data["user"]["id"])
     upload = UploadFile(
         file=io.BytesIO(_PNG_BYTES),
@@ -367,18 +361,16 @@ async def test_avatar_is_not_usable_as_quest_verification_photo(client: AsyncCli
     행을 만들면 이 URL이 `require_owned_photo`를 통과해 사진 인증에 재사용된다.
     """
     seed = await seed_quest_fixture()
-    data = await login(client)
+    await login(client)
+    headers = await auth_headers(client)
     uploaded = await client.post(
         "/api/v1/users/me/profile-image",
         files={"file": ("profile.png", _PNG_BYTES, "image/png")},
-        headers=_active_headers(data),
+        headers=headers,
     )
     assert uploaded.status_code == 200
     avatar_url = uploaded.json()["data"]["profile_image"]
 
-    from tests.helpers import complete_auth_headers
-
-    headers = await complete_auth_headers(client, data)
     response = await client.post(
         f"/api/v1/quests/{seed['photo_quest_id']}/verify",
         json={"photo_url": avatar_url},

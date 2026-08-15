@@ -81,11 +81,13 @@ async def put_my_onboarding_profile(
     payload: OnboardingProfileRequest,
     current_user: ActiveUser,
     session: AsyncSession = Depends(get_session),
+    storage: PhotoStorage = Depends(get_photo_storage),
 ) -> Envelope[UserProfile]:
     data = await service.save_onboarding_profile(
         session,
         current_user=current_user,
         payload=payload,
+        storage=storage,
     )
     return success(data)
 

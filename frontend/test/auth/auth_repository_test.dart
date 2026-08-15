@@ -219,7 +219,6 @@ void main() {
         birthDate: DateTime(2000, 1, 2),
         termsAgreed: true,
         privacyAgreed: true,
-        marketingAgreed: false,
       ),
     );
 
@@ -230,7 +229,6 @@ void main() {
       'birth_date': '2000-01-02',
       'terms_agreed': true,
       'privacy_agreed': true,
-      'marketing_agreed': false,
     });
   });
 

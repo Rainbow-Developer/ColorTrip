@@ -100,8 +100,16 @@ class AuthController extends Notifier<AuthState> {
       if (epoch != _epoch) return false;
       state = _stateForUser(user);
       return true;
-    } on Object {
+    } on Object catch (error) {
       if (epoch != _epoch) return false;
+      if (_isUnderageSignupError(error)) {
+        state = AuthState(
+          status: AuthStatus.profileRequired,
+          user: state.user,
+          errorMessage: '현재 서비스는 만 14세 이상만 가입할 수 있어요.',
+        );
+        return false;
+      }
       try {
         final recovered = await ref
             .read(authRepositoryProvider)
@@ -269,6 +277,12 @@ class AuthController extends Notifier<AuthState> {
     },
     user: user,
   );
+}
+
+bool _isUnderageSignupError(Object error) {
+  if (error is! DioException) return false;
+  final data = error.response?.data;
+  return data is Map && data['code'] == 'UNDERAGE_SIGNUP_NOT_ALLOWED';
 }
 
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(

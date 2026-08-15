@@ -267,7 +267,6 @@ void main() {
         birthDate: DateTime(2000, 1, 2),
         termsAgreed: true,
         privacyAgreed: true,
-        marketingAgreed: false,
       ),
     );
     controller.sessionExpired();
@@ -315,7 +314,6 @@ void main() {
         birthDate: DateTime(2000, 1, 2),
         termsAgreed: true,
         privacyAgreed: true,
-        marketingAgreed: false,
       ),
     );
 
