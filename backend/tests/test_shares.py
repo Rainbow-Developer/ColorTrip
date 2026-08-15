@@ -143,7 +143,7 @@ async def _create_share_and_get_landing(
 
 @pytest.mark.asyncio
 async def test_share_landing_page_map_and_dna(client: AsyncClient) -> None:
-    """MAP_AND_DNA 랜딩 페이지는 색칠 지역과 DNA를 모두 보여줍니다(060-share-native-experience)."""
+    """MAP_AND_DNA 랜딩 페이지는 공개용 지도와 DNA 설명을 모두 보여줍니다."""
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
     await client.post(
@@ -157,8 +157,24 @@ async def test_share_landing_page_map_and_dna(client: AsyncClient) -> None:
     )
 
     html = await _create_share_and_get_landing(client, headers, "MAP_AND_DNA")
+    assert "충북 여행 지도" in html
     assert "단양군" in html
-    assert "자연탐험형" in html
+    assert "자연탐험형 여행자" in html
+    assert "대자연 속에서 에너지를 얻고 조용한 힐링을 즐기는 탐험가예요." in html
+
+
+@pytest.mark.asyncio
+async def test_share_landing_page_map_and_dna_shows_empty_map(client: AsyncClient) -> None:
+    """색칠 지역이 없어도 MAP_AND_DNA 랜딩 페이지는 지도 영역과 DNA 설명을 유지합니다."""
+    headers = await auth_headers(client)
+
+    html = await _create_share_and_get_landing(client, headers, "MAP_AND_DNA")
+    assert "0/11" in html
+    assert "충북 여행 지도" in html
+    assert "진천군" in html
+    assert "영동군" in html
+    assert "아직 색칠한 지역이 없어요." in html
+    assert "자연탐험형 여행자" in html
 
 
 @pytest.mark.asyncio
@@ -177,8 +193,10 @@ async def test_share_landing_page_map_only_omits_dna(client: AsyncClient) -> Non
     )
 
     html = await _create_share_and_get_landing(client, headers, "MAP")
+    assert "충북 여행 지도" in html
     assert "단양군" in html
     assert "자연탐험형" not in html
+    assert "여행 DNA" not in html
 
 
 @pytest.mark.asyncio
@@ -197,7 +215,9 @@ async def test_share_landing_page_dna_only_omits_regions(client: AsyncClient) ->
     )
 
     html = await _create_share_and_get_landing(client, headers, "DNA")
-    assert "자연탐험형" in html
+    assert "자연탐험형 여행자" in html
+    assert "대자연 속에서 에너지를 얻고 조용한 힐링을 즐기는 탐험가예요." in html
+    assert "충북 여행 지도" not in html
     assert "단양군" not in html
 
 

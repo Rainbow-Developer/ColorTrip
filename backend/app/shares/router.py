@@ -15,6 +15,7 @@ from app.shares.schemas import (
     ShareCreateRequest,
     ShareCreateResponse,
     ShareReadResponse,
+    ShareStyle,
     ShareSummaryResponse,
 )
 
@@ -27,6 +28,43 @@ landing_router = APIRouter(tags=["shares"])
 # 앱이 아직 스토어에 배포되지 않아 실제 URL이 없다. 배포 후 이 값을 채우면
 # 랜딩 페이지에 "앱 다운받기" 링크가 활성화된다.
 PLAY_STORE_URL = ""
+
+REGION_NAMES = (
+    "진천군",
+    "음성군",
+    "증평군",
+    "청주시",
+    "괴산군",
+    "충주시",
+    "제천시",
+    "단양군",
+    "보은군",
+    "옥천군",
+    "영동군",
+)
+
+DNA_DETAILS = {
+    "nature": (
+        "자연탐험형 여행자",
+        "대자연 속에서 에너지를 얻고 조용한 힐링을 즐기는 탐험가예요.",
+    ),
+    "food": (
+        "로컬 미식가",
+        "지역의 맛으로 여행을 기억하는 타입이에요. 진짜 여행은 현지 맛집에서 시작되죠.",
+    ),
+    "history": (
+        "이야기 수집가",
+        "골목과 유적에 담긴 이야기를 모으는 타입이에요. 오래된 것에서 깊이를 발견하죠.",
+    ),
+    "activity": (
+        "에너지 탐험가",
+        "몸으로 부딪치며 즐기는 타입이에요. 가만히 있는 여행은 답답하죠.",
+    ),
+    "healing": (
+        "느림의 여행자",
+        "천천히 머무르며 충전하는 타입이에요. 여백이 있는 여행을 사랑하죠.",
+    ),
+}
 
 
 @router.get("/users/me/share-summary", response_model=Envelope[ShareSummaryResponse])
@@ -76,6 +114,75 @@ def _render_not_found_page(share_code: str) -> str:
 </body></html>"""
 
 
+def _render_public_map(card: ShareReadResponse) -> str:
+    if card.share_style not in {ShareStyle.MAP.value, ShareStyle.MAP_AND_DNA.value}:
+        return ""
+
+    colored_region_names = {region.name for region in card.colored_regions}
+    cells = []
+    for region_name in REGION_NAMES:
+        is_colored = region_name in colored_region_names
+        cell_style = (
+            "background:#2D6A4F;color:#FFFFFF;border:1px solid #2D6A4F;"
+            if is_colored
+            else "background:#F5F4EE;color:#8B8A81;border:1px solid #E4E1D6;"
+        )
+        cells.append(
+            '<div style="padding:10px 6px;border-radius:10px;text-align:center;'
+            f'font-size:12px;font-weight:700;{cell_style}">'
+            f"{html.escape(region_name)}</div>"
+        )
+
+    empty_state_html = (
+        """
+        <p style="margin:10px 0 0;color:#777;font-size:12px;text-align:center;">
+            아직 색칠한 지역이 없어요.
+        </p>
+        """
+        if not colored_region_names
+        else ""
+    )
+
+    return f"""
+        <section style="margin:18px 0;padding:16px;border:1px solid #E4E1D6;border-radius:16px;
+                        background:#FCFBF6;">
+            <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;">
+                <h2 style="font-size:15px;margin:0;color:#1F1F1B;">충북 여행 지도</h2>
+                <span style="font-size:12px;color:#777;">색칠 {card.completed_region_count}곳</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;">
+                {"".join(cells)}
+            </div>
+            {empty_state_html}
+        </section>
+    """
+
+
+def _render_dna(card: ShareReadResponse) -> str:
+    if card.share_style not in {ShareStyle.DNA.value, ShareStyle.MAP_AND_DNA.value}:
+        return ""
+    if not card.dna_name:
+        return ""
+
+    dna_title, dna_description = DNA_DETAILS.get(
+        card.dna_type or "",
+        (card.dna_name, "나만의 여행 취향으로 충북을 탐험하고 있어요."),
+    )
+
+    return f"""
+        <section style="margin:18px 0;padding:16px;border:1px solid #D7E7C8;border-radius:16px;
+                        background:#F4FAEE;">
+            <div style="font-size:12px;color:#4F7A5E;font-weight:700;margin-bottom:6px;">
+                여행 DNA
+            </div>
+            <h2 style="font-size:17px;margin:0;color:#1A5C35;">{html.escape(dna_title)}</h2>
+            <p style="font-size:13px;line-height:1.55;color:#4A4A44;margin:8px 0 0;">
+                {html.escape(dna_description)}
+            </p>
+        </section>
+    """
+
+
 def _render_share_landing_page(card: ShareReadResponse) -> str:
     nickname = html.escape(card.owner_nickname or "여행자")
     title = f"{nickname}님의 여행 지도"
@@ -91,26 +198,8 @@ def _render_share_landing_page(card: ShareReadResponse) -> str:
         </div>
     """
 
-    dna_html = ""
-    if card.dna_name:
-        badge_style = (
-            "background:#EAF3DE;color:#1A5C35;padding:6px 14px;"
-            "border-radius:999px;font-size:13px;font-weight:700;"
-        )
-        dna_html = f"""
-        <div style="margin:12px 0;">
-            <span style="{badge_style}">{html.escape(card.dna_name)}</span>
-        </div>
-        """
-
-    regions_html = ""
-    if card.colored_regions:
-        chips = "".join(
-            f'<span style="background:#F0F0EA;color:#444;padding:4px 10px;border-radius:8px;'
-            f'font-size:12px;margin:3px;display:inline-block;">{html.escape(r.name)}</span>'
-            for r in card.colored_regions
-        )
-        regions_html = f'<div style="margin:12px 0;">{chips}</div>'
+    map_html = _render_public_map(card)
+    dna_html = _render_dna(card)
 
     open_app_url = f"colortrip://share/{html.escape(card.share_code)}"
     download_html = (
@@ -128,8 +217,8 @@ def _render_share_landing_page(card: ShareReadResponse) -> str:
 <body style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:24px 16px;color:#1F1F1B;">
 <h1 style="font-size:18px;text-align:center;">{title}</h1>
 {stats_html}
+{map_html}
 {dna_html}
-{regions_html}
 <div style="margin-top:24px;">
     <a href="{open_app_url}"
        style="display:block;background:#EAF3DE;color:#1A5C35;text-decoration:none;
