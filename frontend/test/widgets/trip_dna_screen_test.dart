@@ -106,7 +106,7 @@ void main() {
     await tester.pumpWidget(_app(_TripRepository([_questions])));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(find.text('여행 DNA 진단을 중단할까요?'), findsOneWidget);
@@ -157,5 +157,41 @@ void main() {
       tester.widget<StepProgress>(find.byType(StepProgress)).currentStep,
       2,
     );
+  });
+  testWidgets('appbar back button pops route when retaking survey regardless of step', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [tripDnaRepositoryProvider.overrideWithValue(_TripRepository([_fourQuestions]))],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TripDnaScreen()),
+              ),
+              child: const Text('Push'),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('Push'));
+    await tester.pumpAndSettle();
+
+    // 1번 문항에서 2번 문항으로 이동
+    await tester.tap(find.text('자연 경관'));
+    await tester.pump();
+    await tester.tap(find.text('다음'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 / 4'), findsOneWidget);
+
+    // 좌상단 뒤로가기 버튼(<) 터치
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.pumpAndSettle();
+
+    // 다시하기 모드(canPop == true)이므로, 이전 문항으로 가는 것이 아니라 화면 자체가 pop 되어야 함
+    expect(find.text('Push'), findsOneWidget);
+    expect(find.text('2 / 4'), findsNothing);
   });
 }

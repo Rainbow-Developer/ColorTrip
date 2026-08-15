@@ -36,14 +36,14 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) _handleBack();
+        if (!didPop) _exitSurvey();
       },
       child: Scaffold(
         appBar: AppBar(
           title: const Text('여행 DNA 설문'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-            onPressed: _handleBack,
+            onPressed: _exitSurvey,
           ),
         ),
         body: FutureBuilder<List<TripDnaQuestion>>(
@@ -133,22 +133,52 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _submitting
-                        ? null
-                        : () => _next(isLast, questions),
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
+                  Row(
+                    children: [
+                      if (_step > 0) ...[
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _submitting ? null : _previousQuestion,
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(56),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(17),
+                              ),
+                              side: const BorderSide(
+                                color: Color(0xFFB2C2AD),
+                                width: 1.5,
+                              ),
+                              foregroundColor: Colors.black87,
+                              textStyle: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          )
-                        : Text(isLast ? '결과 보기' : '다음'),
+                            child: const Text('이전'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _submitting
+                              ? null
+                              : () => _next(isLast, questions),
+                          child: _submitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(isLast ? '결과 보기' : '다음'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -167,11 +197,18 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
     });
   }
 
-  Future<void> _handleBack() async {
+  void _previousQuestion() {
     if (_step > 0) {
       setState(() => _step -= 1);
+    }
+  }
+
+  Future<void> _exitSurvey() async {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
       return;
     }
+
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -301,7 +338,9 @@ class _OptionTileState extends State<_OptionTile> {
                 width: _showFocus ? 2 : 1.5,
               ),
             ),
-            child: Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
               child: Text(
                 widget.label,
