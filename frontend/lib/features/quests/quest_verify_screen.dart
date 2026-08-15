@@ -64,9 +64,12 @@ class QuestVerifyScreen extends ConsumerWidget {
           questLat: quest.lat,
           questLng: quest.lng,
           radiusMeters: quest.verifyRadius ?? kDefaultVerifyRadiusMeters,
-          // 배경 지도는 **퀘스트 id만** 담아 서버에 요청한다 — 내 위치는 실리지 않는다.
-          mapImageUrl:
-              '${ref.watch(appConfigProvider).apiBaseUrl}/quests/$questId/map',
+          // 배경 지도는 **퀘스트 식별자만** 담아 서버에 요청한다 — 내 위치는 실리지 않는다.
+          // 앱의 quest.id는 client_key(`dy3`)이고 서버 경로는 UUID를 받으므로, 다른 API와
+          // 똑같이 카탈로그로 변환한다(KAN-91 — 변환을 빠뜨려 서버가 거절했고, 앱은 배경
+          // 없이 도식만 그렸다). 카탈로그가 아직 없거나 서버에 없는 퀘스트면 null을 넘겨
+          // 배경 없이 그린다.
+          mapImageUrl: _mapImageUrl(ref, quest.id),
           onVerified: () => _verifyGps(context, ref, quest, journeyId),
         );
       case 'quiz':
@@ -99,6 +102,17 @@ class QuestVerifyScreen extends ConsumerWidget {
               _verifyPhoto(context, ref, quest, photo, journeyId),
         );
     }
+  }
+
+  /// GPS 인증 배경 지도 URL — 서버가 아는 UUID로 만든다.
+  ///
+  /// 카탈로그가 아직 로드되지 않았거나(오프라인 첫 실행) 서버에 없는 퀘스트면 null이다.
+  /// 배경은 참고용이라 없으면 도식만 그리면 된다 — 인증을 막지 않는다.
+  String? _mapImageUrl(WidgetRef ref, String questKey) {
+    final catalog = ref.watch(domainControllerProvider).value?.catalog;
+    final serverId = catalog?.questIdsByKey[questKey];
+    if (serverId == null) return null;
+    return '${ref.watch(appConfigProvider).apiBaseUrl}/quests/$serverId/map';
   }
 
   Future<bool?> _verify(
@@ -415,7 +429,7 @@ class _GpsVerifyBody extends ConsumerStatefulWidget {
   final int radiusMeters;
 
   /// 배경 지도 URL. 서버가 퀘스트 좌표로 만들어 주며 내 위치는 담기지 않는다.
-  final String mapImageUrl;
+  final String? mapImageUrl;
   final Future<void> Function() onVerified;
 
   bool get isReady => questLat != null && questLng != null;
