@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_network_image.dart';
-import '../../core/widgets/chungbuk_map.dart';
+
 import '../../data/models/quest.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
@@ -103,13 +103,11 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
               separatorBuilder: (_, _) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 final quest = quests[index];
-                final region = ref
-                    .read(regionRepositoryProvider)
-                    .byId(quest.region);
+
                 final done = progress.isCompleted(quest.id);
                 return _QuestCard(
                   quest: quest,
-                  regionName: region?.name ?? quest.region,
+
                   done: done,
                   onTap: () => context.push('/quest/${quest.id}'),
                 );
@@ -184,13 +182,13 @@ class _QuestTypeOptionTile extends StatelessWidget {
 class _QuestCard extends StatelessWidget {
   const _QuestCard({
     required this.quest,
-    required this.regionName,
+
     required this.done,
     required this.onTap,
   });
 
   final Quest quest;
-  final String regionName;
+
   final bool done;
   final VoidCallback onTap;
 
@@ -198,8 +196,6 @@ class _QuestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final typeStyle = questTypeStyles[quest.type];
     final tagColors = questTypeIconColors[quest.type];
-    final regionColor = mapFillColors(quest.region, 1);
-
     return SizedBox(
       height: questCardHeight,
       child: Container(
@@ -256,19 +252,20 @@ class _QuestCard extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            _Tag(
-                              label: regionName,
-                              background: regionColor.background,
-                              foreground: regionColor.label,
-                            ),
                             if (tagColors != null && typeStyle != null) ...[
-                              const SizedBox(width: 6),
                               _Tag(
                                 label: typeStyle.label,
                                 background: tagColors.background,
                                 foreground: tagColors.foreground,
                               ),
+                              const SizedBox(width: 6),
                             ],
+                            if (verifyLabels[quest.verify] != null)
+                              _Tag(
+                                label: verifyLabels[quest.verify]!,
+                                background: AppColors.tripMutedBadgeBg,
+                                foreground: AppColors.tripMutedBadgeFg,
+                              ),
                           ],
                         ),
                       ],

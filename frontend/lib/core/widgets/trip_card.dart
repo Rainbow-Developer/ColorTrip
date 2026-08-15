@@ -30,8 +30,10 @@ class TripCard extends ConsumerWidget {
     final trip = journey.questKeys;
     final total = trip.length;
     final done = trip.where(progress.isCompleted).length;
-    final dominantType = dominantTypeForRegion(region.id);
-    final typeLabel = questTypeStyles[dominantType]?.label ?? dominantType;
+    final uniqueVerifies = trip
+        .map((qId) => kQuests.where((q) => q.id == qId).firstOrNull?.verify)
+        .whereType<String>()
+        .toSet();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -69,22 +71,19 @@ class TripCard extends ConsumerWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  _Badge(
-                    label: region.name,
-                    background: isActive
-                        ? AppColors.tripActiveBadgeBg
-                        : AppColors.tripMutedBadgeBg,
-                    foreground: isActive
-                        ? AppColors.tripActiveBadgeFg
-                        : AppColors.tripMutedBadgeFg,
-                  ),
-                  const SizedBox(width: 6),
-                  if (typeLabel != null)
-                    _Badge(
-                      label: typeLabel,
-                      background: AppColors.tripMutedBadgeBg,
-                      foreground: AppColors.tripMutedBadgeFg,
-                    ),
+                  for (final v in uniqueVerifies)
+                    if (verifyLabels[v] != null) ...[
+                      _Badge(
+                        label: verifyLabels[v]!,
+                        background: isActive
+                            ? AppColors.tripActiveBadgeBg
+                            : AppColors.tripMutedBadgeBg,
+                        foreground: isActive
+                            ? AppColors.tripActiveBadgeFg
+                            : AppColors.tripMutedBadgeFg,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                   if (isActive) ...[
                     const Spacer(),
                     Text(

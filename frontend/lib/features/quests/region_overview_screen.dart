@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_network_image.dart';
-import '../../core/widgets/chungbuk_map.dart';
+
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../data/models/quest.dart';
@@ -193,7 +193,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                         child: _TripQuestTile(
                           key: index == 0 ? _firstTripQuestKey : null,
                           quest: quest,
-                          regionName: region.name,
+
                           done: progress.isCompleted(quest.id),
                           onTap: () {
                             if (index == 0 && !tour.isDone && tour.step == 3) {
@@ -237,7 +237,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                                   padding: const EdgeInsets.only(bottom: 16),
                                   child: _RecommendedQuestTile(
                                     quest: quest,
-                                    regionName: region.name,
+
                                     onTap: () =>
                                         context.push('/quest/${quest.id}'),
                                   ),
@@ -314,13 +314,13 @@ class _TripQuestTile extends StatelessWidget {
   const _TripQuestTile({
     super.key,
     required this.quest,
-    required this.regionName,
+
     required this.done,
     required this.onTap,
   });
 
   final Quest quest;
-  final String regionName;
+
   final bool done;
   final VoidCallback onTap;
 
@@ -328,7 +328,6 @@ class _TripQuestTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final typeStyle = questTypeStyles[quest.type];
     final tagColors = questTypeIconColors[quest.type];
-    final regionColor = mapFillColors(quest.region, 1);
 
     return SizedBox(
       height: questCardHeight,
@@ -386,19 +385,20 @@ class _TripQuestTile extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            MiniBadge(
-                              label: regionName,
-                              background: regionColor.background,
-                              foreground: regionColor.label,
-                            ),
                             if (tagColors != null && typeStyle != null) ...[
-                              const SizedBox(width: 6),
                               MiniBadge(
                                 label: typeStyle.label,
                                 background: tagColors.background,
                                 foreground: tagColors.foreground,
                               ),
+                              const SizedBox(width: 6),
                             ],
+                            if (verifyLabels[quest.verify] != null)
+                              MiniBadge(
+                                label: verifyLabels[quest.verify]!,
+                                background: AppColors.tripMutedBadgeBg,
+                                foreground: AppColors.tripMutedBadgeFg,
+                              ),
                           ],
                         ),
                       ],
@@ -428,19 +428,18 @@ class _TripQuestTile extends StatelessWidget {
 class _RecommendedQuestTile extends StatelessWidget {
   const _RecommendedQuestTile({
     required this.quest,
-    required this.regionName,
+
     required this.onTap,
   });
 
   final Quest quest;
-  final String regionName;
+
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final typeStyle = questTypeStyles[quest.type];
     final tagColors = questTypeIconColors[quest.type];
-    final regionColor = mapFillColors(quest.region, 1);
 
     return SizedBox(
       height: questCardHeight,
@@ -498,19 +497,20 @@ class _RecommendedQuestTile extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            MiniBadge(
-                              label: regionName,
-                              background: regionColor.background,
-                              foreground: regionColor.label,
-                            ),
                             if (tagColors != null && typeStyle != null) ...[
-                              const SizedBox(width: 6),
                               MiniBadge(
                                 label: typeStyle.label,
                                 background: tagColors.background,
                                 foreground: tagColors.foreground,
                               ),
+                              const SizedBox(width: 6),
                             ],
+                            if (verifyLabels[quest.verify] != null)
+                              MiniBadge(
+                                label: verifyLabels[quest.verify]!,
+                                background: AppColors.tripMutedBadgeBg,
+                                foreground: AppColors.tripMutedBadgeFg,
+                              ),
                           ],
                         ),
                       ],

@@ -535,7 +535,7 @@ class _MonthSummaryCard extends StatelessWidget {
 
 /// 퀘스트 카드의 지역 배지에 쓰는 지역 팔레트 채도 — 5단계 중 3단계(부드러운 중간 톤)에
 /// 대응한다([core/widgets/chungbuk_map.dart]의 mapFillColors, `_mapColorLevel`).
-const _regionBadgeSaturation = 0.5;
+
 
 /// 지역 섹션 카드 배경에 쓰는 지역 팔레트 채도 — 5단계 중 가장 옅은 1단계.
 const _regionSectionSaturation = 0.1;
@@ -730,11 +730,8 @@ class _TimelineRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final quest = questRepo.byId(entry.questId);
     if (quest == null) return const SizedBox.shrink();
-    final region = regionRepo.byId(quest.region);
-    final regionName = region?.name ?? quest.region;
     final typeStyle = questTypeStyles[quest.type];
     final tagColors = questTypeIconColors[quest.type];
-    final regionColor = mapFillColors(quest.region, _regionBadgeSaturation);
     final photoUrl = entry.photoUrl;
     final resolvedPhotoUrl = photoUrl == null
         ? null
@@ -797,19 +794,20 @@ class _TimelineRow extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        MiniBadge(
-                          label: regionName,
-                          background: regionColor.background,
-                          foreground: regionColor.label,
-                        ),
                         if (tagColors != null && typeStyle != null) ...[
-                          const SizedBox(width: 6),
                           MiniBadge(
                             label: typeStyle.label,
                             background: tagColors.background,
                             foreground: tagColors.foreground,
                           ),
+                          const SizedBox(width: 6),
                         ],
+                        if (verifyLabels[quest.verify] != null)
+                          MiniBadge(
+                            label: verifyLabels[quest.verify]!,
+                            background: AppColors.tripMutedBadgeBg,
+                            foreground: AppColors.tripMutedBadgeFg,
+                          ),
                       ],
                     ),
                   ],
