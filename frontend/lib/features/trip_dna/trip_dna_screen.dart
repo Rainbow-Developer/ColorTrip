@@ -36,12 +36,15 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) _handleBack();
+        if (!didPop) _exitSurvey();
       },
       child: Scaffold(
         appBar: AppBar(
-          automaticallyImplyLeading: false,
           title: const Text('여행 DNA 설문'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+            onPressed: _exitSurvey,
+          ),
         ),
         body: FutureBuilder<List<TripDnaQuestion>>(
           future: _questionsFuture,
@@ -135,14 +138,14 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
                       if (_step > 0) ...[
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _submitting ? null : _handleBack,
+                            onPressed: _submitting ? null : _previousQuestion,
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size.fromHeight(56),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(17),
                               ),
                               side: const BorderSide(
-                                color: Color(0xFFB2C2AD), // 회색이 살짝 섞인 옅은 초록색
+                                color: Color(0xFFB2C2AD),
                                 width: 1.5,
                               ),
                               foregroundColor: Colors.black87,
@@ -194,11 +197,18 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
     });
   }
 
-  Future<void> _handleBack() async {
+  void _previousQuestion() {
     if (_step > 0) {
       setState(() => _step -= 1);
+    }
+  }
+
+  Future<void> _exitSurvey() async {
+    if (context.canPop()) {
+      context.pop();
       return;
     }
+
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
