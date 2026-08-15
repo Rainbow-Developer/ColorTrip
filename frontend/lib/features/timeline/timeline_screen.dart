@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,11 +33,136 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   /// 기본으로 보여준다.
   int? _monthIndex;
 
-  void _changeYear(int delta) {
-    setState(() {
-      _year += delta;
-      _monthIndex = null;
-    });
+  Future<void> _showPicker() async {
+    final now = DateTime.now();
+    int tempYear = _year;
+    int tempMonth = _monthIndex ?? (tempYear == now.year ? now.month - 1 : 0);
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: SizedBox(
+                height: 300,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('취소', style: TextStyle(color: AppColors.textMuted)),
+                          ),
+                          const Text('날짜 선택', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('확인', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: CupertinoPicker(
+                              itemExtent: 40,
+                              scrollController: FixedExtentScrollController(initialItem: tempYear - 2024),
+                              onSelectedItemChanged: (idx) {
+                                setSheetState(() {
+                                  tempYear = 2024 + idx;
+                                  if (tempYear == now.year && tempMonth > now.month - 1) {
+                                    tempMonth = now.month - 1;
+                                  }
+                                });
+                              },
+                              children: [
+                                for (var y = 2024; y <= now.year; y++)
+                                  Center(child: Text('$y년')),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: CupertinoPicker(
+                              itemExtent: 40,
+                              scrollController: FixedExtentScrollController(initialItem: tempMonth),
+                              onSelectedItemChanged: (idx) {
+                                setSheetState(() {
+                                  tempMonth = idx;
+                                  if (tempYear == now.year && tempMonth > now.month - 1) {
+                                    tempMonth = now.month - 1; // 미래 월 선택 제한
+                                  }
+                                });
+                              },
+                              children: [
+                                for (var m = 1; m <= 12; m++)
+                                  Center(
+                                    child: Text(
+                                      '$m월',
+                                      style: TextStyle(
+                                        color: (tempYear == now.year && m > now.month)
+                                            ? AppColors.textMuted
+                                            : AppColors.textBody,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      final timeline = ref.read(progressProvider).timeline;
+      final monthLabel = '$tempYear년 ${tempMonth + 1}월';
+      final hasRecords = timeline.any((e) => e.month == monthLabel);
+      
+      if (!hasRecords) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              '해당 월에는 여행 기록이 없습니다.',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: AppColors.primaryDark,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _year = tempYear;
+        _monthIndex = tempMonth;
+      });
+    }
   }
 
   @override
@@ -67,18 +193,28 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       ),
       body: Column(
         children: [
-          _YearNavigator(
-            year: _year,
-            canGoNext: _year < now.year,
-            onPrev: () => _changeYear(-1),
-            onNext: () => _changeYear(1),
-          ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: _MonthPillSelector(
-              months: monthLabels,
-              selectedIndex: idx,
-              onSelect: (i) => setState(() => _monthIndex = i),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: InkWell(
+              onTap: _showPicker,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$_year년 ${idx + 1}월',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.keyboard_arrow_down, size: 24),
+                  ],
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -97,75 +233,6 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   }
 }
 
-/// "‹ 2026년 ›" 연도 토글 — 미래 연도로는 넘어가지 않는다([080-timeline-journey-grouping] 비목표).
-class _YearNavigator extends StatelessWidget {
-  const _YearNavigator({
-    required this.year,
-    required this.canGoNext,
-    required this.onPrev,
-    required this.onNext,
-  });
-
-  final int year;
-  final bool canGoNext;
-  final VoidCallback onPrev;
-  final VoidCallback onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _YearNavButton(icon: Icons.chevron_left, enabled: true, onTap: onPrev),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            '$year년',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-          ),
-        ),
-        _YearNavButton(
-          icon: Icons.chevron_right,
-          enabled: canGoNext,
-          onTap: onNext,
-        ),
-      ],
-    );
-  }
-}
-
-class _YearNavButton extends StatelessWidget {
-  const _YearNavButton({
-    required this.icon,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 32,
-      height: 32,
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: enabled ? onTap : null,
-          child: Icon(
-            icon,
-            size: 20,
-            color: enabled ? AppColors.primaryDark : AppColors.checkboxBorder,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// 지역별 보기 — 월 요약 카드 + 지역별 접기/펼치기 섹션.
 class _RegionGroupedView extends StatelessWidget {
@@ -317,94 +384,6 @@ List<_RegionGroup> _groupByRegion({
     ..sort((a, b) => a.earliestCompletedAt.compareTo(b.earliestCompletedAt));
 }
 
-/// 가로 스크롤 월 pill 목록 — "7월 8월 9월 …" 형태로, 선택된 달은 진하게 강조한다.
-class _MonthPillSelector extends StatefulWidget {
-  const _MonthPillSelector({
-    required this.months,
-    required this.selectedIndex,
-    required this.onSelect,
-  });
-
-  final List<String> months;
-  final int selectedIndex;
-  final ValueChanged<int> onSelect;
-
-  @override
-  State<_MonthPillSelector> createState() => _MonthPillSelectorState();
-}
-
-class _MonthPillSelectorState extends State<_MonthPillSelector> {
-  static const _pillWidth = 64.0;
-  final _controller = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
-  }
-
-  @override
-  void didUpdateWidget(_MonthPillSelector oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedIndex != widget.selectedIndex) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToSelected());
-    }
-  }
-
-  void _scrollToSelected() {
-    if (!_controller.hasClients) return;
-    final target = (widget.selectedIndex * _pillWidth - _pillWidth).clamp(
-      0.0,
-      _controller.position.maxScrollExtent,
-    );
-    _controller.animateTo(
-      target,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        controller: _controller,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: widget.months.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final selected = index == widget.selectedIndex;
-          final match = RegExp(r'(\d+)월').firstMatch(widget.months[index]);
-          final label = match != null
-              ? '${match.group(1)}월'
-              : widget.months[index];
-          return ChoiceChip(
-            label: Text(label),
-            selected: selected,
-            showCheckmark: false,
-            onSelected: (_) => widget.onSelect(index),
-            selectedColor: AppColors.primaryDark,
-            backgroundColor: AppColors.surfaceMuted,
-            labelStyle: TextStyle(
-              color: selected ? Colors.white : AppColors.textBody,
-              fontWeight: FontWeight.w700,
-            ),
-            shape: const StadiumBorder(),
-            side: BorderSide.none,
-          );
-        },
-      ),
-    );
-  }
-}
 
 /// 지역별 보기 상단의 월 요약 카드 — "{월}월의 여행 기록 / N개 지역 · M개 퀘스트" + 진행 바.
 class _MonthSummaryCard extends StatelessWidget {
