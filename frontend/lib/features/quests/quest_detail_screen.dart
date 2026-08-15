@@ -36,7 +36,6 @@ class QuestDetailScreen extends ConsumerWidget {
     if (quest == null) {
       return const Scaffold(body: Center(child: Text('퀘스트를 찾을 수 없어요')));
     }
-    final region = ref.watch(regionRepositoryProvider).byId(quest.region);
     final progress = ref.watch(progressProvider);
     final done = progress.isCompleted(quest.id);
     final completedEntry = done ? progress.timelineEntryFor(quest.id) : null;

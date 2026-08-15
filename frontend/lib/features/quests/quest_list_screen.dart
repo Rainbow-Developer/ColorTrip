@@ -103,9 +103,7 @@ class _QuestListScreenState extends ConsumerState<QuestListScreen> {
               separatorBuilder: (_, _) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 final quest = quests[index];
-                final region = ref
-                    .read(regionRepositoryProvider)
-                    .byId(quest.region);
+
                 final done = progress.isCompleted(quest.id);
                 return _QuestCard(
                   quest: quest,

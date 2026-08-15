@@ -421,6 +421,7 @@ class _TripSetupSheetState extends State<_TripSetupSheet> {
         ? [_range!.start, _range!.end]
         : [];
 
+    if (!mounted) return;
     final picked = await showModalBottomSheet<DateTimeRange>(
       context: context,
       isScrollControlled: true,
