@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,7 @@ import '../../data/models/quest.dart' show Quest, kDefaultVerifyRadiusMeters;
 import '../../data/repositories/domain_repository.dart';
 import '../../state/domain_controller.dart';
 import '../../state/repository_providers.dart';
+import 'gps_verify_map.dart';
 
 /// 퀘스트 수행(인증) 화면 — 여행 시작하기로 담은 퀘스트를 지역 개요("여행하기")의
 /// "내 여행 퀘스트" 목록에서 탭하면 여기로 온다(2026-07-09 사용자 확정 — 퀘스트 상세에는
@@ -57,7 +60,9 @@ class QuestVerifyScreen extends ConsumerWidget {
       case 'gps':
         return _GpsVerifyBody(
           questTitle: quest.title,
-          isReady: quest.lat != null && quest.lng != null,
+          questLat: quest.lat,
+          questLng: quest.lng,
+          radiusMeters: quest.verifyRadius ?? kDefaultVerifyRadiusMeters,
           onVerified: () => _verifyGps(context, ref, quest, journeyId),
         );
       case 'quiz':
@@ -387,23 +392,81 @@ class _QuizVerifyBodyState extends State<_QuizVerifyBody> {
   }
 }
 
-class _GpsVerifyBody extends StatefulWidget {
+class _GpsVerifyBody extends ConsumerStatefulWidget {
   const _GpsVerifyBody({
     required this.questTitle,
-    required this.isReady,
+    required this.questLat,
+    required this.questLng,
+    required this.radiusMeters,
     required this.onVerified,
   });
 
   final String questTitle;
-  final bool isReady;
+  final double? questLat;
+  final double? questLng;
+
+  /// 인증 반경(m) — `Quest.verifyRadius`가 int라 여기도 int로 받고, 그리기에 넘길 때만
+  /// double로 바꾼다.
+  final int radiusMeters;
   final Future<void> Function() onVerified;
 
+  bool get isReady => questLat != null && questLng != null;
+
   @override
-  State<_GpsVerifyBody> createState() => _GpsVerifyBodyState();
+  ConsumerState<_GpsVerifyBody> createState() => _GpsVerifyBodyState();
 }
 
-class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
+class _GpsVerifyBodyState extends ConsumerState<_GpsVerifyBody> {
   bool _busy = false;
+  CurrentLocation? _myLocation;
+
+  /// 측위가 끝났는지 — 실패해도 true다(무한 "확인 중"을 막는다).
+  bool _locationResolved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 화면에 들어오면 바로 측위해 도식에 내 위치를 그린다(KAN-87). 인증을 눌러야 측위하던
+    // 이전 방식으로는 어느 쪽으로 얼마나 가야 하는지 인증 전에 알 수 없었다. 권한은 어차피
+    // 인증에 필요하므로 요청 시점만 앞당긴 것이다.
+    if (widget.isReady) unawaited(_locateForPreview());
+  }
+
+  /// 도식 표시용 측위 — **실패해도 사용자를 방해하지 않는다.** 권한 거부·서비스 꺼짐 안내는
+  /// 실제 인증 시도(`_verifyGps`)가 담당하고, 여기서는 조용히 내 위치 없이 그린다.
+  Future<void> _locateForPreview() async {
+    try {
+      final location = await ref.read(locationGatewayProvider).current();
+      if (!mounted) return;
+      setState(() {
+        _myLocation = location;
+        _locationResolved = true;
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() => _locationResolved = true);
+    }
+  }
+
+  /// 퀘스트 지점까지의 실측 거리(m) — 내 위치가 없으면 null.
+  double? get _distance {
+    final me = _myLocation;
+    final lat = widget.questLat;
+    final lng = widget.questLng;
+    if (me == null || lat == null || lng == null) return null;
+    return distanceMeters(me.latitude, me.longitude, lat, lng);
+  }
+
+  String get _locationSummary {
+    final distance = _distance;
+    if (distance != null) {
+      return distance <= widget.radiusMeters
+          ? '반경 안에 있어요'
+          : '약 ${_formatDistance(distance)} 떨어져 있어요';
+    }
+    // 측위가 끝났는데 위치가 없으면 실패한 것이다 — 사유별 안내는 인증 시도가 담당한다.
+    return _locationResolved ? '인증 버튼을 누르면 확인해요' : '확인 중...';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -433,64 +496,17 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
               style: TextStyle(color: AppColors.primaryDark, fontSize: 12),
             ),
             const SizedBox(height: 16),
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.verifyMapBg,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    alignment: Alignment.center,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryDark.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.primaryDark,
-                          width: 2,
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text('📍'),
-                    ),
-                  ),
-                  const Positioned(
-                    left: 12,
-                    top: 10,
-                    child: Text(
-                      '지도 미리보기',
-                      style: TextStyle(color: AppColors.formPlaceholder),
-                    ),
-                  ),
-                  Positioned(
-                    right: 10,
-                    bottom: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: AppColors.timelineLine),
-                      ),
-                      child: const Text(
-                        '현재 위치',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            if (widget.isReady)
+              GpsVerifyMap(
+                questLat: widget.questLat!,
+                questLng: widget.questLng!,
+                radiusMeters: widget.radiusMeters.toDouble(),
+                myLat: _myLocation?.latitude,
+                myLng: _myLocation?.longitude,
+                distanceMeters: _distance,
+                isWithinRadius:
+                    (_distance ?? double.infinity) <= widget.radiusMeters,
               ),
-            ),
             const SizedBox(height: 14),
             if (!widget.isReady)
               const Padding(
@@ -519,9 +535,9 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
                           fontSize: 13,
                         ),
                       ),
-                      const Text(
-                        '인증 버튼을 누르면 확인해요',
-                        style: TextStyle(
+                      Text(
+                        _locationSummary,
+                        style: const TextStyle(
                           color: AppColors.primaryDark,
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
@@ -556,7 +572,11 @@ class _GpsVerifyBodyState extends State<_GpsVerifyBody> {
                   : () async {
                       setState(() => _busy = true);
                       await widget.onVerified();
-                      if (mounted) setState(() => _busy = false);
+                      if (!mounted) return;
+                      setState(() => _busy = false);
+                      // 통과했으면 이 화면을 떠나므로, 여기 남았다는 건 반경 밖이라는 뜻이다.
+                      // 도식을 갱신해 방금 측위한 위치를 보여준다.
+                      await _locateForPreview();
                     },
               child: Text(_busy ? '현재 위치 확인 중...' : '현재 위치로 인증하기'),
             ),
@@ -749,12 +769,19 @@ class _PhotoVerifyBodyState extends ConsumerState<_PhotoVerifyBody> {
                       ),
                       alignment: Alignment.center,
                       // 고른 사진은 원본 비율 그대로 보여준다 — 고정 높이 + cover 로 채우면
-                      // 무엇을 올렸는지 잘려 보여 판정 대상 확인이 어렵다.
+                      // 무엇을 올렸는지 잘려 보여 판정 대상 확인이 어렵다. 다만 세로로 긴
+                      // 사진이 화면을 다 차지하면 그 아래의 판정 실패 사유가 폴드 밖으로
+                      // 밀리므로 높이 상한을 둔다. 상한을 두는 이상 fit 은 contain 이어야
+                      // 한다 — fitWidth 로는 넘친 세로가 Clip.antiAlias 에 잘려 결국 crop 이
+                      // 된다(KAN-83 리뷰).
                       child: photo != null
-                          ? Image.memory(
-                              photo.bytes,
-                              width: double.infinity,
-                              fit: BoxFit.fitWidth,
+                          ? ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 320),
+                              child: Image.memory(
+                                photo.bytes,
+                                width: double.infinity,
+                                fit: BoxFit.contain,
+                              ),
                             )
                           : const SizedBox(
                               height: 120,
