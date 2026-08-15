@@ -231,9 +231,15 @@ async def replace_profile_image(
     previous_url = user.profile_image
     user.profile_image = image.url
 
+    # commit 실패 시 `commit_or_discard_image`가 rollback한 뒤 이 콜백을 부른다. 그때는
+    # `user`가 expire된 상태라 ORM 속성을 읽으면 lazy refresh IO가 일어나고, async
+    # 컨텍스트 밖이라 MissingGreenlet으로 터져 원래 오류를 덮고 보상 삭제까지 건너뛴다.
+    # 그래서 식별자를 미리 값으로 잡아둔다.
+    user_id = user.id
+
     async def is_persisted(check_session: AsyncSession) -> bool:
         found = await check_session.scalar(
-            select(User.id).where(User.id == user.id, User.profile_image == image.url)
+            select(User.id).where(User.id == user_id, User.profile_image == image.url)
         )
         return found is not None
 

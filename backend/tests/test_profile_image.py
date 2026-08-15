@@ -229,6 +229,71 @@ async def test_object_name_from_url_rejects_path_traversal() -> None:
     assert object_name_from_url("/uploads/avatars/a.png") == "avatars/a.png"
 
 
+async def test_commit_failure_cleans_up_and_surfaces_the_original_error(
+    client: AsyncClient,
+) -> None:
+    """commit이 실패하면 원래 예외가 그대로 올라오고 저장된 객체는 정리돼야 한다.
+
+    회귀 가드: `is_persisted` 콜백은 rollback 이후에 실행된다. 거기서 ORM 속성
+    (`user.id`)을 읽으면 expire된 인스턴스가 lazy refresh를 시도해 async 컨텍스트 밖에서
+    `MissingGreenlet`으로 터진다 — 원래 오류가 가려지고 보상 삭제도 건너뛰어 방금 올린
+    아바타가 고아 객체로 남는다. 식별자를 값으로 미리 잡아야 한다.
+    """
+    import io
+
+    import pytest
+    from fastapi import UploadFile
+    from starlette.datastructures import Headers
+
+    from app.auth import service as auth_service
+    from app.auth.models import User
+    from app.core.config import settings
+    from app.core.database import AsyncSessionLocal
+    from app.uploads.storage import get_photo_storage
+
+    data = await login(client)
+    user_id = UUID(data["user"]["id"])
+    upload = UploadFile(
+        file=io.BytesIO(_PNG_BYTES),
+        filename="profile.png",
+        headers=Headers({"content-type": "image/png"}),
+    )
+
+    # 업로드 디렉토리는 세션 전체가 공유하므로, 이 테스트가 새로 만든 파일만 본다.
+    avatars = Path(settings.upload_dir) / "avatars"
+    before = set(avatars.rglob("*.png")) if avatars.exists() else set()
+
+    class _CommitFails(Exception):
+        """commit 단계에서만 터지는 고유 예외 — 이 타입이 그대로 올라와야 한다."""
+
+    async with AsyncSessionLocal() as session:
+        user = await session.get(User, user_id)
+        assert user is not None
+
+        async def _boom() -> None:
+            raise _CommitFails
+
+        session.commit = _boom  # type: ignore[method-assign]
+
+        with pytest.raises(_CommitFails):
+            await auth_service.replace_profile_image(
+                session,
+                current_user=user,
+                file=upload,
+                storage=get_photo_storage(),
+            )
+
+    # 저장은 됐지만 DB에 남지 않았으므로 이번에 만든 객체는 지워져 있어야 한다.
+    leaked = (set(avatars.rglob("*.png")) if avatars.exists() else set()) - before
+    assert leaked == set(), f"보상 삭제가 되지 않아 고아 객체가 남았습니다: {leaked}"
+
+    # DB도 이전 상태(카카오 초기값) 그대로여야 한다.
+    async with AsyncSessionLocal() as session:
+        user = await session.get(User, user_id)
+        assert user is not None
+        assert user.profile_image == "https://example.com/one.png"
+
+
 async def test_avatar_is_not_usable_as_quest_verification_photo(client: AsyncClient) -> None:
     """아바타는 `uploaded_photos` 소유권 행을 만들지 않는다 (plan.md 의사결정 4).
 
