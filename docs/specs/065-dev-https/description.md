@@ -4,7 +4,7 @@
 
 dev API 앞에 **Caddy 리버스 프록시**를 두어 TLS를 종단한다. Caddy가 Let's Encrypt에서 인증서를 자동 발급·갱신하므로 수동 갱신 작업이 없다.
 
-도메인을 구매하지 않고 **sslip.io 와일드카드 DNS**(`34-64-226-70.sslip.io`)를 호스트명으로 쓴다. sslip.io는 호스트명에 박힌 IP를 그대로 A 레코드로 돌려주는 공개 DNS라, 별도 등록 없이 서버 IP에 대응하는 이름을 얻을 수 있다.
+`colortrip.p-e.kr` 도메인을 고정 퍼블릭 IP `34.64.226.70`에 연결해 dev API 호스트명으로 쓴다.
 
 이 작업의 직접적인 목적은 **안드로이드 릴리스 APK가 dev 서버에 접속할 수 있게 하는 것**이다. 릴리스 빌드는 평문 HTTP가 차단되어 있어 HTTPS 없이는 연동 자체가 불가능했다.
 
@@ -18,7 +18,7 @@ sequenceDiagram
     participant API as api (FastAPI)
 
     Note over Caddy,LE: 최초 기동 (1회)
-    Caddy->>LE: ACME 주문 (34-64-226-70.sslip.io)
+    Caddy->>LE: ACME 주문 (colortrip.p-e.kr)
     LE->>Caddy: HTTP-01 챌린지 (80포트로 검증)
     LE-->>Caddy: 인증서 발급
     Caddy->>Caddy: caddy-data 볼륨에 저장
@@ -51,12 +51,12 @@ sequenceDiagram
 
 | 이름 | 값 | 비고 |
 |------|-----|------|
-| `API_DOMAIN` | `34-64-226-70.sslip.io` | 정식 도메인이 생기면 이 값만 교체 |
+| `API_DOMAIN` | `colortrip.p-e.kr` | 도메인을 바꾸면 이 값만 교체 |
 
 **앱 빌드 측** — 릴리스 APK는 https 주소로 빌드한다.
 
 ```bash
-flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<key> --dart-define=API_BASE_URL=https://34-64-226-70.sslip.io/api/v1
+flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<key> --dart-define=API_BASE_URL=https://colortrip.p-e.kr/api/v1
 ```
 
 로컬 백엔드(HTTP)를 볼 때는 **debug 빌드**를 쓴다 — 릴리스는 평문을 차단한다.
@@ -64,7 +64,7 @@ flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<key> --dart-defi
 ## 예시
 
 ```bash
-curl https://34-64-226-70.sslip.io/health
+curl https://colortrip.p-e.kr/health
 ```
 
 ```json
@@ -74,12 +74,12 @@ curl https://34-64-226-70.sslip.io/health
 HTTP로 접근하면 HTTPS로 리다이렉트된다.
 
 ```bash
-curl -I http://34-64-226-70.sslip.io/health
+curl -I http://colortrip.p-e.kr/health
 ```
 
 ## 관련 문서
 
-- [plan.md](plan.md) — 의사결정 근거(왜 Caddy·왜 sslip.io)
+- [plan.md](plan.md) — 의사결정 근거(왜 Caddy·왜 `colortrip.p-e.kr`)
 - [implementation.md](implementation.md) — 현재 구현 상태
 - [docs/conventions/infra-deploy.md](../../conventions/infra-deploy.md) — 인프라 결정 SOT
 - [docs/app-run-guide.md](../../app-run-guide.md) — 앱 실행·설치 런북

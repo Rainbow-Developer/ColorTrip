@@ -91,5 +91,5 @@ sequenceDiagram
 - [x] 7. `030-share-card` 비목표 문구 정리 및 상호 링크
 
 ## 리스크 / 미해결 질문
-* 배포 공개 origin은 `API_DOMAIN`에서 파생한다. 정식 도메인으로 교체할 때도 `API_DOMAIN`만 변경해 공유 링크와 HTTPS 라우팅이 함께 바뀌어야 한다.
+* 배포 공개 origin은 `API_DOMAIN`에서 파생한다. 현재 dev 기준은 `colortrip.p-e.kr`이며, 도메인을 바꿀 때도 `API_DOMAIN`만 변경해 공유 링크와 HTTPS 라우팅이 함께 바뀌어야 한다.
 * 앱스토어/플레이스토어 URL이 아직 없음 — CTA 버튼 링크는 placeholder(`#` 또는 안내 문구)로 두고, 배포 후 실제 URL로 교체 필요.

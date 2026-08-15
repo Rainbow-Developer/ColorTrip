@@ -20,7 +20,7 @@
 | 컨테이너 레지스트리 | Artifact Registry | `asia-northeast3-docker.pkg.dev/colortrip/colortrip-<env>` |
 | CI/CD | GitHub Actions dev 자동 배포 | 이미지 빌드→Artifact Registry 푸시→Alembic migration→API 교체 |
 | HTTPS(TLS 종단) | **Caddy 리버스 프록시** + Let's Encrypt 자동 발급 | `api`는 호스트 포트를 열지 않고 Caddy만 80·443 노출. 설계: [065-dev-https](../specs/065-dev-https/) |
-| 도메인 | **sslip.io 와일드카드 DNS** (`34-64-226-70.sslip.io`) | 임시. 정식 도메인 구매는 후속 — GitHub variable `API_DOMAIN` 값만 교체하면 된다 |
+| 도메인 | **실제 연결 도메인** (`colortrip.p-e.kr`) | 고정 퍼블릭 IP `34.64.226.70`에 연결. GitHub variable `API_DOMAIN` 값으로 배포에 주입한다 |
 
 ## 규칙 / 적용
 
@@ -37,7 +37,7 @@
 - 컨테이너 이미지는 Artifact Registry에 보관한다.
 - **API는 HTTPS로만 외부에 노출한다.** Caddy가 TLS를 종단하고 `api` 컨테이너는 compose 내부망에만 둔다(평문 우회 경로 제거). 안드로이드 릴리스 APK가 평문 HTTP를 차단하므로 HTTPS는 앱 연동의 전제 조건이다.
 - 인증서는 Let's Encrypt에서 자동 발급·갱신하고 `caddy-data` 볼륨에 영속화한다(재발급 rate limit 회피).
-- 도메인은 정식 구매가 목표이나, 그 전까지는 sslip.io 와일드카드 DNS로 HTTPS를 제공한다. 호스트명은 GitHub variable `API_DOMAIN`으로 주입해 교체 지점을 한 곳으로 모은다.
+- 도메인은 `colortrip.p-e.kr`를 사용한다. 호스트명은 GitHub variable `API_DOMAIN`으로 주입해 공유 링크와 Caddy 인증서 발급 기준을 한 곳으로 모은다.
 
 ## 관련 문서
 

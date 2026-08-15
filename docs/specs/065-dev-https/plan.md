@@ -34,7 +34,7 @@ pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ]     ← USES_CLEARTEXT_TRAFFIC 없�
 
 ## 비목표 (Non-Goals)
 
-- 정식 도메인 구매·연결 (후속 과제 — 아래 '리스크' 참고)
+- 추가 도메인 구매·연결
 - 운영(prod) 환경 HTTPS
 - HTTP/2·HTTP/3 튜닝, WAF, CDN
 - Flutter Web·nginx 도입 (기존 compose 주석의 후속 계획과 별개)
@@ -55,7 +55,7 @@ pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ]     ← USES_CLEARTEXT_TRAFFIC 없�
 
 API 앞에 **Caddy 리버스 프록시**를 두고 TLS를 종단한다. Caddy가 Let's Encrypt ACME로 인증서를 자동 발급·갱신한다.
 
-도메인이 없으므로 **sslip.io 와일드카드 DNS**를 쓴다. `34-64-226-70.sslip.io` → `34.64.226.70`으로 해석되며(실측 확인), Let's Encrypt는 이 호스트명에 정상적으로 인증서를 발급한다.
+`colortrip.p-e.kr` 도메인을 고정 퍼블릭 IP `34.64.226.70`에 연결해 쓴다. Let's Encrypt는 이 호스트명에 정상적으로 인증서를 발급한다.
 
 ```mermaid
 flowchart LR
@@ -78,7 +78,7 @@ flowchart LR
 
 | 결정할 항목 | 선택지 | 제안 / 근거 | 상태 |
 |------|--------|------------|------|
-| 호스트명 확보 | A) 도메인 구매 <br> B) sslip.io/nip.io 와일드카드 DNS <br> C) GCP LB + managed cert | **B 권장.** A는 비용·구매 절차·DNS 전파로 오늘 안에 불가하고 결정권이 팀에 있다. C는 도메인이 여전히 필요하고 LB가 월 ~$18 추가된다(현재 인프라 월 ~$41 대비 과함 — 오버엔지니어링). B는 0원·즉시·공인 인증서 발급 가능. dev 전용이라 이름이 예쁘지 않아도 무방 | 합의됨 |
+| 호스트명 확보 | A) 실제 연결 도메인 <br> B) sslip.io/nip.io 와일드카드 DNS <br> C) GCP LB + managed cert | **A 적용.** 초기 검증은 sslip.io로 진행했으나, 현재는 `colortrip.p-e.kr`가 고정 퍼블릭 IP `34.64.226.70`에 연결되어 있어 이 값을 `API_DOMAIN`의 기준으로 쓴다. C는 LB 비용이 추가되어 현 dev 인프라 규모에는 과하다 | 합의됨 |
 | TLS 종단 방식 | A) Caddy <br> B) nginx + certbot <br> C) Traefik | **A 권장.** B는 certbot 크론·nginx 리로드·초기 발급 chicken-and-egg를 직접 조립해야 한다. C는 라벨 기반 설정이 강력하지만 서비스 2개짜리 compose엔 과하다. Caddy는 Caddyfile 3줄로 ACME 발급·갱신·HTTP 리다이렉트가 전부 기본 동작 — 이 규모에 가장 적은 설정으로 목표 달성 | 합의됨 |
 | Caddy 원리·실효성 | — | ACME HTTP-01 챌린지로 80포트에서 소유권을 증명받아 인증서를 발급하고, 만료 30일 전 자동 갱신한다. 갱신 실패 시에도 기존 인증서로 계속 서빙한다. 발급물은 표준 Let's Encrypt 인증서라 안드로이드 시스템 신뢰 저장소에 이미 루트가 있어 **앱 코드 변경이 불필요**하다 | 합의됨 |
 | API 80 포트 직접 노출 | A) 유지 <br> B) 제거 | **B 권장.** 유지하면 HTTPS를 우회해 평문으로 API에 접근하는 경로가 남는다. Caddy만 노출하는 게 목적에 부합 | 합의됨 |
@@ -107,14 +107,14 @@ flowchart LR
 - [x] `deploy/deploy.sh`에 `API_DOMAIN` 처리 · health check 변경
 - [x] `.github/workflows/deploy-dev.yml`에 Caddyfile 전송 · `API_DOMAIN` 주입
 - [x] GitHub 저장소 variable `API_DOMAIN` 등록
-- [x] dev 배포 실행 후 `https://34-64-226-70.sslip.io/health` 검증
+- [x] dev 배포 실행 후 `https://colortrip.p-e.kr/health` 검증
 - [x] 릴리스 APK를 https 주소로 재빌드 → 에뮬레이터에서 연동 확인
 - [x] 문서 갱신 (위 영향 범위 표)
 - [x] CodeRabbit 리뷰 반영 (PR [#61](https://github.com/Rainbow-Developer/ColorTrip/pull/61)) — 호스트명 검증 강화, probe 타임아웃·엄격한 200 검사, 외부 HTTPS probe 추가, Caddy 이미지 digest 고정
 
 ## 리스크 / 미해결 질문
 
-- **sslip.io 의존성**: 서드파티 무료 DNS 서비스라 다운되면 이름 해석이 실패한다. dev 전용이므로 감수하되, **정식 도메인 구매가 후속 과제**임을 명시한다. 도메인이 생기면 `API_DOMAIN` 변수만 바꾸면 되도록 설계했다.
+- **DNS 전파/설정 의존성**: `colortrip.p-e.kr` A 레코드가 `34.64.226.70`을 가리켜야 Caddy 인증서 발급과 공유 링크가 모두 정상 동작한다. 도메인을 바꾸는 경우 `API_DOMAIN` 변수만 바꾸면 되도록 설계했다.
 - **Let's Encrypt rate limit**: 발급 실패를 반복하면 일시 차단될 수 있다. 인증서 볼륨 영속화로 완화한다.
 - **첫 배포 시 발급 지연**: ACME 챌린지에 수 초~수십 초 걸린다. health check 타임아웃(현행 60초)이 부족하면 늘려야 한다.
 - **80 포트 필수**: ACME HTTP-01은 80 포트가 외부에 열려 있어야 한다. 방화벽은 이미 80·443을 허용하고 있어([infra/modules/network/main.tf](../../../infra/modules/network/main.tf)) 추가 작업 없음.

@@ -32,7 +32,7 @@ gcloud auth application-default login      # ADC (Terraform·Cloud SQL Proxy 용
 |--------|------|------|
 | Compute Engine 인스턴스 | `colortrip-dev-app` | Ubuntu + Docker, `e2-small` |
 | 인스턴스 외부 IP(고정) | `34.64.226.70` | 80·443만 공개(SSH는 IAP 전용) |
-| API 주소 (HTTPS) | `https://34-64-226-70.sslip.io` | 검증: `curl https://34-64-226-70.sslip.io/health`. sslip.io 임시 도메인 — [065-dev-https](specs/065-dev-https/) |
+| API 주소 (HTTPS) | `https://colortrip.p-e.kr` | 검증: `curl https://colortrip.p-e.kr/health`. 고정 IP `34.64.226.70`에 연결된 dev API 도메인 — [065-dev-https](specs/065-dev-https/) |
 | Cloud SQL 인스턴스 | `colortrip-dev-db` | PostgreSQL 16, `db-g1-small` |
 | Cloud SQL 연결 이름 | `colortrip:asia-northeast3:colortrip-dev-db` | Auth Proxy 용 |
 | DB 이름 / 유저 | `colortrip` / `colortrip` | 비밀번호는 Secret Manager |
@@ -62,9 +62,9 @@ GitHub repo Actions variables 에 넣을 값:
 | `WIF_PROVIDER` | `projects/190304972522/locations/global/workloadIdentityPools/colortrip-dev-gh-pool/providers/github` |
 | `DEPLOY_SA` | `colortrip-dev-deployer@colortrip.iam.gserviceaccount.com` |
 | `KAKAO_APP_ID` | Kakao token info의 `app_id`와 일치하는 양의 정수 앱 ID |
-| `API_DOMAIN` | `34-64-226-70.sslip.io` — Caddy가 Let's Encrypt 인증서를 발급받을 호스트명 |
+| `API_DOMAIN` | `colortrip.p-e.kr` — Caddy가 Let's Encrypt 인증서를 발급받을 호스트명 |
 
-> `API_DOMAIN`이 없거나 호스트명 형식이 아니면 배포가 시작 단계에서 실패합니다([deploy-dev.yml](../.github/workflows/deploy-dev.yml)). 정식 도메인을 구매하면 이 값만 교체하면 됩니다 — [065-dev-https](specs/065-dev-https/).
+> `API_DOMAIN`이 없거나 호스트명 형식이 아니면 배포가 시작 단계에서 실패합니다([deploy-dev.yml](../.github/workflows/deploy-dev.yml)). 도메인을 바꾸는 경우 이 값만 교체하면 됩니다 — [065-dev-https](specs/065-dev-https/).
 
 네 값은 인증 비밀값이 아니라 WIF provider·서비스 계정·Kakao 앱·API 호스트명을 가리키는 식별자이므로 GitHub repository variables 로 관리합니다. Actions 는 OIDC 토큰으로 단기 자격 증명을 발급받으며, 서비스 계정 키나 앱 시크릿을 GitHub 에 저장하지 않습니다. 실제 앱 시크릿은 아래 GCP Secret Manager 에서 관리합니다.
 

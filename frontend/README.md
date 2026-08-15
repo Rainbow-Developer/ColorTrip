@@ -67,7 +67,7 @@ adb install -r build/app/outputs/flutter-apk/app-debug.apk
 
 | 상황 | `API_BASE_URL` | 빌드 모드 |
 |------|----------------|----------|
-| 팀 dev 서버에 붙이기 (권장) | `https://34-64-226-70.sslip.io/api/v1` | debug · release 모두 |
+| 팀 dev 서버에 붙이기 (권장) | `https://colortrip.p-e.kr/api/v1` | debug · release 모두 |
 | 내 PC의 로컬 백엔드에 붙이기 (같은 Wi-Fi 필요) | `http://<PC의 LAN IP>:8000/api/v1` | **debug만** |
 | 서버 없이 화면만 보기 | 닿지 않는 주소(예: `http://127.0.0.1:1`) | debug |
 
@@ -109,7 +109,7 @@ flutter run -d chrome                        # 웹으로 빠르게 확인
 ## APK 빌드 (설치용)
 
 ```bash
-docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://34-64-226-70.sslip.io/api/v1"
+docker compose run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://colortrip.p-e.kr/api/v1"
 ```
 
 - 결과물: `build/app/outputs/flutter-apk/app-release.apk` (약 83MB, 빌드 ~7분)
