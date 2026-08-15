@@ -239,7 +239,6 @@ class _RegionQuestSelectScreenState
                     final completed = progress.isCompleted(quest.id);
                     return _SelectableQuestCard(
                       quest: quest,
-                      regionName: region.name,
                       selected:
                           completed || _selectedQuestIds!.contains(quest.id),
                       locked: completed,
@@ -293,7 +292,6 @@ class _RegionQuestSelectScreenState
 class _SelectableQuestCard extends StatelessWidget {
   const _SelectableQuestCard({
     required this.quest,
-    required this.regionName,
     required this.selected,
     required this.locked,
     required this.onToggle,
@@ -301,10 +299,7 @@ class _SelectableQuestCard extends StatelessWidget {
   });
 
   final Quest quest;
-  final String regionName;
   final bool selected;
-
-  /// 이미 완료한 퀘스트 — 체크 해제할 수 없고, 탭하면 토글 대신 히스토리(퀘스트 상세)로 이동한다.
   final bool locked;
   final VoidCallback onToggle;
   final VoidCallback onViewDetail;
@@ -360,8 +355,10 @@ class _SelectableQuestCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      _MiniBadge(label: regionName),
-                      const SizedBox(width: 4),
+                      if (verifyLabels[quest.verify] != null) ...[
+                        _MiniBadge(label: verifyLabels[quest.verify]!),
+                        const SizedBox(width: 4),
+                      ],
                       _MiniBadge(
                         label: questTypeStyles[quest.type]?.label ?? quest.type,
                       ),

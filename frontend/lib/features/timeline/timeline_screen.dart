@@ -731,10 +731,9 @@ class _TimelineRow extends StatelessWidget {
     final quest = questRepo.byId(entry.questId);
     if (quest == null) return const SizedBox.shrink();
     final region = regionRepo.byId(quest.region);
-    final regionName = region?.name ?? quest.region;
+
     final typeStyle = questTypeStyles[quest.type];
     final tagColors = questTypeIconColors[quest.type];
-    final regionColor = mapFillColors(quest.region, _regionBadgeSaturation);
     final photoUrl = entry.photoUrl;
     final resolvedPhotoUrl = photoUrl == null
         ? null
@@ -797,19 +796,20 @@ class _TimelineRow extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        MiniBadge(
-                          label: regionName,
-                          background: regionColor.background,
-                          foreground: regionColor.label,
-                        ),
                         if (tagColors != null && typeStyle != null) ...[
-                          const SizedBox(width: 6),
                           MiniBadge(
                             label: typeStyle.label,
                             background: tagColors.background,
                             foreground: tagColors.foreground,
                           ),
+                          const SizedBox(width: 6),
                         ],
+                        if (verifyLabels[quest.verify] != null)
+                          MiniBadge(
+                            label: verifyLabels[quest.verify]!,
+                            background: AppColors.tripMutedBadgeBg,
+                            foreground: AppColors.tripMutedBadgeFg,
+                          ),
                       ],
                     ),
                   ],
