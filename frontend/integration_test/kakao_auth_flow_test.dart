@@ -17,7 +17,6 @@ import 'package:integration_test/integration_test.dart';
 
 UserProfile _profile(OnboardingStep step) => UserProfile(
   id: 'integration-user',
-  email: 'integration@example.com',
   nickname: '통합여행자',
   birthDate: DateTime(2000, 1, 2),
   profileImage: null,

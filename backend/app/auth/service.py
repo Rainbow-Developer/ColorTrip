@@ -194,13 +194,7 @@ async def save_onboarding_profile(
         raise AppException(ErrorCode.REQUIRED_CONSENT_ERROR)
 
     current_user = await require_active_user_for_update(session, current_user.id)
-    if _profile_is_complete(current_user) and current_user.email != payload.email:
-        raise AppException(
-            ErrorCode.VALIDATION_ERROR,
-            "Email cannot be changed after onboarding.",
-        )
     current_user.nickname = payload.nickname
-    current_user.email = payload.email
     current_user.birth_date = payload.birth_date
     decided_at = now_kst()
     await repository.upsert_current_consents(
@@ -342,7 +336,6 @@ def _new_kakao_user(kakao_user: KakaoUserInfo) -> User:
     return User(
         social_provider="kakao",
         social_id=kakao_user.social_id,
-        email=kakao_user.email,
         nickname=kakao_user.nickname,
         birth_date=None,
         profile_image=kakao_user.profile_image,
@@ -351,7 +344,6 @@ def _new_kakao_user(kakao_user: KakaoUserInfo) -> User:
 
 def _anonymize_user(user: User, now: datetime) -> None:
     user.social_id = f"deleted:{user.id}"
-    user.email = None
     user.nickname = None
     user.birth_date = None
     user.profile_image = None
@@ -379,10 +371,4 @@ async def require_active_user_for_update(session: AsyncSession, user_id: UUID) -
 
 
 def _profile_is_complete(user: User) -> bool:
-    return bool(
-        user.nickname
-        and user.nickname.strip()
-        and user.email
-        and user.email.strip()
-        and user.birth_date is not None
-    )
+    return bool(user.nickname and user.nickname.strip() and user.birth_date is not None)

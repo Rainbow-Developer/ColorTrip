@@ -23,7 +23,7 @@
 |----|------|
 | AUTH-INT-01 | Flutter Kakao SDK 로그인 결과를 정식 백엔드 `/api/v1` 인증 흐름과 연결 |
 | AUTH-INT-02 | Kakao access token의 유효성, 사용자 ID, `app_id`를 서버에서 검증 |
-| AUTH-INT-03 | 닉네임·이메일·생년월일 프로필과 서버 상수 기반 versioned consent 온보딩 제공 |
+| AUTH-INT-03 | 닉네임·생년월일 프로필과 서버 상수 기반 versioned consent 온보딩 제공 |
 | AUTH-INT-04 | `ActiveUser` → `ProfiledUser` → `CurrentUser` 단계별 서버 접근 제어 |
 | AUTH-INT-05 | access/refresh JWT를 secure storage에 저장하고 refresh rotation·인증 실패 처리를 Flutter 네트워크 계층에 연결 |
 | AUTH-INT-06 | 프로필 조회·수정, 로그아웃, 즉시 익명화·복구 불가 탈퇴를 앱에서 완료 |
@@ -56,24 +56,24 @@
 
 ### 프로필·동의 온보딩
 
-- 수집하는 인증/프로필 개인정보는 닉네임, 이메일, 생년월일로 제한한다. (이후 [080 프로필 이미지](../080-profile-image/)에서 선택 항목으로 프로필 이미지가 추가됐다. 현행 범위는 [인증 & 보안 컨벤션](../../conventions/auth-security.md)을 따른다.)
+- 수집하는 인증/프로필 개인정보는 닉네임, 생년월일로 제한한다. (이후 [080 프로필 이미지](../080-profile-image/)에서 선택 항목으로 프로필 이미지가 추가됐고, 초기 범위에 있던 이메일은 폐지됐다. 현행 범위는 [인증 & 보안 컨벤션](../../conventions/auth-security.md)을 따른다.)
 - Kakao가 제공한 값은 백엔드가 검증한 응답만 초기값으로 사용하고, 누락 값은 사용자가 온보딩에서 입력한다.
 - 동의 버전은 클라이언트 입력을 받지 않고 서버 상수 `terms-v1`, `privacy-v1`, `marketing-v1`를 기록한다.
-- `PUT /api/v1/users/me/onboarding-profile`은 닉네임·이메일·생년월일과 필수·선택 동의를 하나의 DB 트랜잭션으로 저장하고 최신 `UserProfile`을 반환한다. 필수 동의가 `false`이면 아무것도 저장하지 않으며, 동일 요청과 응답 유실 후 재전송은 중복 consent 행 없이 같은 결과로 수렴한다.
-- 요청 JSON은 `nickname: string`, `email: string`, `birth_date: YYYY-MM-DD`, `terms_agreed: boolean`, `privacy_agreed: boolean`, `marketing_agreed: boolean`의 flat 구조다. 성공 응답은 기존 API Envelope의 `data`에 최신 `UserProfile`을 담고, validation 실패는 422, 필수 동의 거부는 저장 없이 400을 반환한다.
-- 닉네임은 trim 후 1~30자, 이메일은 정규화된 유효 형식·최대 255자, 생년월일은 유효한 과거 또는 오늘 날짜로 검증한다.
-- `PATCH /api/v1/users/me`는 닉네임·생년월일만 수정하고 이메일 변경은 허용하지 않으며 최신 `UserProfile`을 반환한다.
+- `PUT /api/v1/users/me/onboarding-profile`은 닉네임·생년월일과 필수·선택 동의를 하나의 DB 트랜잭션으로 저장하고 최신 `UserProfile`을 반환한다. 필수 동의가 `false`이면 아무것도 저장하지 않으며, 동일 요청과 응답 유실 후 재전송은 중복 consent 행 없이 같은 결과로 수렴한다.
+- 요청 JSON은 `nickname: string`, `birth_date: YYYY-MM-DD`, `terms_agreed: boolean`, `privacy_agreed: boolean`, `marketing_agreed: boolean`의 flat 구조다. 성공 응답은 기존 API Envelope의 `data`에 최신 `UserProfile`을 담고, validation 실패는 422, 필수 동의 거부는 저장 없이 400을 반환한다.
+- 닉네임은 trim 후 1~30자, 생년월일은 유효한 과거 또는 오늘 날짜로 검증한다.
+- `PATCH /api/v1/users/me`는 닉네임·생년월일을 수정하고 최신 `UserProfile`을 반환한다.
 - 이용약관과 개인정보 동의는 필수이며 현재 서버 버전에 동의해야 여행 DNA를 시작할 수 있다. 마케팅 동의는 선택이며 접근을 막지 않는다.
 - 서버는 동의 종류, 버전, 동의 여부, 동의 시각을 저장해 버전 변경 시 재동의를 판단할 수 있어야 한다.
 - `user_consents`는 `id`, `user_id`, `consent_type`, `version`, `agreed`, `decided_at`, `created_at`, `updated_at`을 가지며 `(user_id, consent_type, version)` unique constraint와 사용자 조회 index를 둔다. 유형은 `terms`·`privacy`·`marketing`이고 마케팅 미동의도 `agreed=false` 행으로 upsert한다. 새 version은 이전 행을 덮지 않고 별도 이력으로 공존한다. 탈퇴 시 consent의 개인정보 삭제 요구 때문에 이 테이블은 일반 soft-delete 규칙의 명시적 예외로 물리 삭제한다.
-- `UserProfile`은 `id`, `email`, `nickname`, `birth_date`, `profile_image`, `dna`, `social_provider`, `onboarding_step`, 호환 필드 `is_restored`를 제공한다. 즉시 탈퇴 정책 적용 후 `is_restored`는 항상 `false`다.
+- `UserProfile`은 `id`, `nickname`, `birth_date`, `profile_image`, `dna`, `social_provider`, `onboarding_step`, 호환 필드 `is_restored`를 제공한다. 즉시 탈퇴 정책 적용 후 `is_restored`는 항상 `false`다.
 - `onboarding_step`은 별도 DB 상태가 아니라 현재 프로필·필수 consent·DNA로 `profile`·`trip_dna`·`complete` 중 하나를 계산한다. 필수 consent version이 바뀌면 기존 사용자도 `profile`로 되돌아간다.
 - Kakao 프로필은 신규 사용자 초기값으로만 적용하며 기존 ColorTrip 프로필을 재로그인 때 덮어쓰지 않는다.
 
 ### 단계별 접근
 
 - `ActiveUser`: 유효한 access JWT를 가지고 탈퇴·익명화되지 않은 사용자. 내 프로필 조회, 프로필·동의 온보딩, 로그아웃, 탈퇴에 접근할 수 있다.
-- `ProfiledUser`: `ActiveUser`이면서 닉네임·이메일·생년월일과 현재 `terms-v1`, `privacy-v1` 동의가 완료된 사용자. 여행 DNA 질문 조회·답변 제출에 접근할 수 있다.
+- `ProfiledUser`: `ActiveUser`이면서 닉네임·생년월일과 현재 `terms-v1`, `privacy-v1` 동의가 완료된 사용자. 여행 DNA 질문 조회·답변 제출에 접근할 수 있다.
 - `CurrentUser`: `ProfiledUser`이면서 DNA가 완료된 사용자. 여행·퀘스트·지도·타임라인·공유·업로드 등 일반 보호 API에 접근할 수 있다. (예외: 프로필 이미지 업로드·삭제는 온보딩 중 필요해 `ActiveUser`를 쓴다 — [080](../080-profile-image/))
 - 단계가 부족하면 HTTP 403 `ONBOARDING_REQUIRED`를 반환한다. 클라이언트는 `/users/me`를 다시 조회해 `onboarding_step`에 맞는 화면으로 이동한다.
 - `GET /api/v1/trip_dna/questions`와 답변 제출은 모두 `ProfiledUser`를 요구한다. 기존 `CurrentUser` 호출부는 일반 보호 API의 최종 단계 의미를 유지한다.
@@ -95,14 +95,14 @@
 
 ### 프로필·로그아웃·탈퇴
 
-- 프로필 조회와 수정은 서버 데이터를 SOT로 사용한다. 수정 가능 필드는 닉네임·생년월일이며 이메일은 읽기 전용이다.
+- 프로필 조회와 수정은 서버 데이터를 SOT로 사용한다. 수정 가능 필드는 닉네임·생년월일이다.
 - 로그아웃은 제한 횟수만큼 백엔드 refresh token 폐기를 재시도한 뒤 Kakao logout을 best-effort로 호출하고 Flutter secure storage·메모리 삭제를 수행한다. 백엔드 또는 Kakao logout이 실패해도 기기 로컬 로그아웃은 완료한다.
 - 탈퇴 순서는 다음과 같다.
   1. Flutter가 Kakao SDK unlink를 실행한다.
   2. Flutter가 ColorTrip access JWT로 `DELETE /api/v1/users/me`를 호출한다.
   3. 백엔드 성공 후에만 Flutter가 secure storage와 로컬 사용자 상태를 삭제한다.
 - Kakao unlink 성공 후 백엔드 탈퇴가 실패하면 ColorTrip JWT를 유지하고 백엔드 탈퇴를 재시도한다. 이미 unlink된 Kakao 상태도 정상 재시도 경로로 처리한다.
-- 백엔드는 한 성공 트랜잭션에서 모든 refresh token 폐기, consent 삭제, 닉네임·이메일·생년월일·프로필 이미지·DNA 제거, `social_id = deleted:{user_id}` 치환, `deleted_at`·`anonymized_at` 기록을 수행한다.
+- 백엔드는 한 성공 트랜잭션에서 모든 refresh token 폐기, consent 삭제, 닉네임·생년월일·프로필 이미지·DNA 제거, `social_id = deleted:{user_id}` 치환, `deleted_at`·`anonymized_at` 기록을 수행한다.
 - 탈퇴는 즉시 익명화되며 복구할 수 없다. 같은 Kakao 사용자의 이후 로그인은 새 user를 만든다.
 - 도메인 기록은 참조 무결성과 서비스 기록을 위해 보존하되 익명화된 user에 연결한다.
 
@@ -156,7 +156,7 @@ flowchart TD
 
 - `backend/app/auth/`: Kakao token info 검증, 프로필·consent, 접근 단계, 즉시 익명화 탈퇴.
 - `backend/app/core/`: Kakao app ID·consent version 설정, 인증 오류와 dependency 지원.
-- `backend/alembic/versions/`: 프로필·consent와 즉시 익명화 정책에 필요한 additive migration.
+- `backend/alembic/versions/`: 프로필·consent와 즉시 익명화 정책에 필요한 additive migration. 이후 이메일 수집 폐지로 `users.email` 삭제 migration이 추가됐다(익명화 trigger 함수도 함께 교체).
 - `backend/tests/`: 로그인, app ID 불일치, 단계별 접근, refresh, 로그아웃, 탈퇴 재시도·익명화 테스트.
 - `frontend/lib/`: Kakao SDK adapter, auth repository, secure token storage, Dio refresh, onboarding/profile/탈퇴 화면과 라우팅.
 - `frontend/android/`: Kakao SDK callback과 emulator 개발 설정.
@@ -178,7 +178,7 @@ flowchart TD
 ## 리스크 / 미해결 질문
 
 - Kakao 개발 앱의 Android package name, key hash, 동의 항목 설정이 emulator 빌드와 일치해야 한다. 실제 값은 저장소 문서나 env 예시에 기록하지 않는다.
-- Kakao 이메일·생년월일 권한이 없거나 값이 비어 있으면 프로필 온보딩 입력으로 보완해야 한다.
+- Kakao 생년월일 권한이 없거나 값이 비어 있으면 프로필 온보딩 입력으로 보완해야 한다.
 - unlink 뒤 백엔드 장애가 발생한 중간 상태를 앱 재시작 후에도 복구할 수 있도록 “백엔드 탈퇴 대기” 상태와 ColorTrip JWT 보존이 필요하다.
 - 백엔드 commit 뒤 성공 응답만 유실되는 경우까지 완전히 판별하려면 별도 탈퇴 operation ID 또는 확인 API가 필요하지만 이는 승인된 API 범위 밖이다. 이번 구현은 unlink 완료 상태와 JWT를 보존해 즉시 재시도하며, 이 한계는 Android E2E의 부분 실패 시나리오에서 기록한다.
 - consent 버전이 바뀌면 기존 `CurrentUser`가 `profile` 온보딩 단계로 돌아가 재동의를 완료하기 전 DNA·도메인 API가 차단된다.

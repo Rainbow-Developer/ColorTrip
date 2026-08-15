@@ -34,7 +34,6 @@ async def main():
                 social_provider="kakao",
                 social_id="mock_social_id_local_test",
                 nickname="테스트유저",
-                email="test_user@colortrip.com",
             )
             session.add(user)
             await session.commit()

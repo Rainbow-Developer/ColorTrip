@@ -10,20 +10,14 @@ DateTime minimumBirthDate(DateTime today) => DateTime(today.year - 120);
 
 ProfileValidationResult validateOnboardingProfile({
   required String nickname,
-  required String email,
   required String birthDate,
   required DateTime today,
 }) {
   final errors = <String, String>{};
   final normalizedNickname = nickname.trim();
-  final normalizedEmail = email.trim();
 
   if (normalizedNickname.isEmpty || normalizedNickname.length > 30) {
     errors['nickname'] = '닉네임은 1~30자로 입력해주세요.';
-  }
-  final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-  if (normalizedEmail.length > 255 || !emailPattern.hasMatch(normalizedEmail)) {
-    errors['email'] = '올바른 이메일을 입력해주세요.';
   }
 
   final match = RegExp(

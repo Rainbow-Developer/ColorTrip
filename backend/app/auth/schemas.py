@@ -1,6 +1,5 @@
 """auth — API schemas."""
 
-import re
 from datetime import date
 from typing import Literal, Self
 from uuid import UUID
@@ -33,7 +32,6 @@ class UserProfile(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    email: str | None
     nickname: str | None
     birth_date: date | None
     profile_image: str | None
@@ -77,21 +75,8 @@ class LogoutRequest(BaseModel):
         return self
 
 
-_EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-
 def _normalize_nickname(value: object) -> object:
     return value.strip() if isinstance(value, str) else value
-
-
-def _normalize_email(value: object) -> object:
-    return value.strip().lower() if isinstance(value, str) else value
-
-
-def _validate_email(value: str) -> str:
-    if not _EMAIL_PATTERN.fullmatch(value):
-        raise ValueError("email must be valid.")
-    return value
 
 
 def _validate_birth_date(value: date) -> date:
@@ -104,15 +89,12 @@ class OnboardingProfileRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nickname: str = Field(min_length=1, max_length=30)
-    email: str = Field(min_length=3, max_length=255)
     birth_date: date
     terms_agreed: StrictBool
     privacy_agreed: StrictBool
     marketing_agreed: StrictBool
 
     _strip_nickname = field_validator("nickname", mode="before")(_normalize_nickname)
-    _normalize_email = field_validator("email", mode="before")(_normalize_email)
-    _valid_email = field_validator("email")(_validate_email)
     _valid_birth_date = field_validator("birth_date")(_validate_birth_date)
 
 

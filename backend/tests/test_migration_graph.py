@@ -9,4 +9,4 @@ def test_alembic_revision_graph_has_exactly_one_head() -> None:
     script = ScriptDirectory.from_config(Config(str(config_path)))
     heads = script.get_heads()
 
-    assert heads == ["b2c3d4e5f6a7"], f"Expected Alembic head b2c3d4e5f6a7, found: {heads}"
+    assert heads == ["c3d4e5f6a7b8"], f"Expected Alembic head c3d4e5f6a7b8, found: {heads}"

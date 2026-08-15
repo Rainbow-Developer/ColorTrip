@@ -15,7 +15,7 @@ import '../../state/auth_controller.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
-/// 내 정보 수정 — Figma 스펙(2026-07-08 공유) 반영: 프로필 아이콘, 닉네임/이름/생년월일/이메일(변경불가)
+/// 내 정보 수정 — Figma 스펙(2026-07-08 공유) 반영: 프로필 아이콘, 닉네임/이름/생년월일
 /// 필드, 여행 DNA 유형(탭하면 설문 재응시), 아웃라인 스타일 회원 탈퇴 버튼.
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -27,7 +27,6 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _nicknameController;
   late final TextEditingController _birthdateController;
-  late final TextEditingController _emailController;
   Map<String, String> _errors = const {};
 
   @override
@@ -38,14 +37,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _birthdateController = TextEditingController(
       text: user?.birthDate == null ? '' : _date(user!.birthDate!),
     );
-    _emailController = TextEditingController(text: user?.email ?? '');
   }
 
   @override
   void dispose() {
     _nicknameController.dispose();
     _birthdateController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
@@ -114,13 +111,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
             if (_errors['birthDate'] case final error?) _ErrorText(error),
             const SizedBox(height: 14),
-            AppFormField(
-              label: '이메일',
-              controller: _emailController,
-              hint: 'example@email.com',
-              enabled: false,
-            ),
-            const SizedBox(height: 14),
             _DnaTypeField(label: dna.name, onTap: null),
             if (auth.errorMessage case final error?) ...[
               const SizedBox(height: 16),
@@ -151,14 +141,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _save() async {
     final validation = validateOnboardingProfile(
       nickname: _nicknameController.text,
-      email: _emailController.text,
       birthDate: _birthdateController.text,
       today: DateTime.now(),
     );
-    final relevantErrors = Map<String, String>.from(validation.errors)
-      ..remove('email');
-    if (relevantErrors.isNotEmpty) {
-      setState(() => _errors = relevantErrors);
+    if (validation.errors.isNotEmpty) {
+      setState(() => _errors = validation.errors);
       return;
     }
     setState(() => _errors = const {});

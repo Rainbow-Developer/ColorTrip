@@ -14,7 +14,6 @@ enum OnboardingStep {
 class UserProfile {
   const UserProfile({
     required this.id,
-    required this.email,
     required this.nickname,
     required this.birthDate,
     required this.profileImage,
@@ -28,7 +27,6 @@ class UserProfile {
     final birthDate = json['birth_date'] as String?;
     return UserProfile(
       id: json['id'] as String,
-      email: json['email'] as String?,
       nickname: json['nickname'] as String?,
       birthDate: birthDate == null ? null : DateTime.parse(birthDate),
       profileImage: json['profile_image'] as String?,
@@ -42,7 +40,6 @@ class UserProfile {
   }
 
   final String id;
-  final String? email;
   final String? nickname;
   final DateTime? birthDate;
   final String? profileImage;
@@ -91,7 +88,6 @@ class AuthSession {
 class OnboardingProfileInput {
   const OnboardingProfileInput({
     required this.nickname,
-    required this.email,
     required this.birthDate,
     required this.termsAgreed,
     required this.privacyAgreed,
@@ -99,7 +95,6 @@ class OnboardingProfileInput {
   });
 
   final String nickname;
-  final String email;
   final DateTime birthDate;
   final bool termsAgreed;
   final bool privacyAgreed;
@@ -107,7 +102,6 @@ class OnboardingProfileInput {
 
   Map<String, dynamic> toJson() => {
     'nickname': nickname.trim(),
-    'email': email.trim(),
     'birth_date': _date(birthDate),
     'terms_agreed': termsAgreed,
     'privacy_agreed': privacyAgreed,

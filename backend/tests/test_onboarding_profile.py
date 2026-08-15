@@ -20,7 +20,6 @@ from tests.helpers import login
 def _onboarding_payload(**overrides: object) -> dict[str, object]:
     payload: dict[str, object] = {
         "nickname": "  컬러트립  ",
-        "email": "  USER@Example.COM ",
         "birth_date": "2000-01-02",
         "terms_agreed": True,
         "privacy_agreed": True,
@@ -45,7 +44,6 @@ async def test_onboarding_profile_atomically_normalizes_profile_and_records_cons
     assert response.json()["data"] == {
         **login_data["user"],
         "nickname": "컬러트립",
-        "email": "user@example.com",
         "birth_date": "2000-01-02",
         "onboarding_step": "trip_dna",
     }
@@ -181,8 +179,6 @@ def test_birth_date_validation_uses_current_kst_date(
     [
         ({"nickname": "   "}, 422),
         ({"nickname": "가" * 31}, 422),
-        ({"email": "not-an-email"}, 422),
-        ({"email": "x" * 250 + "@a.com"}, 422),
         ({"birth_date": (date.today() + timedelta(days=1)).isoformat()}, 422),
         ({"terms_agreed": False}, 400),
         ({"privacy_agreed": False}, 400),
@@ -210,7 +206,6 @@ async def test_invalid_onboarding_profile_saves_nothing(
         )
     assert user is not None
     assert user.nickname == "one"
-    assert user.email == "one@example.com"
     assert user.birth_date is None
     assert consent_count == 0
 
@@ -276,7 +271,9 @@ async def test_patch_profile_allows_only_nickname_and_birth_date_for_current_use
         headers=headers,
         json={"nickname": "  새 닉네임 ", "birth_date": "1999-12-31"},
     )
-    email_attempt = await client.patch(
+    # 수집하지 않는 필드는 `extra="forbid"`로 거부한다 — 구버전 클라이언트가 보내던
+    # `email`이 조용히 무시되지 않고 422로 드러나야 한다.
+    removed_field_attempt = await client.patch(
         "/api/v1/users/me",
         headers=headers,
         json={"email": "other@example.com"},
@@ -285,42 +282,9 @@ async def test_patch_profile_allows_only_nickname_and_birth_date_for_current_use
     assert response.status_code == 200
     assert response.json()["data"]["nickname"] == "새 닉네임"
     assert response.json()["data"]["birth_date"] == "1999-12-31"
-    assert response.json()["data"]["email"] == "user@example.com"
+    assert "email" not in response.json()["data"]
     assert response.json()["data"]["onboarding_step"] == "complete"
-    assert email_attempt.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_completed_user_cannot_change_email_through_onboarding_endpoint(
-    client: AsyncClient,
-) -> None:
-    login_data = await login(client)
-    headers = {"Authorization": f"Bearer {login_data['access_token']}"}
-    onboarded = await client.put(
-        "/api/v1/users/me/onboarding-profile",
-        headers=headers,
-        json=_onboarding_payload(),
-    )
-    assert onboarded.status_code == 200
-
-    async with AsyncSessionLocal() as session:
-        user = await session.get(User, UUID(login_data["user"]["id"]))
-        assert user is not None
-        user.dna = "nature"
-        await session.commit()
-
-    changed = await client.put(
-        "/api/v1/users/me/onboarding-profile",
-        headers=headers,
-        json=_onboarding_payload(email="other@example.com"),
-    )
-    profile = await client.get("/api/v1/users/me", headers=headers)
-
-    assert changed.status_code == 422
-    assert changed.json()["code"] == "VALIDATION_ERROR"
-    assert profile.status_code == 200
-    assert profile.json()["data"]["email"] == "user@example.com"
-    assert profile.json()["data"]["onboarding_step"] == "complete"
+    assert removed_field_attempt.status_code == 422
 
 
 @pytest.mark.asyncio

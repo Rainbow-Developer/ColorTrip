@@ -92,7 +92,6 @@ async def test_onboarding_update_serializes_with_withdrawal(
             headers=headers,
             json={
                 "nickname": "race-onboarding",
-                "email": "race@example.com",
                 "birth_date": "2000-01-01",
                 "terms_agreed": True,
                 "privacy_agreed": True,
@@ -182,7 +181,6 @@ async def _assert_user_remains_anonymized(user_id: UUID) -> None:
     assert user.deleted_at is not None
     assert user.anonymized_at is not None
     assert user.social_id == f"deleted:{user_id}"
-    assert user.email is None
     assert user.nickname is None
     assert user.birth_date is None
     assert user.profile_image is None

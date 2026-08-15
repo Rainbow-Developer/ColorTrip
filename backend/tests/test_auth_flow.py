@@ -25,7 +25,6 @@ async def test_kakao_access_token_login_creates_user_and_tokens(
     assert data["access_token"]
     assert data["refresh_token"]
     assert data["is_restored"] is False
-    assert data["user"]["email"] == "one@example.com"
     assert data["user"]["social_provider"] == "kakao"
     assert data["user"]["profile_image"] == "https://example.com/one.png"
     assert data["user"]["dna"] is None
@@ -45,7 +44,7 @@ async def test_kakao_authorization_code_login_exchanges_code(
 
     assert response.status_code == 200
     assert response.json()["status"] == 200
-    assert response.json()["data"]["user"]["email"] == "one@example.com"
+    assert response.json()["data"]["user"]["nickname"] == "one"
     assert mock_kakao_client.exchanged_codes == ["valid-code"]
     assert mock_kakao_client.validated_tokens == ["kakao-token-1"]
 
@@ -107,7 +106,6 @@ async def test_kakao_relogin_does_not_overwrite_completed_colortrip_profile(
         headers=headers,
         json={
             "nickname": "내가 정한 닉네임",
-            "email": "custom@example.com",
             "birth_date": "1999-12-31",
             "terms_agreed": True,
             "privacy_agreed": True,
@@ -119,7 +117,6 @@ async def test_kakao_relogin_does_not_overwrite_completed_colortrip_profile(
 
     assert onboarding.status_code == 200
     assert relogin["user"]["nickname"] == "내가 정한 닉네임"
-    assert relogin["user"]["email"] == "custom@example.com"
     assert relogin["user"]["birth_date"] == "1999-12-31"
     assert relogin["user"]["profile_image"] == "https://example.com/one.png"
 
@@ -153,7 +150,6 @@ async def test_withdrawal_immediately_anonymizes_and_never_restores(
         headers=headers,
         json={
             "nickname": "컬러트립",
-            "email": "user@example.com",
             "birth_date": "2000-01-02",
             "terms_agreed": True,
             "privacy_agreed": True,
@@ -194,7 +190,6 @@ async def test_withdrawal_immediately_anonymizes_and_never_restores(
     assert new_login["is_restored"] is False
     assert anonymized_user is not None
     assert anonymized_user.social_id == f"deleted:{user_id}"
-    assert anonymized_user.email is None
     assert anonymized_user.nickname is None
     assert anonymized_user.birth_date is None
     assert anonymized_user.profile_image is None

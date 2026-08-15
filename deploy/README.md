@@ -105,6 +105,14 @@ HTTP로 접근하면 Caddy가 HTTPS로 리다이렉트한다.
 두 단계 모두 상태 코드가 정확히 `200`인지 비교한다(`curl --fail`은 3xx를 실패로 보지 않아
 리다이렉트가 성공으로 새는 것을 막지 못한다). 모든 probe에는 연결·전체 제한 시간을 건다.
 
+> **비-additive migration 주의.** 3번과 4번 사이에는 **구버전 API가 신버전 schema를 보고
+> 있다.** 컬럼·테이블 추가처럼 additive한 migration은 구버전이 모르는 채로 넘어가지만,
+> `DROP COLUMN`이나 rename은 구버전 API의 `SELECT`가 즉시 실패한다. 예를 들어
+> `users.email` 삭제(`c3d4e5f6a7b8`)는 구버전이 발행하는 `SELECT users.email …`을 깨뜨리고,
+> 이 컬럼은 모든 인증 요청이 지나는 `get_active_user` 경로에 있어 컨테이너 교체가 끝날
+> 때까지 로그인 포함 인증 API 전체가 500을 낸다. 비-additive migration은 트래픽이 없는
+> 시점에 배포하거나, 코드 제거 배포와 컬럼 삭제 배포를 두 단계로 나눈다.
+
 Migration 실패 시 기존 API를 교체하지 않으며 자동 downgrade하지 않는다. API 교체 후
 수동 복구가 필요하면 이전 SHA 이미지 태그를 `API_IMAGE`로 지정하고 `docker compose
 up -d --no-deps api`를 실행한다. 이미 적용된 개인정보 익명화 migration은 복구되지

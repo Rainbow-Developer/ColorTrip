@@ -12,7 +12,7 @@ from app.core.security import generate_open_api_key, hash_open_api_key
 from app.open_api.models import OpenApiKey
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
-# 개인 식별 값(user_id·email 등)이 실수로 섞여 나오지 않는지 확인하기 위한 명시적 허용 목록.
+# 개인 식별 값(user_id·nickname 등)이 실수로 섞여 나오지 않는지 확인하기 위한 명시적 허용 목록.
 _TOP_LEVEL_KEYS = {
     "region",
     "visit_stats",
@@ -70,7 +70,7 @@ async def test_region_stats_reflects_completed_quest_and_share(client: AsyncClie
     assert response.status_code == 200
     data = response.json()["data"]
 
-    # 허용된 필드만 있는지 우선 확인 — user_id·email 같은 개인 식별 값이 섞이면 실패해야 한다.
+    # 허용된 필드만 있는지 우선 확인 — user_id·nickname 같은 개인 식별 값이 섞이면 실패해야 한다.
     assert set(data.keys()) == _TOP_LEVEL_KEYS
     assert set(data["region"].keys()) == _REGION_KEYS
     assert set(data["visit_stats"].keys()) == _VISIT_STATS_KEYS

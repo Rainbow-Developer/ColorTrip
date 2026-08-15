@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 UserProfile _user(OnboardingStep step, {String? profileImage}) => UserProfile(
   id: 'user-id',
-  email: step == OnboardingStep.profile ? null : 'traveler@example.com',
   nickname: step == OnboardingStep.profile ? null : '컬러트립',
   birthDate: step == OnboardingStep.profile ? null : DateTime(2000, 1, 2),
   profileImage: profileImage,
@@ -265,7 +264,6 @@ void main() {
     final submission = controller.submitOnboardingProfile(
       OnboardingProfileInput(
         nickname: '컬러트립',
-        email: 'traveler@example.com',
         birthDate: DateTime(2000, 1, 2),
         termsAgreed: true,
         privacyAgreed: true,
@@ -314,7 +312,6 @@ void main() {
     final success = await controller.submitOnboardingProfile(
       OnboardingProfileInput(
         nickname: '컬러트립',
-        email: 'traveler@example.com',
         birthDate: DateTime(2000, 1, 2),
         termsAgreed: true,
         privacyAgreed: true,

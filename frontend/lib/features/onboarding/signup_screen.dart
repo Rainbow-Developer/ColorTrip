@@ -14,7 +14,8 @@ import '../../state/progress_notifier.dart';
 import 'profile_validation.dart';
 
 /// 회원가입 — Figma 스펙(2026-07-08 공유) 반영: 닉네임(카카오 프로필 프리필 가정)
-/// + 이름·생년월일·이메일(빈 값, placeholder) + 필수/선택 약관 동의.
+/// + 생년월일(빈 값, placeholder) + 필수/선택 약관 동의.
+/// 이메일은 수집하지 않는다(035 변경 이력 참고).
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
@@ -25,7 +26,6 @@ class SignupScreen extends ConsumerStatefulWidget {
 class _SignupScreenState extends ConsumerState<SignupScreen> {
   late final TextEditingController _nicknameController;
   late final TextEditingController _birthdateController;
-  late final TextEditingController _emailController;
 
   // 필수 약관은 사용자가 실제로 체크해야만 진행 가능하다 — 사전 체크는 컴플라이언스 리스크
   // (CodeRabbit 리뷰 반영, 이전엔 true로 사전 체크되어 있었음).
@@ -42,14 +42,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _birthdateController = TextEditingController(
       text: user?.birthDate == null ? '' : _date(user!.birthDate!),
     );
-    _emailController = TextEditingController(text: user?.email ?? '');
   }
 
   @override
   void dispose() {
     _nicknameController.dispose();
     _birthdateController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
@@ -131,17 +129,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   onChanged: (_) => setState(() {}),
                 ),
                 if (_errors['birthDate'] case final error?) _FieldError(error),
-                const SizedBox(height: 14),
-                AppFormField(
-                  label: '이메일',
-                  controller: _emailController,
-                  hint: 'example@email.com',
-                  enabled: !auth.isBusy,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.done,
-                  onChanged: (_) => setState(() {}),
-                ),
-                if (_errors['email'] case final error?) _FieldError(error),
                 const SizedBox(height: 20),
                 _AgreementCheckbox(
                   label: '[필수] 이용약관 동의',
@@ -199,7 +186,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Future<void> _submit() async {
     final validation = validateOnboardingProfile(
       nickname: _nicknameController.text,
-      email: _emailController.text,
       birthDate: _birthdateController.text,
       today: DateTime.now(),
     );
@@ -214,7 +200,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         .submitOnboardingProfile(
           OnboardingProfileInput(
             nickname: nickname,
-            email: _emailController.text.trim(),
             birthDate: validation.birthDate!,
             termsAgreed: _agreeTerms,
             privacyAgreed: _agreePrivacy,
@@ -254,7 +239,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         // 프로필 이미지는 선택 즉시 서버에 저장되므로(080-profile-image 의사결정 3)
         // "저장되지 않는다"고 뭉뚱그리지 않는다.
         content: const Text(
-          '입력한 닉네임·생년월일·이메일은 저장되지 않고 로그아웃됩니다.\n등록한 프로필 이미지는 계정에 남아 다음 로그인 때 그대로 보여요.',
+          '입력한 닉네임·생년월일은 저장되지 않고 로그아웃됩니다.\n등록한 프로필 이미지는 계정에 남아 다음 로그인 때 그대로 보여요.',
         ),
         actions: [
           TextButton(

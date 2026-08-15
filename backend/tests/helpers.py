@@ -38,7 +38,6 @@ async def complete_auth_headers(
         headers=headers,
         json={
             "nickname": data["user"]["nickname"] or "테스트 사용자",
-            "email": data["user"]["email"] or "test@example.com",
             "birth_date": "2000-01-01",
             "terms_agreed": True,
             "privacy_agreed": True,

@@ -19,7 +19,7 @@
 - [x] Flutter의 Kakao access token을 token-info에서 검증하고 정수 `app_id`가 `KAKAO_APP_ID`와 일치할 때만 user-info를 조회한다.
 - [x] timeout, 잘못된 JSON·사용자 ID·token, 다른 앱 token을 `SOCIAL_AUTH_ERROR`로 정규화하며 authorization-code 경로를 유지한다.
 - [x] 사용자 프로필과 현재 version의 terms/privacy/marketing consent를 한 트랜잭션으로 멱등 저장한다.
-- [x] 프로필 완료 후 온보딩 endpoint를 다시 호출해 이메일을 변경하는 우회도 차단하되, 같은 이메일을 사용한 재동의는 허용한다.
+- [x] 프로필 완료 후 온보딩 endpoint를 다시 호출하는 재동의를 허용한다. (초안의 이메일 변경 차단 규칙은 이메일 수집 폐지로 소멸했다 — 아래 변경 이력 참고.)
 - [x] 프로필·필수 동의·DNA로 `profile → trip_dna → complete`를 계산한다.
 - [x] `ActiveUser`·`ProfiledUser`·`CurrentUser` dependency와 일반 보호 API의 온보딩 단계 차단을 제공한다.
 - [ ] Trip DNA 질문·답변 API의 `ProfiledUser` 적용은 기존 Flutter 설문 흐름과 함께 KAN-54에서 전환한다.

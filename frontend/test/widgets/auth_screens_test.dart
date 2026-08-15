@@ -24,9 +24,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 UserProfile _user(OnboardingStep step) => UserProfile(
   id: 'user-id',
-  email: step == OnboardingStep.profile
-      ? 'kakao@example.com'
-      : 'user@example.com',
   nickname: step == OnboardingStep.profile ? '카카오닉네임' : '서버닉네임',
   birthDate: step == OnboardingStep.profile ? null : DateTime(2000, 1, 2),
   profileImage: null,
@@ -39,7 +36,6 @@ UserProfile _user(OnboardingStep step) => UserProfile(
 UserProfile _withProfileImage(UserProfile user, String? profileImage) =>
     UserProfile(
       id: user.id,
-      email: user.email,
       nickname: user.nickname,
       birthDate: user.birthDate,
       profileImage: profileImage,
@@ -195,8 +191,9 @@ void main() {
     );
 
     expect(find.text('카카오닉네임'), findsOneWidget);
-    expect(find.text('kakao@example.com'), findsOneWidget);
     expect(find.text('이름'), findsNothing);
+    // 이메일은 더 이상 수집하지 않으므로 입력 필드가 없어야 한다.
+    expect(find.text('이메일'), findsNothing);
     expect(find.text('[필수] 이용약관 동의'), findsOneWidget);
     expect(find.text('[선택] 마케팅 수신 동의'), findsOneWidget);
   });
@@ -433,7 +430,6 @@ void main() {
   ) async {
     final profile = UserProfile(
       id: 'user-id',
-      email: 'kakao@example.com',
       nickname: '카카오닉네임',
       birthDate: DateTime(2000, 1, 2),
       profileImage: null,
@@ -507,7 +503,7 @@ void main() {
     },
   );
 
-  testWidgets('edit profile prefills server fields and keeps email read-only', (
+  testWidgets('edit profile prefills server fields without an email row', (
     tester,
   ) async {
     final container = await _container(
@@ -523,13 +519,10 @@ void main() {
     );
 
     expect(find.text('서버닉네임'), findsOneWidget);
-    expect(find.text('user@example.com'), findsOneWidget);
     expect(find.text('2000-01-02'), findsOneWidget);
     expect(find.text('이름'), findsNothing);
-    final emailField = tester.widget<TextField>(
-      find.widgetWithText(TextField, 'user@example.com'),
-    );
-    expect(emailField.enabled, isFalse);
+    // 이메일은 더 이상 수집하지 않으므로 필드 자체가 없어야 한다.
+    expect(find.text('이메일'), findsNothing);
   });
 
   testWidgets('edit profile shows a user-facing error when saving fails', (

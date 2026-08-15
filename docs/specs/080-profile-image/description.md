@@ -92,7 +92,6 @@ Content-Type: multipart/form-data; boundary=...
 {
   "data": {
     "id": "0198...",
-    "email": "user@example.com",
     "nickname": "여행자",
     "birth_date": "2000-01-01",
     "profile_image": "/uploads/avatars/2026/08/0198abcd....png",

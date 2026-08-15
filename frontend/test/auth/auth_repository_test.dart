@@ -122,7 +122,6 @@ ResponseBody _response(int status, Map<String, dynamic> body) =>
 
 Map<String, dynamic> get _profile => {
   'id': '018f0000-0000-7000-8000-000000000001',
-  'email': 'traveler@example.com',
   'nickname': '컬러트립',
   'birth_date': '2000-01-02',
   'profile_image': null,
@@ -217,7 +216,6 @@ void main() {
     await repository.submitOnboardingProfile(
       OnboardingProfileInput(
         nickname: ' 컬러트립 ',
-        email: ' traveler@example.com ',
         birthDate: DateTime(2000, 1, 2),
         termsAgreed: true,
         privacyAgreed: true,
@@ -229,7 +227,6 @@ void main() {
     expect(request.method, 'PUT');
     expect(Map<String, dynamic>.from(request.data as Map), {
       'nickname': '컬러트립',
-      'email': 'traveler@example.com',
       'birth_date': '2000-01-02',
       'terms_agreed': true,
       'privacy_agreed': true,
