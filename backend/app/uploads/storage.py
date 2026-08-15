@@ -31,18 +31,30 @@ class LocalPhotoStorage:
     def __init__(self, base_dir: str) -> None:
         self._base = Path(base_dir)
 
+    def _resolved(self, object_name: str) -> Path:
+        """object_name을 base 안의 경로로 확정한다. 벗어나면 거부한다.
+
+        `object_name_from_url`이 이미 걸러주지만, 이 클래스는 그 함수를 거치지 않은
+        호출도 받을 수 있어 마지막 방어선을 여기에 둔다 — 파일을 지우고 읽는 지점이다.
+        """
+        path = (self._base / object_name).resolve()
+        base = self._base.resolve()
+        if path != base and base not in path.parents:
+            raise ValueError(f"업로드 경로를 벗어난 객체 이름입니다: {object_name!r}")
+        return path
+
     async def save(self, object_name: str, content: bytes, content_type: str) -> str:
-        path = self._base / object_name
+        path = self._resolved(object_name)
         path.parent.mkdir(parents=True, exist_ok=True)
         await asyncio.to_thread(path.write_bytes, content)
         return f"/uploads/{object_name}"
 
     async def delete(self, object_name: str) -> None:
-        path = self._base / object_name
+        path = self._resolved(object_name)
         await asyncio.to_thread(path.unlink, missing_ok=True)
 
     async def load(self, object_name: str) -> bytes:
-        return await asyncio.to_thread((self._base / object_name).read_bytes)
+        return await asyncio.to_thread(self._resolved(object_name).read_bytes)
 
 
 class GCSPhotoStorage:
@@ -67,20 +79,44 @@ class GCSPhotoStorage:
         return await asyncio.to_thread(self._bucket.blob(object_name).download_as_bytes)
 
 
-def object_name_from_url(photo_url: str) -> str | None:
+def object_name_from_url(photo_url: str | None) -> str | None:
     """photo_url을 스토리지 객체 이름으로 되돌린다 — save()가 만든 URL의 역변환.
 
     현재 설정의 스토리지가 만든 형태만 인정한다(로컬 `/uploads/{object}` / GCS 공개 URL).
     형태가 맞지 않으면 None — 호출부는 판정 불가로 다뤄 통과시키지 않는다.
+
+    `users.profile_image`에는 Kakao CDN URL이 초기값으로 들어갈 수 있어, 프로필 이미지
+    삭제 경로도 이 판정으로 "우리가 저장한 객체"만 걸러낸다 (080-profile-image).
     """
+    if photo_url is None:
+        return None
     if settings.gcs_upload_bucket:
         prefix = f"https://storage.googleapis.com/{settings.gcs_upload_bucket}/"
         if photo_url.startswith(prefix):
-            return photo_url.removeprefix(prefix) or None
+            return _safe_object_name(photo_url.removeprefix(prefix))
         return None
     if photo_url.startswith("/uploads/"):
-        return photo_url.removeprefix("/uploads/") or None
+        return _safe_object_name(photo_url.removeprefix("/uploads/"))
     return None
+
+
+def _safe_object_name(object_name: str) -> str | None:
+    """스토리지 루트를 벗어날 수 있는 이름을 거른다.
+
+    DB 값이 오염돼도 바깥 파일을 읽거나 지우지 못하게 하는 방어선이다. 거르는 것:
+
+    - 빈 이름
+    - 상위 경로 탈출(`..`)
+    - **절대 경로** — `/uploads//tmp/x`는 prefix 제거 후 `/tmp/x`가 되는데,
+      `Path(base) / "/tmp/x"`는 base를 통째로 무시하고 `/tmp/x`가 된다.
+    - 백슬래시 — 우리가 만드는 이름(`{prefix}/{YYYY}/{MM}/{uuid7}{ext}`)에는 없고,
+      Windows에서 경로 구분자로 해석될 수 있다.
+    """
+    if not object_name or object_name.startswith(("/", "\\")):
+        return None
+    if "\\" in object_name or ".." in object_name.split("/"):
+        return None
+    return object_name
 
 
 @lru_cache(maxsize=1)

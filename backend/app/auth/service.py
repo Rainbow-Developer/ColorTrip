@@ -3,6 +3,8 @@
 from datetime import datetime, timedelta
 from uuid import UUID
 
+from fastapi import UploadFile
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +22,8 @@ from app.core.base import now_kst
 from app.core.config import settings
 from app.core.exceptions import AppException, ErrorCode
 from app.core.security import create_access_token, create_refresh_token, hash_refresh_token
+from app.uploads import service as uploads_service
+from app.uploads.storage import PhotoStorage
 
 TERMS_CONSENT_VERSION = "terms-v1"
 PRIVACY_CONSENT_VERSION = "privacy-v1"
@@ -129,9 +133,16 @@ async def logout(
     await session.commit()
 
 
-async def withdraw_current_user(session: AsyncSession, *, current_user: User) -> None:
+async def withdraw_current_user(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    storage: PhotoStorage,
+) -> None:
     current_user = await require_active_user_for_update(session, current_user.id)
     now = now_kst()
+    # 익명화가 컬럼을 비우기 전에 잡아둔다 — 이후에는 URL을 알 수 없다.
+    profile_image_url = current_user.profile_image
     await repository.revoke_active_refresh_tokens(
         session,
         user_id=current_user.id,
@@ -142,6 +153,8 @@ async def withdraw_current_user(session: AsyncSession, *, current_user: User) ->
     current_user.deleted_at = now
     current_user.withdrawal_grace_until = None
     await session.commit()
+    # 컬럼만 비우면 공개 읽기 객체가 남아 "탈퇴 시 지체 없이 파기"와 어긋난다.
+    await uploads_service.discard_stored_image(storage, profile_image_url)
 
 
 async def build_user_profile(session: AsyncSession, user: User) -> UserProfile:
@@ -181,20 +194,9 @@ async def save_onboarding_profile(
         raise AppException(ErrorCode.REQUIRED_CONSENT_ERROR)
 
     current_user = await require_active_user_for_update(session, current_user.id)
-    # 이메일 잠금은 **온보딩을 마친** 사용자에게만 건다 — 필드 채워짐(_profile_is_complete)
-    # 만으로 판단하면, 카카오가 닉네임·이메일을 미리 채워준 신규 가입자가 첫 제출부터
-    # "이메일 변경 불가"로 막힌다(생년월일이 필수였을 때는 그 값이 비어 있어 우연히
-    # 걸러지고 있었다 — KAN-75에서 선택 항목으로 바꾸며 드러났다).
-    if await is_profiled_user(session, current_user) and current_user.email != payload.email:
-        raise AppException(
-            ErrorCode.VALIDATION_ERROR,
-            "Email cannot be changed after onboarding.",
-        )
+    # 이메일 수집을 폐지해 KAN-75의 이메일 잠금 로직도 함께 사라졌다.
     current_user.nickname = payload.nickname
-    current_user.email = payload.email
-    if payload.birth_date is not None:
-        # 선택 항목이므로 값이 올 때만 덮어쓴다 — 재제출 시 기존 값을 지우지 않는다(KAN-75).
-        current_user.birth_date = payload.birth_date
+    current_user.birth_date = payload.birth_date
     decided_at = now_kst()
     await repository.upsert_current_consents(
         session,
@@ -209,6 +211,71 @@ async def save_onboarding_profile(
     await session.commit()
     await session.refresh(current_user)
     return await build_user_profile(session, current_user)
+
+
+async def replace_profile_image(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    file: UploadFile,
+    storage: PhotoStorage,
+) -> UserProfile:
+    """프로필 이미지를 업로드하고 `users.profile_image`를 갱신한다.
+
+    온보딩 중에도 등록할 수 있어야 해서 `ActiveUser`만 요구한다. 퀘스트 인증 사진과 달리
+    `uploaded_photos` 소유권 행을 만들지 않는다 — 만들면 이 URL이 `require_owned_photo`를
+    통과해 사진 인증에 재사용될 수 있다 (080-profile-image 의사결정 4).
+    """
+    image = await uploads_service.store_uploaded_image(file, storage, prefix="avatars")
+    try:
+        user = await require_active_user_for_update(session, current_user.id)
+    except Exception:
+        # 업로드 도중 다른 기기에서 탈퇴가 끝나면 여기서 막힌다. 이미 저장된 객체는
+        # 어떤 행도 참조하지 않으므로 지우고 원래 예외를 그대로 올린다.
+        await uploads_service.discard_stored_image(storage, image.url)
+        raise
+    previous_url = user.profile_image
+    user.profile_image = image.url
+
+    # commit 실패 시 `commit_or_discard_image`가 rollback한 뒤 이 콜백을 부른다. 그때는
+    # `user`가 expire된 상태라 ORM 속성을 읽으면 lazy refresh IO가 일어나고, async
+    # 컨텍스트 밖이라 MissingGreenlet으로 터져 원래 오류를 덮고 보상 삭제까지 건너뛴다.
+    # 그래서 식별자를 미리 값으로 잡아둔다.
+    user_id = user.id
+
+    async def is_persisted(check_session: AsyncSession) -> bool:
+        found = await check_session.scalar(
+            select(User.id).where(User.id == user_id, User.profile_image == image.url)
+        )
+        return found is not None
+
+    await uploads_service.commit_or_discard_image(
+        session, storage, image, is_persisted=is_persisted
+    )
+    # 새 URL이 확정된 뒤에 이전 객체를 지운다. Kakao CDN 초기값은 건너뛴다.
+    await uploads_service.discard_stored_image(storage, previous_url)
+    await session.refresh(user)
+    return await build_user_profile(session, user)
+
+
+async def remove_profile_image(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    storage: PhotoStorage,
+) -> UserProfile:
+    """프로필 이미지를 비우고 저장된 객체도 지운다. 이미 비어 있어도 성공한다(멱등).
+
+    공개 읽기 스토리지라 컬럼만 비우면 URL을 아는 주체가 계속 읽을 수 있어,
+    개인정보처리방침의 파기 문구와 어긋난다 (080-profile-image 의사결정 2).
+    """
+    user = await require_active_user_for_update(session, current_user.id)
+    previous_url = user.profile_image
+    user.profile_image = None
+    await session.commit()
+    await uploads_service.discard_stored_image(storage, previous_url)
+    await session.refresh(user)
+    return await build_user_profile(session, user)
 
 
 async def update_current_user_profile(
@@ -282,7 +349,6 @@ def _new_kakao_user(kakao_user: KakaoUserInfo) -> User:
     return User(
         social_provider="kakao",
         social_id=kakao_user.social_id,
-        email=kakao_user.email,
         nickname=kakao_user.nickname,
         birth_date=None,
         profile_image=kakao_user.profile_image,
@@ -291,7 +357,6 @@ def _new_kakao_user(kakao_user: KakaoUserInfo) -> User:
 
 def _anonymize_user(user: User, now: datetime) -> None:
     user.social_id = f"deleted:{user.id}"
-    user.email = None
     user.nickname = None
     user.birth_date = None
     user.profile_image = None
@@ -319,9 +384,10 @@ async def require_active_user_for_update(session: AsyncSession, user_id: UUID) -
 
 
 def _profile_is_complete(user: User) -> bool:
-    """온보딩 프로필 입력이 끝났는지 — 생년월일은 **선택**이라 포함하지 않는다(KAN-75).
+    """온보딩 프로필 입력이 끝났는지 — 닉네임과 생년월일 둘 다 있어야 한다.
 
-    포함하면 생년월일을 건너뛴 사용자가 onboarding_step="profile"에 영구히 묶여
-    회원가입 화면을 벗어나지 못한다.
+    이메일은 수집을 폐지해 제외한다. 생년월일은 KAN-75에서 잠시 선택이었으나 이
+    브랜치에서 다시 필수로 되돌렸다 — 회원가입 화면이 두 값을 모두 받으므로 여기서
+    비어 있을 수 없다.
     """
-    return bool(user.nickname and user.nickname.strip() and user.email and user.email.strip())
+    return bool(user.nickname and user.nickname.strip() and user.birth_date is not None)

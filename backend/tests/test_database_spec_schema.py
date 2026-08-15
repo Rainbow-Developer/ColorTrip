@@ -55,6 +55,8 @@ async def test_existing_tables_are_additively_preserved(client: AsyncClient) -> 
         "withdrawal_grace_until",
         "anonymized_at",
     } <= users_columns.keys()
+    # 이메일 수집 폐지(c3d4e5f6a7b8)로 컬럼이 사라졌다.
+    assert "email" not in users_columns
     assert refresh_indexes["ix_refresh_tokens_token_hash"]["unique"] is True
     assert {"center_lat", "center_lng"} <= regions_columns.keys()
     assert {"content_type_id", "lat", "lng", "verify_radius"} <= quests_columns.keys()
@@ -121,11 +123,13 @@ async def test_auth_migration_finishes_anonymizing_legacy_soft_deleted_users(
 
     async with engine.begin() as connection:
         await connection.run_sync(_upgrade_to_head)
+        # head에서는 email 컬럼이 이미 삭제됐다(c3d4e5f6a7b8). 삽입 시점(be3e3c52de66)에는
+        # 존재했으므로 legacy 값은 그대로 넣되, 여기서는 조회하지 않는다.
         legacy_user = (
             await connection.execute(
                 sa.text(
                     """
-                    SELECT social_id, withdrawal_grace_until, email, nickname, birth_date,
+                    SELECT social_id, withdrawal_grace_until, nickname, birth_date,
                            profile_image, dna, anonymized_at
                     FROM users
                     WHERE id = :id
@@ -142,11 +146,11 @@ async def test_auth_migration_finishes_anonymizing_legacy_soft_deleted_users(
             sa.text(
                 """
                 INSERT INTO users (
-                    social_provider, social_id, email, nickname, birth_date, dna,
+                    social_provider, social_id, nickname, birth_date, dna,
                     profile_image, withdrawal_grace_until, anonymized_at, id,
                     created_at, updated_at, deleted_at
                 ) VALUES (
-                    'kakao', 'deployment-overlap-social-id', 'overlap@example.com',
+                    'kakao', 'deployment-overlap-social-id',
                     '배포 중 사용자', :birth_date, 'food',
                     'https://example.com/overlap.png', NULL, NULL, :id,
                     :created_at, :updated_at, NULL
@@ -181,7 +185,7 @@ async def test_auth_migration_finishes_anonymizing_legacy_soft_deleted_users(
             await connection.execute(
                 sa.text(
                     """
-                    SELECT social_id, withdrawal_grace_until, email, nickname, birth_date,
+                    SELECT social_id, withdrawal_grace_until, nickname, birth_date,
                            profile_image, dna, anonymized_at
                     FROM users
                     WHERE id = :id
@@ -193,7 +197,6 @@ async def test_auth_migration_finishes_anonymizing_legacy_soft_deleted_users(
 
     assert legacy_user.social_id == f"deleted:{user_id}"
     assert legacy_user.withdrawal_grace_until is None
-    assert legacy_user.email is None
     assert legacy_user.nickname is None
     assert legacy_user.birth_date is None
     assert legacy_user.profile_image is None
@@ -202,7 +205,6 @@ async def test_auth_migration_finishes_anonymizing_legacy_soft_deleted_users(
     assert refresh_deleted_at is not None
     assert overlap_user.social_id == f"deleted:{overlap_user_id}"
     assert overlap_user.withdrawal_grace_until is None
-    assert overlap_user.email is None
     assert overlap_user.nickname is None
     assert overlap_user.birth_date is None
     assert overlap_user.profile_image is None
@@ -218,7 +220,7 @@ async def test_auth_migration_finishes_anonymizing_legacy_soft_deleted_users(
             await connection.execute(
                 sa.text(
                     """
-                    SELECT social_id, email, nickname, birth_date, profile_image, dna
+                    SELECT social_id, nickname, birth_date, profile_image, dna
                     FROM users
                     WHERE id = :id
                     """
@@ -230,7 +232,6 @@ async def test_auth_migration_finishes_anonymizing_legacy_soft_deleted_users(
 
     assert "user_consents" not in tables_after_downgrade
     assert downgraded_user.social_id == f"deleted:{user_id}"
-    assert downgraded_user.email is None
     assert downgraded_user.nickname is None
     assert downgraded_user.birth_date is None
     assert downgraded_user.profile_image is None

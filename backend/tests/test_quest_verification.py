@@ -134,7 +134,7 @@ async def test_photo_verify_rejects_another_users_upload(client: AsyncClient) ->
     uploaded = await client.post(
         "/api/v1/uploads/photo",
         headers=owner_headers,
-        files={"file": ("proof.jpg", b"jpeg", "image/jpeg")},
+        files={"file": ("proof.jpg", b"\xff\xd8\xff" + b"0" * 32, "image/jpeg")},
     )
     assert uploaded.status_code == 201
 

@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# 릴리스 서명 설정 — keystore 비밀번호가 평문으로 들어가므로 커밋 금지 (KAN-67)
+/key.properties
+*.jks
+*.keystore

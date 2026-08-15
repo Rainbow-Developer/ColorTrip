@@ -14,7 +14,7 @@ from app.auth.service import PRIVACY_CONSENT_VERSION
 
 legal_router = APIRouter(tags=["legal"])
 
-_EFFECTIVE_DATE = "2026-08-06"
+_EFFECTIVE_DATE = "2026-08-13"
 
 
 def _render_privacy_policy_page() -> str:
@@ -40,10 +40,10 @@ def _render_privacy_policy_page() -> str:
 </tr>
 <tr>
   <td style="padding:8px;border:1px solid #E0E0DA;">회원가입/인증</td>
-  <td style="padding:8px;border:1px solid #E0E0DA;">닉네임, 이메일, 생년월일, 카카오 계정
-    식별자</td>
+  <td style="padding:8px;border:1px solid #E0E0DA;">닉네임, 생년월일, 카카오 계정
+    식별자, 프로필 이미지(선택)</td>
   <td style="padding:8px;border:1px solid #E0E0DA;">카카오 소셜 로그인 연동, 회원 식별,
-    본인 확인</td>
+    본인 확인, 프로필 표시</td>
 </tr>
 <tr>
   <td style="padding:8px;border:1px solid #E0E0DA;">위치정보</td>
@@ -53,7 +53,8 @@ def _render_privacy_policy_page() -> str:
 <tr>
   <td style="padding:8px;border:1px solid #E0E0DA;">카메라/사진</td>
   <td style="padding:8px;border:1px solid #E0E0DA;">촬영하거나 업로드한 사진</td>
-  <td style="padding:8px;border:1px solid #E0E0DA;">여행 퀘스트의 사진 인증</td>
+  <td style="padding:8px;border:1px solid #E0E0DA;">여행 퀘스트의 사진 인증, 프로필 이미지
+    등록</td>
 </tr>
 <tr>
   <td style="padding:8px;border:1px solid #E0E0DA;">서비스 이용 기록</td>

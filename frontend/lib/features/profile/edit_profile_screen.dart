@@ -4,16 +4,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_form_field.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/birth_date_picker.dart';
+import '../../core/widgets/profile_image_picker.dart';
 import '../../data/models/auth_models.dart';
 import '../../features/onboarding/profile_validation.dart';
 import '../../state/auth_controller.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
-/// 내 정보 수정 — Figma 스펙(2026-07-08 공유) 반영: 프로필 아이콘, 닉네임/이름/생년월일/이메일(변경불가)
+/// 내 정보 수정 — Figma 스펙(2026-07-08 공유) 반영: 프로필 아이콘, 닉네임/이름/생년월일
 /// 필드, 여행 DNA 유형(탭하면 설문 재응시), 아웃라인 스타일 회원 탈퇴 버튼.
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -25,7 +27,6 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _nicknameController;
   late final TextEditingController _birthdateController;
-  late final TextEditingController _emailController;
   Map<String, String> _errors = const {};
 
   @override
@@ -36,14 +37,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _birthdateController = TextEditingController(
       text: user?.birthDate == null ? '' : _date(user!.birthDate!),
     );
-    _emailController = TextEditingController(text: user?.email ?? '');
   }
 
   @override
   void dispose() {
     _nicknameController.dispose();
     _birthdateController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
@@ -53,6 +52,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final user = ref.watch(currentUserProvider);
     final dna = ref.watch(dnaRepositoryProvider).byId(user?.dna ?? dnaType);
     final auth = ref.watch(authControllerProvider);
+    final authNotifier = ref.read(authControllerProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(
@@ -72,16 +72,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: AppColors.imagePlaceholderBg,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.checkboxBorder),
+              child: ProfileImagePicker(
+                imageUrl: ref.watch(resolveUploadUrlProvider)(
+                  user?.profileImage,
                 ),
-                alignment: Alignment.center,
-                child: const Text('👤', style: TextStyle(fontSize: 24)),
+                isBusy: auth.isBusy,
+                size: 80,
+                // notifier를 build 시점에 잡아 콜백에 넘긴다. 콜백 안에서 `ref.read`를
+                // 하면, 카메라·갤러리가 떠 있는 동안 Android가 Activity를 재생성했을 때
+                // 이 화면이 unmount돼 "Using ref ... unmounted" 예외로 업로드가 조용히
+                // 사라진다. notifier 자체는 ProviderContainer가 들고 있어 안전하다.
+                onPicked: (picked) => authNotifier.uploadProfileImage(
+                  picked.bytes,
+                  mimeType: picked.mimeType,
+                ),
+                onRemoved: authNotifier.removeProfileImage,
               ),
             ),
             const SizedBox(height: 24),
@@ -96,9 +101,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             if (_errors['nickname'] case final error?) _ErrorText(error),
             const SizedBox(height: 14),
             AppFormField(
-              label: '생년월일 (선택)',
+              label: '생년월일',
               controller: _birthdateController,
-              hint: '입력하지 않아도 저장할 수 있어요',
+              hint: '2000-01-01',
               enabled: !auth.isBusy,
               readOnly: true,
               onTap: _pickBirthDate,
@@ -107,13 +112,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
             if (_errors['birthDate'] case final error?) _ErrorText(error),
             const SizedBox(height: 14),
-            AppFormField(
-              label: '이메일',
-              controller: _emailController,
-              hint: 'example@email.com',
-              enabled: false,
-            ),
-            const SizedBox(height: 14),
+            // 이메일 필드는 수집 폐지로 제거했다. DNA 재검사 이동은 dev(#73)에서
+            // 활성화된 동작이라 그대로 살린다.
             _DnaTypeField(
               label: dna.name,
               onTap: () => context.push('/trip-dna'),
@@ -147,14 +147,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _save() async {
     final validation = validateOnboardingProfile(
       nickname: _nicknameController.text,
-      email: _emailController.text,
       birthDate: _birthdateController.text,
       today: DateTime.now(),
     );
-    final relevantErrors = Map<String, String>.from(validation.errors)
-      ..remove('email');
-    if (relevantErrors.isNotEmpty) {
-      setState(() => _errors = relevantErrors);
+    if (validation.errors.isNotEmpty) {
+      setState(() => _errors = validation.errors);
       return;
     }
     setState(() => _errors = const {});
@@ -173,7 +170,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     if (success) {
       ref.read(progressProvider.notifier).setNickname(nickname);
       showAppToast(context, '변경사항이 저장되었어요');
-      context.pop();
+      // 저장하면 수정 화면에 남지 않고 마이로 돌아간다.
+      //
+      // `pop()`만 쓰면 화면에 남는 경우가 있다. 저장 성공이 auth 상태를 바꾸고, 그게
+      // refreshListenable을 통해 GoRouter를 재평가시켜 `/profile/edit`이 스택 없는
+      // 단독 경로가 되기 때문이다(이때 canPop()은 false). 마이 탭 경로로 직접 이동해
+      // 스택 상태와 무관하게 같은 결과를 보장한다 — 탭 경로는 '/profile'이 아니라 '/my'다.
+      context.go('/my');
     }
   }
 

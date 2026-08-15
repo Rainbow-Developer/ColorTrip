@@ -1,6 +1,6 @@
 """auth — API routers."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import service
@@ -18,6 +18,7 @@ from app.auth.schemas import (
 )
 from app.core.database import get_session
 from app.core.response import Envelope, success
+from app.uploads.storage import PhotoStorage, get_photo_storage
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 users_router = APIRouter(prefix="/users", tags=["users"])
@@ -103,10 +104,45 @@ async def patch_my_profile(
     return success(data)
 
 
+@users_router.post("/me/profile-image")
+async def post_my_profile_image(
+    file: UploadFile,
+    current_user: ActiveUser,
+    session: AsyncSession = Depends(get_session),
+    storage: PhotoStorage = Depends(get_photo_storage),
+) -> Envelope[UserProfile]:
+    data = await service.replace_profile_image(
+        session,
+        current_user=current_user,
+        file=file,
+        storage=storage,
+    )
+    return success(data, message="프로필 이미지를 저장했습니다.")
+
+
+@users_router.delete("/me/profile-image")
+async def delete_my_profile_image(
+    current_user: ActiveUser,
+    session: AsyncSession = Depends(get_session),
+    storage: PhotoStorage = Depends(get_photo_storage),
+) -> Envelope[UserProfile]:
+    data = await service.remove_profile_image(
+        session,
+        current_user=current_user,
+        storage=storage,
+    )
+    return success(data, message="프로필 이미지를 삭제했습니다.")
+
+
 @users_router.delete("/me")
 async def delete_my_profile(
     current_user: ActiveUser,
     session: AsyncSession = Depends(get_session),
+    storage: PhotoStorage = Depends(get_photo_storage),
 ) -> Envelope[None]:
-    await service.withdraw_current_user(session, current_user=current_user)
+    await service.withdraw_current_user(
+        session,
+        current_user=current_user,
+        storage=storage,
+    )
     return success(None)

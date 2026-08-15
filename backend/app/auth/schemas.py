@@ -1,6 +1,5 @@
 """auth — API schemas."""
 
-import re
 from datetime import date
 from typing import Literal, Self
 from uuid import UUID
@@ -33,7 +32,6 @@ class UserProfile(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    email: str | None
     nickname: str | None
     birth_date: date | None
     profile_image: str | None
@@ -77,21 +75,8 @@ class LogoutRequest(BaseModel):
         return self
 
 
-_EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-
 def _normalize_nickname(value: object) -> object:
     return value.strip() if isinstance(value, str) else value
-
-
-def _normalize_email(value: object) -> object:
-    return value.strip().lower() if isinstance(value, str) else value
-
-
-def _validate_email(value: str) -> str:
-    if not _EMAIL_PATTERN.fullmatch(value):
-        raise ValueError("email must be valid.")
-    return value
 
 
 def _validate_birth_date(value: date) -> date:
@@ -104,22 +89,13 @@ class OnboardingProfileRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     nickname: str = Field(min_length=1, max_length=30)
-    email: str = Field(min_length=3, max_length=255)
-    # 생년월일은 선택 항목이다(KAN-75) — 보내지 않거나 null이면 저장하지 않는다.
-    birth_date: date | None = None
+    birth_date: date
     terms_agreed: StrictBool
     privacy_agreed: StrictBool
     marketing_agreed: StrictBool
 
     _strip_nickname = field_validator("nickname", mode="before")(_normalize_nickname)
-    _normalize_email = field_validator("email", mode="before")(_normalize_email)
-    _valid_email = field_validator("email")(_validate_email)
-
-    @field_validator("birth_date")
-    @classmethod
-    def validate_optional_birth_date(cls, value: date | None) -> date | None:
-        """값이 있을 때만 미래 날짜를 막는다(없으면 검증 대상이 아니다)."""
-        return None if value is None else _validate_birth_date(value)
+    _valid_birth_date = field_validator("birth_date")(_validate_birth_date)
 
 
 class UserProfileUpdateRequest(BaseModel):

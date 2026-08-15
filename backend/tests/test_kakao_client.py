@@ -24,7 +24,6 @@ async def test_kakao_access_token_is_validated_before_user_info(
             json={
                 "id": 77,
                 "kakao_account": {
-                    "email": "One@Example.com",
                     "profile": {
                         "nickname": "one",
                         "profile_image_url": "https://example.com/profile.png",
@@ -44,7 +43,7 @@ async def test_kakao_access_token_is_validated_before_user_info(
         settings.kakao_user_info_url,
     ]
     assert all(request.headers["Authorization"] == "Bearer access-token" for request in requests)
-    assert user.email == "One@Example.com"
+    assert user.nickname == "one"
     assert user.profile_image == "https://example.com/profile.png"
 
 

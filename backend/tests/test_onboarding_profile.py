@@ -20,7 +20,6 @@ from tests.helpers import login
 def _onboarding_payload(**overrides: object) -> dict[str, object]:
     payload: dict[str, object] = {
         "nickname": "  컬러트립  ",
-        "email": "  USER@Example.COM ",
         "birth_date": "2000-01-02",
         "terms_agreed": True,
         "privacy_agreed": True,
@@ -45,7 +44,6 @@ async def test_onboarding_profile_atomically_normalizes_profile_and_records_cons
     assert response.json()["data"] == {
         **login_data["user"],
         "nickname": "컬러트립",
-        "email": "user@example.com",
         "birth_date": "2000-01-02",
         "onboarding_step": "trip_dna",
     }
@@ -181,8 +179,6 @@ def test_birth_date_validation_uses_current_kst_date(
     [
         ({"nickname": "   "}, 422),
         ({"nickname": "가" * 31}, 422),
-        ({"email": "not-an-email"}, 422),
-        ({"email": "x" * 250 + "@a.com"}, 422),
         # 서버는 KST 기준으로 미래 날짜를 판정한다(`now_kst()`). 러너의 로컬 날짜(UTC)로
         # 계산하면 00~09시 KST 구간에서 "내일"이 KST의 오늘과 같아져 통과해버린다.
         ({"birth_date": (now_kst().date() + timedelta(days=1)).isoformat()}, 422),
@@ -212,7 +208,6 @@ async def test_invalid_onboarding_profile_saves_nothing(
         )
     assert user is not None
     assert user.nickname == "one"
-    assert user.email == "one@example.com"
     assert user.birth_date is None
     assert consent_count == 0
 
@@ -278,7 +273,9 @@ async def test_patch_profile_allows_only_nickname_and_birth_date_for_current_use
         headers=headers,
         json={"nickname": "  새 닉네임 ", "birth_date": "1999-12-31"},
     )
-    email_attempt = await client.patch(
+    # 수집하지 않는 필드는 `extra="forbid"`로 거부한다 — 구버전 클라이언트가 보내던
+    # `email`이 조용히 무시되지 않고 422로 드러나야 한다.
+    removed_field_attempt = await client.patch(
         "/api/v1/users/me",
         headers=headers,
         json={"email": "other@example.com"},
@@ -287,42 +284,9 @@ async def test_patch_profile_allows_only_nickname_and_birth_date_for_current_use
     assert response.status_code == 200
     assert response.json()["data"]["nickname"] == "새 닉네임"
     assert response.json()["data"]["birth_date"] == "1999-12-31"
-    assert response.json()["data"]["email"] == "user@example.com"
+    assert "email" not in response.json()["data"]
     assert response.json()["data"]["onboarding_step"] == "complete"
-    assert email_attempt.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_completed_user_cannot_change_email_through_onboarding_endpoint(
-    client: AsyncClient,
-) -> None:
-    login_data = await login(client)
-    headers = {"Authorization": f"Bearer {login_data['access_token']}"}
-    onboarded = await client.put(
-        "/api/v1/users/me/onboarding-profile",
-        headers=headers,
-        json=_onboarding_payload(),
-    )
-    assert onboarded.status_code == 200
-
-    async with AsyncSessionLocal() as session:
-        user = await session.get(User, UUID(login_data["user"]["id"]))
-        assert user is not None
-        user.dna = "nature"
-        await session.commit()
-
-    changed = await client.put(
-        "/api/v1/users/me/onboarding-profile",
-        headers=headers,
-        json=_onboarding_payload(email="other@example.com"),
-    )
-    profile = await client.get("/api/v1/users/me", headers=headers)
-
-    assert changed.status_code == 422
-    assert changed.json()["code"] == "VALIDATION_ERROR"
-    assert profile.status_code == 200
-    assert profile.json()["data"]["email"] == "user@example.com"
-    assert profile.json()["data"]["onboarding_step"] == "complete"
+    assert removed_field_attempt.status_code == 422
 
 
 @pytest.mark.asyncio
@@ -389,15 +353,14 @@ async def test_active_user_can_logout_and_withdraw_before_onboarding(client: Asy
 
 
 @pytest.mark.asyncio
-async def test_onboarding_profile_accepts_missing_birth_date(client: AsyncClient) -> None:
-    """생년월일은 선택 항목이다 — 없이 제출해도 온보딩이 다음 단계로 넘어간다 (KAN-75).
+async def test_onboarding_profile_requires_birth_date(client: AsyncClient) -> None:
+    """생년월일은 필수다 — KAN-75에서 잠시 선택이었으나 이메일 폐지와 함께 되돌렸다.
 
-    프로필 완료 판정에 생년월일이 남아 있으면 건너뛴 사용자가 onboarding_step="profile"에
-    묶여 회원가입 화면을 벗어나지 못한다.
+    빼면 온보딩 필수 입력이 닉네임 하나만 남는다.
     """
     login_data = await login(client)
     payload = _onboarding_payload()
-    del payload["birth_date"]
+    payload.pop("birth_date")
 
     response = await client.put(
         "/api/v1/users/me/onboarding-profile",
@@ -405,56 +368,26 @@ async def test_onboarding_profile_accepts_missing_birth_date(client: AsyncClient
         json=payload,
     )
 
-    assert response.status_code == 200
-    data = response.json()["data"]
-    assert data["birth_date"] is None
-    assert data["onboarding_step"] == "trip_dna"
+    assert response.status_code == 422
+
+    # null도 거부한다 — 저장된 값을 지우는 경로를 열지 않는다.
+    nulled = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers={"Authorization": f"Bearer {login_data['access_token']}"},
+        json=_onboarding_payload(birth_date=None),
+    )
+    assert nulled.status_code == 422
 
 
 @pytest.mark.asyncio
-async def test_onboarding_retry_without_birth_date_keeps_saved_value(
-    client: AsyncClient,
-) -> None:
-    """생년월일을 넣어 저장한 뒤 빼고 재제출해도 기존 값을 지우지 않는다 (KAN-75)."""
+async def test_onboarding_profile_rejects_unknown_email_field(client: AsyncClient) -> None:
+    """이메일 수집을 폐지했으므로 요청 본문에 email이 오면 거부한다(extra="forbid")."""
     login_data = await login(client)
-    headers = {"Authorization": f"Bearer {login_data['access_token']}"}
-    first = await client.put(
-        "/api/v1/users/me/onboarding-profile",
-        headers=headers,
-        json=_onboarding_payload(),
-    )
-    assert first.status_code == 200
-
-    payload = _onboarding_payload()
-    del payload["birth_date"]
-    second = await client.put(
-        "/api/v1/users/me/onboarding-profile",
-        headers=headers,
-        json=payload,
-    )
-
-    assert second.status_code == 200
-    assert second.json()["data"]["birth_date"] == "2000-01-02"
-
-
-@pytest.mark.asyncio
-async def test_first_onboarding_submit_may_change_kakao_prefilled_email(
-    client: AsyncClient,
-) -> None:
-    """카카오가 채워준 이메일은 첫 온보딩 제출에서 바꿀 수 있어야 한다 (회귀: KAN-75).
-
-    이메일 잠금을 "필드가 채워졌는가"로 판단하면, 생년월일이 선택으로 바뀐 뒤 카카오
-    프리필만으로 잠금 조건이 성립해 신규 가입자가 첫 제출부터 막힌다. 잠금 기준은
-    "온보딩(동의 포함)을 마쳤는가"여야 한다.
-    """
-    login_data = await login(client)
-    assert login_data["user"]["email"] is not None  # 카카오 프리필 전제
 
     response = await client.put(
         "/api/v1/users/me/onboarding-profile",
         headers={"Authorization": f"Bearer {login_data['access_token']}"},
-        json=_onboarding_payload(email="changed@example.com"),
+        json=_onboarding_payload(email="traveler@example.com"),
     )
 
-    assert response.status_code == 200
-    assert response.json()["data"]["email"] == "changed@example.com"
+    assert response.status_code == 422

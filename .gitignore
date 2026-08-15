@@ -237,3 +237,6 @@ backend/qr_output/
 #   유출되면 키를 교체할 수 없다(Play 업로드 키는 재설정 요청 필요).
 *.jks
 *.keystore
+
+# 릴리스 빌드 산출물 (서명된 apk/aab) — 저장소에 두지 않는다
+build-output/

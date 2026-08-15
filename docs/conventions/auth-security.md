@@ -15,8 +15,8 @@
 | Refresh token TTL | 14일 | DB 저장 hash + rotation |
 | Refresh token 저장 | 서버 DB에 hash 저장 | 원문 저장 금지, 로그아웃/탈퇴 시 무효화 |
 | 토큰 저장(클라이언트) | flutter_secure_storage | |
-| 수집 개인정보 범위 | 닉네임, 이메일, 생년월일 | 인증/프로필 PII 최소 범위 |
-| 동의 버전 | 서버 상수 `terms-v1`, `privacy-v1`, `marketing-v1` | 클라이언트가 version을 지정하지 않음 |
+| 수집 개인정보 범위 | 닉네임, 생년월일, 프로필 이미지(선택) | 인증/프로필 PII 최소 범위. 프로필 이미지는 미등록 허용. 이메일은 쓰임이 없어 수집하지 않는다 |
+| 동의 버전 | 서버 상수 `terms-v1`, `privacy-v1`, `marketing-v1` | 클라이언트가 version을 지정하지 않음. 출시 후 수집 항목이 바뀌면 해당 버전을 상향해 재동의를 받는다 |
 | 보호 API 접근 단계 | `ActiveUser` → `ProfiledUser` → `CurrentUser` | 프로필·필수 동의·DNA 완료 여부를 서버에서 강제 |
 | 탈퇴 정책 | 즉시 익명화, 복구 없음 | 035에서 005의 7일 복구 정책 대체 |
 | 탈퇴 후 도메인 기록 | 익명화된 user에 연결해 보존 | 여행·퀘스트·지도·타임라인·공유 기록 삭제 제외 |
@@ -24,6 +24,13 @@
 | 비밀 / 키 관리 | GCP Secret Manager | |
 | CORS 정책 | 허용 도메인 화이트리스트 | |
 | 로컬 Kakao 검증 | Flutter Kakao SDK + 정식 API | authorization-code 경로는 호환용 외부 클라이언트에서만 검증 |
+
+Flutter/Android Kakao SDK 초기화에는 **네이티브 앱 키**를 사용한다. REST API 키와 Admin 키는
+각각 REST API 호출과 Admin API 호출에만 사용하며, `KAKAO_NATIVE_APP_KEY`에 전달하지 않는다.
+Android 플랫폼에는 앱 패키지명 `io.vmonster.colortrip`과 현재 APK 서명 키의 해시를 등록한다.
+키 종류를 잘못 사용하면 `KOE101`이 발생하고, 등록하지 않은 서명 키로 실행하면
+`KOE009 (invalid android_key_hash)`가 발생한다. 실행 절차와 해시 확인 명령은
+[앱 실행 가이드](../app-run-guide.md#kakao-앱-키와-android-플랫폼-설정)를 따른다.
 
 ## 적용 상태
 
@@ -47,12 +54,13 @@
 
 ## 프로필·동의와 보호 API 사용자 조회
 
-- 인증/프로필 개인정보 수집은 닉네임, 이메일, 생년월일로 제한한다.
+- 인증/프로필 개인정보 수집은 닉네임, 생년월일, 프로필 이미지로 제한한다. 프로필 이미지는 선택이며 등록하지 않아도 서비스 이용에 제약이 없다. 이메일은 서비스 어디에서도 쓰이지 않아 수집하지 않으며, Kakao 동의항목에서도 요청하지 않는다.
 - 동의 version은 클라이언트 입력이 아니라 서버 상수 `terms-v1`, `privacy-v1`, `marketing-v1`를 사용한다.
 - 이용약관과 개인정보 동의는 필수이고 마케팅 동의는 선택이다. 현재 필수 version 동의가 없으면 일반 도메인 API 접근을 허용하지 않는다.
 - `ActiveUser`는 access JWT 검증 후 active user(`deleted_at IS NULL`, `anonymized_at IS NULL`)를 DB에서 조회한다. 프로필·동의 온보딩, 로그아웃, 탈퇴처럼 유효한 access JWT가 필요한 API에 사용한다.
-- `ProfiledUser`는 `ActiveUser`에 닉네임·이메일·생년월일과 현재 이용약관·개인정보 필수 동의 완료 조건을 더한다. 여행 DNA 질문·답변 API 적용은 Flutter 세션 연동을 포함한 KAN-54에서 수행한다.
-- `CurrentUser`는 `ProfiledUser`에 DNA 완료 조건을 더한다. 여행·퀘스트·지도·타임라인·공유·업로드 등 일반 보호 API에 사용한다.
+- `ProfiledUser`는 `ActiveUser`에 닉네임·생년월일과 현재 이용약관·개인정보 필수 동의 완료 조건을 더한다. 여행 DNA 질문·답변 API 적용은 Flutter 세션 연동을 포함한 KAN-54에서 수행한다.
+- `CurrentUser`는 `ProfiledUser`에 DNA 완료 조건을 더한다. 여행·퀘스트·지도·타임라인·공유·퀘스트 사진 업로드 등 일반 보호 API에 사용한다.
+- 프로필 이미지 업로드·삭제는 예외로 `ActiveUser`를 사용한다. 온보딩 중에 등록할 수 있어야 하므로 상위 단계를 요구할 수 없다([080 프로필 이미지](../specs/080-profile-image/)).
 - 단계가 부족하면 HTTP 403 `ONBOARDING_REQUIRED`를 반환하고, 클라이언트는 `/users/me`의 계산된 `onboarding_step`을 다시 조회한다.
 - endpoint는 필요한 최소 단계의 dependency를 받고, service에는 식별된 user 또는 user id만 전달한다.
 - endpoint나 service에서 JWT를 직접 decode하지 않는다.
@@ -65,7 +73,7 @@
 
 - Flutter의 탈퇴 순서는 **Kakao SDK unlink → `DELETE /api/v1/users/me` → 백엔드 성공 후 secure storage·로컬 사용자 상태 삭제**로 고정한다.
 - unlink 성공 후 백엔드 탈퇴가 실패하면 ColorTrip JWT를 삭제하지 않고 백엔드 탈퇴를 재시도한다. Kakao가 이미 unlink된 상태도 정상 재시도 경로로 처리한다.
-- 백엔드는 탈퇴 성공 트랜잭션에서 refresh token 전체 폐기, consent 삭제, 닉네임·이메일·생년월일·프로필 이미지·DNA 제거, `social_id = deleted:{user_id}` 치환, `deleted_at`·`anonymized_at` 기록을 함께 수행한다.
+- 백엔드는 탈퇴 성공 트랜잭션에서 refresh token 전체 폐기, consent 삭제, 닉네임·생년월일·프로필 이미지·DNA 제거, `social_id = deleted:{user_id}` 치환, `deleted_at`·`anonymized_at` 기록을 함께 수행한다.
 - 익명화는 즉시 적용하며 계정 복구를 제공하지 않는다. 같은 Kakao 사용자의 이후 로그인은 새 user를 생성한다.
 - 여행·퀘스트·지도·타임라인·공유 등 도메인 기록은 삭제하지 않고 익명화된 user에 연결해 보존한다.
 - 외부 unlink webhook과 도메인 기록 삭제는 035 범위가 아니다.
@@ -74,4 +82,5 @@
 
 - [외부 API & 데이터 연동](./external-apis.md)
 - [035 Kakao 통합 인증](../specs/035-kakao-auth-integration/)
+- [080 프로필 이미지](../specs/080-profile-image/)
 - [005 이전 백엔드 인증/회원 기반](../specs/005-auth-member/)

@@ -122,7 +122,6 @@ ResponseBody _response(int status, Map<String, dynamic> body) =>
 
 Map<String, dynamic> get _profile => {
   'id': '018f0000-0000-7000-8000-000000000001',
-  'email': 'traveler@example.com',
   'nickname': '컬러트립',
   'birth_date': '2000-01-02',
   'profile_image': null,
@@ -217,7 +216,6 @@ void main() {
     await repository.submitOnboardingProfile(
       OnboardingProfileInput(
         nickname: ' 컬러트립 ',
-        email: ' traveler@example.com ',
         birthDate: DateTime(2000, 1, 2),
         termsAgreed: true,
         privacyAgreed: true,
@@ -229,7 +227,6 @@ void main() {
     expect(request.method, 'PUT');
     expect(Map<String, dynamic>.from(request.data as Map), {
       'nickname': '컬러트립',
-      'email': 'traveler@example.com',
       'birth_date': '2000-01-02',
       'terms_agreed': true,
       'privacy_agreed': true,
@@ -430,6 +427,60 @@ void main() {
       throwsA(isA<DioException>()),
     );
     expect(storage.tokens, isNotNull);
+  });
+
+  test('uploads a profile image with the picker-provided MIME type', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    late RequestOptions request;
+    dio.httpClientAdapter = _Adapter((options) async {
+      request = options;
+      return _response(200, {
+        'data': {
+          ..._profile,
+          'profile_image': '/uploads/avatars/2026/08/a.png',
+        },
+      });
+    });
+    final repository = DioAuthRepository(
+      dio: dio,
+      kakao: _Gateway(),
+      storage: _Storage(),
+    );
+
+    final user = await repository.uploadProfileImage(
+      Uint8List.fromList([0x89, 0x50, 0x4e, 0x47]),
+      mimeType: 'image/png',
+    );
+
+    expect(request.path, '/users/me/profile-image');
+    expect(request.method, 'POST');
+    final form = request.data as FormData;
+    expect(form.files.single.key, 'file');
+    expect(form.files.single.value.filename, 'profile.png');
+    expect(form.files.single.value.contentType.toString(), 'image/png');
+    expect(user.profileImage, '/uploads/avatars/2026/08/a.png');
+  });
+
+  test('removes a profile image and returns the cleared profile', () async {
+    final dio = Dio(BaseOptions(baseUrl: 'https://api.example.com'));
+    late RequestOptions request;
+    dio.httpClientAdapter = _Adapter((options) async {
+      request = options;
+      return _response(200, {
+        'data': {..._profile, 'profile_image': null},
+      });
+    });
+    final repository = DioAuthRepository(
+      dio: dio,
+      kakao: _Gateway(),
+      storage: _Storage(),
+    );
+
+    final user = await repository.removeProfileImage();
+
+    expect(request.path, '/users/me/profile-image');
+    expect(request.method, 'DELETE');
+    expect(user.profileImage, isNull);
   });
 }
 

@@ -40,12 +40,9 @@ class QuestDetailScreen extends ConsumerWidget {
     final progress = ref.watch(progressProvider);
     final done = progress.isCompleted(quest.id);
     final completedEntry = done ? progress.timelineEntryFor(quest.id) : null;
-    final photoUrl = completedEntry?.photoUrl;
-    final resolvedPhotoUrl = photoUrl == null
-        ? null
-        : Uri.parse(
-            ref.watch(appConfigProvider).apiBaseUrl,
-          ).resolve(photoUrl).toString();
+    final resolvedPhotoUrl = ref.watch(resolveUploadUrlProvider)(
+      completedEntry?.photoUrl,
+    );
     final conditionEmoji = _conditionEmoji[quest.verify] ?? '📍';
 
     return Scaffold(

@@ -18,7 +18,6 @@ KAKAO_REQUEST_TIMEOUT_SECONDS = 5.0
 @dataclass(frozen=True)
 class KakaoUserInfo:
     social_id: str
-    email: str | None
     nickname: str | None
     profile_image: str | None = None
 
@@ -125,12 +124,10 @@ class HttpKakaoClient:
             if isinstance(profile_raw, dict):
                 profile = profile_raw
 
-        email = account.get("email") if isinstance(account, dict) else None
         nickname = profile.get("nickname")
         profile_image = profile.get("profile_image_url")
         return KakaoUserInfo(
             social_id=str(social_id),
-            email=email if isinstance(email, str) else None,
             nickname=nickname if isinstance(nickname, str) else None,
             profile_image=profile_image if isinstance(profile_image, str) else None,
         )

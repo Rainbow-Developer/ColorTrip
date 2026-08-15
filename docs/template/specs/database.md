@@ -28,7 +28,6 @@ CREATE TABLE users (
     id               UUID GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     social_provider  VARCHAR(20)  NOT NULL,
     social_id        VARCHAR(100) NOT NULL,
-    email            VARCHAR(255),
     nickname         VARCHAR(30),
     birth_date       DATE,
     dna              dna_type,

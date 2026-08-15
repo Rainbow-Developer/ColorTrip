@@ -17,7 +17,6 @@ import 'package:integration_test/integration_test.dart';
 
 UserProfile _profile(OnboardingStep step) => UserProfile(
   id: 'integration-user',
-  email: 'integration@example.com',
   nickname: '통합여행자',
   birthDate: DateTime(2000, 1, 2),
   profileImage: null,
@@ -58,6 +57,15 @@ class _AuthRepository implements AuthRepository {
   Future<UserProfile> submitOnboardingProfile(
     OnboardingProfileInput input,
   ) async => user = _profile(OnboardingStep.tripDna);
+
+  @override
+  Future<UserProfile> uploadProfileImage(
+    Uint8List bytes, {
+    String mimeType = 'image/jpeg',
+  }) async => user!;
+
+  @override
+  Future<UserProfile> removeProfileImage() async => user!;
 
   @override
   Future<UserProfile> updateProfile(ProfileUpdateInput input) async => user!;

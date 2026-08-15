@@ -68,7 +68,6 @@ async def get_user_share_summary_data(session: AsyncSession, user: User) -> Shar
 
     return ShareSummaryResponse(
         nickname=user.nickname,
-        profile_image=user.profile_image,
         dna_type=dna_type,
         dna_name=dna_name,
         completed_region_count=completed_region_count,
@@ -143,7 +142,6 @@ async def get_public_share_card(session: AsyncSession, share_code: str) -> Share
         share_code=share.share_code,
         share_style=share.share_style,
         owner_nickname=summary.nickname,
-        owner_profile_image=summary.profile_image,
         dna_type=dna_type,
         dna_name=dna_name,
         completed_region_count=summary.completed_region_count,

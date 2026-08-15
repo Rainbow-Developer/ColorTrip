@@ -34,7 +34,6 @@ class User(UUIDPKMixin, TimestampMixin, Base):
 
     social_provider: Mapped[str] = mapped_column(String(20))
     social_id: Mapped[str] = mapped_column(String(100))
-    email: Mapped[str | None] = mapped_column(String(255))
     nickname: Mapped[str | None] = mapped_column(String(30))
     birth_date: Mapped[date | None] = mapped_column(Date)
     dna: Mapped[str | None] = mapped_column(dna_type_column())

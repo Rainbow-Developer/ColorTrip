@@ -23,12 +23,47 @@ async def test_upload_photo(client: AsyncClient) -> None:
     assert photo_url.endswith(".png")
 
 
+async def test_upload_records_photo_ownership(client: AsyncClient) -> None:
+    """소유권 행 생성은 사진 인증의 전제다 — 공용 헬퍼로 리팩터링해도 유지돼야 한다."""
+    from sqlalchemy import select
+
+    from app.core.database import AsyncSessionLocal
+    from app.uploads.models import UploadedPhoto
+
+    headers = await auth_headers(client)
+    response = await client.post(
+        "/api/v1/uploads/photo",
+        files={"file": ("visit.png", _PNG_BYTES, "image/png")},
+        headers=headers,
+    )
+    assert response.status_code == 201
+    photo_url = response.json()["data"]["photo_url"]
+
+    async with AsyncSessionLocal() as session:
+        owned = await session.scalar(
+            select(UploadedPhoto.id).where(UploadedPhoto.photo_url == photo_url)
+        )
+    assert owned is not None
+
+
 async def test_upload_rejects_non_image(client: AsyncClient) -> None:
     headers = await auth_headers(client)
 
     response = await client.post(
         "/api/v1/uploads/photo",
         files={"file": ("note.txt", b"hello", "text/plain")},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+
+async def test_upload_rejects_mime_spoofed_bytes(client: AsyncClient) -> None:
+    """content_type만 이미지인 파일은 거부한다 — 인증 사진도 같은 검증을 받는다."""
+    headers = await auth_headers(client)
+
+    response = await client.post(
+        "/api/v1/uploads/photo",
+        files={"file": ("visit.png", b"not an image at all", "image/png")},
         headers=headers,
     )
     assert response.status_code == 422

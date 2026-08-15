@@ -22,7 +22,7 @@ policy URL이 필수다([KAN-66](https://rainbowdev00.atlassian.net/browse/KAN-6
 
 - 외부에서 HTTPS로 접근 가능한 개인정보처리방침 페이지를 제공한다 (Play Console 등록용 URL).
 - 회원가입 화면의 개인정보 동의 체크박스에서 이 페이지로 이동할 수 있게 한다.
-- 실제 수집 항목(인증 프로필: 닉네임·이메일·생년월일, 위치, 카메라, 여행/퀘스트 인증 데이터)과
+- 실제 수집 항목(인증 프로필: 닉네임·생년월일, 위치, 카메라, 여행/퀘스트 인증 데이터)과
   회원탈퇴 절차를 반영한 초안을 작성한다.
 
 ## 비목표 (Non-Goals)
@@ -35,7 +35,7 @@ policy URL이 필수다([KAN-66](https://rainbowdev00.atlassian.net/browse/KAN-6
 ## 요구사항
 
 - 정적 페이지, 별도 인증 불필요, 외부 크롤러(Play 심사 봇 포함)가 접근 가능해야 한다.
-- 페이지는 `docs/conventions/auth-security.md`의 수집 개인정보 SOT(닉네임·이메일·생년월일,
+- 페이지는 `docs/conventions/auth-security.md`의 수집 개인정보 SOT(닉네임·생년월일,
   동의 버전 `privacy-v1`)와 일치해야 한다. 위치·카메라·여행 데이터는 인증 도메인 밖이라 그
   SOT 표에는 없으므로 이 스펙에서 실제 코드 근거(AndroidManifest 권한, 업로드/인증 기능)를
   들어 직접 명시한다.

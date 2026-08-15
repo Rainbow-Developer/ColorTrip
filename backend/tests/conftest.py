@@ -73,7 +73,6 @@ class MockKakaoClient:
 
         return KakaoUserInfo(
             social_id=user["social_id"] or "",
-            email=user.get("email"),
             nickname=user.get("nickname"),
             profile_image=user.get("profile_image"),
         )
@@ -85,19 +84,16 @@ def mock_kakao_client() -> MockKakaoClient:
         token_users={
             "kakao-token-1": {
                 "social_id": "kakao-user-1",
-                "email": "one@example.com",
                 "nickname": "one",
                 "profile_image": "https://example.com/one.png",
             },
             "kakao-token-2": {
                 "social_id": "kakao-user-1",
-                "email": "one@example.com",
                 "nickname": "one-restored",
                 "profile_image": "https://example.com/two.png",
             },
             "kakao-token-unknown": {
                 "social_id": "kakao-user-unknown",
-                "email": "unknown@example.com",
                 "nickname": "unknown",
                 "profile_image": None,
             },

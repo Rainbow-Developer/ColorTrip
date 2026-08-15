@@ -2,7 +2,7 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 완료 (백엔드·배포·Flutter). 생년월일은 KAN-75에서 선택 필드로 전환 |
+| 상태 | 완료 (백엔드·배포·Flutter). 이메일 수집 폐지, 생년월일 필수 |
 | 최종 업데이트 | 2026-08-14 |
 
 ## 구현 단위
@@ -19,7 +19,7 @@
 - [x] Flutter의 Kakao access token을 token-info에서 검증하고 정수 `app_id`가 `KAKAO_APP_ID`와 일치할 때만 user-info를 조회한다.
 - [x] timeout, 잘못된 JSON·사용자 ID·token, 다른 앱 token을 `SOCIAL_AUTH_ERROR`로 정규화하며 authorization-code 경로를 유지한다.
 - [x] 사용자 프로필과 현재 version의 terms/privacy/marketing consent를 한 트랜잭션으로 멱등 저장한다.
-- [x] 프로필 완료 후 온보딩 endpoint를 다시 호출해 이메일을 변경하는 우회도 차단하되, 같은 이메일을 사용한 재동의는 허용한다.
+- [x] 프로필 완료 후 온보딩 endpoint를 다시 호출하는 재동의를 허용한다. (초안의 이메일 변경 차단 규칙은 이메일 수집 폐지로 소멸했다 — 아래 변경 이력 참고.)
 - [x] 프로필·필수 동의·DNA로 `profile → trip_dna → complete`를 계산한다.
 - [x] `ActiveUser`·`ProfiledUser`·`CurrentUser` dependency와 일반 보호 API의 온보딩 단계 차단을 제공한다.
 - [ ] Trip DNA 질문·답변 API의 `ProfiledUser` 적용은 기존 Flutter 설문 흐름과 함께 KAN-54에서 전환한다.
@@ -58,4 +58,6 @@
 |------|------|
 | 2026-07-25 | 승인된 Kakao 통합 인증 범위의 계획 문서 최초 작성 |
 | 2026-07-28 | CodeRabbit 검토 범위 분리를 위해 백엔드·배포를 KAN-53, Flutter와 실제 Android E2E를 KAN-54로 분리 |
-| 2026-08-13 | **생년월일을 선택 필드로 전환(KAN-75)** — `OnboardingProfileRequest.birth_date`를 `date \| None`으로 내리고, `_profile_is_complete`(=`onboarding_step` 판정)에서 제외했다. 포함해 두면 생년월일을 건너뛴 사용자가 `profile` 단계에 영구히 묶인다. 함께 드러난 결함: 이메일 잠금 조건이 `_profile_is_complete`를 재사용하고 있어, 생년월일이 필수일 때만 우연히 동작했다(Kakao가 닉네임·이메일을 프리필하므로 선택 전환 즉시 신규 가입자가 첫 제출부터 422). 잠금 기준을 `is_profiled_user`(consent 포함)로 바꿨다. 재제출 시 기존 생년월일을 지우지 않는다. 테스트 3건 추가 |
+| 2026-08-13 | **생년월일을 선택 필드로 전환(KAN-75)** — `OnboardingProfileRequest.birth_date`를 `date \| None`으로 내리고 `_profile_is_complete`에서 제외했다. 함께 드러난 결함으로 이메일 잠금 기준을 `is_profiled_user`(consent 포함)로 바꿨다. **아래 2026-08-14 항목에서 선택 전환은 되돌렸고, 이메일 잠금은 이메일 폐지로 소멸했다** |
+| 2026-08-13 | **이메일 수집 폐지**. 서비스 어디에서도 쓰이지 않는 PII라 온보딩 입력·`UserProfile` 응답·Kakao user-info 파싱·`users.email` 컬럼·익명화 trigger에서 모두 제거했다. `onboarding_step`의 `profile` 판정과 `ProfiledUser` 조건은 닉네임·생년월일 기준으로 축소됐고, 이메일 변경 차단 규칙과 형식 검증은 함께 소멸했다. 수집 범위 SOT는 [인증 & 보안 컨벤션](../../conventions/auth-security.md). 동의 버전은 수집 항목이 줄어드는 변경이라 `privacy-v1`을 유지했다 |
+| 2026-08-14 | 생년월일을 **다시 필수로 환원**(KAN-74 병합 시 결정). 이메일 폐지로 온보딩 필수 입력이 닉네임 하나만 남는 것을 피하기 위해 KAN-75의 선택 전환을 되돌렸다. `_profile_is_complete`는 닉네임·생년월일 기준이다 |
