@@ -38,6 +38,14 @@ extension on _ShareStyle {
   };
 }
 
+typedef ShareImageSaver =
+    Future<void> Function(Uint8List bytes, {required String name});
+
+final shareImageSaverProvider = Provider<ShareImageSaver>(
+  (ref) =>
+      (bytes, {required name}) => Gal.putImageBytes(bytes, name: name),
+);
+
 class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
   final _previewKey = GlobalKey();
   _ShareStyle _style = _ShareStyle.mapAndDna;
@@ -45,28 +53,46 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
   bool _isSaving = false;
 
   Future<void> _saveImage() async {
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     setState(() => _isSaving = true);
     try {
+      await WidgetsBinding.instance.endOfFrame;
       final boundary =
           _previewKey.currentContext?.findRenderObject()
               as RenderRepaintBoundary?;
-      if (boundary == null) return;
+      if (boundary == null) {
+        throw StateError('Share preview is not ready.');
+      }
       // 기기 배율(devicePixelRatio)로 캡처해야 저장된 이미지가 흐릿하지 않다.
-      final image = await boundary.toImage(
-        pixelRatio: MediaQuery.devicePixelRatioOf(context),
+      final image = await boundary.toImage(pixelRatio: pixelRatio);
+      final ByteData? byteData;
+      try {
+        byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      } finally {
+        image.dispose();
+      }
+      if (byteData == null) {
+        throw StateError('Could not encode the share preview.');
+      }
+      final bytes = byteData.buffer.asUint8List(
+        byteData.offsetInBytes,
+        byteData.lengthInBytes,
       );
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return;
-      await Gal.putImageBytes(
-        byteData.buffer.asUint8List(),
+      await ref.read(shareImageSaverProvider)(
+        bytes,
         name: 'colortrip_share_${DateTime.now().millisecondsSinceEpoch}',
       );
       if (!mounted) return;
       showAppToast(context, '이미지가 저장되었어요');
-    } on GalException {
-      if (mounted) {
-        showAppToast(context, '이미지 저장 권한이 필요해요. 설정에서 허용해주세요.');
-      }
+    } on GalException catch (error) {
+      if (!mounted) return;
+      final message = switch (error.type) {
+        GalExceptionType.accessDenied => '이미지 저장 권한이 필요해요. 설정에서 허용해주세요.',
+        GalExceptionType.notEnoughSpace => '저장 공간이 부족해요.',
+        GalExceptionType.notSupportedFormat ||
+        GalExceptionType.unexpected => '이미지 저장에 실패했어요. 다시 시도해주세요.',
+      };
+      showAppToast(context, message);
     } catch (_) {
       if (mounted) showAppToast(context, '이미지 저장에 실패했어요. 다시 시도해주세요.');
     } finally {
@@ -213,7 +239,7 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
               children: [
                 Expanded(
                   child: _StyleOption(
-                    label: '지도+DNA',
+                    label: '지도 + DNA',
                     selected: _style == _ShareStyle.mapAndDna,
                     onTap: () => setState(() => _style = _ShareStyle.mapAndDna),
                   ),
@@ -240,16 +266,18 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: OutlinedButton.icon(
                     onPressed: _isSaving ? null : _saveImage,
-                    child: const Text('📸 이미지 저장'),
+                    icon: const Icon(Icons.download, size: 18),
+                    label: const Text('이미지 저장'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: OutlinedButton(
+                  child: OutlinedButton.icon(
                     onPressed: _isLinking ? null : _copyLink,
-                    child: const Text('🔗 링크 복사'),
+                    icon: const Icon(Icons.link, size: 18),
+                    label: const Text('링크 복사'),
                   ),
                 ),
               ],
@@ -323,6 +351,8 @@ class _StyleOption extends StatelessWidget {
         child: Text(
           label,
           textAlign: TextAlign.center,
+          maxLines: 1,
+          softWrap: false,
           style: TextStyle(
             color: selected
                 ? AppColors.primaryDark

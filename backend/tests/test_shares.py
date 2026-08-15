@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from httpx import AsyncClient
 
+from app.core.config import settings
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
 
@@ -51,7 +52,7 @@ async def test_create_share_card(client: AsyncClient) -> None:
     data1 = res1.json()["data"]
     assert len(data1["share_code"]) == 8
     assert data1["share_style"] == "MAP_AND_DNA"
-    assert data1["share_code"] in data1["share_url"]
+    assert data1["share_url"] == f"{settings.share_base_url}/share/{data1['share_code']}"
 
     # 2. MAP 생성
     res2 = await client.post(

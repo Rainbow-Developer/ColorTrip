@@ -45,7 +45,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>퀘스트 인증용 사진을 촬영하기 위해 카메라 접근 권한이 필요합니다.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>퀘스트 인증용 사진을 선택하기 위해 사진 보관함 접근 권한이 필요합니다.</string>
+	<string>퀘스트 인증용 사진을 선택하고 공유 카드를 저장하기 위해 사진 보관함 접근 권한이 필요합니다.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>여행 지도 공유 카드를 사진 보관함에 저장하기 위해 권한이 필요합니다.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>퀘스트 장소 도착 여부를 확인하기 위해 현재 위치가 필요합니다. 위치는 기기 안에서만 사용되며 서버로 전송되지 않습니다.</string>
 	<key>UIApplicationSceneManifest</key>

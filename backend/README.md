@@ -58,6 +58,7 @@ uv run uvicorn app.main:app --reload --no-access-log
 | `GCS_UPLOAD_BUCKET` | 인증 사진 업로드용 GCS 버킷 (미설정 시 로컬 디스크로 저장) |
 | `UPLOAD_DIR` | 버킷 미설정 시 로컬 저장 경로 (기본: `./uploads`) |
 | `MAX_UPLOAD_SIZE_MB` | 인증 사진 최대 크기 (기본 10MB) |
+| `SHARE_BASE_URL` | 공유 랜딩 링크의 공개 origin. 로컬 기본 `http://localhost:8000`, Android 에뮬레이터는 `http://10.0.2.2:8000` |
 
 ## 구조
 

@@ -92,6 +92,21 @@ def test_kakao_token_info_url_must_be_http_url(token_info_url: str) -> None:
         _settings(app_env="test", kakao_token_info_url=token_info_url)
 
 
+@pytest.mark.parametrize("share_base_url", ["", "   ", "colortrip.app", "ftp://example.com"])
+def test_share_base_url_must_be_http_url(share_base_url: str) -> None:
+    with pytest.raises(ValueError, match="SHARE_BASE_URL"):
+        _settings(app_env="test", share_base_url=share_base_url)
+
+
+def test_share_base_url_is_normalized() -> None:
+    settings = _settings(
+        app_env="test",
+        share_base_url=" https://api.example.com/ ",
+    )
+
+    assert settings.share_base_url == "https://api.example.com"
+
+
 def test_local_env_allows_local_defaults() -> None:
     settings = _settings(
         app_env="local",
@@ -106,6 +121,7 @@ def test_local_compose_passes_required_kakao_token_info_configuration() -> None:
 
     assert "KAKAO_APP_ID:" in compose
     assert "KAKAO_TOKEN_INFO_URL:" in compose
+    assert "SHARE_BASE_URL:" in compose
 
 
 def test_dev_workflow_validates_kakao_app_id_before_remote_shell() -> None:

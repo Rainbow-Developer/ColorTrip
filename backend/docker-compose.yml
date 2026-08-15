@@ -34,6 +34,8 @@ services:
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
       TOUR_API_KEY: ${TOUR_API_KEY:-}
       TOUR_API_BASE_URL: ${TOUR_API_BASE_URL:-https://apis.data.go.kr/B551011/KorService2}
+      # 앱에서 복사한 링크를 Android 에뮬레이터 브라우저에서도 열 수 있게 호스트 별칭을 쓴다.
+      SHARE_BASE_URL: ${SHARE_BASE_URL:-http://10.0.2.2:8000}
     ports:
       - "8000:8000"
     depends_on:
