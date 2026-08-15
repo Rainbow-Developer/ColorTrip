@@ -59,7 +59,7 @@ class _RegionQuestSelectScreenState
 
   /// 새 여행이면 이름·기간 입력 시트를 띄운 뒤 등록하고, 이미 시작한 여행이면
   /// 기존 이름·기간을 유지한 채 선택 퀘스트만 갱신한다.
-  Future<void> _startTrip(String defaultName) async {
+  Future<void> _startTrip(String defaultName, OnboardingTourState tour) async {
     if (_saving) return;
     final selected = {..._selectedQuestIds!};
     final journeys =
@@ -82,6 +82,7 @@ class _RegionQuestSelectScreenState
               journeyId: existingJourney.id,
               questKeys: selected.toList(),
             );
+        _advanceTourAfterSuccessfulSave(tour);
         if (mounted) context.go('/travel');
       } on Object {
         if (mounted) {
@@ -115,6 +116,7 @@ class _RegionQuestSelectScreenState
             startDate: info.startDate,
             endDate: info.endDate,
           );
+      _advanceTourAfterSuccessfulSave(tour);
       if (mounted) context.go('/travel');
     } on Object {
       if (mounted) {
@@ -122,6 +124,12 @@ class _RegionQuestSelectScreenState
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _advanceTourAfterSuccessfulSave(OnboardingTourState tour) {
+    if (!tour.isDone && tour.step == 2) {
+      ref.read(onboardingTourProvider.notifier).advance();
     }
   }
 
@@ -253,7 +261,7 @@ class _RegionQuestSelectScreenState
                   // 시트 없이 퀘스트만 추가(KAN-46) — 분기는 _startTrip이 담당.
                   onPressed: selectedCount == 0 || _saving
                       ? null
-                      : () => _startTrip(tripTitleFor(region)),
+                      : () => _startTrip(tripTitleFor(region), tour),
                   child: Text(
                     _saving
                         ? '저장 중...'
@@ -267,7 +275,7 @@ class _RegionQuestSelectScreenState
               ),
             ],
           ),
-          if (!tour.isDone && tour.step == 2)
+          if (!tour.isDone && tour.step == 2 && selectedCount > 0)
             CoachMarkOverlay(
               targetKey: _startTripButtonKey,
               stepIndex: 2,

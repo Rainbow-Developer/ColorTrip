@@ -164,7 +164,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         .updateProfile(
           // 생년월일이 비어 있으면 null → 요청에서 생략되어 서버 값이 유지된다.
           // (지우기는 지원하지 않는다 — 서버가 birth_date: null을 거부한다)
-          ProfileUpdateInput(nickname: nickname, birthDate: validation.birthDate),
+          ProfileUpdateInput(
+            nickname: nickname,
+            birthDate: validation.birthDate,
+          ),
         );
     if (!mounted) return;
     if (success) {

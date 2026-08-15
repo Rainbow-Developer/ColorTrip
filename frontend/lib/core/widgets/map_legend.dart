@@ -121,7 +121,9 @@ class _RegionPaletteDialog extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 4),
-                                  for (final color in regionMapColors[region.id] ?? const <Color>[])
+                                  for (final color
+                                      in regionMapColors[region.id] ??
+                                          const <Color>[])
                                     Padding(
                                       padding: const EdgeInsets.only(right: 4),
                                       child: Container(
@@ -129,7 +131,9 @@ class _RegionPaletteDialog extends StatelessWidget {
                                         height: 16,
                                         decoration: BoxDecoration(
                                           color: color,
-                                          borderRadius: BorderRadius.circular(3),
+                                          borderRadius: BorderRadius.circular(
+                                            3,
+                                          ),
                                         ),
                                       ),
                                     ),

@@ -44,6 +44,17 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
   final _selectQuestButtonKey = GlobalKey();
   final _firstTripQuestKey = GlobalKey();
 
+  void _goToQuestSelect(
+    BuildContext context,
+    String regionId,
+    OnboardingTourState tour,
+  ) {
+    if (!tour.isDone && tour.step == 1) {
+      ref.read(onboardingTourProvider.notifier).advance();
+    }
+    context.push('/region/$regionId/quests');
+  }
+
   @override
   Widget build(BuildContext context) {
     final regionId = widget.regionId;
@@ -86,24 +97,20 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
         title: const Text('여행하기'),
         titleSpacing: 0,
       ),
-      // 여행이 이미 시작된 지역은 본문 하단의 "퀘스트 더 선택하기"(journeyQuery 포함)가
-      // 그 역할을 하므로, 고정 하단 바는 시작 전 CTA에만 쓴다(과거 둘 다 떠 있던 중복 버그 수정).
-      bottomNavigationBar: tripStarted
-          ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                child: ElevatedButton(
-                  key: _selectQuestButtonKey,
-                  onPressed: () => context.push('/region/$regionId/quests'),
-                  child: const Text('퀘스트 선택하러 가기'),
-                ),
-              ),
-            ),
+      // 이 버튼은 본문 하단 Positioned(아래 body Stack)에 둔다 — bottomNavigationBar에
+      // 두면 코치마크(body Stack 안에서만 그려짐)가 닿을 수 없는 영역이라 스포트라이트가
+      // 전혀 보이지 않는다. (과거 이 버튼이 두 곳에 동시에 떠 있던 GlobalKey 중복 버그도
+      // 함께 있었음 — 이제 body 쪽 하나만 남긴다.)
       body: Stack(
+        fit: StackFit.expand,
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              100 + MediaQuery.paddingOf(context).bottom,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -188,11 +195,20 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                           quest: quest,
                           regionName: region.name,
                           done: progress.isCompleted(quest.id),
-                          onTap: () => progress.isCompleted(quest.id)
-                              ? context.push('/quest/${quest.id}')
-                              : context.push(
-                                  '/quest/${quest.id}/verify$journeyQuery',
-                                ),
+                          onTap: () {
+                            if (index == 0 && !tour.isDone && tour.step == 3) {
+                              ref
+                                  .read(onboardingTourProvider.notifier)
+                                  .advance();
+                            }
+                            if (progress.isCompleted(quest.id)) {
+                              context.push('/quest/${quest.id}');
+                            } else {
+                              context.push(
+                                '/quest/${quest.id}/verify$journeyQuery',
+                              );
+                            }
+                          },
                         ),
                       ),
                   // The duplicate '퀘스트 더 선택하기' button was removed from here.
@@ -265,7 +281,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                       : ElevatedButton(
                           key: _selectQuestButtonKey,
                           onPressed: () =>
-                              context.push('/region/$regionId/quests'),
+                              _goToQuestSelect(context, regionId, tour),
                           child: const Text('퀘스트 선택하러 가기'),
                         ),
                 ),

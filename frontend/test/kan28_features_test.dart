@@ -9,7 +9,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:colortrip/core/widgets/coach_mark.dart';
 import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/features/home/home_screen.dart';
@@ -240,6 +242,151 @@ void main() {
     expect(find.text('단양 힐링 여행'), findsOneWidget);
     expect(find.text(info.periodLabel), findsOneWidget);
     expect(find.text('진행중인 여행'), findsOneWidget);
+  });
+
+  testWidgets('튜토리얼 코치마크는 배경을 막고 하이라이트된 버튼만 통과시킨다', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final tourStepTwoOverride = onboardingTourProvider.overrideWith(
+      () => OnboardingTourNotifier(
+        const OnboardingTourState(step: 2, skipped: false),
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        tourStepTwoOverride,
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      _wrap(
+        const RegionQuestSelectScreen(regionId: 'danyang'),
+        container: container,
+        extraRoutes: [
+          GoRoute(path: '/travel', builder: (_, _) => const SizedBox.shrink()),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행을 시작해보세요'), findsNothing);
+
+    await tester.tap(find.text('소백산 연화봉 전망대 인증'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행을 시작해보세요'), findsOneWidget);
+    expect(find.text('여행 시작하기 (1)'), findsOneWidget);
+
+    final paintedScrim = find.byKey(const ValueKey('coach-mark-scrim'));
+    expect(paintedScrim, findsOneWidget);
+    final scrimSize = tester.getSize(paintedScrim);
+    expect(
+      scrimSize.width,
+      tester.view.physicalSize.width / tester.view.devicePixelRatio,
+    );
+    expect(scrimSize.height, greaterThan(1000));
+
+    await tester.tap(find.text('도담삼봉에서 인생샷 남기기'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행 시작하기 (1)'), findsOneWidget);
+    expect(find.text('여행 시작하기 (2)'), findsNothing);
+
+    await tester.tap(find.text('여행 시작하기 (1)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행 정보를 입력해주세요'), findsOneWidget);
+    expect(container.read(onboardingTourProvider).step, 2);
+
+    Navigator.of(tester.element(find.text('여행 정보를 입력해주세요'))).pop();
+    await tester.pumpAndSettle();
+    expect(container.read(onboardingTourProvider).step, 2);
+
+    await tester.tap(find.text('여행 시작하기 (1)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('시작일 ~ 종료일 선택'));
+    await tester.pumpAndSettle();
+
+    final today = DateTime.now().day.toString();
+    await tester.tap(find.text(today).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(today).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('선택 완료'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, '여행 시작하기'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(onboardingTourProvider).step, 3);
+  });
+
+  testWidgets('비동기 레이아웃 변경 후 코치마크가 이동한 타겟을 다시 측정한다', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final targetKey = GlobalKey();
+    var targetTop = 120.0;
+    var tapCount = 0;
+    late StateSetter rebuild;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingTourProvider.overrideWith(
+            () => OnboardingTourNotifier(
+              const OnboardingTourState(step: 2, skipped: false),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                rebuild = setState;
+                return Stack(
+                  children: [
+                    Positioned(
+                      top: targetTop,
+                      left: 100,
+                      width: 240,
+                      child: ElevatedButton(
+                        key: targetKey,
+                        onPressed: () => tapCount++,
+                        child: const Text('움직이는 타겟'),
+                      ),
+                    ),
+                    CoachMarkOverlay(
+                      targetKey: targetKey,
+                      stepIndex: 2,
+                      title: '이동 테스트',
+                      body: '레이아웃 변경 후 새 위치를 사용합니다.',
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    rebuild(() => targetTop = 620);
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(const Offset(220, 148));
+    await tester.pump();
+    expect(tapCount, 0);
+
+    await tester.tap(find.text('움직이는 타겟'));
+    await tester.pump();
+    expect(tapCount, 1);
   });
 
   test('기간 표기는 같은 해면 연도를 한 번만 쓴다', () {
