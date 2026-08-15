@@ -43,7 +43,7 @@ void main() {
         const AuthState(status: AuthStatus.authenticated),
         '/trip-dna',
       ),
-      '/home',
+      isNull,
     );
     expect(
       authRedirect(

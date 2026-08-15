@@ -204,8 +204,8 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
   }
 
   Future<void> _exitSurvey() async {
-    if (context.canPop()) {
-      context.pop();
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
       return;
     }
 
