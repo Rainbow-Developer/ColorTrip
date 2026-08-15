@@ -14,6 +14,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'package:colortrip/core/config/app_config.dart';
+import 'package:colortrip/core/network/dio_client.dart' show appConfigProvider;
 import 'package:colortrip/data/location/location_gateway.dart';
 import 'package:colortrip/data/media/photo_picker_gateway.dart';
 import 'package:colortrip/data/models/quest.dart';
@@ -242,6 +244,14 @@ ProviderContainer _container({
 }) {
   final container = ProviderContainer(
     overrides: [
+      // GPS 화면이 배경 지도 URL을 만들 때 읽는다(KAN-90). 실제 요청은 위젯 테스트에서
+      // 실패하고 errorBuilder가 격자 도식으로 내려앉으므로 값 자체는 중요하지 않다.
+      appConfigProvider.overrideWithValue(
+        AppConfig.fromValues(
+          kakaoNativeAppKey: 'test-key',
+          apiBaseUrl: 'http://localhost:8000/api/v1',
+        ),
+      ),
       if (fakeQuests != null)
         questRepositoryProvider.overrideWith(
           (ref) => _FakeQuestRepository(fakeQuests),
@@ -790,6 +800,30 @@ void main() {
     );
     expect(southWest.dx, lessThan(0));
     expect(southWest.dy, lessThan(0));
+  });
+
+  test('metersPerPixel은 VWorld 실측 축척과 일치한다', () {
+    // 2026-08-15 실측: VWorld 이미지 API(zoom 15)에서 center를 256px에 해당하는 경도만큼
+    // 옮긴 이미지가 원본의 오른쪽 절반과 픽셀 단위로 일치했다(워터마크 영역 제외).
+    // 그때 쓴 값이 3.8153m/px이고, 이 함수가 같은 값을 내야 오버레이가 지도와 정렬된다.
+    expect(metersPerPixel(latitude: 37.0008, zoom: 15), closeTo(3.8153, 0.001));
+    // 줌이 1 오르면 축척은 정확히 절반이다.
+    expect(
+      metersPerPixel(latitude: 37.0008, zoom: 16),
+      closeTo(metersPerPixel(latitude: 37.0008, zoom: 15) / 2, 1e-9),
+    );
+    // 적도에서 가장 크고 고위도로 갈수록 줄어든다.
+    expect(
+      metersPerPixel(latitude: 0, zoom: 15),
+      greaterThan(metersPerPixel(latitude: 60, zoom: 15)),
+    );
+  });
+
+  test('mapImageSpanMeters는 배경 지도가 담는 가로 거리를 준다', () {
+    // 640px × 3.8153m/px ≈ 2441.8m. 인증 반경 500m(지름 1km)가 넉넉히 들어온다.
+    final span = mapImageSpanMeters(latitude: 37.0008);
+    expect(span, closeTo(2441.8, 1.0));
+    expect(span, greaterThan(1000)); // 기본 반경의 지름보다 넓어야 한다
   });
 
   test('mapSpanMeters는 반경과 내 위치가 모두 담기도록 정해진다', () {

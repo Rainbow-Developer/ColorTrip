@@ -69,6 +69,7 @@ NAVER_API_KEY=       # Naver 지도/지역 API
 GEMINI_API_KEY=      # 사진 AI 인증(Gemini) — 비우면 local/test는 스텁 판정, 그 외는 인증 거부 (docs/specs/050-quest-verification)
 GEMINI_MODEL=        # 선택: 기본 gemini-3.5-flash
 QR_SECRET_KEY=       # QR 인증 서명 키 — 비우면 JWT_SECRET_KEY에서 파생
+VWORLD_API_KEY=      # GPS 인증 화면의 지도 배경(VWorld 이미지 API) — 비우면 배경 없이 도식만
 
 # 인증
 JWT_SECRET_KEY=      # JWT(Access/Refresh) 서명 키

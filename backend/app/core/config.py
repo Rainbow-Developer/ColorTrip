@@ -51,6 +51,21 @@ class Settings(BaseSettings):
     # QR 인증 페이로드 서명 키 — 미설정 시 JWT_SECRET_KEY에서 파생한다.
     qr_secret_key: str = ""
 
+    # GPS 인증 화면의 지도 배경 — VWorld 정적 지도(docs/specs/050-quest-verification).
+    # 키를 **서버가** 들고 프록시하는 이유: ① 앱에 넣으면 APK에서 추출된다 ② GPS 퀘스트는
+    # 좌표가 고정이라 서버가 캐시하면 VWorld 호출이 퀘스트 수만큼으로 끝난다(앱이 직접
+    # 부르면 사용자 수만큼이다). 미설정 시 지도 배경 없이 오버레이만 그린다(fail-soft) —
+    # 배경은 참고용이고 인증 판정과 무관하다.
+    vworld_api_key: str = ""
+    vworld_base_url: str = "https://api.vworld.kr"
+    # 지도 이미지 캐시 경로. 퀘스트당 1장이라 용량이 작고, 재배포로 사라져도 다시 받으면 된다.
+    map_cache_dir: str = "./map_cache"
+    # 줌 15는 위도 37에서 약 3.82m/px(2026-08-15 실측 확인) — 640x360이면 가로 2.4km,
+    # 세로 1.4km라 인증 반경 500m(지름 1km)가 화면에 들어온다. 앱 도식이 16:9라 크기도 맞춘다.
+    map_zoom: int = 15
+    map_image_width: int = 640
+    map_image_height: int = 360
+
     # 지자체 오픈 API 서비스키 해시 키 — 미설정 시 JWT_SECRET_KEY에서 파생한다
     # (docs/specs/070-municipal-open-api). JWT_SECRET_KEY와 도메인을 분리해두면,
     # 사용자 세션 관련 사고로 JWT_SECRET_KEY를 회전시켜도 이미 발급한 지자체 키가

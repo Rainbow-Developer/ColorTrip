@@ -26,17 +26,30 @@
 
 #### 위치 도식 (KAN-87)
 
-내 위치와 퀘스트 지점의 관계를 화면에 그린다. **외부 지도를 쓰지 않는다** — 구글·네이버·카카오·OSM 등은 현재 위치 기준으로 타일을 요청하므로 좌표가 지도 사업자에게 전송되고, 그 순간 위 불변식("단말을 벗어나면 안 된다")이 깨진다. 대신 `CustomPainter`로 직접 그린다(외부 패키지·네트워크 요청 0건 — 지도 채색의 [chungbuk_map.dart](../../../frontend/lib/core/widgets/chungbuk_map.dart)와 같은 방식).
+내 위치와 퀘스트 지점의 관계를 화면에 그린다. 배경으로 **퀘스트 좌표 기준 정적 지도**를 깔고 그 위에 반경 원·내 위치를 얹는다.
+
+문제가 되는 것은 지도 자체가 아니라 **내 위치를 기준으로 타일을 요청하는 것**이다. 지도 SDK(구글·네이버·카카오)는 현재 위치로 타일을 부르므로 좌표가 지도 사업자에게 나가지만, 퀘스트 좌표는 앱에 하드코딩된 공개 데이터이므로 그 좌표로 이미지 한 장을 받는 것은 사용자 위치 전송이 아니다. 그래서 다음을 지킨다.
+
+| 지킬 것 | 이유 |
+|---------|------|
+| 지도 이미지는 **퀘스트 좌표로만** 요청 | 사용자 위치가 나가지 않는다 |
+| 내 위치는 **단말이 오버레이로** 그림 | 화면 좌표로만 존재한다 |
+| 지도 SDK의 "내 위치 표시"·"내 위치로 이동" **금지** | SDK가 직접 좌표를 수집·전송한다 |
+
+이미지는 서버 프록시(`GET /quests/{id}/map`)가 VWorld에서 받아 캐시해 내려준다 — 키를 앱에 넣지 않기 위함이고, 퀘스트 좌표가 고정이라 캐시가 곧 호출 상한이 된다([external-apis.md](../../conventions/external-apis.md#vworld-gps-인증-화면의-지도-배경)).
 
 | 요소 | 표시 |
 |------|------|
 | 퀘스트 지점 | 도식 **중심에 고정** + 마커 |
 | 인증 반경 | 중심 기준 원(`verifyRadius`, 기본 500m) |
 | 내 위치 | 실제 방위·거리에 맞춘 점 — 반경 안이면 통과 색, 밖이면 중립 색 |
-| 축척 | 두 점이 항상 보이도록 자동 조정 |
+| 축척 | 배경 지도가 있으면 그 이미지의 축척(웹 메르카토르)에 고정, 없으면 두 점이 보이도록 자동 조정 |
 | 거리 | 실측 거리 텍스트 |
+| 화면 밖 | 배경 지도는 축척이 고정이라 멀리 있으면 화면을 벗어난다 — 가장자리에 방향 삼각형으로 표시하고 거리는 칩으로 안내 |
 
-위경도는 도식의 화면 좌표로 변환되어 painter에만 전달된다. 어떤 네트워크 호출에도 실리지 않으므로 좌표 비전송 불변식은 그대로 유지된다.
+위경도는 도식의 화면 좌표로 변환되어 painter에만 전달된다. 어떤 네트워크 호출에도 실리지 않으므로 좌표 비전송 불변식은 그대로 유지된다. 배경 이미지 URL에도 퀘스트 id만 담긴다.
+
+**서버 설정과 FE 상수는 함께 움직인다** — 배경 지도의 줌·크기(`map_zoom`·`map_image_width/height`)를 바꾸면 앱의 축척 계산(`gps_verify_map.dart`의 `kMapZoom`·`kMapImageWidthPx`)도 같이 고쳐야 반경 원이 지도와 맞는다. 백엔드 테스트가 이 일치를 강제한다.
 
 이 불변식은 세 겹으로 강제된다(KAN-77 — `a3df7fc`에서 좌표를 전송하도록 이탈했던 회귀를 되돌리며 추가).
 
@@ -76,7 +89,8 @@
 | DB 퀘스트 인증 확장 | MissionType.QR·비전 연동 | `backend/app/quests/verification.py` |
 | QR 생성 | 서명 페이로드 → PNG | `backend/scripts/generate_quest_qr.py` |
 | 인증 화면 3분기 | 사진 업로드·GPS 측위·QR 스캔 | `frontend/lib/features/quests/quest_verify_screen.dart` |
-| 위치 도식 | 내 위치·퀘스트 지점·인증 반경을 그리는 `CustomPainter`(외부 지도 없음, KAN-87) | `frontend/lib/features/quests/gps_verify_map.dart` |
+| 위치 도식 | 배경 지도 위에 내 위치·퀘스트 지점·인증 반경을 그린다(KAN-87·90) | `frontend/lib/features/quests/gps_verify_map.dart` |
+| 배경 지도 프록시 | VWorld 정적 지도 호출 + 디스크 캐시 (`GET /quests/{id}/map`) | `backend/app/quests/static_map.py` |
 | 판정 결과 화면 | 실제 AI 판정값 표시 | `frontend/lib/features/quests/photo_verify_result_screen.dart` |
 | 사진 선택 seam | 갤러리·카메라 선택(테스트에서 대체 가능) | `frontend/lib/data/media/photo_picker_gateway.dart` |
 
