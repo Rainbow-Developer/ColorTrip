@@ -417,6 +417,8 @@ class _TripSetupSheetState extends State<_TripSetupSheet> {
   }
 
   Future<void> _pickRange() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future.delayed(const Duration(milliseconds: 100));
     final now = DateTime.now();
     List<DateTime?> tempRange = _range != null
         ? [_range!.start, _range!.end]
