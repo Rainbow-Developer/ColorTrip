@@ -18,11 +18,15 @@ class TripCard extends ConsumerWidget {
     required this.journey,
     required this.region,
     required this.isActive,
+    this.onEdit,
+    this.onDelete,
   });
 
   final DomainJourney journey;
   final Region region;
   final bool isActive;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -51,12 +55,51 @@ class TripCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                journey.title ?? tripTitleFor(region),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      journey.title ?? tripTitleFor(region),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (onEdit != null || onDelete != null)
+                    SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: PopupMenuButton<_TripCardAction>(
+                        tooltip: '여행 관리',
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.more_vert, size: 20),
+                        onSelected: (action) {
+                          switch (action) {
+                            case _TripCardAction.edit:
+                              onEdit?.call();
+                              break;
+                            case _TripCardAction.delete:
+                              onDelete?.call();
+                              break;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          if (onEdit != null)
+                            const PopupMenuItem(
+                              value: _TripCardAction.edit,
+                              child: Text('여행 정보 수정'),
+                            ),
+                          if (onDelete != null)
+                            const PopupMenuItem(
+                              value: _TripCardAction.delete,
+                              child: Text('여행 삭제'),
+                            ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
               if (journey.startDate != null && journey.endDate != null) ...[
                 const SizedBox(height: 2),
@@ -111,6 +154,8 @@ class TripCard extends ConsumerWidget {
     return '${start.year}.${md(start)} ~ ${md(end)}';
   }
 }
+
+enum _TripCardAction { edit, delete }
 
 class _Badge extends StatelessWidget {
   const _Badge({

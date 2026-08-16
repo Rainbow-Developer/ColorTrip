@@ -20,6 +20,7 @@ from app.journeys.schemas import (
     JourneyListData,
     JourneyQuestAddRequest,
     JourneyQuestReplaceRequest,
+    JourneyUpdateRequest,
 )
 
 router = APIRouter(prefix="/journeys", tags=["journeys"])
@@ -64,6 +65,32 @@ async def get_journey(
 ) -> Envelope[JourneyDetail]:
     data = await service.get_journey_detail(session, current_user.id, journey_id)
     return success(data)
+
+
+@router.patch("/{journey_id}")
+async def update_journey(
+    journey_id: UUID,
+    payload: JourneyUpdateRequest,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_session),
+) -> Envelope[JourneyDetail]:
+    data = await service.update_journey(
+        session,
+        current_user.id,
+        journey_id,
+        payload.model_dump(exclude_unset=True),
+    )
+    return success(data, message="여정 정보가 수정되었습니다.")
+
+
+@router.delete("/{journey_id}")
+async def delete_journey(
+    journey_id: UUID,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_session),
+) -> Envelope[dict[str, str]]:
+    await service.delete_journey(session, current_user.id, journey_id)
+    return success({"id": str(journey_id)}, message="여정이 삭제되었습니다.")
 
 
 @router.post("/{journey_id}/quests")

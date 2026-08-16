@@ -130,16 +130,65 @@ async def test_my_map_counts_completed_journeys(client: AsyncClient) -> None:
     assert after[seed["region_id"]]["completed_journey_count"] == 1
     assert after[seed["other_region_id"]]["completed_journey_count"] == 0
 
-    # 이미 완료한 퀘스트로 여정을 하나 더 만들면 생성 즉시 completed → 2로 집계된다.
+    # 완료 기록은 여정별로 소유된다. 같은 퀘스트로 새 여정을 만들어도 기존 여정의
+    # 완료 기록이 다른 여정에 중복 집계되지는 않는다.
     second = await client.post(
         "/api/v1/journeys",
         json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
         headers=headers,
     )
-    assert second.json()["data"]["status"] == "completed"
+    assert second.status_code == 201
+    assert second.json()["data"]["status"] == "in_progress"
 
     again = await _get_map_by_region(client, headers)
-    assert again[seed["region_id"]]["completed_journey_count"] == 2
+    assert again[seed["region_id"]]["completed_journey_count"] == 1
+
+
+async def test_my_map_preserves_legacy_null_journey_progress_count(
+    client: AsyncClient,
+) -> None:
+    """배포 전 journey_id가 비어 있던 완료 기록도 채색 집계에서 사라지면 안 된다."""
+    from sqlalchemy import update
+
+    from app.core.database import AsyncSessionLocal
+    from app.quests.models import QuestProgress
+
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    created = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        headers=headers,
+    )
+    assert created.status_code == 201
+
+    verify = await client.post(
+        f"/api/v1/quests/{seed['gps_quest_id']}/verify",
+        json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/photos/x.jpg"},
+        headers=headers,
+    )
+    assert verify.json()["data"]["verified"] is True
+
+    async with AsyncSessionLocal() as session:
+        await session.execute(
+            update(QuestProgress)
+            .where(QuestProgress.id == UUID(verify.json()["data"]["progress"]["id"]))
+            .values(journey_id=None)
+        )
+        await session.commit()
+
+    legacy = await _get_map_by_region(client, headers)
+    assert legacy[seed["region_id"]]["completed_journey_count"] == 1
+
+    second = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        headers=headers,
+    )
+    assert second.status_code == 201
+
+    after_second = await _get_map_by_region(client, headers)
+    assert after_second[seed["region_id"]]["completed_journey_count"] == 1
 
 
 async def test_my_map_counts_journey_with_single_completed_quest(client: AsyncClient) -> None:

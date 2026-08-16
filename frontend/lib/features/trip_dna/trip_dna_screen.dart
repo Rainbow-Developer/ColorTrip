@@ -137,14 +137,18 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: (_submitting || _step == 0) ? null : _previousQuestion,
+                          onPressed: (_submitting || _step == 0)
+                              ? null
+                              : _previousQuestion,
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size.fromHeight(56),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(17),
                             ),
                             side: BorderSide(
-                              color: _step == 0 ? AppColors.checkboxBorder : const Color(0xFFB2C2AD),
+                              color: _step == 0
+                                  ? AppColors.checkboxBorder
+                                  : const Color(0xFFB2C2AD),
                               width: 1.5,
                             ),
                             foregroundColor: Colors.black87,

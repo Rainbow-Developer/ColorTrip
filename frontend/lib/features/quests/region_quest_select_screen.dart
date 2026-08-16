@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
@@ -9,13 +8,13 @@ import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/filter_chip_row.dart';
+import '../../core/widgets/trip_info_sheet.dart';
 import '../../data/models/quest.dart';
 import '../../data/repositories/domain_repository.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../../state/domain_controller.dart';
 import '../../state/progress_notifier.dart';
-import '../../state/progress_state.dart';
 import '../../state/repository_providers.dart';
 
 /// 퀘스트 선택 — 지역 퀘스트를 여러 개 골라 "여행 시작하기"로 여행을 시작한다.
@@ -94,14 +93,11 @@ class _RegionQuestSelectScreenState
       return;
     }
 
-    final info = await showModalBottomSheet<TripInfo>(
+    final info = await showTripInfoSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => _TripSetupSheet(defaultName: defaultName),
+      initialName: defaultName,
+      title: '여행 정보를 입력해주세요',
+      submitLabel: '여행 시작하기',
     );
     if (info == null || !mounted) return;
 
@@ -385,220 +381,6 @@ class _SelectableQuestCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// 여행 이름·기간 입력 시트 — 이름은 "OO 여행"이 기본값, 기간은 [showDateRangePicker]로
-/// 시작일·종료일을 함께 받는다. 둘 다 채워야 시작할 수 있다.
-class _TripSetupSheet extends StatefulWidget {
-  const _TripSetupSheet({required this.defaultName});
-
-  final String defaultName;
-
-  @override
-  State<_TripSetupSheet> createState() => _TripSetupSheetState();
-}
-
-class _TripSetupSheetState extends State<_TripSetupSheet> {
-  late final TextEditingController _nameController = TextEditingController(
-    text: widget.defaultName,
-  );
-  DateTimeRange? _range;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickRange() async {
-    FocusManager.instance.primaryFocus?.unfocus();
-    await Future.delayed(const Duration(milliseconds: 100));
-    final now = DateTime.now();
-    List<DateTime?> tempRange = _range != null
-        ? [_range!.start, _range!.end]
-        : [];
-
-    if (!mounted) return;
-    final picked = await showModalBottomSheet<DateTimeRange>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final isValid =
-                tempRange.length == 2 &&
-                tempRange[0] != null &&
-                tempRange[1] != null;
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 20,
-                  bottom: 20,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      '여행 기간을 선택해주세요',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    CalendarDatePicker2(
-                      config: CalendarDatePicker2Config(
-                        calendarType: CalendarDatePicker2Type.range,
-                        firstDate: DateTime(now.year, now.month, now.day),
-                        lastDate: DateTime(now.year + 2, now.month, now.day),
-                        selectedDayHighlightColor: AppColors.primaryDark,
-                      ),
-                      value: tempRange,
-                      onValueChanged: (dates) {
-                        setSheetState(() {
-                          tempRange = dates;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: isValid
-                          ? () {
-                              Navigator.pop(
-                                context,
-                                DateTimeRange(
-                                  start: tempRange[0]!,
-                                  end: tempRange[1]!,
-                                ),
-                              );
-                            }
-                          : null,
-                      child: const Text('선택 완료'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() => _range = picked);
-    }
-  }
-
-  InputDecoration _fieldDecoration({String? hintText, Widget? suffixIcon}) {
-    return InputDecoration(
-      hintText: hintText,
-      suffixIcon: suffixIcon,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.formFieldBorder),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.formFieldBorder),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.primaryDark),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final range = _range;
-    final canSubmit = _nameController.text.trim().isNotEmpty && range != null;
-
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            '여행 정보를 입력해주세요',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            '여행 이름',
-            style: TextStyle(fontSize: 12, color: AppColors.formLabel),
-          ),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _nameController,
-            maxLength: 30,
-            onChanged: (_) => setState(() {}),
-            decoration: _fieldDecoration(
-              hintText: '예) 단양 여행',
-            ).copyWith(counterText: ''),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '여행 날짜',
-            style: TextStyle(fontSize: 12, color: AppColors.formLabel),
-          ),
-          const SizedBox(height: 6),
-          InkWell(
-            onTap: _pickRange,
-            borderRadius: BorderRadius.circular(10),
-            child: InputDecorator(
-              decoration: _fieldDecoration(
-                suffixIcon: const Icon(
-                  Icons.calendar_today_outlined,
-                  size: 18,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              child: Text(
-                range == null
-                    ? '시작일 ~ 종료일 선택'
-                    : TripInfo.formatPeriod(range.start, range.end),
-                style: TextStyle(
-                  fontSize: 14,
-                  color: range == null
-                      ? AppColors.formPlaceholder
-                      : AppColors.textStrong,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: canSubmit
-                ? () => Navigator.pop(
-                    context,
-                    TripInfo(
-                      name: _nameController.text.trim(),
-                      startDate: range.start,
-                      endDate: range.end,
-                    ),
-                  )
-                : null,
-            child: const Text('여행 시작하기'),
-          ),
-        ],
       ),
     );
   }

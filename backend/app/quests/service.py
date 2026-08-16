@@ -92,7 +92,11 @@ async def start_quest(
     quest = await _get_quest_or_404(session, quest_id)
     await _validate_journey_link(session, user_id, quest.id, journey_id)
 
-    progress = await repository.get_progress(session, user_id, quest_id)
+    progress = await repository.get_progress_including_deleted(session, user_id, quest_id)
+    if progress is not None and progress.deleted_at is not None:
+        _restore_progress(progress, journey_id)
+        await session.commit()
+        return ProgressItem.model_validate(progress)
     if progress is not None:
         if progress.status == ProgressStatus.COMPLETED.value:
             raise AppException(ErrorCode.CONFLICT_ERROR, "이미 완료한 퀘스트입니다.")
@@ -120,9 +124,17 @@ async def verify_quest(
 ) -> VerifyResultData:
     """미션 타입별 룰 기반 인증. 성공 시 완료 처리하고 관련 여정 상태를 갱신한다."""
     quest = await _get_quest_or_404(session, quest_id)
-    await _validate_journey_link(session, user_id, quest.id, payload.journey_id)
+    journey_id = await _resolve_journey_id(
+        session,
+        user_id,
+        quest.id,
+        payload.journey_id,
+    )
+    await _validate_journey_link(session, user_id, quest.id, journey_id)
 
-    progress = await repository.get_progress(session, user_id, quest_id)
+    progress = await repository.get_progress_including_deleted(session, user_id, quest_id)
+    if progress is not None and progress.deleted_at is not None:
+        _restore_progress(progress, journey_id)
     if progress is not None and progress.status == ProgressStatus.COMPLETED.value:
         raise AppException(ErrorCode.CONFLICT_ERROR, "이미 완료한 퀘스트입니다.")
 
@@ -149,7 +161,9 @@ async def verify_quest(
 
     if judge_input.needs_external_judgement:
         # 트랜잭션을 닫은 사이 다른 요청이 같은 퀘스트를 완료했을 수 있다.
-        progress = await repository.get_progress(session, user_id, quest_id)
+        progress = await repository.get_progress_including_deleted(session, user_id, quest_id)
+        if progress is not None and progress.deleted_at is not None:
+            _restore_progress(progress, journey_id)
         if progress is not None and progress.status == ProgressStatus.COMPLETED.value:
             return VerifyResultData(
                 verified=True,
@@ -159,10 +173,10 @@ async def verify_quest(
             )
 
     if progress is None:  # start 없이 바로 인증하는 경우 진행을 함께 생성
-        progress = QuestProgress(user_id=user_id, quest_id=quest_id, journey_id=payload.journey_id)
+        progress = QuestProgress(user_id=user_id, quest_id=quest_id, journey_id=journey_id)
         session.add(progress)
-    elif payload.journey_id is not None:
-        progress.journey_id = payload.journey_id
+    elif journey_id is not None:
+        progress.journey_id = journey_id
 
     if mission_type == MissionType.QUIZ.value:
         progress.quiz_answer = payload.answer
@@ -255,3 +269,37 @@ async def _validate_journey_link(
     link = await journeys_repository.get_journey_quest(session, journey_id, quest_id)
     if link is None or link.deleted_at is not None:
         raise AppException(ErrorCode.VALIDATION_ERROR, "여정에 담기지 않은 퀘스트입니다.")
+
+
+def _restore_progress(progress: QuestProgress, journey_id: UUID | None) -> None:
+    progress.deleted_at = None
+    progress.status = ProgressStatus.IN_PROGRESS.value
+    progress.journey_id = journey_id
+    progress.verified_lat = None
+    progress.verified_lng = None
+    progress.photo_url = None
+    progress.quiz_answer = None
+    progress.completed_at = None
+
+
+async def _resolve_journey_id(
+    session: AsyncSession,
+    user_id: UUID,
+    quest_id: UUID,
+    payload_journey_id: UUID | None,
+) -> UUID | None:
+    if payload_journey_id is not None:
+        return payload_journey_id
+    journeys = await journeys_repository.list_journeys_containing_quest(
+        session,
+        user_id,
+        quest_id,
+    )
+    if not journeys:
+        return None
+    if len(journeys) > 1:
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR,
+            "여러 여행에 담긴 퀘스트입니다. 여행을 선택해주세요.",
+        )
+    return journeys[0].id

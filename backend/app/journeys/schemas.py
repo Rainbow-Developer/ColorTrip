@@ -24,6 +24,18 @@ class JourneyCreateRequest(BaseModel):
         return self
 
 
+class JourneyUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=100)
+    start_date: date | None = None
+    end_date: date | None = None
+
+    @model_validator(mode="after")
+    def _validate_date_order(self) -> Self:
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("end_date는 start_date보다 빠를 수 없습니다.")
+        return self
+
+
 class JourneyQuestAddRequest(BaseModel):
     quest_id: UUID
 

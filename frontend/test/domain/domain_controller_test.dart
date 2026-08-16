@@ -1,8 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:colortrip/data/repositories/domain_repository.dart';
+import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/state/domain_controller.dart';
 import 'package:colortrip/state/progress_notifier.dart';
+import 'package:colortrip/state/progress_state.dart';
 import 'package:colortrip/state/repository_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,6 +52,8 @@ class _Repository implements DomainRepository {
   int createCalls = 0;
   final createRequestIds = <String>[];
   String? replacedJourneyId;
+  String? updatedJourneyId;
+  String? deletedJourneyId;
 
   @override
   Future<DomainSnapshot> fetchSnapshot() async {
@@ -91,6 +95,51 @@ class _Repository implements DomainRepository {
   }) async {
     replacedJourneyId = journeyId;
     return snapshot.journeys.firstWhere((journey) => journey.id == journeyId);
+  }
+
+  @override
+  Future<DomainJourney> updateJourney({
+    required String journeyId,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    updatedJourneyId = journeyId;
+    final current = snapshot.journeys.singleWhere(
+      (journey) => journey.id == journeyId,
+    );
+    final updated = DomainJourney(
+      id: current.id,
+      regionKey: current.regionKey,
+      questKeys: current.questKeys,
+      title: title,
+      startDate: startDate,
+      endDate: endDate,
+      status: current.status,
+      createdAt: current.createdAt,
+    );
+    snapshot = DomainSnapshot(
+      catalog: snapshot.catalog,
+      journeys: [updated],
+      completedQuestKeys: snapshot.completedQuestKeys,
+      regionProgress: snapshot.regionProgress,
+      regionTripCount: snapshot.regionTripCount,
+      timeline: snapshot.timeline,
+    );
+    return updated;
+  }
+
+  @override
+  Future<void> deleteJourney({required String journeyId}) async {
+    deletedJourneyId = journeyId;
+    snapshot = DomainSnapshot(
+      catalog: snapshot.catalog,
+      journeys: const [],
+      completedQuestKeys: const {},
+      regionProgress: const {},
+      regionTripCount: const {},
+      timeline: const [],
+    );
   }
 
   @override
@@ -218,6 +267,86 @@ void main() {
 
     expect(repository.replacedJourneyId, 'older-journey');
   });
+
+  test('journey update refreshes snapshot projection', () async {
+    final repository = _Repository();
+    final container = ProviderContainer(
+      overrides: [domainRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+    await container.read(domainControllerProvider.future);
+
+    await container
+        .read(domainControllerProvider.notifier)
+        .updateJourney(
+          journeyId: 'journey-uuid',
+          title: '수정 여행',
+          startDate: DateTime(2026, 8),
+          endDate: DateTime(2026, 8, 2),
+        );
+
+    expect(repository.updatedJourneyId, 'journey-uuid');
+    final journey = container
+        .read(domainControllerProvider)
+        .value!
+        .journeys
+        .single;
+    expect(journey.title, '수정 여행');
+    expect(
+      container.read(progressProvider).tripInfoOf('danyang')?.name,
+      '수정 여행',
+    );
+  });
+
+  test(
+    'journey deletion clears local coloring override and refreshes',
+    () async {
+      final repository = _Repository()..snapshot = _snapshot(completed: false);
+      final container = ProviderContainer(
+        overrides: [domainRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      await container.read(domainControllerProvider.future);
+      final quest = kQuests.firstWhere((quest) => quest.region == 'danyang');
+      container.read(progressProvider.notifier).startTrip(
+        'danyang',
+        {quest.id},
+        TripInfo(
+          name: '단양 여행',
+          startDate: DateTime(2026, 7, 20),
+          endDate: DateTime(2026, 7, 22),
+        ),
+      );
+      container.read(progressProvider.notifier).completeQuest(quest.id);
+      final otherQuest = kQuests.firstWhere(
+        (quest) => quest.region != 'danyang',
+      );
+      container.read(progressProvider.notifier).startTrip(
+        otherQuest.region,
+        {otherQuest.id},
+        TripInfo(
+          name: '다른 여행',
+          startDate: DateTime(2026, 7, 20),
+          endDate: DateTime(2026, 7, 22),
+        ),
+      );
+      container.read(progressProvider.notifier).completeQuest(otherQuest.id);
+      expect(container.read(progressProvider).localTripCompletions, {
+        'danyang': 1,
+        otherQuest.region: 1,
+      });
+
+      await container
+          .read(domainControllerProvider.notifier)
+          .deleteJourney(journeyId: 'journey-uuid');
+
+      expect(repository.deletedJourneyId, 'journey-uuid');
+      expect(container.read(domainControllerProvider).value!.journeys, isEmpty);
+      expect(container.read(progressProvider).localTripCompletions, {
+        otherQuest.region: 1,
+      });
+    },
+  );
 
   test(
     'keeps a persisted verification successful when snapshot refresh fails',

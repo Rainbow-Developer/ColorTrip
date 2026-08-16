@@ -139,6 +139,15 @@ abstract class DomainRepository {
     required List<String> questKeys,
   });
 
+  Future<DomainJourney> updateJourney({
+    required String journeyId,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  Future<void> deleteJourney({required String journeyId});
+
   Future<String> uploadPhoto(Uint8List bytes, {String mimeType = 'image/jpeg'});
 
   /// 퀘스트 인증 요청.
@@ -270,6 +279,30 @@ class DioDomainRepository implements DomainRepository {
       data: {'quest_ids': questKeys.map(catalog.questId).toList()},
     );
     return _journeyFromDetail(_data(response), catalog);
+  }
+
+  @override
+  Future<DomainJourney> updateJourney({
+    required String journeyId,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final catalog = await _loadCatalog();
+    final response = await _dio.patch(
+      '/journeys/$journeyId',
+      data: {
+        'title': title,
+        'start_date': _date(startDate),
+        'end_date': _date(endDate),
+      },
+    );
+    return _journeyFromDetail(_data(response), catalog);
+  }
+
+  @override
+  Future<void> deleteJourney({required String journeyId}) async {
+    await _dio.delete('/journeys/$journeyId');
   }
 
   @override

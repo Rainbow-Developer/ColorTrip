@@ -7,8 +7,10 @@ completed. 그 밖에는 in_progress로 되돌린다. "기간이 지났다"는 �
 """
 
 from datetime import date
+from typing import Any
 from uuid import UUID
 
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +26,10 @@ from app.journeys.schemas import (
     JourneyProgressSummary,
     JourneyQuestItem,
 )
+from app.maps import repository as maps_repository
+from app.progress.models import MapProgress
+from app.quests.models import QuestProgress
+from app.timeline.models import TimelineEvent
 
 
 async def create_journey(
@@ -70,6 +76,16 @@ async def create_journey(
         for order, quest_id in enumerate(unique_ids):
             session.add(JourneyQuest(journey_id=journey.id, quest_id=quest_id, sort_order=order))
         await session.flush()
+        await session.execute(
+            update(QuestProgress)
+            .where(
+                QuestProgress.user_id == user_id,
+                QuestProgress.quest_id.in_(unique_ids),
+                QuestProgress.journey_id.is_(None),
+                QuestProgress.deleted_at.is_(None),
+            )
+            .values(journey_id=journey.id)
+        )
         # 담은 퀘스트를 이미 완료한 사용자라면 생성 즉시 완료 상태가 되어야 한다.
         await recalculate_status(session, journey)
         await session.commit()
@@ -130,12 +146,160 @@ async def get_journey_detail(
     return await _journey_detail(session, user_id, journey_id)
 
 
+async def update_journey(
+    session: AsyncSession,
+    user_id: UUID,
+    journey_id: UUID,
+    updates: dict[str, Any],
+) -> JourneyDetail:
+    journey = await repository.get_journey_for_update(session, journey_id, user_id)
+    if journey is None:
+        raise AppException(ErrorCode.NOT_FOUND_ERROR, "여정을 찾을 수 없습니다.")
+
+    next_start = updates.get("start_date", journey.start_date)
+    next_end = updates.get("end_date", journey.end_date)
+    if next_start and next_end and next_end < next_start:
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR, "end_date는 start_date보다 빠를 수 없습니다."
+        )
+
+    if "title" in updates:
+        journey.title = updates["title"]
+    if "start_date" in updates:
+        journey.start_date = updates["start_date"]
+    if "end_date" in updates:
+        journey.end_date = updates["end_date"]
+    await session.flush()
+    await recalculate_status(session, journey)
+    await session.commit()
+    return await _journey_detail(session, user_id, journey_id)
+
+
+async def delete_journey(session: AsyncSession, user_id: UUID, journey_id: UUID) -> None:
+    journey = await repository.get_journey_for_update(session, journey_id, user_id)
+    if journey is None:
+        raise AppException(ErrorCode.NOT_FOUND_ERROR, "여정을 찾을 수 없습니다.")
+
+    deleted_at = now_kst()
+    progress_items = list(
+        (
+            await session.execute(
+                select(QuestProgress).where(
+                    QuestProgress.user_id == user_id,
+                    QuestProgress.journey_id == journey_id,
+                    QuestProgress.deleted_at.is_(None),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    progress_ids_to_delete: list[UUID] = []
+    affected_replacement_journey_ids: set[UUID] = set()
+    for progress in progress_items:
+        replacement_journey_id = await _find_active_journey_for_quest_excluding(
+            session,
+            user_id,
+            progress.quest_id,
+            journey_id,
+        )
+        if replacement_journey_id is None:
+            progress_ids_to_delete.append(progress.id)
+        else:
+            progress.journey_id = replacement_journey_id
+            affected_replacement_journey_ids.add(replacement_journey_id)
+
+    if affected_replacement_journey_ids:
+        await session.flush()
+        replacement_journeys = (
+            (
+                await session.execute(
+                    select(Journey).where(
+                        Journey.id.in_(affected_replacement_journey_ids),
+                        Journey.user_id == user_id,
+                        Journey.deleted_at.is_(None),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for replacement_journey in replacement_journeys:
+            await recalculate_status(session, replacement_journey)
+
+    if progress_ids_to_delete:
+        await session.execute(
+            update(TimelineEvent)
+            .where(
+                TimelineEvent.user_id == user_id,
+                TimelineEvent.quest_progress_id.in_(progress_ids_to_delete),
+                TimelineEvent.deleted_at.is_(None),
+            )
+            .values(deleted_at=deleted_at)
+        )
+        await session.execute(
+            update(QuestProgress)
+            .where(
+                QuestProgress.user_id == user_id,
+                QuestProgress.id.in_(progress_ids_to_delete),
+                QuestProgress.deleted_at.is_(None),
+            )
+            .values(deleted_at=deleted_at)
+        )
+
+    await session.execute(
+        update(JourneyQuest)
+        .where(
+            JourneyQuest.journey_id == journey_id,
+            JourneyQuest.deleted_at.is_(None),
+        )
+        .values(deleted_at=deleted_at)
+    )
+    journey.deleted_at = deleted_at
+    await session.flush()
+
+    remaining_colored = await _count_colored_journeys_for_region(
+        session,
+        user_id,
+        journey.region_id,
+    )
+    await session.execute(
+        update(MapProgress)
+        .where(
+            MapProgress.user_id == user_id,
+            MapProgress.region_id == journey.region_id,
+            MapProgress.deleted_at.is_(None),
+        )
+        .values(
+            completed_count=remaining_colored,
+            first_colored_at=None if remaining_colored == 0 else MapProgress.first_colored_at,
+        )
+    )
+    if remaining_colored == 0:
+        await session.execute(
+            update(TimelineEvent)
+            .where(
+                TimelineEvent.user_id == user_id,
+                TimelineEvent.region_id == journey.region_id,
+                TimelineEvent.event_type == "region_colored",
+                TimelineEvent.quest_progress_id.is_(None),
+                TimelineEvent.deleted_at.is_(None),
+            )
+            .values(deleted_at=deleted_at)
+        )
+
+    await session.commit()
+
+
 async def _journey_detail(session: AsyncSession, user_id: UUID, journey_id: UUID) -> JourneyDetail:
     """상세 응답 조립(동기화 없음) — 생성·퀘스트 변경 직후처럼 이미 재계산된 경로에서 쓴다."""
     journey = await _get_owned_journey(session, user_id, journey_id)
     journey_quests = await repository.list_journey_quests(session, journey_id)
     status_map = await repository.progress_status_map(
-        session, user_id, [jq.quest_id for jq in journey_quests]
+        session,
+        user_id,
+        [jq.quest_id for jq in journey_quests],
+        journey_id=journey_id,
     )
     quests = [
         JourneyQuestItem(
@@ -326,6 +490,41 @@ async def sync_journey_statuses(session: AsyncSession, user_id: UUID) -> None:
             changed = True
     if changed:
         await session.commit()
+
+
+async def _count_colored_journeys_for_region(
+    session: AsyncSession,
+    user_id: UUID,
+    region_id: UUID,
+) -> int:
+    counts = await maps_repository.count_colored_journeys_by_region(
+        session,
+        user_id,
+        region_id=region_id,
+    )
+    return counts.get(region_id, 0)
+
+
+async def _find_active_journey_for_quest_excluding(
+    session: AsyncSession,
+    user_id: UUID,
+    quest_id: UUID,
+    excluded_journey_id: UUID,
+) -> UUID | None:
+    stmt = (
+        select(Journey.id)
+        .join(JourneyQuest, JourneyQuest.journey_id == Journey.id)
+        .where(
+            Journey.user_id == user_id,
+            Journey.id != excluded_journey_id,
+            Journey.deleted_at.is_(None),
+            JourneyQuest.quest_id == quest_id,
+            JourneyQuest.deleted_at.is_(None),
+        )
+        .order_by(Journey.created_at.desc())
+        .limit(1)
+    )
+    return await session.scalar(stmt)
 
 
 async def _get_owned_journey(session: AsyncSession, user_id: UUID, journey_id: UUID) -> Journey:

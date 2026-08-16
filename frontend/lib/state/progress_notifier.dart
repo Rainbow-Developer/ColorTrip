@@ -81,6 +81,16 @@ class ProgressNotifier extends Notifier<ProgressState> {
     state = next;
   }
 
+  void clearLocalTripCompletions() {
+    state = state.copyWith(localTripCompletions: const {});
+  }
+
+  void clearLocalTripCompletionsForRegion(String regionId) {
+    if (!state.localTripCompletions.containsKey(regionId)) return;
+    final completions = {...state.localTripCompletions}..remove(regionId);
+    state = state.copyWith(localTripCompletions: completions);
+  }
+
   /// 서버(`GET /users/me/map`) 진행도를 로컬 상태에 반영한다([020-frontend-map-sync]).
   /// 서버가 값을 준 지역만 덮어쓰고, 응답에 없는 지역은 기존 로컬 값을 유지한다.
   /// [serverRegionTripCount]는 지역별 완료 여행 수(completed_journey_count) — 지도 채색
