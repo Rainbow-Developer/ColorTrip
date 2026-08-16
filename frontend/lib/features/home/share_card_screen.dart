@@ -197,10 +197,10 @@ class _ShareCardScreenState extends ConsumerState<ShareCardScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _ShareStat(
-                            label: '완료 지역',
-                            value: '${progress.completedRegionCount}',
+                            label: '여행 완료',
+                            value: '${progress.completedJourneyCount}',
                           ),
-                          _ShareStat(label: '진행률', value: '$progressPct%'),
+                          _ShareStat(label: '채색률', value: '$progressPct%'),
                         ],
                       ),
                     if (_style != _ShareStyle.mapOnly) ...[

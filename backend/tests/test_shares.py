@@ -12,6 +12,7 @@ async def test_get_my_share_summary(client: AsyncClient) -> None:
     """내 여행 지도 진행률, DNA, 색칠된 시·군 요약 조회가 정상 동작하는지 테스트합니다."""
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
+    await _create_journey_for_gps_quest(client, headers, seed)
 
     # 퀘스트 완료를 통해 지도 1개 영역 색칠
     await client.post(
@@ -86,6 +87,7 @@ async def test_get_public_share_card(client: AsyncClient) -> None:
     """비인증(Public) 상태에서 공유 숏코드를 통해 카드를 조회하는 API를 테스트합니다."""
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
+    await _create_journey_for_gps_quest(client, headers, seed)
 
     # 퀘스트 완료
     await client.post(
@@ -116,6 +118,7 @@ async def test_get_public_share_card(client: AsyncClient) -> None:
     assert p_data["completed_region_count"] == 1
     assert len(p_data["colored_regions"]) == 1
     assert p_data["colored_regions"][0]["name"] == "단양군"
+    assert p_data["colored_regions"][0]["completed_journey_count"] == 1
 
 
 @pytest.mark.asyncio
@@ -141,11 +144,23 @@ async def _create_share_and_get_landing(
     return landing_res.text
 
 
+async def _create_journey_for_gps_quest(
+    client: AsyncClient, headers: dict[str, str], seed: dict[str, str]
+) -> None:
+    response = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        headers=headers,
+    )
+    assert response.status_code == 201
+
+
 @pytest.mark.asyncio
 async def test_share_landing_page_map_and_dna(client: AsyncClient) -> None:
     """MAP_AND_DNA 랜딩 페이지는 공개용 지도와 DNA 설명을 모두 보여줍니다."""
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
+    await _create_journey_for_gps_quest(client, headers, seed)
     await client.post(
         f"/api/v1/quests/{seed['gps_quest_id']}/verify",
         json={
@@ -161,6 +176,8 @@ async def test_share_landing_page_map_and_dna(client: AsyncClient) -> None:
     assert 'viewBox="10 10 480 460"' in html
     assert 'aria-label="충청북도 11개 시군 여행 지도"' in html
     assert "단양군" in html
+    assert 'fill="#F4F2F8"' in html
+    assert 'fill="#B096E3"' not in html
     assert "자연탐험형 여행자" in html
     assert "대자연 속에서 에너지를 얻고 조용한 힐링을 즐기는 탐험가예요." in html
 
@@ -186,6 +203,7 @@ async def test_share_landing_page_map_only_omits_dna(client: AsyncClient) -> Non
     """MAP 스타일 랜딩 페이지는 색칠 지역만 보여주고 DNA는 노출하지 않습니다."""
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
+    await _create_journey_for_gps_quest(client, headers, seed)
     await client.post(
         f"/api/v1/quests/{seed['gps_quest_id']}/verify",
         json={
@@ -208,6 +226,7 @@ async def test_share_landing_page_dna_only_omits_regions(client: AsyncClient) ->
     """DNA 스타일 랜딩 페이지는 DNA만 보여주고 색칠 지역은 노출하지 않습니다."""
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
+    await _create_journey_for_gps_quest(client, headers, seed)
     await client.post(
         f"/api/v1/quests/{seed['gps_quest_id']}/verify",
         json={

@@ -5,6 +5,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:colortrip/data/repositories/domain_repository.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/progress_state.dart';
 
@@ -99,5 +100,52 @@ void main() {
       container.read(progressProvider).tripStatusOf('danyang', now: today),
       RegionTripStatus.notStarted,
     );
+  });
+
+  test('서버 스냅샷의 completed 여정 수를 여행 완료 지표로 쓴다', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final createdAt = DateTime(2026, 8, 13);
+
+    container
+        .read(progressProvider.notifier)
+        .replaceFromServer(
+          DomainSnapshot(
+            catalog: const DomainCatalog(
+              regionIdsByKey: {'danyang': 'region-uuid'},
+              regionKeysById: {'region-uuid': 'danyang'},
+              questIdsByKey: {'dy1': 'quest-uuid'},
+              questKeysById: {'quest-uuid': 'dy1'},
+            ),
+            journeys: [
+              DomainJourney(
+                id: 'completed-journey',
+                regionKey: 'danyang',
+                questKeys: const ['dy1'],
+                title: '완료 여행',
+                startDate: createdAt,
+                endDate: createdAt,
+                status: 'completed',
+                createdAt: createdAt,
+              ),
+              DomainJourney(
+                id: 'active-journey',
+                regionKey: 'danyang',
+                questKeys: const ['dy1'],
+                title: '진행 여행',
+                startDate: createdAt,
+                endDate: createdAt.add(const Duration(days: 1)),
+                status: 'in_progress',
+                createdAt: createdAt,
+              ),
+            ],
+            completedQuestKeys: const {},
+            regionProgress: const {},
+            regionTripCount: const {},
+            timeline: const [],
+          ),
+        );
+
+    expect(container.read(progressProvider).completedJourneyCount, 1);
   });
 }

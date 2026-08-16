@@ -12,7 +12,12 @@ from app.core.database import get_session
 from app.core.exceptions import AppException
 from app.core.response import Envelope, success
 from app.shares import service
-from app.shares.public_map import PUBLIC_MAP_REGIONS, PUBLIC_MAP_VIEW_BOX
+from app.shares.public_map import (
+    PUBLIC_MAP_REGIONS,
+    PUBLIC_MAP_VIEW_BOX,
+    public_map_fill_color,
+    public_map_label_color,
+)
 from app.shares.schemas import (
     ShareCreateRequest,
     ShareCreateResponse,
@@ -142,13 +147,15 @@ def _render_public_map(card: ShareReadResponse) -> str:
     if card.share_style not in {ShareStyle.MAP.value, ShareStyle.MAP_AND_DNA.value}:
         return ""
 
-    colored_region_names = {region.name for region in card.colored_regions}
+    completed_journey_counts = {
+        region.name: region.completed_journey_count for region in card.colored_regions
+    }
     paths = []
     labels = []
     for region in PUBLIC_MAP_REGIONS:
-        is_colored = region.name in colored_region_names
-        fill = region.filled_color if is_colored else "#F0F0F0"
-        label_fill = "#FFFFFF" if is_colored else "#9A9A90"
+        completed_journey_count = completed_journey_counts.get(region.name, 0)
+        fill = public_map_fill_color(region, completed_journey_count)
+        label_fill = public_map_label_color(fill)
         label_x, label_y = _polygon_centroid(_svg_path_points(region.path))
 
         paths.append(
@@ -169,7 +176,7 @@ def _render_public_map(card: ShareReadResponse) -> str:
             아직 색칠한 지역이 없어요.
         </p>
         """
-        if not colored_region_names
+        if not completed_journey_counts
         else ""
     )
 
