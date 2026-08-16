@@ -20,10 +20,11 @@ import '../../state/repository_providers.dart';
 /// 홈 화면에 하나만 존재하므로 모듈 전역 키로 충분하다(코치마크가 지도 위치를 측정하는 용도).
 final _mapKey = GlobalKey();
 
-/// 홈(지도) — Figma 스펙(2026-07-08 공유) 반영: 완료 지역/진행률 스탯, 추천 여행지 배너(KAN-28),
-/// 진행중 여행+DNA 카드, 지도 색칠(범례 포함), 최근 완료 섹션. 공유 버튼은 지도 바로 위에 붙여
-/// 무엇을 공유하는지 헷갈리지 않게 한다(2026-07-11 KAN-029). 온보딩 투어 1단계로 지도를
-/// 코치마크로 안내한다(KAN-040 피드백 — 텍스트 설명 대신 실제 화면에 화살표로 표시).
+/// 홈(지도) — Figma 스펙(2026-07-08 공유) 반영: 추천 여행지 배너(KAN-28),
+/// 지도 색칠(범례 포함), 최근 완료 섹션. 진행도는 지도 좌상단의 작은 배지로 압축하고,
+/// 공유 버튼은 지도 우상단에 붙여 무엇을 공유하는지 헷갈리지 않게 한다(2026-07-11 KAN-029).
+/// 온보딩 투어 1단계로 지도를 코치마크로 안내한다(KAN-040 피드백 — 텍스트 설명 대신 실제
+/// 화면에 화살표로 표시).
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -46,47 +47,55 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _StatsSummaryCard(
-                    completedRegionCount: progress.completedRegionCount,
-                    totalRegionCount: kRegions.length,
-                    progressPct: progressPct,
-                  ),
-                  const SizedBox(height: 16),
-                  const _InProgressDnaCard(),
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () => context.push('/share'),
-                      icon: const Icon(Icons.ios_share, size: 16),
-                      label: const Text('공유하기'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primaryDark,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        minimumSize: const Size(48, 48),
+                  const _RecommendedRegionBanner(),
+                  const SizedBox(height: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _CompactProgressBar(
+                              completedJourneyCount:
+                                  progress.completedJourneyCount,
+                              coloringPct: progressPct,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => context.push('/share'),
+                            tooltip: '공유하기',
+                            icon: const Icon(Icons.ios_share, size: 22),
+                            color: AppColors.primaryDark,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints.tightFor(
+                              width: 44,
+                              height: 40,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  KeyedSubtree(
-                    key: _mapKey,
-                    child: ChungbukMap(
-                      regionSaturation: {
-                        for (final region in kRegions)
-                          region.id: progress.regionSaturation(region.id),
-                      },
-                      onRegionTap: (regionId) {
-                        if (!tour.isDone && tour.step == 0) {
-                          ref.read(onboardingTourProvider.notifier).advance();
-                        }
-                        context.push('/region/$regionId');
-                      },
-                    ),
+                      const SizedBox(height: 8),
+                      KeyedSubtree(
+                        key: _mapKey,
+                        child: ChungbukMap(
+                          regionSaturation: {
+                            for (final region in kRegions)
+                              region.id: progress.regionSaturation(region.id),
+                          },
+                          onRegionTap: (regionId) {
+                            if (!tour.isDone && tour.step == 0) {
+                              ref
+                                  .read(onboardingTourProvider.notifier)
+                                  .advance();
+                            }
+                            context.push('/region/$regionId');
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
                   const MapLegend(),
-                  const SizedBox(height: 20),
-                  const _RecommendedRegionBanner(),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -147,90 +156,79 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _StatsSummaryCard extends StatelessWidget {
-  const _StatsSummaryCard({
-    required this.completedRegionCount,
-    required this.totalRegionCount,
-    required this.progressPct,
+class _CompactProgressBar extends StatelessWidget {
+  const _CompactProgressBar({
+    required this.completedJourneyCount,
+    required this.coloringPct,
   });
 
-  final int completedRegionCount;
-  final int totalRegionCount;
-  final int progressPct;
+  final int completedJourneyCount;
+  final int coloringPct;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final barWidth = constraints.maxWidth < 105
+              ? constraints.maxWidth
+              : 105.0;
+          return Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: _StatColumn(
-                  label: '완료한 지역',
-                  value: '$completedRegionCount / $totalRegionCount',
+              _ProgressMetric(label: '여행 완료', value: '$completedJourneyCount'),
+              _ProgressMetric(label: '채색률', value: '$coloringPct%'),
+              SizedBox(
+                width: barWidth,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: coloringPct / 100,
+                    minHeight: 4,
+                    backgroundColor: const Color(0xFFEEEEEA),
+                    valueColor: const AlwaysStoppedAnimation(
+                      AppColors.primaryDark,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _StatColumn(label: '진행률', value: '$progressPct%'),
-              ),
             ],
-          ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: progressPct / 100,
-              minHeight: 6,
-              backgroundColor: const Color(0xFFEEEEEA),
-              valueColor: const AlwaysStoppedAnimation(AppColors.primaryDark),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 }
 
-class _StatColumn extends StatelessWidget {
-  const _StatColumn({required this.label, required this.value});
+class _ProgressMetric extends StatelessWidget {
+  const _ProgressMetric({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: AppColors.formLabel),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF111111),
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label ',
+            style: const TextStyle(
+              color: AppColors.formLabel,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-      ],
+          TextSpan(text: value),
+        ],
+      ),
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w800,
+        color: Color(0xFF111111),
+      ),
     );
   }
 }
@@ -472,102 +470,6 @@ class _QuestSummaryRow extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 진행 중인 지역(0<진행도<전체) + 여행 DNA 요약 카드.
-class _InProgressDnaCard extends ConsumerWidget {
-  const _InProgressDnaCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final progress = ref.watch(progressProvider);
-    final dna = ref
-        .watch(dnaRepositoryProvider)
-        .byId(progress.dnaType ?? 'nature');
-
-    String? inProgressLabel;
-    String? inProgressRegionId;
-    for (final region in kRegionsInMapOrder) {
-      if (progress.tripStatusOf(region.id) != RegionTripStatus.inProgress) {
-        continue;
-      }
-      final trip = progress.tripQuestsOf(region.id);
-      final done = trip.where(progress.isCompleted).length;
-      inProgressLabel = '${region.name} $done/${trip.length}';
-      inProgressRegionId = region.id;
-      break;
-    }
-
-    // 카드가 세로로 과하게 크다는 피드백(KAN-73)으로 여백·폰트·태그를 압축했다. 가로는
-    // 그대로 화면 폭을 쓰고, 설명은 두 줄까지만 보여 카드 높이가 DNA 문구 길이에 휘둘리지
-    // 않게 한다.
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.tripActiveBadgeBg,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          if (inProgressLabel != null) ...[
-            // KAN-69: 카드를 눌러 해당 지역 "여행하기" 화면으로 이동한다.
-            // 레이아웃은 KAN-73의 압축안(한 줄 · fontSize 13 · 간격 4)을 유지한다 —
-            // 카드가 세로로 과하게 크다는 피드백을 되돌리지 않기 위함(위 주석 참고).
-            InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => context.push('/region/$inProgressRegionId'),
-              child: Text(
-                '진행중인 여행 · $inProgressLabel',
-                style: const TextStyle(
-                  color: AppColors.tripActiveBadgeFg,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-          ],
-          Text(
-            dna.desc,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.primaryDark,
-              fontSize: 11,
-              height: 1.25,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 5,
-            runSpacing: 4,
-            alignment: WrapAlignment.center,
-            children: [
-              for (final tag in dna.tags.take(3))
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    tag,
-                    style: const TextStyle(
-                      color: AppColors.tripActiveBadgeFg,
-                      fontSize: 10,
-                    ),
-                  ),
-                ),
-            ],
           ),
         ],
       ),

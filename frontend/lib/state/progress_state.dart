@@ -87,6 +87,7 @@ class ProgressState {
     required this.regionProgress,
     required this.regionTripCount,
     required this.localTripCompletions,
+    required this.completedJourneyCount,
   });
 
   const ProgressState.empty()
@@ -98,7 +99,8 @@ class ProgressState {
       nickname = null,
       regionProgress = const {},
       regionTripCount = const {},
-      localTripCompletions = const {};
+      localTripCompletions = const {},
+      completedJourneyCount = 0;
 
   final Set<String> completedQuestIds;
   final List<TimelineEntry> timeline;
@@ -129,6 +131,10 @@ class ProgressState {
   /// 이유: 완료한 지역에 퀘스트를 더 담아도(KAN-46 재방문) 이미 칠해진 채색이 사라지지
   /// 않아야 하기 때문이다([055-journey-map-coloring]).
   final Map<String, int> localTripCompletions;
+
+  /// 완료 상태가 된 여행(여정) 수 — 홈 지표의 "여행 완료"에 사용한다. 지도 채색률과
+  /// 다른 척도라서 서버 journeys 목록의 status == completed 건수로 따로 보존한다.
+  final int completedJourneyCount;
 
   bool isCompleted(String questId) => completedQuestIds.contains(questId);
 
@@ -207,6 +213,7 @@ class ProgressState {
     Map<String, int>? regionProgress,
     Map<String, int>? regionTripCount,
     Map<String, int>? localTripCompletions,
+    int? completedJourneyCount,
   }) {
     return ProgressState(
       completedQuestIds: completedQuestIds ?? this.completedQuestIds,
@@ -218,6 +225,8 @@ class ProgressState {
       regionProgress: regionProgress ?? this.regionProgress,
       regionTripCount: regionTripCount ?? this.regionTripCount,
       localTripCompletions: localTripCompletions ?? this.localTripCompletions,
+      completedJourneyCount:
+          completedJourneyCount ?? this.completedJourneyCount,
     );
   }
 }

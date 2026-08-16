@@ -4,11 +4,11 @@ import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from app.auth.models import User
 from app.core.config import settings
 from app.core.exceptions import AppException, ErrorCode
+from app.maps.repository import count_colored_journeys_by_region
 from app.progress.models import MapProgress
 from app.regions.repository import list_regions
 from app.shares import repository
@@ -36,27 +36,20 @@ async def get_user_share_summary_data(session: AsyncSession, user: User) -> Shar
     all_regions = await list_regions(session)
     total_region_count = len(all_regions)
 
-    # 2. 유저의 색칠된 지도 진행률 조회 (completed_count > 0)
-    stmt = (
-        select(MapProgress)
-        .options(joinedload(MapProgress.region))
-        .where(
-            MapProgress.user_id == user.id,
-            MapProgress.completed_count > 0,
-            MapProgress.deleted_at.is_(None),
-        )
-    )
-    result = await session.execute(stmt)
-    map_progresses = list(result.scalars().all())
+    # 2. 앱 지도와 같은 기준으로 색칠된 지역을 계산한다.
+    # 완료 퀘스트가 1개 이상인 여정 수가 1 이상이면 색칠된 지역이다
+    # (docs/specs/055-journey-map-coloring/).
+    completed_journey_counts = await count_colored_journeys_by_region(session, user.id)
 
     colored_regions = [
         ColoredRegionItem(
-            id=mp.region.id,
-            name=mp.region.name,
-            area_code=mp.region.area_code,
+            id=region.id,
+            name=region.name,
+            area_code=region.area_code,
+            completed_journey_count=count,
         )
-        for mp in map_progresses
-        if mp.region is not None
+        for region in all_regions
+        if (count := completed_journey_counts.get(region.id, 0)) > 0
     ]
 
     completed_region_count = len(colored_regions)

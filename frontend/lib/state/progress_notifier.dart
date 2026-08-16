@@ -131,6 +131,9 @@ class ProgressNotifier extends Notifier<ProgressState> {
       // 지도가 영영 채색되지 않는 버그가 있었다. 서버 값이 로컬 누적([localTripCompletions])보다
       // 클 때만 의미가 있으므로(ProgressState.completedTripCountOf가 max 병합) 그대로 담는다.
       regionTripCount: {...snapshot.regionTripCount},
+      completedJourneyCount: snapshot.journeys
+          .where((journey) => journey.status == 'completed')
+          .length,
     );
   }
 

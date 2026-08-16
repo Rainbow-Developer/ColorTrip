@@ -28,6 +28,7 @@ class ColoredRegionItem(BaseModel):
     id: uuid.UUID
     name: str
     area_code: str | None = None
+    completed_journey_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

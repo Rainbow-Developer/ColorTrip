@@ -53,18 +53,36 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
-                            child: const Text('취소', style: TextStyle(color: AppColors.textMuted)),
+                            child: const Text(
+                              '취소',
+                              style: TextStyle(color: AppColors.textMuted),
+                            ),
                           ),
-                          const Text('날짜 선택', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                          const Text(
+                            '날짜 선택',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
-                            child: const Text('확인', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
+                            child: const Text(
+                              '확인',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -76,11 +94,14 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           Expanded(
                             child: CupertinoPicker(
                               itemExtent: 40,
-                              scrollController: FixedExtentScrollController(initialItem: tempYear - 2024),
+                              scrollController: FixedExtentScrollController(
+                                initialItem: tempYear - 2024,
+                              ),
                               onSelectedItemChanged: (idx) {
                                 setSheetState(() {
                                   tempYear = 2024 + idx;
-                                  if (tempYear == now.year && tempMonth > now.month - 1) {
+                                  if (tempYear == now.year &&
+                                      tempMonth > now.month - 1) {
                                     tempMonth = now.month - 1;
                                   }
                                 });
@@ -94,11 +115,14 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           Expanded(
                             child: CupertinoPicker(
                               itemExtent: 40,
-                              scrollController: FixedExtentScrollController(initialItem: tempMonth),
+                              scrollController: FixedExtentScrollController(
+                                initialItem: tempMonth,
+                              ),
                               onSelectedItemChanged: (idx) {
                                 setSheetState(() {
                                   tempMonth = idx;
-                                  if (tempYear == now.year && tempMonth > now.month - 1) {
+                                  if (tempYear == now.year &&
+                                      tempMonth > now.month - 1) {
                                     tempMonth = now.month - 1; // 미래 월 선택 제한
                                   }
                                 });
@@ -109,7 +133,9 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                                     child: Text(
                                       '$m월',
                                       style: TextStyle(
-                                        color: (tempYear == now.year && m > now.month)
+                                        color:
+                                            (tempYear == now.year &&
+                                                m > now.month)
                                             ? AppColors.textMuted
                                             : AppColors.textBody,
                                       ),
@@ -134,7 +160,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       final timeline = ref.read(progressProvider).timeline;
       final monthLabel = '$tempYear년 ${tempMonth + 1}월';
       final hasRecords = timeline.any((e) => e.month == monthLabel);
-      
+
       if (!hasRecords) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -199,7 +225,10 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
               onTap: _showPicker,
               borderRadius: BorderRadius.circular(8),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -232,7 +261,6 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     );
   }
 }
-
 
 /// 지역별 보기 — 월 요약 카드 + 지역별 접기/펼치기 섹션.
 class _RegionGroupedView extends StatelessWidget {
@@ -383,7 +411,6 @@ List<_RegionGroup> _groupByRegion({
   return groups.values.toList()
     ..sort((a, b) => a.earliestCompletedAt.compareTo(b.earliestCompletedAt));
 }
-
 
 /// 지역별 보기 상단의 월 요약 카드 — "{월}월의 여행 기록 / N개 지역 · M개 퀘스트" + 진행 바.
 class _MonthSummaryCard extends StatelessWidget {
