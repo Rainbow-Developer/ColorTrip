@@ -167,69 +167,67 @@ class _CompactProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(
-                    text: '여행 완료 ',
-                    style: TextStyle(
-                      color: AppColors.formLabel,
-                      fontWeight: FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final barWidth = constraints.maxWidth < 105
+              ? constraints.maxWidth
+              : 105.0;
+          return Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _ProgressMetric(label: '여행 완료', value: '$completedJourneyCount'),
+              _ProgressMetric(label: '채색률', value: '$coloringPct%'),
+              SizedBox(
+                width: barWidth,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: coloringPct / 100,
+                    minHeight: 4,
+                    backgroundColor: const Color(0xFFEEEEEA),
+                    valueColor: const AlwaysStoppedAnimation(
+                      AppColors.primaryDark,
                     ),
-                  ),
-                  TextSpan(text: '$completedJourneyCount'),
-                ],
-              ),
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF111111),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(
-                    text: '채색률 ',
-                    style: TextStyle(
-                      color: AppColors.formLabel,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  TextSpan(text: '$coloringPct%'),
-                ],
-              ),
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF111111),
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 105,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: LinearProgressIndicator(
-                  value: coloringPct / 100,
-                  minHeight: 4,
-                  backgroundColor: const Color(0xFFEEEEEA),
-                  valueColor: const AlwaysStoppedAnimation(
-                    AppColors.primaryDark,
                   ),
                 ),
               ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ProgressMetric extends StatelessWidget {
+  const _ProgressMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label ',
+            style: const TextStyle(
+              color: AppColors.formLabel,
+              fontWeight: FontWeight.w500,
             ),
-          ],
-        ),
+          ),
+          TextSpan(text: value),
+        ],
+      ),
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w800,
+        color: Color(0xFF111111),
       ),
     );
   }
