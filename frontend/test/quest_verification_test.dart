@@ -59,6 +59,27 @@ const _gpsQuest = Quest(
   verifyRadius: 300,
 );
 
+/// 앱의 퀘스트 키(client_key)와 서버가 아는 UUID — 배경 지도 URL은 **UUID**를 써야 한다.
+/// 앱 곳곳의 다른 API 호출과 같은 규칙이고, 이걸 빠뜨려 서버가 거절했던 게 KAN-91이다.
+const _gpsQuestKey = 'test-gps-coords';
+const _gpsQuestServerUuid = 'b1f0c2d3-4e5f-6789-abcd-ef0123456789';
+
+/// 카탈로그에 서버 UUID 매핑이 없는 gps 퀘스트 — 배경 URL을 만들 수 없는 경우.
+const _gpsQuestNotInCatalog = Quest(
+  id: 'not-in-catalog',
+  region: 'danyang',
+  type: 'nature',
+  title: '카탈로그에 없는 GPS 퀘스트',
+  place: '도담삼봉',
+  verify: 'gps',
+  reward: 10,
+  desc: '',
+  conditions: [],
+  lat: 37.0008,
+  lng: 128.3418,
+  verifyRadius: 300,
+);
+
 /// 측위를 대신하는 대역 — 플랫폼 채널 없이 임의 좌표를 돌려준다.
 class _FakeLocationGateway implements LocationGateway {
   _FakeLocationGateway(this.latitude, this.longitude);
@@ -128,8 +149,8 @@ class _QuizDomainRepository implements DomainRepository {
     catalog: const DomainCatalog(
       regionIdsByKey: {},
       regionKeysById: {},
-      questIdsByKey: {},
-      questKeysById: {},
+      questIdsByKey: {_gpsQuestKey: _gpsQuestServerUuid},
+      questKeysById: {_gpsQuestServerUuid: _gpsQuestKey},
     ),
     journeys: const [],
     completedQuestKeys: _completed,
@@ -313,8 +334,8 @@ class _PhotoDomainRepository implements DomainRepository {
     catalog: const DomainCatalog(
       regionIdsByKey: {},
       regionKeysById: {},
-      questIdsByKey: {},
-      questKeysById: {},
+      questIdsByKey: {_gpsQuestKey: _gpsQuestServerUuid},
+      questKeysById: {_gpsQuestServerUuid: _gpsQuestKey},
     ),
     journeys: const [],
     completedQuestKeys: _completed,
@@ -864,6 +885,55 @@ void main() {
     expect(repository.verifyCalls, 0);
     expect(find.byType(GpsVerifyMap), findsOneWidget);
     expect(find.textContaining('떨어져'), findsWidgets);
+  });
+
+  testWidgets('gps 분기 — 배경 지도 URL은 client_key가 아니라 서버 UUID를 쓴다', (
+    tester,
+  ) async {
+    // KAN-91: 앱의 quest.id는 client_key(`dy3`)인데 서버 경로는 UUID를 받는다. 카탈로그
+    // 변환을 빠뜨리면 서버가 거절하고 배경이 통째로 사라진다(사용자 보고 "지도가 전혀 안 뜬다").
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+
+    final container = _container(
+      fakeQuests: [_gpsQuest],
+      domainRepository: _PhotoDomainRepository(),
+      locationGateway: _FakeLocationGateway(37.0130, 128.3418),
+    );
+    await tester.pumpWidget(_wrapVerifyScreen(_gpsQuest.id, container));
+    await tester.pumpAndSettle();
+
+    final map = tester.widget<GpsVerifyMap>(find.byType(GpsVerifyMap));
+    expect(map.mapImageUrl, isNotNull);
+    expect(map.mapImageUrl, contains(_gpsQuestServerUuid));
+    expect(
+      map.mapImageUrl,
+      isNot(contains(_gpsQuestKey)),
+      reason: 'client_key를 그대로 넣으면 서버가 UUID 파싱에 실패한다',
+    );
+  });
+
+  testWidgets('gps 분기 — 카탈로그에 없는 퀘스트는 배경 없이 그린다', (tester) async {
+    // 카탈로그가 아직 없거나 서버에 없는 퀘스트면 URL을 만들 수 없다. 배경은 참고용이라
+    // 없으면 도식만 그리면 되고, 인증을 막아서는 안 된다.
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+
+    final container = _container(
+      fakeQuests: [_gpsQuestNotInCatalog],
+      domainRepository: _PhotoDomainRepository(),
+      locationGateway: _FakeLocationGateway(37.0130, 128.3418),
+    );
+    await tester.pumpWidget(
+      _wrapVerifyScreen(_gpsQuestNotInCatalog.id, container),
+    );
+    await tester.pumpAndSettle();
+
+    final map = tester.widget<GpsVerifyMap>(find.byType(GpsVerifyMap));
+    expect(map.mapImageUrl, isNull);
+    expect(find.widgetWithText(ElevatedButton, '현재 위치로 인증하기'), findsOneWidget);
   });
 
   testWidgets('gps 분기 — 측위에 실패해도 도식은 그리고 화면을 막지 않는다', (tester) async {
