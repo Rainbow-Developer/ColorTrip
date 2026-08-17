@@ -44,6 +44,14 @@ class TimelineRepository:
                 )
             )
             assert existing is not None
+            if existing.deleted_at is not None:
+                existing.user_id = obj_in.user_id
+                existing.region_id = obj_in.region_id
+                existing.title = obj_in.title
+                existing.occurred_at = obj_in.occurred_at
+                existing.deleted_at = None
+                await session.flush()
+                return existing, True
             return existing, False
 
         db_obj = TimelineEvent(
@@ -73,6 +81,7 @@ class TimelineRepository:
                 joinedload(TimelineEvent.quest_progress).joinedload(QuestProgress.quest),
             )
             .where(TimelineEvent.user_id == user_id)
+            .where(TimelineEvent.deleted_at.is_(None))
             .order_by(TimelineEvent.occurred_at.desc())
         )
 

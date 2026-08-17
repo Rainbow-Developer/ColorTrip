@@ -56,6 +56,18 @@ class _Repository implements DomainRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<DomainJourney> updateJourney({
+    required String journeyId,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteJourney({required String journeyId}) =>
+      throw UnimplementedError();
+
+  @override
   Future<String> uploadPhoto(
     Uint8List bytes, {
     String mimeType = 'image/jpeg',

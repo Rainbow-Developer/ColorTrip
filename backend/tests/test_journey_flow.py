@@ -260,6 +260,186 @@ async def test_create_journey_rejects_reversed_dates(client: AsyncClient) -> Non
     assert response.json()["code"] == "VALIDATION_ERROR"
 
 
+async def test_update_journey_changes_title_and_dates(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    created = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            "title": "처음 여행",
+            "start_date": "2026-07-20",
+            "end_date": "2026-07-22",
+        },
+        headers=headers,
+    )
+    journey_id = created.json()["data"]["id"]
+
+    updated = await client.patch(
+        f"/api/v1/journeys/{journey_id}",
+        json={
+            "title": "수정한 여행",
+            "start_date": "2026-08-01",
+            "end_date": "2026-08-03",
+        },
+        headers=headers,
+    )
+
+    assert updated.status_code == 200
+    data = updated.json()["data"]
+    assert data["title"] == "수정한 여행"
+    assert data["start_date"] == "2026-08-01"
+    assert data["end_date"] == "2026-08-03"
+
+
+async def test_update_journey_rejects_reversed_dates(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    created = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        headers=headers,
+    )
+    journey_id = created.json()["data"]["id"]
+
+    response = await client.patch(
+        f"/api/v1/journeys/{journey_id}",
+        json={"start_date": "2026-08-03", "end_date": "2026-08-01"},
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+async def test_delete_journey_soft_deletes_linked_records(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    created = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["quiz_quest_id"]]},
+        headers=headers,
+    )
+    journey_id = created.json()["data"]["id"]
+
+    verified = await client.post(
+        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
+        json={"answer": "O", "journey_id": journey_id},
+        headers=headers,
+    )
+    assert verified.json()["data"]["verified"] is True
+    assert len((await client.get("/api/v1/users/me/timeline", headers=headers)).json()["data"]) == 2
+
+    deleted = await client.delete(f"/api/v1/journeys/{journey_id}", headers=headers)
+    assert deleted.status_code == 200
+
+    listed = await client.get("/api/v1/journeys", headers=headers)
+    assert listed.json()["data"]["total"] == 0
+    detail = await client.get(f"/api/v1/journeys/{journey_id}", headers=headers)
+    assert detail.status_code == 404
+    timeline = await client.get("/api/v1/users/me/timeline", headers=headers)
+    assert timeline.json()["data"] == []
+    map_response = await client.get("/api/v1/users/me/map", headers=headers)
+    region = next(
+        item for item in map_response.json()["data"] if item["region_id"] == seed["region_id"]
+    )
+    assert region["completed_journey_count"] == 0
+
+    recreated = await client.post(
+        "/api/v1/journeys",
+        json={"region_id": seed["region_id"], "quest_ids": [seed["quiz_quest_id"]]},
+        headers=headers,
+    )
+    new_journey_id = recreated.json()["data"]["id"]
+    verified_again = await client.post(
+        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
+        json={"answer": "O", "journey_id": new_journey_id},
+        headers=headers,
+    )
+    assert verified_again.status_code == 200
+    assert verified_again.json()["data"]["verified"] is True
+
+
+async def test_delete_journey_keeps_shared_quest_progress_for_other_journey(
+    client: AsyncClient,
+) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    first = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["quiz_quest_id"]],
+            "title": "첫 번째 여행",
+        },
+        headers=headers,
+    )
+    second = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["quiz_quest_id"]],
+            "title": "두 번째 여행",
+        },
+        headers=headers,
+    )
+    first_id = first.json()["data"]["id"]
+    second_id = second.json()["data"]["id"]
+
+    verified = await client.post(
+        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
+        json={"answer": "O", "journey_id": first_id},
+        headers=headers,
+    )
+    assert verified.json()["data"]["verified"] is True
+
+    before_delete = await client.get(f"/api/v1/journeys/{second_id}", headers=headers)
+    assert before_delete.json()["data"]["status"] == "in_progress"
+    assert before_delete.json()["data"]["progress"] == {"completed": 0, "total": 1}
+
+    deleted = await client.delete(f"/api/v1/journeys/{first_id}", headers=headers)
+    assert deleted.status_code == 200
+
+    remaining = await client.get(f"/api/v1/journeys/{second_id}", headers=headers)
+    assert remaining.status_code == 200
+    assert remaining.json()["data"]["status"] == "completed"
+    assert remaining.json()["data"]["progress"] == {"completed": 1, "total": 1}
+    timeline = await client.get("/api/v1/users/me/timeline", headers=headers)
+    assert len(timeline.json()["data"]) == 2
+    map_response = await client.get("/api/v1/users/me/map", headers=headers)
+    region = next(
+        item for item in map_response.json()["data"] if item["region_id"] == seed["region_id"]
+    )
+    assert region["completed_journey_count"] == 1
+
+
+async def test_verify_shared_quest_requires_explicit_journey(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    for title in ["첫 번째 여행", "두 번째 여행"]:
+        created = await client.post(
+            "/api/v1/journeys",
+            json={
+                "region_id": seed["region_id"],
+                "quest_ids": [seed["quiz_quest_id"]],
+                "title": title,
+            },
+            headers=headers,
+        )
+        assert created.status_code == 201
+
+    missing_journey = await client.post(
+        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
+        json={"answer": "O"},
+        headers=headers,
+    )
+    assert missing_journey.status_code == 422
+    assert missing_journey.json()["code"] == "VALIDATION_ERROR"
+
+
 async def test_create_journey_rejects_cross_region_quest(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)

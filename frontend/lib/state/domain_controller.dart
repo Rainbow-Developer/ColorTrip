@@ -74,6 +74,36 @@ class DomainController extends AsyncNotifier<DomainSnapshot> {
     await refresh();
   }
 
+  Future<void> updateJourney({
+    required String journeyId,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    await ref
+        .read(domainRepositoryProvider)
+        .updateJourney(
+          journeyId: journeyId,
+          title: title,
+          startDate: startDate,
+          endDate: endDate,
+        );
+    await refresh();
+  }
+
+  Future<void> deleteJourney({required String journeyId}) async {
+    final regionKey = _regionKeyForJourney(state.value, journeyId);
+    await ref
+        .read(domainRepositoryProvider)
+        .deleteJourney(journeyId: journeyId);
+    if (regionKey != null) {
+      ref
+          .read(progressProvider.notifier)
+          .clearLocalTripCompletionsForRegion(regionKey);
+    }
+    await refresh();
+  }
+
   /// 좌표 파라미터는 없다 — 위치 인증은 단말에서 판정하고 좌표를 서버로 보내지 않는다
   /// (docs/specs/050-quest-verification/location-law-review.md, KAN-77).
   Future<QuestVerification> verifyQuest({
@@ -137,4 +167,12 @@ String _uuidV4() {
   return '${value.substring(0, 8)}-${value.substring(8, 12)}-'
       '${value.substring(12, 16)}-${value.substring(16, 20)}-'
       '${value.substring(20)}';
+}
+
+String? _regionKeyForJourney(DomainSnapshot? snapshot, String journeyId) {
+  if (snapshot == null) return null;
+  for (final journey in snapshot.journeys) {
+    if (journey.id == journeyId) return journey.regionKey;
+  }
+  return null;
 }

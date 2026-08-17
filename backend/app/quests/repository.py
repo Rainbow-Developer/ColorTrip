@@ -101,6 +101,17 @@ async def get_progress(
     return await session.scalar(stmt)
 
 
+async def get_progress_including_deleted(
+    session: AsyncSession, user_id: UUID, quest_id: UUID
+) -> QuestProgress | None:
+    """사용자×퀘스트 진행 레코드를 soft delete 포함해 조회한다 (복원 판단용)."""
+    stmt = select(QuestProgress).where(
+        QuestProgress.user_id == user_id,
+        QuestProgress.quest_id == quest_id,
+    )
+    return await session.scalar(stmt)
+
+
 async def list_progress(
     session: AsyncSession,
     user_id: UUID,

@@ -3,9 +3,9 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from app.core.enums import ProgressStatus
 from app.journeys.models import Journey, JourneyQuest
@@ -142,16 +142,22 @@ async def get_quests_by_ids(session: AsyncSession, quest_ids: list[UUID]) -> Seq
 
 
 async def progress_status_map(
-    session: AsyncSession, user_id: UUID, quest_ids: list[UUID]
+    session: AsyncSession,
+    user_id: UUID,
+    quest_ids: list[UUID],
+    journey_id: UUID | None = None,
 ) -> dict[UUID, str]:
     """사용자의 퀘스트별 진행 상태 맵을 반환한다."""
     if not quest_ids:
         return {}
-    stmt = select(QuestProgress.quest_id, QuestProgress.status).where(
+    filters: list[ColumnElement[bool]] = [
         QuestProgress.user_id == user_id,
         QuestProgress.quest_id.in_(quest_ids),
         QuestProgress.deleted_at.is_(None),
-    )
+    ]
+    if journey_id is not None:
+        filters.append(QuestProgress.journey_id == journey_id)
+    stmt = select(QuestProgress.quest_id, QuestProgress.status).where(*filters)
     rows = (await session.execute(stmt)).all()
     return {quest_id: status for quest_id, status in rows}
 
@@ -192,6 +198,22 @@ async def progress_summary_map(
         QuestProgress.status == ProgressStatus.COMPLETED.value,
         QuestProgress.deleted_at.is_(None),
     )
+    legacy_journey = aliased(Journey)
+    legacy_journey_quest = aliased(JourneyQuest)
+    legacy_journey_id = (
+        select(legacy_journey.id)
+        .join(legacy_journey_quest, legacy_journey_quest.journey_id == legacy_journey.id)
+        .where(
+            legacy_journey.user_id == user_id,
+            legacy_journey.deleted_at.is_(None),
+            legacy_journey_quest.quest_id == QuestProgress.quest_id,
+            legacy_journey_quest.deleted_at.is_(None),
+        )
+        .order_by(legacy_journey.created_at.asc(), legacy_journey.id.asc())
+        .limit(1)
+        .correlate(QuestProgress)
+        .scalar_subquery()
+    )
     stmt = (
         select(
             JourneyQuest.journey_id,
@@ -200,7 +222,15 @@ async def progress_summary_map(
         )
         .outerjoin(
             QuestProgress,
-            (QuestProgress.quest_id == JourneyQuest.quest_id) & (QuestProgress.user_id == user_id),
+            (QuestProgress.quest_id == JourneyQuest.quest_id)
+            & or_(
+                QuestProgress.journey_id == JourneyQuest.journey_id,
+                and_(
+                    QuestProgress.journey_id.is_(None),
+                    JourneyQuest.journey_id == legacy_journey_id,
+                ),
+            )
+            & (QuestProgress.user_id == user_id),
         )
         .where(JourneyQuest.journey_id.in_(journey_ids), JourneyQuest.deleted_at.is_(None))
         .group_by(JourneyQuest.journey_id)

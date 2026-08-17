@@ -201,6 +201,18 @@ class _QuizDomainRepository implements DomainRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<DomainJourney> updateJourney({
+    required String journeyId,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteJourney({required String journeyId}) =>
+      throw UnimplementedError();
+
+  @override
   Future<String> uploadPhoto(
     Uint8List bytes, {
     String mimeType = 'image/jpeg',
@@ -409,6 +421,18 @@ class _PhotoDomainRepository implements DomainRepository {
     required String journeyId,
     required List<String> questKeys,
   }) => throw UnimplementedError();
+
+  @override
+  Future<DomainJourney> updateJourney({
+    required String journeyId,
+    required String title,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteJourney({required String journeyId}) =>
+      throw UnimplementedError();
 }
 
 void main() {
