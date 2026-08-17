@@ -123,7 +123,11 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.tripActiveBadgeBg,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: dna.gradient,
+                    ),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -133,7 +137,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                       Text(
                         dna.name,
                         style: const TextStyle(
-                          color: AppColors.tripActiveBadgeFg,
+                          color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
                         ),
@@ -142,8 +146,8 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                       Text(
                         dna.desc,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.primaryDark,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.86),
                           fontSize: 12,
                           height: 1.4,
                         ),
@@ -160,14 +164,15 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                                 vertical: 5,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: Colors.white.withValues(alpha: 0.92),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 tag,
-                                style: const TextStyle(
-                                  color: AppColors.tripActiveBadgeFg,
+                                style: TextStyle(
+                                  color: dna.gradient.last,
                                   fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
