@@ -8,11 +8,10 @@ import '../../core/widgets/app_network_image.dart';
 
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
-import '../../data/models/quest.dart';
 import '../../data/models/category_vocabulary.dart';
+import '../../data/models/quest.dart';
 import '../../data/repositories/domain_repository.dart'
     show DomainJourney, kRecommendedQuestSize;
-import '../../data/static/regions_data.dart';
 import '../../state/auth_controller.dart';
 import '../../state/domain_controller.dart';
 import '../../state/domain_recommendation_providers.dart';
@@ -75,17 +74,11 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
         ref.watch(domainControllerProvider).value?.journeys ??
         const <DomainJourney>[];
     final selectedJourney = widget.journeyId == null
-        ? journeys
-              .where(
-                (journey) =>
-                    regionByStableKey(journey.regionKey)?.id == regionId,
-              )
-              .firstOrNull
+        ? null
         : journeys
               .where((journey) => journey.id == widget.journeyId)
               .firstOrNull;
-    final tripQuests =
-        selectedJourney?.questKeys.toSet() ?? progress.tripQuestsOf(regionId);
+    final tripQuests = selectedJourney?.questKeys.toSet() ?? const <String>{};
     final tripStarted = tripQuests.isNotEmpty;
     final journeyQuery = selectedJourney == null
         ? ''
