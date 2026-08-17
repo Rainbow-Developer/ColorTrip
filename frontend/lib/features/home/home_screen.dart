@@ -321,6 +321,7 @@ class _RecommendedRegionBanner extends ConsumerWidget {
           data: (keys) {
             final questRepo = ref.watch(questRepositoryProvider);
             final dna = ref.watch(dnaRepositoryProvider).byId(dnaId);
+            final dnaColors = questTypeIconColors[dna.id];
             final content = _BannerContent(
               regionId: region.id,
               regionName: region.name,
@@ -349,11 +350,7 @@ class _RecommendedRegionBanner extends ConsumerWidget {
                     vertical: 14,
                   ),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: dna.gradient,
-                    ),
+                    color: dnaColors?.background ?? AppColors.surfaceMuted,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Column(
@@ -367,8 +364,10 @@ class _RecommendedRegionBanner extends ConsumerWidget {
                               children: [
                                 Text(
                                   '${dna.icon} ${dna.name}를 위한 추천 여행지',
-                                  style: const TextStyle(
-                                    color: Colors.white70,
+                                  style: TextStyle(
+                                    color:
+                                        dnaColors?.foreground ??
+                                        AppColors.textBody,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -377,7 +376,7 @@ class _RecommendedRegionBanner extends ConsumerWidget {
                                 Text(
                                   content.regionName,
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.textStrong,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -386,16 +385,16 @@ class _RecommendedRegionBanner extends ConsumerWidget {
                                 Text(
                                   content.questLabel,
                                   style: const TextStyle(
-                                    color: Colors.white70,
+                                    color: AppColors.textBody,
                                     fontSize: 12,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.chevron_right,
-                            color: Colors.white,
+                            color: dnaColors?.foreground ?? AppColors.textBody,
                             size: 26,
                           ),
                         ],
@@ -418,7 +417,7 @@ class _RecommendedRegionBanner extends ConsumerWidget {
 }
 
 /// 배너 안 퀘스트 요약 한 줄 — 유형 이모지 + 제목, 썸네일이 있으면 소형으로 함께 보여준다.
-/// DNA 그라데이션 배경 위에 얹히므로 텍스트는 흰색 계열을 쓴다.
+/// DNA 카드 배경(questTypeIconColors 연한 배경색) 위에 얹히므로 텍스트는 짙은 색을 쓴다.
 class _QuestSummaryRow extends StatelessWidget {
   const _QuestSummaryRow({required this.quest});
 
@@ -465,7 +464,7 @@ class _QuestSummaryRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.textStrong,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),

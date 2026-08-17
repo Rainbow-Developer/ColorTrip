@@ -70,6 +70,8 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
       ref.watch(currentUserProvider)?.dna ?? progress.dnaType ?? 'nature',
     );
     final dna = ref.watch(dnaRepositoryProvider).byId(dnaType);
+    final dnaIconAsset = dnaCardIconAssets[dna.id];
+    final dnaColors = questTypeIconColors[dna.id];
     final journeys =
         ref.watch(domainControllerProvider).value?.journeys ??
         const <DomainJourney>[];
@@ -121,67 +123,95 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                 ),
                 const SizedBox(height: 14),
                 Container(
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: dna.gradient,
-                    ),
+                    color: dnaColors?.background ?? AppColors.surfaceMuted,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(dna.icon, style: const TextStyle(fontSize: 28)),
-                        const SizedBox(height: 6),
-                        Text(
-                          dna.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
+                        // 여행 DNA 카드 전용 아이콘 일러스트(dnaCardIconAssets) — 카드
+                        // 세로 크기에 맞춰 꽉 채운다.
+                        if (dnaIconAsset != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.asset(
+                              dnaIconAsset,
+                              width: 84,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            width: 84,
+                            child: Center(
+                              child: Text(
+                                dna.icon,
+                                style: const TextStyle(fontSize: 40),
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          dna.desc,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            for (final tag in dna.tags.take(3))
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.92),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  tag,
-                                  style: TextStyle(
-                                    color: dna.gradient.last,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                dna.name,
+                                style: TextStyle(
+                                  color:
+                                      dnaColors?.foreground ??
+                                      AppColors.textStrong,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
                                 ),
                               ),
-                          ],
+                              const SizedBox(height: 6),
+                              Text(
+                                dna.desc,
+                                style: const TextStyle(
+                                  color: AppColors.textStrong,
+                                  fontSize: 12,
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [
+                                  for (final tag in dna.tags.take(3))
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: (dnaColors?.foreground ??
+                                                AppColors.textBody)
+                                            .withValues(alpha: 0.16),
+                                        borderRadius: BorderRadius.circular(
+                                          10,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '#$tag',
+                                        style: TextStyle(
+                                          color:
+                                              dnaColors?.foreground ??
+                                              AppColors.textBody,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),

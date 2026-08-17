@@ -114,6 +114,11 @@ flutter:
     - assets/images/quest_type_history.svg
     - assets/images/quest_type_active.svg
     - assets/images/quest_type_healing.svg
+    - assets/images/icon_nature.png
+    - assets/images/icon_food.png
+    - assets/images/icon_history.png
+    - assets/images/icon_activity.png
+    - assets/images/icon_relax.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
