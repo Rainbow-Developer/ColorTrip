@@ -12,11 +12,14 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:colortrip/core/widgets/coach_mark.dart';
+import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/features/home/home_screen.dart';
+import 'package:colortrip/features/quests/region_overview_screen.dart';
 import 'package:colortrip/features/quests/region_quest_select_screen.dart';
 import 'package:colortrip/features/travel/travel_list_screen.dart';
+import 'package:colortrip/state/auth_controller.dart';
 import 'package:colortrip/state/onboarding_tour_notifier.dart';
 import 'package:colortrip/state/progress_notifier.dart';
 import 'package:colortrip/state/progress_state.dart';
@@ -190,6 +193,73 @@ void main() {
     expect(find.text(questById('dy4').title), findsWidgets);
     expect(find.text(questById('dy3').title), findsWidgets);
     expect(find.text(questById('dy2').title), findsWidgets);
+  });
+
+  testWidgets('지도에서 지역을 누른 개요 화면은 사용자 프로필 DNA를 우선 표시한다', (tester) async {
+    const user = UserProfile(
+      id: 'user-id',
+      nickname: '컬러트립',
+      birthDate: null,
+      profileImage: null,
+      dna: 'food',
+      socialProvider: 'kakao',
+      onboardingStep: OnboardingStep.complete,
+      isRestored: false,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        _tourDoneOverride,
+        currentUserProvider.overrideWithValue(user),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(progressProvider.notifier).setDnaType('nature');
+
+    await tester.pumpWidget(
+      _wrap(
+        const RegionOverviewScreen(regionId: 'danyang'),
+        container: container,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('로컬 미식가'), findsOneWidget);
+    expect(find.text('자연탐험형 여행자'), findsNothing);
+  });
+
+  testWidgets('지역 개요 화면은 legacy active 사용자 DNA를 activity로 보정한다', (
+    tester,
+  ) async {
+    const user = UserProfile(
+      id: 'user-id',
+      nickname: '컬러트립',
+      birthDate: null,
+      profileImage: null,
+      dna: 'active',
+      socialProvider: 'kakao',
+      onboardingStep: OnboardingStep.complete,
+      isRestored: false,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        _tourDoneOverride,
+        currentUserProvider.overrideWithValue(user),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      _wrap(
+        const RegionOverviewScreen(regionId: 'danyang'),
+        container: container,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('에너지 탐험가'), findsOneWidget);
+    expect(find.text('자연탐험형 여행자'), findsNothing);
   });
 
   testWidgets('여행 시작하기 시 이름·날짜 입력 시트를 거쳐 여행이 등록된다', (tester) async {

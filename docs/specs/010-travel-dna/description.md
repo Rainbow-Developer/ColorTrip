@@ -28,6 +28,7 @@ flowchart TD
 | 설문 도메인 API 라우터 | 설문 및 DNA 조회/제출 API | `backend/app/trip_dna/router.py` |
 | 데이터 시드 스크립트 | 초기 설문 문항 및 카테고리 데이터 적재 | `backend/app/trip_dna/seed.py` |
 | 설문 화면 | 문항 1개씩 진행 + 진행 위치 표시 | `frontend/lib/features/trip_dna/trip_dna_screen.dart` |
+| 지역 개요 DNA 카드 | 지도에서 지역을 눌렀을 때 로그인 사용자 프로필의 DNA를 우선 표시 | `frontend/lib/features/quests/region_overview_screen.dart` |
 | 단계 진행바 | 전체 문항 중 현재 위치를 칸으로 표시 | `frontend/lib/core/widgets/step_progress.dart` |
 
 설문 화면 상단에는 `N / 전체` 라벨과 [StepProgress](../../../frontend/lib/core/widgets/step_progress.dart) 진행바가 있어 "4문항 중 지금 몇 번째"인지 보인다(KAN-75). 칸 수는 서버가 내려준 문항 수를 그대로 쓴다 — 문항이 늘거나 줄어도 화면을 고치지 않는다. 이 진행바는 원래 회원가입 화면에 2/3으로 **고정**돼 있었는데, 단계 정의가 없어 의미가 없었으므로 실제로 진행이 있는 이 화면으로 옮겼다.
@@ -40,6 +41,8 @@ flowchart TD
 - `HISTORY` (역사문화)
 - `ACTIVITY` (액티비티)
 - `HEALING` (힐링)
+
+프론트엔드 표시 식별값도 서버와 같은 소문자 값(`nature`, `food`, `history`, `activity`, `healing`)을 표준으로 사용합니다. 예전 캐시나 응답에 남아 있을 수 있는 `active`는 앱 진입부에서 `activity`로 보정합니다.
 
 ### 선택지 가중치 (`score_value`) 예시
 각 선택지는 JSON 형식으로 여러 카테고리의 가중치 점수를 복합적으로 가질 수 있습니다.

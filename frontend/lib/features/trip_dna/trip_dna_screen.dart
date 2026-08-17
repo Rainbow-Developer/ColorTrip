@@ -259,8 +259,7 @@ class _TripDnaScreenState extends ConsumerState<TripDnaScreen> {
       final result = await ref
           .read(tripDnaRepositoryProvider)
           .submitReplies(replies);
-      // 서버의 `activity` 분류를 기존 앱 화면이 사용하는 `active` 분류로
-      // 일관되게 변환한다.
+      // 서버와 앱의 표준 식별값은 `activity`다. 예전 캐시/응답에 남은 `active`만 보정한다.
       final mainDnaType = toAppCategory(result['main_dna_type'] as String);
 
       ref.read(progressProvider.notifier).setDnaType(mainDnaType);

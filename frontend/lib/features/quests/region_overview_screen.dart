@@ -9,9 +9,11 @@ import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../data/models/quest.dart';
+import '../../data/models/category_vocabulary.dart';
 import '../../data/repositories/domain_repository.dart'
     show DomainJourney, kRecommendedQuestSize;
 import '../../data/static/regions_data.dart';
+import '../../state/auth_controller.dart';
 import '../../state/domain_controller.dart';
 import '../../state/domain_recommendation_providers.dart';
 import '../../state/onboarding_tour_notifier.dart';
@@ -65,7 +67,9 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
     final tour = ref.watch(onboardingTourProvider);
     final questRepo = ref.watch(questRepositoryProvider);
     final progress = ref.watch(progressProvider);
-    final dnaType = progress.dnaType ?? 'nature';
+    final dnaType = toAppCategory(
+      ref.watch(currentUserProvider)?.dna ?? progress.dnaType ?? 'nature',
+    );
     final dna = ref.watch(dnaRepositoryProvider).byId(dnaType);
     final journeys =
         ref.watch(domainControllerProvider).value?.journeys ??
