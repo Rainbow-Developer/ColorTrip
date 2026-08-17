@@ -29,6 +29,7 @@
  - [x] 5) 지도 지역 진입 화면 DNA 표시 정합성 보정
    - [region_overview_screen.dart](../../../frontend/lib/features/quests/region_overview_screen.dart)가 `ref.watch(currentUserProvider)?.dna`를 우선 사용해, 지도에서 지역을 눌렀을 때 실제 사용자 DNA 카드가 표시되도록 수정.
    - 프론트 카테고리 표준을 서버와 같은 `activity`로 정리하고, 예전 `active` 값만 `activity`로 보정.
+   - 홈 추천 배너와 지도 지역 진입 화면의 DNA 카드가 같은 `dna.gradient` 색상 팔레트를 사용하도록 맞춤.
 
  ## 미구현 / 남은 항목
  - [ ] 3) 내 결과 조회 API (`GET /api/v1/users/me/travel-dna` 또는 회원 도메인 연동 조회)

@@ -121,59 +121,70 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                 ),
                 const SizedBox(height: 14),
                 Container(
-                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.tripActiveBadgeBg,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: dna.gradient,
+                    ),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Column(
-                    children: [
-                      Text(dna.icon, style: const TextStyle(fontSize: 28)),
-                      const SizedBox(height: 6),
-                      Text(
-                        dna.name,
-                        style: const TextStyle(
-                          color: AppColors.tripActiveBadgeFg,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(dna.icon, style: const TextStyle(fontSize: 28)),
+                        const SizedBox(height: 6),
+                        Text(
+                          dna.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        dna.desc,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.primaryDark,
-                          fontSize: 12,
-                          height: 1.4,
+                        const SizedBox(height: 6),
+                        Text(
+                          dna.desc,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        alignment: WrapAlignment.center,
-                        children: [
-                          for (final tag in dna.tags.take(3))
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                tag,
-                                style: const TextStyle(
-                                  color: AppColors.tripActiveBadgeFg,
-                                  fontSize: 11,
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            for (final tag in dna.tags.take(3))
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.92),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  tag,
+                                  style: TextStyle(
+                                    color: dna.gradient.last,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),

@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:colortrip/core/widgets/coach_mark.dart';
 import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/models/quest.dart';
+import 'package:colortrip/data/static/dna_data.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/features/home/home_screen.dart';
 import 'package:colortrip/features/quests/region_overview_screen.dart';
@@ -226,6 +227,22 @@ void main() {
 
     expect(find.text('로컬 미식가'), findsOneWidget);
     expect(find.text('자연탐험형 여행자'), findsNothing);
+    final expectedGradient = dnaTypeById('food').gradient;
+    final hasMatchingGradient = tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .any((box) {
+          final decoration = box.decoration;
+          if (decoration is! BoxDecoration) return false;
+          final gradient = decoration.gradient;
+          if (gradient is! LinearGradient) return false;
+          final colors = gradient.colors;
+          if (colors.length != expectedGradient.length) return false;
+          for (var index = 0; index < colors.length; index += 1) {
+            if (colors[index] != expectedGradient[index]) return false;
+          }
+          return true;
+        });
+    expect(hasMatchingGradient, isTrue);
   });
 
   testWidgets('지역 개요 화면은 legacy active 사용자 DNA를 activity로 보정한다', (
