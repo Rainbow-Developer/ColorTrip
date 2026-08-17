@@ -123,7 +123,7 @@ const questTypeIconColors = <String, ({Color background, Color foreground})>{
   'nature': (background: Color(0xFFE8F5E9), foreground: Color(0xFF43A047)),
   'food': (background: Color(0xFFFFF3E0), foreground: Color(0xFFFB8C00)),
   'history': (background: Color(0xFFEDE7F6), foreground: Color(0xFF7E57C2)),
-  'active': (background: Color(0xFFE3F2FD), foreground: Color(0xFF1E88E5)),
+  'activity': (background: Color(0xFFE3F2FD), foreground: Color(0xFF1E88E5)),
   'healing': (background: Color(0xFFFCE4EC), foreground: Color(0xFFD81B60)),
 };
 
