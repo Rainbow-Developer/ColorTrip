@@ -65,9 +65,7 @@ class _RegionQuestSelectScreenState
         ref.read(domainControllerProvider).value?.journeys ??
         const <DomainJourney>[];
     final existingJourney = widget.journeyId == null
-        ? journeys
-              .where((journey) => journey.regionKey == widget.regionId)
-              .firstOrNull
+        ? null
         : journeys
               .where((journey) => journey.id == widget.journeyId)
               .firstOrNull;
@@ -144,17 +142,22 @@ class _RegionQuestSelectScreenState
         ref.watch(domainControllerProvider).value?.journeys ??
         const <DomainJourney>[];
     final selectedJourney = widget.journeyId == null
-        ? journeys
-              .where((journey) => journey.regionKey == widget.regionId)
-              .firstOrNull
+        ? null
         : journeys
               .where((journey) => journey.id == widget.journeyId)
               .firstOrNull;
 
+    final inProgressJourneys = journeys.where((j) =>
+        j.regionKey == widget.regionId &&
+        j.status != 'completed' &&
+        j.id != widget.journeyId);
+    final questsInOtherJourneys =
+        inProgressJourneys.expand((j) => j.questKeys).toSet();
+
     // 기존에 이 지역 여행에서 이미 고른 퀘스트가 있으면 그 상태로 시작한다(추가 선택 지원).
     final tripAlreadyStarted = selectedJourney != null;
     _selectedQuestIds ??= {
-      ...(selectedJourney?.questKeys ?? progress.tripQuestsOf(widget.regionId)),
+      ...(selectedJourney?.questKeys ?? const <String>{}),
     };
 
     final availableTypes = <String>{for (final q in allRegionQuests) q.type};
@@ -233,11 +236,14 @@ class _RegionQuestSelectScreenState
                   itemBuilder: (context, index) {
                     final quest = quests[index];
                     final completed = progress.isCompleted(quest.id);
+                    final inOtherJourney = questsInOtherJourneys.contains(quest.id);
                     return _SelectableQuestCard(
                       quest: quest,
                       selected:
                           completed || _selectedQuestIds!.contains(quest.id),
-                      locked: completed,
+                      completed: completed,
+                      inOtherJourney: inOtherJourney,
+                      badgeLabel: completed ? '완료됨' : (inOtherJourney ? '다른 여행 담김' : null),
                       onToggle: () => setState(() {
                         if (!_selectedQuestIds!.add(quest.id)) {
                           _selectedQuestIds!.remove(quest.id);
@@ -289,46 +295,51 @@ class _SelectableQuestCard extends StatelessWidget {
   const _SelectableQuestCard({
     required this.quest,
     required this.selected,
-    required this.locked,
+    required this.completed,
+    required this.inOtherJourney,
+    this.badgeLabel,
     required this.onToggle,
     required this.onViewDetail,
   });
 
   final Quest quest;
   final bool selected;
-  final bool locked;
+  final bool completed;
+  final bool inOtherJourney;
+  final String? badgeLabel;
   final VoidCallback onToggle;
   final VoidCallback onViewDetail;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: locked ? onViewDetail : onToggle,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.questSelectedBg : Colors.white,
-          border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 22,
-              height: 22,
-              child: Icon(
-                locked
-                    ? Icons.lock
-                    : selected
-                    ? Icons.check_circle
-                    : Icons.circle_outlined,
-                color: selected
-                    ? AppColors.primaryDark
-                    : AppColors.timelineDotGrey,
-                size: locked ? 18 : 22,
-              ),
+    final locked = completed || inOtherJourney;
+
+    Widget content = Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: selected ? AppColors.questSelectedBg : Colors.white,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 22,
+            height: 22,
+            child: Icon(
+              completed
+                  ? Icons.check_circle
+                  : inOtherJourney
+                      ? Icons.lock
+                      : selected
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+              color: completed || selected
+                  ? AppColors.primaryDark
+                  : AppColors.timelineDotGrey,
+              size: (inOtherJourney && !completed) ? 18 : 22,
             ),
+          ),
             const SizedBox(width: 8),
             AppNetworkImage(
               url: quest.imageUrl,
@@ -358,9 +369,9 @@ class _SelectableQuestCard extends StatelessWidget {
                       _MiniBadge(
                         label: questTypeStyles[quest.type]?.label ?? quest.type,
                       ),
-                      if (locked) ...[
+                      if (badgeLabel != null) ...[
                         const SizedBox(width: 4),
-                        const _MiniBadge(label: '완료됨'),
+                        _MiniBadge(label: badgeLabel!),
                       ],
                       const Spacer(),
                       GestureDetector(
@@ -381,7 +392,16 @@ class _SelectableQuestCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
+      );
+
+    if (completed) {
+      content = Opacity(opacity: 0.5, child: content);
+    }
+
+    return InkWell(
+      onTap: locked ? onViewDetail : onToggle,
+      borderRadius: BorderRadius.circular(12),
+      child: content,
     );
   }
 }
