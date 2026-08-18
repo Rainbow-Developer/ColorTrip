@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/region.dart';
 import '../../data/static/regions_data.dart';
 import '../constants.dart';
 
@@ -47,108 +48,218 @@ class MapLegend extends StatelessWidget {
   }
 }
 
-/// 지역별 색상 팔레트 팝업 — 지역 이름 옆에 그 지역의 5단계 팔레트를 보여준다.
-/// 팔레트 목록은 팝업 안에서 가운데 정렬하고, 제목은 그 목록의 지역 이름 위치에 맞춘다.
+/// 지역 대표 이모지 — 팔레트 팝업의 원형 배지에 쓴다. kRegionsInMapOrder와 1:1 대응한다.
+const Map<String, String> _regionPaletteEmoji = {
+  'jincheon': '🌸',
+  'eumseong': '🍊',
+  'jeungpyeong': '🌲',
+  'cheongju': '🏯',
+  'goesan': '🕳️',
+  'chungju': '🏞️',
+  'jecheon': '🌼',
+  'danyang': '🪻',
+  'boeun': '⛰️',
+  'okcheon': '🪷',
+  'yeongdong': '🌳',
+};
+
+/// 지역별 색상 팔레트 팝업 — 지역마다 원형 아이콘 배지 + 이름 + 5단계 팔레트를 한 줄로 보여준다.
 class _RegionPaletteDialog extends StatelessWidget {
   const _RegionPaletteDialog();
 
-  // 이름 SizedBox(48) + 간격(4) + 스와치 5개(28 + 오른쪽 여백 4)의 고정 폭.
-  static const _rowContentWidth = 48.0 + 4 + 5 * (28 + 4);
-
   @override
   Widget build(BuildContext context) {
+    final dialogWidth = MediaQuery.sizeOf(context).width * 0.88;
     return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 36),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final titleIndent = ((constraints.maxWidth - _rowContentWidth) / 2)
-                .clamp(0.0, double.infinity);
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () => Navigator.of(context).pop(),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: SizedBox(
+        width: dialogWidth,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: AppColors.surfaceMuted,
+                      shape: BoxShape.circle,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: EdgeInsets.only(left: titleIndent),
-                  child: const Text(
-                    '지역별 색상 팔레트',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    child: const Text('🎨', style: TextStyle(fontSize: 22)),
                   ),
-                ),
-                const SizedBox(height: 4),
-                // 팔레트만 보여주면 색이 무엇을 뜻하는지 알 수 없다. KAN-73에서 범례 문구를
-                // "인증한 여행 수"로 바로잡은 취지를 팝업에서도 유지한다.
-                Padding(
-                  padding: EdgeInsets.only(left: titleIndent),
-                  child: const Text(
-                    '왼쪽부터 인증한 여행 수 1회 → 5회+',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.tripMutedBadgeFg,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Center(
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 2),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (final region in kRegionsInMapOrder)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 9),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    width: 48,
-                                    child: Text(
-                                      region.name,
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  for (final color
-                                      in regionMapColors[region.id] ??
-                                          const <Color>[])
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 4),
-                                      child: Container(
-                                        width: 28,
-                                        height: 16,
-                                        decoration: BoxDecoration(
-                                          color: color,
-                                          borderRadius: BorderRadius.circular(
-                                            3,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
+                          Text(
+                            '지역별 색상 팔레트',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textHeading,
                             ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            '왼쪽부터 인증한 여행 수 1회 → 5회예요 ✨',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
+                  InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.surfaceMuted,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      for (final region in kRegionsInMapOrder)
+                        _PaletteRow(region: region),
+                    ],
+                  ),
                 ),
-              ],
-            );
-          },
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('🍃', style: TextStyle(fontSize: 15)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(
+                              text: 'TIP  ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                            const TextSpan(
+                              text: '1은 가장 연한 색상, 5는 가장 진한 색상이에요.',
+                            ),
+                          ],
+                        ),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textBody,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// 팔레트 팝업의 지역 1건 — 원형 이모지 배지(그 지역 1단계 색) + 이름 + 구분선 + 5단계 팔레트.
+class _PaletteRow extends StatelessWidget {
+  const _PaletteRow({required this.region});
+
+  final Region region;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = regionMapColors[region.id] ?? const <Color>[];
+    final emoji = _regionPaletteEmoji[region.id] ?? '📍';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors.isNotEmpty ? colors.first : AppColors.surfaceMuted,
+              shape: BoxShape.circle,
+            ),
+            child: Text(emoji, style: const TextStyle(fontSize: 15)),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 48,
+            child: Text(
+              region.name,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 20,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            color: AppColors.border,
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                for (var i = 0; i < colors.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 4),
+                  Expanded(
+                    child: Container(
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: colors[i],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
