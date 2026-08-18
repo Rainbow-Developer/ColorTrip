@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import pytest
 import sqlalchemy as sa
 from alembic.config import Config
 from httpx import AsyncClient
@@ -63,9 +64,11 @@ async def test_existing_tables_are_additively_preserved(client: AsyncClient) -> 
 
 
 async def test_auth_migration_finishes_anonymizing_legacy_soft_deleted_users(
-    client: AsyncClient,
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _ = client
+    # 이 테스트의 레거시 계정은 출시 전 테스트 계정이라는 마이그레이션 전제를 명시한다.
+    monkeypatch.setenv("PRELAUNCH_CONSENT_MIGRATION_CONFIRMED", "true")
     user_id = uuid4()
     refresh_id = uuid4()
     overlap_user_id = uuid4()
@@ -430,8 +433,10 @@ async def test_domain_catalog_migration_reuses_matching_legacy_rows(
 
 
 async def test_domain_catalog_migration_deduplicates_legacy_timeline_events(
-    client: AsyncClient,
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # 이 테스트도 기존 테스트 계정을 가진 상태에서 head로 복귀하므로 승인 전제를 명시한다.
+    monkeypatch.setenv("PRELAUNCH_CONSENT_MIGRATION_CONFIRMED", "true")
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
     verified = await client.post(

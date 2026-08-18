@@ -176,9 +176,7 @@ async def withdraw_current_user(
     await session.execute(delete(UploadedPhoto).where(UploadedPhoto.user_id == current_user.id))
     # 사진 원본 링크만 지운다. 완료 횟수·지역 진행도 같은 비식별 집계 기반 기록은 남긴다.
     await session.execute(
-        update(QuestProgress)
-        .where(QuestProgress.user_id == current_user.id)
-        .values(photo_url=None)
+        update(QuestProgress).where(QuestProgress.user_id == current_user.id).values(photo_url=None)
     )
     _anonymize_user(current_user, now)
     current_user.deleted_at = now
