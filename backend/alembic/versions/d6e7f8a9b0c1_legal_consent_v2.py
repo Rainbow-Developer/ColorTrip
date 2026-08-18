@@ -11,14 +11,12 @@ import os
 import sqlalchemy as sa
 from alembic import op
 
+from app.legal.documents import PRIVACY, TERMS
+
 revision: str = "d6e7f8a9b0c1"
 down_revision: str | Sequence[str] | None = "c3d4e5f6a7b8"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
-
-TERMS_DIGEST = "f5522ec86cee565890ba32ee052ff59cdfc8fff149f45b6ef0a382b5b1c3d610"
-PRIVACY_DIGEST = "82ec37f76387b5848bca9ccd757d6dc747e748eb312079d9f613aa216b304747"
-
 
 def upgrade() -> None:
     connection = op.get_bind()
@@ -38,7 +36,7 @@ def upgrade() -> None:
             "document_digest = :digest, source = 'prelaunch_migration' "
             "WHERE consent_type = 'terms'"
         ),
-        {"digest": TERMS_DIGEST},
+        {"digest": TERMS.digest},
     )
     connection.execute(
         sa.text(
@@ -46,7 +44,7 @@ def upgrade() -> None:
             "document_digest = :digest, source = 'prelaunch_migration' "
             "WHERE consent_type = 'privacy'"
         ),
-        {"digest": PRIVACY_DIGEST},
+        {"digest": PRIVACY.digest},
     )
     op.alter_column("user_consents", "document_digest", nullable=False)
     op.alter_column("user_consents", "source", nullable=False)

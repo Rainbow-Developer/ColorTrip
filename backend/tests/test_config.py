@@ -76,6 +76,19 @@ def test_non_local_env_accepts_required_auth_settings() -> None:
     assert settings.share_base_url == "https://colortrip.p-e.kr"
 
 
+def test_non_local_env_requires_release_legal_disclosures() -> None:
+    with pytest.raises(ValueError, match="LEGAL_OPERATOR_NAME"):
+        _settings(
+            app_env="dev",
+            jwt_secret_key="dev-secret-key-at-least-32-bytes-long",
+            kakao_rest_api_key="test-kakao-rest-api-key",
+            kakao_redirect_uri="https://example.com/auth/kakao/callback",
+            cors_allowed_origins="https://example.com",
+            share_base_url="https://colortrip.p-e.kr",
+            legal_operator_name="",
+        )
+
+
 def test_non_local_env_rejects_default_share_base_url() -> None:
     with pytest.raises(ValueError, match="SHARE_BASE_URL must use HTTPS"):
         _settings(
@@ -186,5 +199,21 @@ def test_dev_workflow_validates_kakao_app_id_before_remote_shell() -> None:
 
 def _settings(**kwargs: Any) -> Settings:
     kwargs.setdefault("kakao_app_id", 12345)
+    kwargs.setdefault("legal_operator_name", "ColorTrip 운영자")
+    kwargs.setdefault("legal_terms_version", "terms-v2")
+    kwargs.setdefault("legal_privacy_version", "privacy-v2")
+    kwargs.setdefault("legal_document_effective_date", "2026-08-15")
+    kwargs.setdefault("legal_operator_email", "privacy@example.com")
+    kwargs.setdefault("legal_operator_address", "서울특별시 예시로 1")
+    kwargs.setdefault("legal_privacy_officer_name", "개인정보 담당자")
+    kwargs.setdefault("legal_privacy_officer_email", "privacy@example.com")
+    kwargs.setdefault("legal_gcs_processor_name", "Google LLC")
+    kwargs.setdefault("legal_gcs_processing_country", "대한민국")
+    kwargs.setdefault("legal_gcs_region", "asia-northeast3")
+    kwargs.setdefault("legal_gemini_processor_name", "Google LLC")
+    kwargs.setdefault("legal_gemini_processing_country", "미국")
+    kwargs.setdefault("legal_gemini_retention_period", "Google 계약 및 설정에 따름")
+    kwargs.setdefault("legal_share_retention_period", "공유 철회 또는 회원 탈퇴 시까지")
+    kwargs.setdefault("legal_aggregate_retention_period", "익명화 후 서비스 운영 기간")
     settings_cls = cast(Any, Settings)
     return settings_cls(_env_file=None, **kwargs)

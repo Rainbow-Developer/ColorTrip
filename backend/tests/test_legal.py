@@ -15,3 +15,6 @@ async def test_terms_and_privacy_are_public_versioned_documents(client: AsyncCli
     assert privacy.status_code == 200
     assert "개인정보처리방침" in privacy.text
     assert "privacy-v2" in privacy.text
+    assert "위치정보" in privacy.text
+    assert "여행 성향" in privacy.text
+    assert "공유 코드" in privacy.text
