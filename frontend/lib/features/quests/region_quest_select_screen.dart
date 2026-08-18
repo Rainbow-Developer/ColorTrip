@@ -239,11 +239,9 @@ class _RegionQuestSelectScreenState
                     final inOtherJourney = questsInOtherJourneys.contains(quest.id);
                     return _SelectableQuestCard(
                       quest: quest,
-                      selected:
-                          completed || _selectedQuestIds!.contains(quest.id),
+                      selected: _selectedQuestIds!.contains(quest.id),
                       completed: completed,
-                      inOtherJourney: inOtherJourney,
-                      badgeLabel: completed ? '완료됨' : (inOtherJourney ? '다른 여행 담김' : null),
+                      badgeLabel: completed ? '완료됨' : (inOtherJourney ? '진행중' : null),
                       onToggle: () => setState(() {
                         if (!_selectedQuestIds!.add(quest.id)) {
                           _selectedQuestIds!.remove(quest.id);
@@ -296,7 +294,6 @@ class _SelectableQuestCard extends StatelessWidget {
     required this.quest,
     required this.selected,
     required this.completed,
-    required this.inOtherJourney,
     this.badgeLabel,
     required this.onToggle,
     required this.onViewDetail,
@@ -305,41 +302,49 @@ class _SelectableQuestCard extends StatelessWidget {
   final Quest quest;
   final bool selected;
   final bool completed;
-  final bool inOtherJourney;
   final String? badgeLabel;
   final VoidCallback onToggle;
   final VoidCallback onViewDetail;
 
   @override
   Widget build(BuildContext context) {
-    final locked = completed || inOtherJourney;
-
-    Widget content = Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.questSelectedBg : Colors.white,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 22,
-            height: 22,
-            child: Icon(
-              completed
-                  ? Icons.check_circle
-                  : inOtherJourney
-                      ? Icons.lock
-                      : selected
-                          ? Icons.check_circle
-                          : Icons.circle_outlined,
-              color: completed || selected
-                  ? AppColors.primaryDark
-                  : AppColors.timelineDotGrey,
-              size: (inOtherJourney && !completed) ? 18 : 22,
-            ),
-          ),
+    return InkWell(
+      onTap: onToggle,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: selected ? AppColors.questSelectedBg : Colors.white,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            if (badgeLabel != null)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 6,
+                child: Container(
+                  color: badgeLabel == '완료됨'
+                      ? AppColors.primaryDark
+                      : Colors.orange[400],
+                ),
+              ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(badgeLabel != null ? 14 : 10, 10, 10, 10),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: Icon(
+                      selected ? Icons.check_circle : Icons.circle_outlined,
+                      color: selected ? AppColors.primaryDark : AppColors.timelineDotGrey,
+                      size: 22,
+                    ),
+                  ),
             const SizedBox(width: 8),
             AppNetworkImage(
               url: quest.imageUrl,
@@ -377,7 +382,7 @@ class _SelectableQuestCard extends StatelessWidget {
                       GestureDetector(
                         onTap: onViewDetail,
                         child: Text(
-                          locked ? '히스토리 보기' : '퀘스트 설명',
+                          completed ? '히스토리 보기' : '퀘스트 설명',
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
@@ -392,16 +397,10 @@ class _SelectableQuestCard extends StatelessWidget {
             ),
           ],
         ),
-      );
-
-    if (completed) {
-      content = Opacity(opacity: 0.5, child: content);
-    }
-
-    return InkWell(
-      onTap: locked ? onViewDetail : onToggle,
-      borderRadius: BorderRadius.circular(12),
-      child: content,
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
