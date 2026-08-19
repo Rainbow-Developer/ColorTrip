@@ -147,18 +147,19 @@ class _RegionQuestSelectScreenState
               .where((journey) => journey.id == widget.journeyId)
               .firstOrNull;
 
-    final inProgressJourneys = journeys.where((j) =>
-        j.regionKey == widget.regionId &&
-        j.status != 'completed' &&
-        j.id != widget.journeyId);
-    final questsInOtherJourneys =
-        inProgressJourneys.expand((j) => j.questKeys).toSet();
+    final inProgressJourneys = journeys.where(
+      (j) =>
+          j.regionKey == widget.regionId &&
+          j.status != 'completed' &&
+          j.id != widget.journeyId,
+    );
+    final questsInOtherJourneys = inProgressJourneys
+        .expand((j) => j.questKeys)
+        .toSet();
 
     // 기존에 이 지역 여행에서 이미 고른 퀘스트가 있으면 그 상태로 시작한다(추가 선택 지원).
     final tripAlreadyStarted = selectedJourney != null;
-    _selectedQuestIds ??= {
-      ...(selectedJourney?.questKeys ?? const <String>{}),
-    };
+    _selectedQuestIds ??= {...(selectedJourney?.questKeys ?? const <String>{})};
 
     final availableTypes = <String>{for (final q in allRegionQuests) q.type};
     final filters = [
@@ -236,12 +237,16 @@ class _RegionQuestSelectScreenState
                   itemBuilder: (context, index) {
                     final quest = quests[index];
                     final completed = progress.isCompleted(quest.id);
-                    final inOtherJourney = questsInOtherJourneys.contains(quest.id);
+                    final inOtherJourney = questsInOtherJourneys.contains(
+                      quest.id,
+                    );
                     return _SelectableQuestCard(
                       quest: quest,
                       selected: _selectedQuestIds!.contains(quest.id),
                       completed: completed,
-                      badgeLabel: completed ? '완료됨' : (inOtherJourney ? '진행중' : null),
+                      badgeLabel: completed
+                          ? '완료됨'
+                          : (inOtherJourney ? '진행중' : null),
                       onToggle: () => setState(() {
                         if (!_selectedQuestIds!.add(quest.id)) {
                           _selectedQuestIds!.remove(quest.id);
@@ -333,7 +338,12 @@ class _SelectableQuestCard extends StatelessWidget {
                 ),
               ),
             Padding(
-              padding: EdgeInsets.fromLTRB(badgeLabel != null ? 14 : 10, 10, 10, 10),
+              padding: EdgeInsets.fromLTRB(
+                badgeLabel != null ? 14 : 10,
+                10,
+                10,
+                10,
+              ),
               child: Row(
                 children: [
                   SizedBox(
@@ -341,63 +351,67 @@ class _SelectableQuestCard extends StatelessWidget {
                     height: 22,
                     child: Icon(
                       selected ? Icons.check_circle : Icons.circle_outlined,
-                      color: selected ? AppColors.primaryDark : AppColors.timelineDotGrey,
+                      color: selected
+                          ? AppColors.primaryDark
+                          : AppColors.timelineDotGrey,
                       size: 22,
                     ),
                   ),
-            const SizedBox(width: 8),
-            AppNetworkImage(
-              url: quest.imageUrl,
-              width: 44,
-              height: 44,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    quest.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
+                  const SizedBox(width: 8),
+                  AppNetworkImage(
+                    url: quest.imageUrl,
+                    width: 44,
+                    height: 44,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (verifyLabels[quest.verify] != null) ...[
-                        _MiniBadge(label: verifyLabels[quest.verify]!),
-                        const SizedBox(width: 4),
-                      ],
-                      _MiniBadge(
-                        label: questTypeStyles[quest.type]?.label ?? quest.type,
-                      ),
-                      if (badgeLabel != null) ...[
-                        const SizedBox(width: 4),
-                        _MiniBadge(label: badgeLabel!),
-                      ],
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: onViewDetail,
-                        child: Text(
-                          completed ? '히스토리 보기' : '퀘스트 설명',
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          quest.title,
                           style: const TextStyle(
-                            fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.tripMutedBadgeFg,
+                            fontSize: 13,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            if (verifyLabels[quest.verify] != null) ...[
+                              _MiniBadge(label: verifyLabels[quest.verify]!),
+                              const SizedBox(width: 4),
+                            ],
+                            _MiniBadge(
+                              label:
+                                  questTypeStyles[quest.type]?.label ??
+                                  quest.type,
+                            ),
+                            if (badgeLabel != null) ...[
+                              const SizedBox(width: 4),
+                              _MiniBadge(label: badgeLabel!),
+                            ],
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: onViewDetail,
+                              child: Text(
+                                completed ? '히스토리 보기' : '퀘스트 설명',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.tripMutedBadgeFg,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-              ),
           ],
         ),
       ),

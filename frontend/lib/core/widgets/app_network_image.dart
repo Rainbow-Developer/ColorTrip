@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../constants.dart';
 
-/// 네트워크 이미지 공용 위젯 — TourAPI 대표 이미지 등 원격 이미지를 디스크 캐시와 함께
-/// 보여준다(docs/specs/045-quest-region-images).
+/// 이미지 공용 위젯 — TourAPI 대표 이미지 등 원격 이미지를 디스크 캐시와 함께
+/// 보여준다(docs/specs/045-quest-region-images). `asset:`으로 시작하는 값은
+/// Flutter asset 이미지로 렌더링한다.
 ///
 /// [url]이 null/빈 문자열이면 네트워크 요청 없이 기존 화면들과 같은 placeholder
 /// (회색 [AppColors.imagePlaceholderBg] 배경 + 가운데 이모지/텍스트)를 그린다 —
@@ -24,6 +25,7 @@ class AppNetworkImage extends StatelessWidget {
   });
 
   /// 이미지 URL. null이거나 공백뿐이면 placeholder만 그린다.
+  /// `asset:assets/images/foo.png` 형식이면 로컬 asset을 사용한다.
   final String? url;
 
   final double? width;
@@ -68,10 +70,19 @@ class AppNetworkImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final url = this.url;
-    final image = url == null || url.trim().isEmpty
+    final trimmedUrl = url?.trim();
+    final image = trimmedUrl == null || trimmedUrl.isEmpty
         ? _buildPlaceholder()
+        : trimmedUrl.startsWith('asset:')
+        ? Image.asset(
+            trimmedUrl.substring('asset:'.length),
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: (_, _, _) => _buildPlaceholder(),
+          )
         : CachedNetworkImage(
-            imageUrl: url,
+            imageUrl: trimmedUrl,
             width: width,
             height: height,
             fit: fit,

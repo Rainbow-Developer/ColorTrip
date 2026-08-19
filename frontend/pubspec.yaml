@@ -109,6 +109,17 @@ flutter:
     - assets/images/gps_mountain_icon.png
     - assets/images/top_bar_logo.png
     - assets/images/map_image.png
+    - assets/images/region_boeun_main.png
+    - assets/images/region_cheongju_main.png
+    - assets/images/region_chungju_main.png
+    - assets/images/region_danyang_main.png
+    - assets/images/region_eumseong_main.png
+    - assets/images/region_goesan_main.png
+    - assets/images/region_jecheon_main.png
+    - assets/images/region_jeungpyeong_main.png
+    - assets/images/region_jincheon_main.png
+    - assets/images/region_okcheon_main.png
+    - assets/images/region_yeongdong_main.png
     - assets/images/quest_type_nature.svg
     - assets/images/quest_type_food.svg
     - assets/images/quest_type_history.svg

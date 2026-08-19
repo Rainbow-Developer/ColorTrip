@@ -73,11 +73,19 @@ void main() {
     const nickname = '컬러트립';
     final leapDay = DateTime(2024, 2, 29);
     expect(
-      validateOnboardingProfile(nickname: nickname, birthDate: '2010-02-28', today: leapDay).errors,
+      validateOnboardingProfile(
+        nickname: nickname,
+        birthDate: '2010-02-28',
+        today: leapDay,
+      ).errors,
       isEmpty,
     );
     expect(
-      validateOnboardingProfile(nickname: nickname, birthDate: '2010-03-01', today: leapDay).errors,
+      validateOnboardingProfile(
+        nickname: nickname,
+        birthDate: '2010-03-01',
+        today: leapDay,
+      ).errors,
       contains('birthDate'),
     );
   });
