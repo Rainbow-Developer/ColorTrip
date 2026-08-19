@@ -1,4 +1,4 @@
-"""record v2 consent evidence and remove marketing consent.
+"""add v2 consent evidence columns compatibly.
 
 Revision ID: d6e7f8a9b0c1
 Revises: c3d4e5f6a7b8
@@ -29,7 +29,9 @@ def upgrade() -> None:
 
     op.add_column("user_consents", sa.Column("document_digest", sa.String(64), nullable=True))
     op.add_column("user_consents", sa.Column("source", sa.String(30), nullable=True))
-    op.execute(sa.text("DELETE FROM user_consents WHERE consent_type = 'marketing'"))
+    # Rolling deployment phase: old API containers can still insert marketing rows
+    # and omit the new evidence columns until every instance is replaced.  The
+    # follow-up revision performs the destructive enforcement step.
     connection.execute(
         sa.text(
             "UPDATE user_consents SET version = 'terms-v2', agreed = true, "
@@ -46,20 +48,8 @@ def upgrade() -> None:
         ),
         {"digest": PRIVACY.digest},
     )
-    op.alter_column("user_consents", "document_digest", nullable=False)
-    op.alter_column("user_consents", "source", nullable=False)
-    op.drop_constraint("ck_user_consents_type", "user_consents", type_="check")
-    op.create_check_constraint(
-        "ck_user_consents_type", "user_consents", "consent_type IN ('terms', 'privacy')"
-    )
 
 
 def downgrade() -> None:
-    op.drop_constraint("ck_user_consents_type", "user_consents", type_="check")
-    op.create_check_constraint(
-        "ck_user_consents_type",
-        "user_consents",
-        "consent_type IN ('terms', 'privacy', 'marketing')",
-    )
     op.drop_column("user_consents", "source")
     op.drop_column("user_consents", "document_digest")
