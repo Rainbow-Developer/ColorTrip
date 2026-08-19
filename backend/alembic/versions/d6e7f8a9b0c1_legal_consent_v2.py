@@ -34,19 +34,19 @@ def upgrade() -> None:
     # follow-up revision performs the destructive enforcement step.
     connection.execute(
         sa.text(
-            "UPDATE user_consents SET version = 'terms-v2', agreed = true, "
+            "UPDATE user_consents SET version = :version, agreed = true, "
             "document_digest = :digest, source = 'prelaunch_migration' "
             "WHERE consent_type = 'terms'"
         ),
-        {"digest": TERMS.digest},
+        {"version": TERMS.version, "digest": TERMS.digest},
     )
     connection.execute(
         sa.text(
-            "UPDATE user_consents SET version = 'privacy-v2', agreed = true, "
+            "UPDATE user_consents SET version = :version, agreed = true, "
             "document_digest = :digest, source = 'prelaunch_migration' "
             "WHERE consent_type = 'privacy'"
         ),
-        {"digest": PRIVACY.digest},
+        {"version": PRIVACY.version, "digest": PRIVACY.digest},
     )
 
 
