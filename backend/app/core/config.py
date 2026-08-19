@@ -141,6 +141,13 @@ class Settings(BaseSettings):
 
         env = self.app_env.strip().lower()
         if env in {"local", "test"}:
+            # 로컬·테스트는 공개 문서와 동의 계약을 결정적으로 검증할 수 있게만 기본값을 둔다.
+            # dev/prod는 아래 필수 검증을 통과하려면 반드시 실제 배포값을 제공해야 한다.
+            self.legal_terms_version = self.legal_terms_version or "terms-v2"
+            self.legal_privacy_version = self.legal_privacy_version or "privacy-v2"
+            self.legal_document_effective_date = (
+                self.legal_document_effective_date or "2026-08-15"
+            )
             return self
 
         jwt_secret_key = self.jwt_secret_key.strip()
