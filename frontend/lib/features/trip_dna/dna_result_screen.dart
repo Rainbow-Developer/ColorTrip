@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/auth_controller.dart';
 import '../../state/repository_providers.dart';
@@ -16,6 +18,7 @@ class DnaResultScreen extends ConsumerWidget {
         ref.watch(progressProvider).dnaType ??
         'nature';
     final dna = ref.watch(dnaRepositoryProvider).byId(dnaType);
+    final iconAsset = questTypeIconAssets[dna.id];
 
     return Scaffold(
       body: Container(
@@ -33,7 +36,19 @@ class DnaResultScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(dna.icon, style: const TextStyle(fontSize: 56)),
+                // 퀘스트 목록 카테고리 선택과 같은 유형 아이콘(questTypeIconAssets)을 재사용한다.
+                Container(
+                  width: 72,
+                  height: 72,
+                  padding: const EdgeInsets.all(14),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: iconAsset != null
+                      ? SvgPicture.asset(iconAsset)
+                      : Text(dna.icon, style: const TextStyle(fontSize: 32)),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   dna.name,
