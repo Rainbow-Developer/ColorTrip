@@ -145,9 +145,7 @@ class Settings(BaseSettings):
             # dev/prod는 아래 필수 검증을 통과하려면 반드시 실제 배포값을 제공해야 한다.
             self.legal_terms_version = self.legal_terms_version or "terms-v2"
             self.legal_privacy_version = self.legal_privacy_version or "privacy-v2"
-            self.legal_document_effective_date = (
-                self.legal_document_effective_date or "2026-08-15"
-            )
+            self.legal_document_effective_date = self.legal_document_effective_date or "2026-08-15"
             return self
 
         jwt_secret_key = self.jwt_secret_key.strip()
