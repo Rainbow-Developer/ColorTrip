@@ -3,7 +3,7 @@
 | 항목 | 내용 |
 |------|------|
 | 상태 | 완료 |
-| 최종 업데이트 | 2026-07-31 |
+| 최종 업데이트 | 2026-08-19 |
 
 ## 구현 규모 / 단위 분할
 
@@ -16,8 +16,19 @@
 
 - [x] `backend/scripts/enrich_frontend_quests.py` — TourAPI 매칭(areaBasedList2 + searchKeyword2 보강, 장소명 별칭 사전) 후 dart 필드 삽입(재실행 가능)
 - [x] `Quest.imageUrl`/`lat`/`lng`/`verifyRadius`, `Region.imageUrl` 필드 추가
-- [x] 공용 위젯 `AppNetworkImage`(cached_network_image 래퍼, 로딩·에러·URL 없음 → 기존 placeholder 폴백)
+- [x] 공용 위젯 `AppNetworkImage`(cached_network_image 래퍼, `asset:` 로컬 이미지 지원, 로딩·에러·URL 없음 → 기존 placeholder 폴백)
 - [x] 화면 적용 — 퀘스트 목록·상세, 지역 개요(헤더·썸네일), 퀘스트 선택
+- [x] KAN-100 청주시 지역 개요 대표 이미지 — `frontend/assets/images/region_cheongju_main.png` 로컬 asset 적용
+- [x] KAN-100 충주시 지역 개요 대표 이미지 — `frontend/assets/images/region_chungju_main.png` 로컬 asset 적용
+- [x] KAN-100 단양군 지역 개요 대표 이미지 — `frontend/assets/images/region_danyang_main.png` 로컬 asset 적용
+- [x] KAN-100 음성군 지역 개요 대표 이미지 — `frontend/assets/images/region_eumseong_main.png` 로컬 asset 적용
+- [x] KAN-100 괴산군 지역 개요 대표 이미지 — `frontend/assets/images/region_goesan_main.png` 로컬 asset 적용
+- [x] KAN-100 증평군 지역 개요 대표 이미지 — `frontend/assets/images/region_jeungpyeong_main.png` 로컬 asset 적용
+- [x] KAN-100 진천군 지역 개요 대표 이미지 — `frontend/assets/images/region_jincheon_main.png` 로컬 asset 적용
+- [x] KAN-100 옥천군 지역 개요 대표 이미지 — `frontend/assets/images/region_okcheon_main.png` 로컬 asset 적용
+- [x] KAN-100 보은군 지역 개요 대표 이미지 — `frontend/assets/images/region_boeun_main.png` 로컬 asset 적용
+- [x] KAN-100 제천시 지역 개요 대표 이미지 — `frontend/assets/images/region_jecheon_main.png` 로컬 asset 적용
+- [x] KAN-100 영동군 지역 개요 대표 이미지 — `frontend/assets/images/region_yeongdong_main.png` 로컬 asset 적용
 - [x] 테스트 `test/quest_images_test.dart` — placeholder 폴백, 이미지 없는 데이터로 목록 렌더
 
 ## 미구현 / 남은 항목
@@ -36,3 +47,14 @@
 |------|------|
 | 2026-07-30 | 최초 작성 (KAN-58) |
 | 2026-07-31 | 구현·데이터 보강 완료. searchKeyword2가 areaCode 파라미터를 주면 0건을 반환하는 문제를 발견해 주소(addr1) 기반 클라이언트 필터로 우회 |
+| 2026-08-19 | KAN-100: 청주시 지역 개요 대표 이미지를 제작 asset(`region_cheongju_main.png`)으로 교체 |
+| 2026-08-19 | KAN-100: 충주시 지역 개요 대표 이미지를 제작 asset(`region_chungju_main.png`)으로 교체 |
+| 2026-08-19 | KAN-100: 단양군 지역 개요 대표 이미지를 제작 asset(`region_danyang_main.png`)으로 교체하고, `AppNetworkImage`가 `asset:` 스킴을 렌더링하도록 확장 |
+| 2026-08-19 | KAN-100: 음성군 지역 개요 대표 이미지를 제작 asset(`region_eumseong_main.png`)으로 교체 |
+| 2026-08-19 | KAN-100: 괴산군 지역 개요 대표 이미지를 제작 asset(`region_goesan_main.png`)으로 교체 |
+| 2026-08-19 | KAN-100: 증평군 지역 개요 대표 이미지를 제작 asset(`region_jeungpyeong_main.png`)으로 교체 |
+| 2026-08-19 | KAN-100: 진천군 지역 개요 대표 이미지를 제작 asset(`region_jincheon_main.png`)으로 교체 |
+| 2026-08-19 | KAN-100: 옥천군 지역 개요 대표 이미지를 제작 asset(`region_okcheon_main.png`)으로 교체 |
+| 2026-08-19 | KAN-100: 보은군 지역 개요 대표 이미지를 제작 asset(`region_boeun_main.png`)으로 교체 |
+| 2026-08-19 | KAN-100: 제천시 지역 개요 대표 이미지를 제작 asset(`region_jecheon_main.png`)으로 교체 |
+| 2026-08-19 | KAN-100: 영동군 지역 개요 대표 이미지를 제작 asset(`region_yeongdong_main.png`)으로 교체 |

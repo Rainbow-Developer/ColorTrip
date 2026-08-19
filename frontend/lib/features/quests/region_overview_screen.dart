@@ -190,12 +190,11 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                                         vertical: 5,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: (dnaColors?.foreground ??
-                                                AppColors.textBody)
-                                            .withValues(alpha: 0.16),
-                                        borderRadius: BorderRadius.circular(
-                                          10,
-                                        ),
+                                        color:
+                                            (dnaColors?.foreground ??
+                                                    AppColors.textBody)
+                                                .withValues(alpha: 0.16),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
                                         '#$tag',
