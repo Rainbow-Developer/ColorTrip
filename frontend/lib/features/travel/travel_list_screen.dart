@@ -99,6 +99,7 @@ class _TravelListScreenState extends ConsumerState<TravelListScreen> {
       journey: journey,
       region: region,
       isActive: isActive,
+      onTap: () => context.push('/journey/${journey.id}'),
       onEdit: isActive && !_isOperating
           ? () => _editJourney(journey, region)
           : null,

@@ -19,6 +19,7 @@ import '../features/quests/region_quest_select_screen.dart';
 import '../features/trip_dna/dna_result_screen.dart';
 import '../features/trip_dna/trip_dna_screen.dart';
 import '../features/timeline/timeline_screen.dart';
+import '../features/travel/journey_detail_screen.dart';
 import '../features/travel/travel_list_screen.dart';
 import '../state/auth_controller.dart';
 import '../state/domain_state_gate.dart';
@@ -64,12 +65,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/region/:id',
-        builder: (context, state) => DomainStateGate(
-          child: RegionOverviewScreen(
-            regionId: state.pathParameters['id']!,
-            journeyId: state.uri.queryParameters['journeyId'],
-          ),
-        ),
+        builder: (context, state) {
+          final journeyId = state.uri.queryParameters['journeyId'];
+          return DomainStateGate(
+            child: journeyId == null
+                ? RegionOverviewScreen(regionId: state.pathParameters['id']!)
+                : JourneyDetailScreen(journeyId: journeyId),
+          );
+        },
         routes: [
           GoRoute(
             path: 'quests',
@@ -81,6 +84,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/journey/:journeyId',
+        builder: (context, state) => DomainStateGate(
+          child: JourneyDetailScreen(
+            journeyId: state.pathParameters['journeyId']!,
+          ),
+        ),
       ),
       GoRoute(
         path: '/quest/:id',

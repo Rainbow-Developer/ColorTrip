@@ -80,7 +80,7 @@ class _RegionQuestSelectScreenState
               questKeys: selected.toList(),
             );
         _advanceTourAfterSuccessfulSave(tour);
-        if (mounted) context.go('/travel');
+        if (mounted) context.go('/journey/${existingJourney.id}');
       } on Object {
         if (mounted) {
           showAppToast(context, '퀘스트 선택을 저장하지 못했어요. 다시 시도해주세요.');
