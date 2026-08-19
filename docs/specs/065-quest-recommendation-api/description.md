@@ -6,7 +6,7 @@
 
 ## 동작 방식
 
-1. 홈 추천 카드와 지역 개요는 `GET /quests/recommended?region_id=...&size=3`으로 동일한 DNA 일치 미완료 퀘스트를 받는다.
+1. 홈 추천 카드와 지역 개요는 `GET /quests/recommended?region_id=...&size=3`으로 동일한 DNA 일치 미완료 퀘스트를 받는다. 지역 개요는 여행 존재 여부와 무관하게 3건을 스냅형 가로 캐러셀로 유지한다.
 2. 홈은 `GET /regions/unvisited`로 여정 미생성 지역을 받고 첫 결과를 추천한다.
 3. 여정 생성·수정·퀘스트 완료 뒤 KAN-55 도메인 상태 갱신이 추천 Provider를 다시 조회한다.
 
@@ -21,7 +21,7 @@
 
 ## 예시
 
-`GET /api/v1/regions/unvisited`는 `matching_quest_count`가 가장 높은 지역부터 반환한다. 지역 개요는 `GET /api/v1/quests/recommended`로 받은 **추천 퀘스트의 `client_key`** 를 기존 퀘스트 상세 라우트에 전달한다. 지역 라우팅은 `client_key`가 아니라 정적 카탈로그의 지역 키를 쓴다 — `/regions/unvisited` 응답의 `id`(서버 UUID)를 `regionKey`로 변환해 사용한다.
+`GET /api/v1/regions/unvisited`는 `matching_quest_count`가 가장 높은 지역부터 반환한다. 지역 개요의 추천 캐러셀은 `GET /api/v1/quests/recommended`로 받은 **추천 퀘스트의 `client_key`** 를 기존 퀘스트 상세 라우트에 전달한다. 지역 라우팅은 `client_key`가 아니라 정적 카탈로그의 지역 키를 쓴다 — `/regions/unvisited` 응답의 `id`(서버 UUID)를 `regionKey`로 변환해 사용한다.
 
 ## 관련 문서
 

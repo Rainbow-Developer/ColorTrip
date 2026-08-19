@@ -19,7 +19,7 @@
 2. 사용자가 정적 카탈로그에서 고른 key를 UUID로 변환한다.
 3. 새 여행은 `client_request_id`와 함께 생성하고, 기존 여행의 선택 변경은 원자적
    `PUT /journeys/{id}/quests`로 저장한다.
-4. 여행 화면은 `GET /journeys`, 상세 화면은 `GET /journeys/{id}`를 조회한다.
+4. 앱은 `GET /journeys` 스냅샷으로 지역별 진행중 여행과 `/journey/:journeyId` 상세를 복원하고, 서버의 단건 상세 계약은 `GET /journeys/{id}`로 유지한다.
 5. 응답 유실 후 같은 `client_request_id`를 재전송해도 여정은 한 건만 존재한다.
 
 ### 퀘스트 인증과 파생 상태
@@ -48,7 +48,7 @@
 | catalog snapshot migration | 11개 지역·220개 퀘스트 서버 준비 | `backend/alembic/versions/` |
 | Flutter 도메인 Repository | Envelope·페이지네이션·API 모델 변환 | `frontend/lib/data/repositories/` |
 | Flutter 도메인 Provider | 사용자별 여정·진행·지도·타임라인 서버 상태 | `frontend/lib/state/` |
-| 관련 화면 | 서버 상태 표시와 저장·인증 UX | `frontend/lib/features/` |
+| 관련 화면 | 지역별 여행 탐색, 여행 상세, 저장·인증 UX | `frontend/lib/features/quests/`, `frontend/lib/features/travel/` |
 
 ## 설정 / 사용법
 
