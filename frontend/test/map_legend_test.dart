@@ -33,7 +33,7 @@ void main() {
     expect(find.text('지역별 색상 팔레트'), findsOneWidget);
     // 채색 집계는 "퀘스트를 1개 이상 인증한 여행"이므로 완주(완료) 표현을 쓰지 않는다.
     // 채도 cap(5)과 설명의 단계 수가 어긋나면 범례가 거짓말을 한다.
-    expect(find.text('왼쪽부터 인증한 여행 수 1회 → 5회+'), findsOneWidget);
+    expect(find.text('왼쪽부터 인증한 여행 수 1회 → 5회예요 ✨'), findsOneWidget);
     expect(find.textContaining('완료 횟수'), findsNothing);
     expect(find.textContaining('완주'), findsNothing);
   });
