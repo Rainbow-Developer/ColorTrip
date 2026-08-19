@@ -1,10 +1,10 @@
 """auth — business logic."""
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,12 +22,23 @@ from app.core.base import now_kst
 from app.core.config import settings
 from app.core.exceptions import AppException, ErrorCode
 from app.core.security import create_access_token, create_refresh_token, hash_refresh_token
+from app.legal.documents import PRIVACY, TERMS
+from app.quests.models import QuestProgress
 from app.uploads import service as uploads_service
+from app.uploads.models import UploadedPhoto
 from app.uploads.storage import PhotoStorage
 
-TERMS_CONSENT_VERSION = "terms-v1"
-PRIVACY_CONSENT_VERSION = "privacy-v1"
-MARKETING_CONSENT_VERSION = "marketing-v1"
+TERMS_CONSENT_VERSION = TERMS.version
+PRIVACY_CONSENT_VERSION = PRIVACY.version
+
+
+def is_at_least_fourteen(birth_date: date, *, today: date | None = None) -> bool:
+    current = today or now_kst().date()
+    try:
+        fourteenth_birthday = birth_date.replace(year=birth_date.year + 14)
+    except ValueError:
+        fourteenth_birthday = birth_date.replace(year=birth_date.year + 14, day=28)
+    return fourteenth_birthday <= current
 
 
 async def login_with_kakao_access_token(
@@ -143,18 +154,38 @@ async def withdraw_current_user(
     now = now_kst()
     # 익명화가 컬럼을 비우기 전에 잡아둔다 — 이후에는 URL을 알 수 없다.
     profile_image_url = current_user.profile_image
+    uploaded_photo_urls = list(
+        await session.scalars(
+            select(UploadedPhoto.photo_url).where(UploadedPhoto.user_id == current_user.id)
+        )
+    )
+    progress_photo_urls = list(
+        await session.scalars(
+            select(QuestProgress.photo_url).where(
+                QuestProgress.user_id == current_user.id,
+                QuestProgress.photo_url.is_not(None),
+            )
+        )
+    )
     await repository.revoke_active_refresh_tokens(
         session,
         user_id=current_user.id,
         deleted_at=now,
     )
     await repository.hard_delete_consents(session, user_id=current_user.id)
+    await session.execute(delete(UploadedPhoto).where(UploadedPhoto.user_id == current_user.id))
+    # 사진 원본 링크만 지운다. 완료 횟수·지역 진행도 같은 비식별 집계 기반 기록은 남긴다.
+    await session.execute(
+        update(QuestProgress).where(QuestProgress.user_id == current_user.id).values(photo_url=None)
+    )
     _anonymize_user(current_user, now)
     current_user.deleted_at = now
     current_user.withdrawal_grace_until = None
     await session.commit()
     # 컬럼만 비우면 공개 읽기 객체가 남아 "탈퇴 시 지체 없이 파기"와 어긋난다.
     await uploads_service.discard_stored_image(storage, profile_image_url)
+    for photo_url in set(uploaded_photo_urls + progress_photo_urls):
+        await uploads_service.discard_stored_image(storage, photo_url)
 
 
 async def build_user_profile(session: AsyncSession, user: User) -> UserProfile:
@@ -189,7 +220,11 @@ async def save_onboarding_profile(
     *,
     current_user: User,
     payload: OnboardingProfileRequest,
+    storage: PhotoStorage,
 ) -> UserProfile:
+    if not is_at_least_fourteen(payload.birth_date):
+        await reject_underage_onboarding(session, current_user=current_user, storage=storage)
+        raise AppException(ErrorCode.UNDERAGE_SIGNUP_NOT_ALLOWED)
     if not payload.terms_agreed or not payload.privacy_agreed:
         raise AppException(ErrorCode.REQUIRED_CONSENT_ERROR)
 
@@ -202,15 +237,37 @@ async def save_onboarding_profile(
         session,
         user_id=current_user.id,
         decisions={
-            "terms": (TERMS_CONSENT_VERSION, payload.terms_agreed),
-            "privacy": (PRIVACY_CONSENT_VERSION, payload.privacy_agreed),
-            "marketing": (MARKETING_CONSENT_VERSION, payload.marketing_agreed),
+            "terms": (TERMS_CONSENT_VERSION, payload.terms_agreed, TERMS.digest, "explicit"),
+            "privacy": (
+                PRIVACY_CONSENT_VERSION,
+                payload.privacy_agreed,
+                PRIVACY.digest,
+                "explicit",
+            ),
         },
         decided_at=decided_at,
     )
     await session.commit()
     await session.refresh(current_user)
     return await build_user_profile(session, current_user)
+
+
+async def reject_underage_onboarding(
+    session: AsyncSession,
+    *,
+    current_user: User,
+    storage: PhotoStorage,
+) -> None:
+    """Block and anonymize an incomplete account that submitted an underage birth date."""
+    user = await require_active_user_for_update(session, current_user.id)
+    profile_image_url = user.profile_image
+    now = now_kst()
+    await repository.revoke_active_refresh_tokens(session, user_id=user.id, deleted_at=now)
+    await repository.hard_delete_consents(session, user_id=user.id)
+    _anonymize_user(user, now)
+    user.deleted_at = now
+    await session.commit()
+    await uploads_service.discard_stored_image(storage, profile_image_url)
 
 
 async def replace_profile_image(
@@ -220,12 +277,9 @@ async def replace_profile_image(
     file: UploadFile,
     storage: PhotoStorage,
 ) -> UserProfile:
-    """프로필 이미지를 업로드하고 `users.profile_image`를 갱신한다.
-
-    온보딩 중에도 등록할 수 있어야 해서 `ActiveUser`만 요구한다. 퀘스트 인증 사진과 달리
-    `uploaded_photos` 소유권 행을 만들지 않는다 — 만들면 이 URL이 `require_owned_photo`를
-    통과해 사진 인증에 재사용될 수 있다 (080-profile-image 의사결정 4).
-    """
+    """프로필 이미지를 업로드하고 `users.profile_image`를 갱신한다."""
+    if not await is_profiled_user(session, current_user):
+        raise AppException(ErrorCode.ONBOARDING_REQUIRED)
     image = await uploads_service.store_uploaded_image(file, storage, prefix="avatars")
     try:
         user = await require_active_user_for_update(session, current_user.id)
@@ -290,6 +344,9 @@ async def update_current_user_profile(
     if "nickname" in payload.model_fields_set:
         current_user.nickname = payload.nickname
     if "birth_date" in payload.model_fields_set:
+        assert payload.birth_date is not None
+        if not is_at_least_fourteen(payload.birth_date):
+            raise AppException(ErrorCode.UNDERAGE_SIGNUP_NOT_ALLOWED)
         current_user.birth_date = payload.birth_date
     await session.commit()
     await session.refresh(current_user)

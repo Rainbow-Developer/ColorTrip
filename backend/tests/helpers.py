@@ -41,7 +41,6 @@ async def complete_auth_headers(
             "birth_date": "2000-01-01",
             "terms_agreed": True,
             "privacy_agreed": True,
-            "marketing_agreed": False,
         },
     )
     assert response.status_code == 200

@@ -92,7 +92,6 @@ class OnboardingProfileRequest(BaseModel):
     birth_date: date
     terms_agreed: StrictBool
     privacy_agreed: StrictBool
-    marketing_agreed: StrictBool
 
     _strip_nickname = field_validator("nickname", mode="before")(_normalize_nickname)
     _valid_birth_date = field_validator("birth_date")(_validate_birth_date)

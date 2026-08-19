@@ -59,6 +59,29 @@ void main() {
     );
   });
 
+  test('rejects a birth date for a user younger than fourteen', () {
+    final result = validateOnboardingProfile(
+      nickname: '컬러트립',
+      birthDate: '2013-07-26',
+      today: DateTime(2026, 7, 25),
+    );
+
+    expect(result.errors, contains('birthDate'));
+  });
+
+  test('clamps the leap-day fourteen-year boundary to February 28', () {
+    const nickname = '컬러트립';
+    final leapDay = DateTime(2024, 2, 29);
+    expect(
+      validateOnboardingProfile(nickname: nickname, birthDate: '2010-02-28', today: leapDay).errors,
+      isEmpty,
+    );
+    expect(
+      validateOnboardingProfile(nickname: nickname, birthDate: '2010-03-01', today: leapDay).errors,
+      contains('birthDate'),
+    );
+  });
+
   test('rejects a malformed birth date', () {
     final result = validateOnboardingProfile(
       nickname: '컬러트립',

@@ -31,7 +31,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   // (CodeRabbit 리뷰 반영, 이전엔 true로 사전 체크되어 있었음).
   bool _agreeTerms = false;
   bool _agreePrivacy = false;
-  bool _agreeMarketing = false;
   Map<String, String> _errors = const {};
 
   @override
@@ -134,23 +133,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   onChanged: auth.isBusy
                       ? null
                       : (v) => setState(() => _agreeTerms = v),
+                  onViewDetails: () => _openLegalDocument('/terms', '이용약관'),
                 ),
                 const SizedBox(height: 8),
                 _AgreementCheckbox(
-                  label: '[필수] 개인정보 처리방침',
+                  label: '[필수] 개인정보 수집·이용 동의',
                   value: _agreePrivacy,
                   onChanged: auth.isBusy
                       ? null
                       : (v) => setState(() => _agreePrivacy = v),
-                  onViewDetails: _openPrivacyPolicy,
-                ),
-                const SizedBox(height: 8),
-                _AgreementCheckbox(
-                  label: '[선택] 마케팅 수신 동의',
-                  value: _agreeMarketing,
-                  onChanged: auth.isBusy
-                      ? null
-                      : (v) => setState(() => _agreeMarketing = v),
+                  onViewDetails: () =>
+                      _openLegalDocument('/privacy', '개인정보처리방침'),
                 ),
                 if (auth.errorMessage case final error?) ...[
                   const SizedBox(height: 16),
@@ -201,29 +194,47 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             birthDate: validation.birthDate!,
             termsAgreed: _agreeTerms,
             privacyAgreed: _agreePrivacy,
-            marketingAgreed: _agreeMarketing,
           ),
         );
     if (!mounted) return;
     if (success) {
       ref.read(progressProvider.notifier).setNickname(nickname);
       context.go('/trip-dna');
+    } else if (ref.read(authControllerProvider).errorMessage ==
+        '현재 서비스는 만 14세 이상만 가입할 수 있어요.') {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          content: const Text('현재 서비스는 만 14세 이상만 가입할 수 있어요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
+      if (mounted) await ref.read(authControllerProvider.notifier).logout();
     }
   }
 
   Future<void> _pickBirthDate() async {
     final today = DateTime.now();
     final firstDate = minimumBirthDate(today);
+    final lastDate = maximumBirthDate(today);
     final parsed = DateTime.tryParse(_birthdateController.text);
     final initial =
-        parsed != null && !parsed.isBefore(firstDate) && !parsed.isAfter(today)
+        parsed != null &&
+            !parsed.isBefore(firstDate) &&
+            !parsed.isAfter(lastDate)
         ? parsed
         : DateTime(today.year - 26, today.month, today.day);
     final selected = await showBirthDatePicker(
       context: context,
       initialDate: initial,
       firstDate: firstDate,
-      lastDate: today,
+      lastDate: lastDate,
     );
     if (selected == null || !mounted) return;
     setState(() => _birthdateController.text = _date(selected));
@@ -258,21 +269,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     context.go('/splash');
   }
 
-  /// 개인정보처리방침 페이지를 외부 브라우저로 연다. 새 dart-define 없이 기존
-  /// 필수 빌드값인 apiBaseUrl(예: https://host/api/v1)의 origin에 /privacy를
-  /// 붙여 URL을 계산한다 (075-privacy-policy-page).
-  Future<void> _openPrivacyPolicy() async {
+  Future<void> _openLegalDocument(String path, String name) async {
     final apiBaseUrl = ref.read(appConfigProvider).apiBaseUrl;
     final origin = Uri.parse(apiBaseUrl);
-    final privacyUrl = origin.replace(path: '/privacy', query: '');
+    final documentUrl = origin.replace(path: path, query: '');
     final opened = await launchUrl(
-      privacyUrl,
+      documentUrl,
       mode: LaunchMode.externalApplication,
     );
     if (!opened && mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('개인정보처리방침 페이지를 열 수 없어요.')));
+      ).showSnackBar(SnackBar(content: Text('$name 페이지를 열 수 없어요.')));
     }
   }
 

@@ -16,7 +16,7 @@
 | Refresh token 저장 | 서버 DB에 hash 저장 | 원문 저장 금지, 로그아웃/탈퇴 시 무효화 |
 | 토큰 저장(클라이언트) | flutter_secure_storage | |
 | 수집 개인정보 범위 | 닉네임, 생년월일, 프로필 이미지(선택) | 인증/프로필 PII 최소 범위. 프로필 이미지는 미등록 허용. 이메일은 쓰임이 없어 수집하지 않는다 |
-| 동의 버전 | 서버 상수 `terms-v1`, `privacy-v1`, `marketing-v1` | 클라이언트가 version을 지정하지 않음. 출시 후 수집 항목이 바뀌면 해당 버전을 상향해 재동의를 받는다 |
+| 동의 버전 | 서버 상수 `terms-v2`, `privacy-v2` | 클라이언트가 version을 지정하지 않음. 두 필수 문서가 바뀌면 해당 버전을 상향해 재동의를 받는다. 마케팅 동의는 수집하지 않는다 |
 | 보호 API 접근 단계 | `ActiveUser` → `ProfiledUser` → `CurrentUser` | 프로필·필수 동의·DNA 완료 여부를 서버에서 강제 |
 | 탈퇴 정책 | 즉시 익명화, 복구 없음 | 035에서 005의 7일 복구 정책 대체 |
 | 탈퇴 후 도메인 기록 | 익명화된 user에 연결해 보존 | 여행·퀘스트·지도·타임라인·공유 기록 삭제 제외 |
@@ -55,7 +55,7 @@ Android 플랫폼에는 앱 패키지명 `io.vmonster.colortrip`과 현재 APK �
 ## 프로필·동의와 보호 API 사용자 조회
 
 - 인증/프로필 개인정보 수집은 닉네임, 생년월일, 프로필 이미지로 제한한다. 프로필 이미지는 선택이며 등록하지 않아도 서비스 이용에 제약이 없다. 이메일은 서비스 어디에서도 쓰이지 않아 수집하지 않으며, Kakao 동의항목에서도 요청하지 않는다.
-- 동의 version은 클라이언트 입력이 아니라 서버 상수 `terms-v1`, `privacy-v1`, `marketing-v1`를 사용한다.
+- 동의 version은 클라이언트 입력이 아니라 서버 상수 `terms-v2`, `privacy-v2`를 사용한다. 마케팅 동의는 처리하지 않는다.
 - 이용약관과 개인정보 동의는 필수이고 마케팅 동의는 선택이다. 현재 필수 version 동의가 없으면 일반 도메인 API 접근을 허용하지 않는다.
 - `ActiveUser`는 access JWT 검증 후 active user(`deleted_at IS NULL`, `anonymized_at IS NULL`)를 DB에서 조회한다. 프로필·동의 온보딩, 로그아웃, 탈퇴처럼 유효한 access JWT가 필요한 API에 사용한다.
 - `ProfiledUser`는 `ActiveUser`에 닉네임·생년월일과 현재 이용약관·개인정보 필수 동의 완료 조건을 더한다. 여행 DNA 질문·답변 API 적용은 Flutter 세션 연동을 포함한 KAN-54에서 수행한다.
@@ -84,3 +84,12 @@ Android 플랫폼에는 앱 패키지명 `io.vmonster.colortrip`과 현재 APK �
 - [035 Kakao 통합 인증](../specs/035-kakao-auth-integration/)
 - [080 프로필 이미지](../specs/080-profile-image/)
 - [005 이전 백엔드 인증/회원 기반](../specs/005-auth-member/)
+# 법적 동의 및 연령 제한 (v2)
+
+- 가입 완료에는 `terms-v2`, `privacy-v2`의 명시적 동의와 만 14세 이상 생년월일이 필요하다.
+- 동의 증빙은 문서 버전, SHA-256 다이제스트, 결정 시각, 출처(`explicit` 또는
+  `prelaunch_migration`)를 `user_consents`에 저장한다. `prelaunch_migration`은 사용자
+  자발 동의가 아니라 출시 전 테스트 계정 전환 기록이다.
+- 마케팅 수신 동의는 수집·저장·API 계약에 포함하지 않는다.
+- 만 14세 미만 값이 서버에 제출되면 `UNDERAGE_SIGNUP_NOT_ALLOWED`로 응답하고, 해당
+  미완료 계정의 토큰·동의·프로필 정보를 익명화한다.
