@@ -222,11 +222,11 @@ async def save_onboarding_profile(
     payload: OnboardingProfileRequest,
     storage: PhotoStorage,
 ) -> UserProfile:
-    if not payload.terms_agreed or not payload.privacy_agreed:
-        raise AppException(ErrorCode.REQUIRED_CONSENT_ERROR)
     if not is_at_least_fourteen(payload.birth_date):
         await reject_underage_onboarding(session, current_user=current_user, storage=storage)
         raise AppException(ErrorCode.UNDERAGE_SIGNUP_NOT_ALLOWED)
+    if not payload.terms_agreed or not payload.privacy_agreed:
+        raise AppException(ErrorCode.REQUIRED_CONSENT_ERROR)
 
     current_user = await require_active_user_for_update(session, current_user.id)
     # 이메일 수집을 폐지해 KAN-75의 이메일 잠금 로직도 함께 사라졌다.

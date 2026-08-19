@@ -4,6 +4,7 @@
 """
 
 import ipaddress
+from datetime import date
 from typing import Self
 from urllib.parse import urlparse
 
@@ -85,9 +86,9 @@ class Settings(BaseSettings):
     # 공개 법적 문서 — 배포 환경의 실제 운영자·위탁·국외 처리 사실을 이 설정으로 주입한다.
     # 값이 문서 본문과 동의 다이제스트를 구성하므로, 운영 환경에서는 빈 값을 허용하지 않는다.
     legal_operator_name: str = ""
-    legal_terms_version: str = "terms-v2"
-    legal_privacy_version: str = "privacy-v2"
-    legal_document_effective_date: str = "2026-08-15"
+    legal_terms_version: str = ""
+    legal_privacy_version: str = ""
+    legal_document_effective_date: str = ""
     legal_operator_email: str = ""
     legal_operator_address: str = ""
     legal_privacy_officer_name: str = ""
@@ -182,8 +183,14 @@ class Settings(BaseSettings):
         )
         for env_name in required_legal_fields:
             field_name = env_name.lower()
-            if not str(getattr(self, field_name)).strip():
+            value = str(getattr(self, field_name)).strip()
+            if not value:
                 raise ValueError(f"{env_name} must be set outside local/test environments.")
+            if env_name == "LEGAL_DOCUMENT_EFFECTIVE_DATE":
+                try:
+                    date.fromisoformat(value)
+                except ValueError as error:
+                    raise ValueError("LEGAL_DOCUMENT_EFFECTIVE_DATE must be YYYY-MM-DD.") from error
         return self
 
 

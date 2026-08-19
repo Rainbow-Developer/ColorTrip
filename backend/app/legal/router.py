@@ -1,5 +1,7 @@
 """Public legal-document routes."""
 
+from html import escape
+
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
@@ -15,7 +17,8 @@ def _render(document: LegalDocument) -> str:
         f"<title>{document.title}</title></head>"
         '<body style="font-family:sans-serif;max-width:640px;margin:0 auto;padding:32px 20px 64px;line-height:1.6;">'  # noqa: E501
         f'{document.body}<footer style="margin-top:48px;padding-top:16px;border-top:1px solid #ddd;color:#666;font-size:12px;">'  # noqa: E501
-        f"버전: {document.version}<br>문서 다이제스트: {document.digest}</footer></body></html>"
+        f"버전: {escape(document.version)}<br>문서 다이제스트: {document.digest}"
+        "</footer></body></html>"
     )
 
 

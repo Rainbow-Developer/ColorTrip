@@ -258,7 +258,10 @@ async def test_upload_cleans_up_when_the_user_becomes_inactive(
     from app.uploads.storage import get_photo_storage
 
     data = await login(client)
-    await auth_headers(client)
+    headers = await auth_headers(client)
+    me = await client.get("/api/v1/users/me", headers=headers)
+    assert me.status_code == 200
+    assert me.json()["data"]["id"] == data["user"]["id"]
     user_id = UUID(data["user"]["id"])
     avatars = Path(settings.upload_dir) / "avatars"
     before = set(avatars.rglob("*.png")) if avatars.exists() else set()
@@ -312,7 +315,10 @@ async def test_commit_failure_cleans_up_and_surfaces_the_original_error(
     from app.uploads.storage import get_photo_storage
 
     data = await login(client)
-    await auth_headers(client)
+    headers = await auth_headers(client)
+    me = await client.get("/api/v1/users/me", headers=headers)
+    assert me.status_code == 200
+    assert me.json()["data"]["id"] == data["user"]["id"]
     user_id = UUID(data["user"]["id"])
     upload = UploadFile(
         file=io.BytesIO(_PNG_BYTES),

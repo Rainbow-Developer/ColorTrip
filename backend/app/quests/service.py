@@ -220,7 +220,11 @@ async def verify_quest(
             photo_verdict=None if already_done else outcome.photo_verdict,
         )
 
-    if not verified and payload.photo_url:
+    if (
+        not verified
+        and mission_type in {MissionType.PHOTO.value, MissionType.GPS_PHOTO.value}
+        and payload.photo_url
+    ):
         await session.execute(
             delete(UploadedPhoto).where(
                 UploadedPhoto.user_id == user_id,

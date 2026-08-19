@@ -10,8 +10,11 @@ class ProfileValidationResult {
 /// Date-picker and form validation share the same supported birth-date range.
 DateTime minimumBirthDate(DateTime today) => DateTime(today.year - 120);
 
-DateTime maximumBirthDate(DateTime today) =>
-    DateTime(today.year - 14, today.month, today.day);
+DateTime maximumBirthDate(DateTime today) {
+  final targetYear = today.year - 14;
+  final lastDayOfMonth = DateTime(targetYear, today.month + 1, 0).day;
+  return DateTime(targetYear, today.month, today.day.clamp(1, lastDayOfMonth));
+}
 
 ProfileValidationResult validateOnboardingProfile({
   required String nickname,
