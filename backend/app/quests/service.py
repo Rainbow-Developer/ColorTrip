@@ -102,8 +102,7 @@ async def start_quest(
         await session.commit()
         return ProgressItem.model_validate(progress)
     if progress is not None:
-        if progress.status == ProgressStatus.COMPLETED.value:
-            raise AppException(ErrorCode.CONFLICT_ERROR, "이미 완료한 퀘스트입니다.")
+        # 이미 완료한 퀘스트도 다른 여행에서 다시 시작/수행 가능하도록 허용 (Conflict 제거)
         if journey_id is not None and progress.journey_id != journey_id:
             progress.journey_id = journey_id
             await session.commit()
