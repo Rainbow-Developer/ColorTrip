@@ -372,7 +372,7 @@ async def test_concurrent_different_quest_completions_update_region_once_each(
     assert sum(item["event_type"] == "region_colored" for item in timeline) == 1
 
 
-async def test_verify_completed_quest_conflicts(client: AsyncClient) -> None:
+async def test_verify_completed_quest_allows_reverify(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
 
@@ -386,12 +386,12 @@ async def test_verify_completed_quest_conflicts(client: AsyncClient) -> None:
         json={"answer": "O"},
         headers=headers,
     )
-    assert again.status_code == 409
+    assert again.status_code == 200
 
     start_again = await client.post(
         f"/api/v1/quests/{seed['quiz_quest_id']}/start", headers=headers
     )
-    assert start_again.status_code == 409
+    assert start_again.status_code == 200
 
 
 async def test_verify_with_foreign_journey_rejected(client: AsyncClient) -> None:
