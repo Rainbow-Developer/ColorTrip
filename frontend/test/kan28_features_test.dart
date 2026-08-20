@@ -246,6 +246,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+    expect(scrollable.position.pixels, before);
 
     await tester.tapAt(const Offset(4, 400));
     await tester.pumpAndSettle();
@@ -663,6 +664,59 @@ void main() {
     await tester.tap(find.text('움직이는 타겟'));
     await tester.pump();
     expect(tapCount, 1);
+  });
+
+  testWidgets('화면 크기가 바뀌면 코치마크가 타겟 좌표를 다시 측정한다', (tester) async {
+    tester.view.physicalSize = const Size(800, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final targetKey = GlobalKey();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingTourProvider.overrideWith(
+            () => OnboardingTourNotifier(
+              const OnboardingTourState(step: 0, skipped: false),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned(
+                  left: 100,
+                  right: 100,
+                  bottom: 120,
+                  height: 50,
+                  child: ColoredBox(key: targetKey, color: AppColors.mapEmpty),
+                ),
+                CoachMarkOverlay(
+                  targetKey: targetKey,
+                  stepIndex: 0,
+                  title: '지도에서 지역을 눌러보세요',
+                  body: '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요.',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = const Size(800, 500);
+    await tester.pumpAndSettle();
+
+    final targetRect = tester.getRect(find.byKey(targetKey));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(targetRect.bottom, lessThan(500));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(500));
   });
 
   test('기간 표기는 같은 해면 연도를 한 번만 쓴다', () {

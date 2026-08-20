@@ -66,6 +66,12 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     _scheduleMeasure();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleMeasure();
+  }
+
   void _scheduleMeasure() {
     if (_measureScheduled) return;
     _measureScheduled = true;
