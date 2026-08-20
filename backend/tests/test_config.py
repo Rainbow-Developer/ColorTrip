@@ -197,6 +197,32 @@ def test_dev_workflow_validates_kakao_app_id_before_remote_shell() -> None:
     assert "KAKAO_APP_ID='${{ vars.KAKAO_APP_ID }}'" not in workflow
 
 
+def test_dev_deploy_script_writes_all_required_legal_disclosures() -> None:
+    deploy_script = (REPOSITORY_ROOT / "deploy" / "deploy.sh").read_text(encoding="utf-8")
+
+    required_fields = (
+        "LEGAL_OPERATOR_NAME",
+        "LEGAL_TERMS_VERSION",
+        "LEGAL_PRIVACY_VERSION",
+        "LEGAL_DOCUMENT_EFFECTIVE_DATE",
+        "LEGAL_OPERATOR_EMAIL",
+        "LEGAL_OPERATOR_ADDRESS",
+        "LEGAL_PRIVACY_OFFICER_NAME",
+        "LEGAL_PRIVACY_OFFICER_EMAIL",
+        "LEGAL_GCS_PROCESSOR_NAME",
+        "LEGAL_GCS_PROCESSING_COUNTRY",
+        "LEGAL_GCS_REGION",
+        "LEGAL_GEMINI_PROCESSOR_NAME",
+        "LEGAL_GEMINI_PROCESSING_COUNTRY",
+        "LEGAL_GEMINI_RETENTION_PERIOD",
+        "LEGAL_SHARE_RETENTION_PERIOD",
+        "LEGAL_AGGREGATE_RETENTION_PERIOD",
+    )
+
+    for field in required_fields:
+        assert f"{field}=" in deploy_script
+
+
 def _settings(**kwargs: Any) -> Settings:
     kwargs.setdefault("kakao_app_id", 12345)
     kwargs.setdefault("legal_operator_name", "ColorTrip 운영자")

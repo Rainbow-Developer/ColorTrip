@@ -49,6 +49,7 @@ Android 플랫폼에는 앱 패키지명 `io.vmonster.colortrip`과 현재 APK �
 - 클라이언트 토큰은 flutter_secure_storage에만 저장한다.
 - 시크릿은 코드/깃에 두지 않고 GCP Secret Manager를 사용한다(외부 API 키 관리도 동일).
 - `local/test` 외 환경은 `JWT_SECRET_KEY`, `KAKAO_APP_ID`, `KAKAO_REST_API_KEY`, `KAKAO_REDIRECT_URI`를 배포 설정으로 주입하고, Kakao 개발자 설정에서 client secret을 활성화한 환경만 `KAKAO_CLIENT_SECRET`도 주입한다. 기본 placeholder secret이나 해당 환경의 필수 Kakao 설정 누락으로 앱이 시작되지 않아야 한다.
+- 운영자·수탁·보유 기준 legal configuration은 공개 dev와 prod에 실제 사실을 주입한다. 외부 사용자에게 제공하지 않는 내부 dev 테스트 환경만 `deploy/deploy.sh`의 명시적 `개발 환경 테스트용` placeholder를 쓸 수 있으며, 공개 전 실제 값으로 교체한다.
 - CORS는 허용 도메인 화이트리스트로 제한한다.
 - 정식 Flutter 경로는 Kakao SDK access token을 `POST /api/v1/auth/login/social`에 전달해 검증한다. 호환용 authorization-code 경로를 수동 검증할 때만 앱에 개발용 라우트를 추가하지 않고 별도 로컬 클라이언트를 사용한다.
 
