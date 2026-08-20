@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,8 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../state/onboarding_tour_notifier.dart';
 import '../constants.dart';
 
-const _bubbleAllowance = 320.0;
 const _spotlightMargin = 16.0;
+const _bubbleArrowSize = 26.0;
 
 /// 실제 화면의 특정 위젯([targetKey])을 스포트라이트로 강조하고 화살표+말풍선으로 설명하는
 /// 온보딩 코치마크. 각 화면에서 `OnboardingTourState.step == stepIndex`일 때만 띄운다.
@@ -89,7 +90,11 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     if (measured == null) return;
 
     if (widget.forceBubbleBelow) {
-      final adjusted = await _makeRoomBelow(ctx, measured);
+      final adjusted = await _makeRoomBelow(
+        ctx,
+        measured,
+        _messageCardHeight(measured.overlaySize),
+      );
       if (adjusted != null) measured = adjusted;
     }
 
@@ -118,18 +123,20 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   Future<({Rect rect, Size overlaySize})?> _makeRoomBelow(
     BuildContext ctx,
     ({Rect rect, Size overlaySize}) measured,
+    double messageCardHeight,
   ) async {
+    final bubbleAllowance =
+        messageCardHeight + _bubbleArrowSize + _spotlightMargin;
     final missing =
-        _bubbleAllowance - (measured.overlaySize.height - measured.rect.bottom);
+        bubbleAllowance - (measured.overlaySize.height - measured.rect.bottom);
     if (missing <= 0) return measured;
 
     final scrollable = Scrollable.maybeOf(ctx);
     final position = scrollable?.position;
     if (position == null) return measured;
-    final targetOffset = (position.pixels + missing + _spotlightMargin).clamp(
-      position.minScrollExtent,
-      position.maxScrollExtent,
-    );
+    final targetOffset = (position.pixels + missing + _spotlightMargin)
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
     if ((targetOffset - position.pixels).abs() < 0.5) return measured;
 
     await position.animateTo(
@@ -140,6 +147,35 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted || !ctx.mounted) return null;
     return _readTargetRect(ctx);
+  }
+
+  double _messageCardHeight(Size overlaySize) {
+    final textDirection = Directionality.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final maxTextWidth = (overlaySize.width - 64).clamp(0.0, double.infinity);
+
+    double textHeight(String text, TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: textDirection,
+        textScaler: textScaler,
+      )..layout(maxWidth: maxTextWidth);
+      return painter.height;
+    }
+
+    final stepHeight = textHeight(
+      '${widget.stepIndex + 1}/$kOnboardingTotalSteps',
+      const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+    );
+    final titleHeight = textHeight(
+      widget.title,
+      const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+    );
+    final bodyHeight = textHeight(
+      widget.body,
+      const TextStyle(fontSize: 13, height: 1.4),
+    );
+    return 32 + stepHeight + 6 + titleHeight + 6 + bodyHeight + 10 + 48;
   }
 
   @override
@@ -153,13 +189,16 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
 
     final screenSize = _localSize ?? MediaQuery.sizeOf(context);
     const margin = 16.0;
+    final messageCardHeight = _messageCardHeight(screenSize);
+    final bubbleAllowance =
+        messageCardHeight + _bubbleArrowSize + _spotlightMargin;
 
     final spaceBelow = screenSize.height - rect.bottom;
     final spaceAbove = rect.top;
     final _BubblePlacement placement;
-    if (widget.forceBubbleBelow || spaceBelow >= _bubbleAllowance) {
+    if (widget.forceBubbleBelow || spaceBelow >= bubbleAllowance) {
       placement = _BubblePlacement.below;
-    } else if (spaceAbove >= _bubbleAllowance) {
+    } else if (spaceAbove >= bubbleAllowance) {
       placement = _BubblePlacement.above;
     } else {
       placement = spaceBelow >= spaceAbove
@@ -167,10 +206,23 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
           : _BubblePlacement.above;
     }
 
-    final bubble = _MessageCard(
+    double cardMaxHeight(double availableHeight) {
+      return (availableHeight - _bubbleArrowSize)
+          .clamp(0.0, messageCardHeight)
+          .toDouble();
+    }
+
+    final bubbleBelow = _MessageCard(
       stepIndex: widget.stepIndex,
       title: widget.title,
       body: widget.body,
+      maxHeight: cardMaxHeight(screenSize.height - rect.bottom - margin * 2),
+    );
+    final bubbleAbove = _MessageCard(
+      stepIndex: widget.stepIndex,
+      title: widget.title,
+      body: widget.body,
+      maxHeight: cardMaxHeight(rect.top - margin * 2),
     );
 
     final hole = rect.inflate(8);
@@ -207,9 +259,9 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
                     const Icon(
                       Icons.arrow_upward,
                       color: Colors.white,
-                      size: 26,
+                      size: _bubbleArrowSize,
                     ),
-                    bubble,
+                    bubbleBelow,
                   ],
                 ),
               ),
@@ -220,11 +272,11 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    bubble,
+                    bubbleAbove,
                     const Icon(
                       Icons.arrow_downward,
                       color: Colors.white,
-                      size: 26,
+                      size: _bubbleArrowSize,
                     ),
                   ],
                 ),
@@ -271,6 +323,9 @@ class _RenderSpotlightHitTestBlocker extends RenderBox {
 
   Rect _passthroughRect;
   VoidCallback? onBackgroundTap;
+  int? _trackedPointer;
+  Offset? _trackedStartPosition;
+  bool _exceededTouchSlop = false;
 
   set passthroughRect(Rect value) {
     if (_passthroughRect == value) return;
@@ -294,9 +349,41 @@ class _RenderSpotlightHitTestBlocker extends RenderBox {
 
   @override
   void handleEvent(PointerEvent event, covariant HitTestEntry entry) {
-    if (event is PointerUpEvent) {
-      onBackgroundTap?.call();
+    if (event is PointerDownEvent) {
+      _trackedPointer = event.pointer;
+      _trackedStartPosition = event.localPosition;
+      _exceededTouchSlop = false;
+      return;
     }
+
+    if (event.pointer != _trackedPointer) return;
+
+    if (event is PointerMoveEvent) {
+      final start = _trackedStartPosition;
+      if (start != null &&
+          (event.localPosition - start).distance > kTouchSlop) {
+        _exceededTouchSlop = true;
+      }
+      return;
+    }
+
+    if (event is PointerUpEvent) {
+      if (!_exceededTouchSlop) {
+        onBackgroundTap?.call();
+      }
+      _clearTrackedPointer();
+      return;
+    }
+
+    if (event is PointerCancelEvent) {
+      _clearTrackedPointer();
+    }
+  }
+
+  void _clearTrackedPointer() {
+    _trackedPointer = null;
+    _trackedStartPosition = null;
+    _exceededTouchSlop = false;
   }
 }
 
@@ -305,61 +392,68 @@ class _MessageCard extends ConsumerWidget {
     required this.stepIndex,
     required this.title,
     required this.body,
+    required this.maxHeight,
   });
 
   final int stepIndex;
   final String title;
   final String body;
+  final double maxHeight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '${stepIndex + 1}/$kOnboardingTotalSteps',
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.primaryDark,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          title,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          body,
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.textMuted,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () =>
+                ref.read(onboardingTourProvider.notifier).skipForever(),
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            child: const Text(
+              '다시 보지 않기',
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    return ConstrainedBox(
       key: const ValueKey('coach-mark-message-card'),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '${stepIndex + 1}/$kOnboardingTotalSteps',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryDark,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            body,
-            style: const TextStyle(
-              fontSize: 13,
-              color: AppColors.textMuted,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () =>
-                  ref.read(onboardingTourProvider.notifier).skipForever(),
-              style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-              child: const Text(
-                '다시 보지 않기',
-                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-              ),
-            ),
-          ),
-        ],
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: SingleChildScrollView(child: content),
       ),
     );
   }

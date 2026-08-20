@@ -35,6 +35,15 @@ final _tourDoneOverride = onboardingTourProvider.overrideWith(
   ),
 );
 
+ScrollableState _firstPageScrollable(WidgetTester tester) {
+  return tester.state<ScrollableState>(
+    find.descendant(
+      of: find.byType(SingleChildScrollView).first,
+      matching: find.byType(Scrollable),
+    ),
+  );
+}
+
 class _DomainRepository implements DomainRepository {
   DomainSnapshot snapshot = const DomainSnapshot(
     catalog: DomainCatalog(
@@ -218,7 +227,7 @@ void main() {
     await tester.pumpWidget(_wrap(const HomeScreen(), container: container));
     await tester.pumpAndSettle();
 
-    final scrollable = tester.state<ScrollableState>(find.byType(Scrollable));
+    final scrollable = _firstPageScrollable(tester);
     final before = scrollable.position.pixels;
 
     await tester.drag(find.byType(ChungbukMap), const Offset(0, -260));
@@ -232,6 +241,11 @@ void main() {
     );
     expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
     expect(messageCardRect.bottom, lessThanOrEqualTo(800));
+
+    await tester.dragFrom(const Offset(4, 400), const Offset(0, -120));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
 
     await tester.tapAt(const Offset(4, 400));
     await tester.pumpAndSettle();
@@ -256,6 +270,108 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+  });
+
+  testWidgets('작은 화면에서도 지도 코치마크 말풍선은 화면 안에 배치된다', (tester) async {
+    tester.view.physicalSize = const Size(800, 620);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final container = ProviderContainer(
+      overrides: [
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(step: 0, skipped: false),
+          ),
+        ),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_wrap(const HomeScreen(), container: container));
+    await tester.pumpAndSettle();
+
+    final scrollable = _firstPageScrollable(tester);
+    expect(scrollable.position.pixels, greaterThan(0));
+
+    final mapRect = tester.getRect(find.byType(ChungbukMap));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(620));
+
+    await tester.tapAt(const Offset(4, 310));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
+    expect(scrollable.position.pixels, 0);
+  });
+
+  testWidgets('코치마크는 부모 스크롤 한계에서도 말풍선 높이를 제한한다', (tester) async {
+    tester.view.physicalSize = const Size(800, 360);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final targetKey = GlobalKey();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingTourProvider.overrideWith(
+            () => OnboardingTourNotifier(
+              const OnboardingTourState(step: 0, skipped: false),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                SingleChildScrollView(
+                  child: SizedBox(
+                    height: 320,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 170),
+                        SizedBox(
+                          key: targetKey,
+                          width: 300,
+                          height: 50,
+                          child: const ColoredBox(color: AppColors.mapEmpty),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                CoachMarkOverlay(
+                  targetKey: targetKey,
+                  stepIndex: 0,
+                  title: '지도에서 지역을 눌러보세요',
+                  body:
+                      '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요. '
+                      '작은 화면에서는 설명이 카드 안에서 스크롤돼야 해요.',
+                  forceBubbleBelow: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollable = _firstPageScrollable(tester);
+    expect(scrollable.position.maxScrollExtent, 0);
+
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(messageCardRect.bottom, lessThanOrEqualTo(360));
+    expect(messageCardRect.height, lessThan(140));
   });
 
   testWidgets('지도에서 지역을 누른 개요 화면은 사용자 프로필 DNA를 우선 표시한다', (tester) async {
