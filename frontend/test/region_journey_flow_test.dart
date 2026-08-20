@@ -30,7 +30,7 @@ class _FakeDomainRepository implements DomainRepository {
   Future<DomainSnapshot> fetchSnapshot() async => snapshot;
 
   @override
-  Future<List<String>> fetchRecommendedQuestKeys({
+  Future<List<String>> fetchRecommendedQuestKeys({String? category, 
     required String regionKey,
     int size = 3,
   }) async => const ['dy4', 'dy3', 'dy2'];
@@ -117,7 +117,14 @@ DomainSnapshot _snapshot({
     completedQuestKeys: completedQuestKeys,
     regionProgress: const {},
     regionTripCount: const {},
-    timeline: const [],
+    timeline: [
+      for (final key in completedQuestKeys)
+        DomainTimelineEntry(
+          questKey: key,
+          occurredAt: DateTime(2026, 8, 19),
+          photoUrl: null,
+        ),
+    ],
   );
 }
 
