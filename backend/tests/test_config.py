@@ -223,6 +223,13 @@ def test_dev_deploy_script_writes_all_required_legal_disclosures() -> None:
         assert f"{field}=" in deploy_script
 
 
+def test_dev_deploy_script_confirms_prelaunch_consent_migrations() -> None:
+    deploy_script = (REPOSITORY_ROOT / "deploy" / "deploy.sh").read_text(encoding="utf-8")
+
+    assert "PRELAUNCH_CONSENT_MIGRATION_CONFIRMED=true" in deploy_script
+    assert "PRELAUNCH_CONSENT_ENFORCEMENT_CONFIRMED=true" in deploy_script
+
+
 def _settings(**kwargs: Any) -> Settings:
     kwargs.setdefault("kakao_app_id", 12345)
     kwargs.setdefault("legal_operator_name", "ColorTrip 운영자")

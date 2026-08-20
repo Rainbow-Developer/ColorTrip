@@ -153,6 +153,10 @@ LEGAL_GEMINI_PROCESSING_COUNTRY=개발 환경 테스트용
 LEGAL_GEMINI_RETENTION_PERIOD=개발 환경 검증 후 삭제
 LEGAL_SHARE_RETENTION_PERIOD=개발 환경 검증 종료 시 삭제
 LEGAL_AGGREGATE_RETENTION_PERIOD=개발 환경 검증 종료 시 삭제
+# 기존 dev 계정이 모두 출시 전 테스트 계정임을 확인한 내부 환경에서만 v2 동의
+# migration을 진행한다. 이력은 prelaunch_migration으로 남고 marketing 동의 행은 삭제된다.
+PRELAUNCH_CONSENT_MIGRATION_CONFIRMED=true
+PRELAUNCH_CONSENT_ENFORCEMENT_CONFIRMED=true
 EOF
 chmod 600 .env
 
