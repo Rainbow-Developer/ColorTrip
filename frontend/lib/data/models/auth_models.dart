@@ -91,21 +91,18 @@ class OnboardingProfileInput {
     required this.birthDate,
     required this.termsAgreed,
     required this.privacyAgreed,
-    required this.marketingAgreed,
   });
 
   final String nickname;
   final DateTime birthDate;
   final bool termsAgreed;
   final bool privacyAgreed;
-  final bool marketingAgreed;
 
   Map<String, dynamic> toJson() => {
     'nickname': nickname.trim(),
     'birth_date': _date(birthDate),
     'terms_agreed': termsAgreed,
     'privacy_agreed': privacyAgreed,
-    'marketing_agreed': marketingAgreed,
   };
 }
 

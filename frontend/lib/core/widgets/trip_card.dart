@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../data/models/region.dart';
 import '../../data/repositories/domain_repository.dart';
@@ -18,6 +17,7 @@ class TripCard extends ConsumerWidget {
     required this.journey,
     required this.region,
     required this.isActive,
+    required this.onTap,
     this.onEdit,
     this.onDelete,
   });
@@ -25,6 +25,7 @@ class TripCard extends ConsumerWidget {
   final DomainJourney journey;
   final Region region;
   final bool isActive;
+  final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -42,8 +43,7 @@ class TripCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: InkWell(
-        onTap: () =>
-            context.push('/region/${region.id}?journeyId=${journey.id}'),
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(14),

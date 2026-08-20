@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,7 +28,10 @@ from app.quests.schemas import (
     VerifyResultData,
 )
 from app.timeline.service import handle_quest_completion
+from app.uploads import service as uploads_service
+from app.uploads.models import UploadedPhoto
 from app.uploads.service import require_owned_photo
+from app.uploads.storage import get_photo_storage
 
 
 async def list_quests(
@@ -183,7 +187,7 @@ async def verify_quest(
     else:
         progress.verified_lat = payload.lat
         progress.verified_lng = payload.lng
-        progress.photo_url = payload.photo_url
+        progress.photo_url = payload.photo_url if verified else None
 
     if verified:
         progress.status = ProgressStatus.COMPLETED.value
@@ -215,6 +219,20 @@ async def verify_quest(
             # verified=true인데 photo_verdict.passed=false인 모순 응답이 될 수 있다.
             photo_verdict=None if already_done else outcome.photo_verdict,
         )
+
+    if (
+        not verified
+        and mission_type in {MissionType.PHOTO.value, MissionType.GPS_PHOTO.value}
+        and payload.photo_url
+    ):
+        await session.execute(
+            delete(UploadedPhoto).where(
+                UploadedPhoto.user_id == user_id,
+                UploadedPhoto.photo_url == payload.photo_url,
+            )
+        )
+        await session.commit()
+        await uploads_service.discard_stored_image(get_photo_storage(), payload.photo_url)
 
     return VerifyResultData(
         verified=verified,

@@ -121,10 +121,10 @@ async def upsert_current_consents(
     session: AsyncSession,
     *,
     user_id: UUID,
-    decisions: dict[str, tuple[str, bool]],
+    decisions: dict[str, tuple[str, bool, str, str]],
     decided_at: datetime,
 ) -> None:
-    for consent_type, (version, agreed) in decisions.items():
+    for consent_type, (version, agreed, document_digest, source) in decisions.items():
         stmt = (
             insert(UserConsent)
             .values(
@@ -133,6 +133,8 @@ async def upsert_current_consents(
                 consent_type=consent_type,
                 version=version,
                 agreed=agreed,
+                document_digest=document_digest,
+                source=source,
                 decided_at=decided_at,
                 created_at=decided_at,
                 updated_at=decided_at,
@@ -143,6 +145,8 @@ async def upsert_current_consents(
                     "agreed": agreed,
                     "decided_at": decided_at,
                     "updated_at": decided_at,
+                    "document_digest": document_digest,
+                    "source": source,
                 },
                 where=UserConsent.agreed.is_distinct_from(agreed),
             )

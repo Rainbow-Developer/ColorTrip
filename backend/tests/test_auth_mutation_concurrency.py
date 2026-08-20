@@ -95,7 +95,6 @@ async def test_onboarding_update_serializes_with_withdrawal(
                 "birth_date": "2000-01-01",
                 "terms_agreed": True,
                 "privacy_agreed": True,
-                "marketing_agreed": False,
             },
         )
     )

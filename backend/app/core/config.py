@@ -4,6 +4,7 @@
 """
 
 import ipaddress
+from datetime import date
 from typing import Self
 from urllib.parse import urlparse
 
@@ -82,6 +83,25 @@ class Settings(BaseSettings):
     # 파생해 주입한다(KAN-072 — 존재하지 않는 도메인으로 하드코딩되어 공유 링크가 무효했던 문제).
     share_base_url: str = "http://localhost:8000"
 
+    # 공개 법적 문서 — 배포 환경의 실제 운영자·위탁·국외 처리 사실을 이 설정으로 주입한다.
+    # 값이 문서 본문과 동의 다이제스트를 구성하므로, 운영 환경에서는 빈 값을 허용하지 않는다.
+    legal_operator_name: str = ""
+    legal_terms_version: str = ""
+    legal_privacy_version: str = ""
+    legal_document_effective_date: str = ""
+    legal_operator_email: str = ""
+    legal_operator_address: str = ""
+    legal_privacy_officer_name: str = ""
+    legal_privacy_officer_email: str = ""
+    legal_gcs_processor_name: str = ""
+    legal_gcs_processing_country: str = ""
+    legal_gcs_region: str = ""
+    legal_gemini_processor_name: str = ""
+    legal_gemini_processing_country: str = ""
+    legal_gemini_retention_period: str = ""
+    legal_share_retention_period: str = ""
+    legal_aggregate_retention_period: str = ""
+
     # CORS — docs/conventions/auth-security.md (허용 도메인 화이트리스트)
     # 콤마 구분 도메인 목록. local/test는 "*" 허용, 그 외는 화이트리스트 필수
     cors_allowed_origins: str = "*"
@@ -121,6 +141,11 @@ class Settings(BaseSettings):
 
         env = self.app_env.strip().lower()
         if env in {"local", "test"}:
+            # 로컬·테스트는 공개 문서와 동의 계약을 결정적으로 검증할 수 있게만 기본값을 둔다.
+            # dev/prod는 아래 필수 검증을 통과하려면 반드시 실제 배포값을 제공해야 한다.
+            self.legal_terms_version = self.legal_terms_version or "terms-v2"
+            self.legal_privacy_version = self.legal_privacy_version or "privacy-v2"
+            self.legal_document_effective_date = self.legal_document_effective_date or "2026-08-15"
             return self
 
         jwt_secret_key = self.jwt_secret_key.strip()
@@ -143,6 +168,34 @@ class Settings(BaseSettings):
             raise ValueError(
                 "SHARE_BASE_URL must not use a local host outside local/test environments."
             )
+        required_legal_fields = (
+            "LEGAL_OPERATOR_NAME",
+            "LEGAL_TERMS_VERSION",
+            "LEGAL_PRIVACY_VERSION",
+            "LEGAL_DOCUMENT_EFFECTIVE_DATE",
+            "LEGAL_OPERATOR_EMAIL",
+            "LEGAL_OPERATOR_ADDRESS",
+            "LEGAL_PRIVACY_OFFICER_NAME",
+            "LEGAL_PRIVACY_OFFICER_EMAIL",
+            "LEGAL_GCS_PROCESSOR_NAME",
+            "LEGAL_GCS_PROCESSING_COUNTRY",
+            "LEGAL_GCS_REGION",
+            "LEGAL_GEMINI_PROCESSOR_NAME",
+            "LEGAL_GEMINI_PROCESSING_COUNTRY",
+            "LEGAL_GEMINI_RETENTION_PERIOD",
+            "LEGAL_SHARE_RETENTION_PERIOD",
+            "LEGAL_AGGREGATE_RETENTION_PERIOD",
+        )
+        for env_name in required_legal_fields:
+            field_name = env_name.lower()
+            value = str(getattr(self, field_name)).strip()
+            if not value:
+                raise ValueError(f"{env_name} must be set outside local/test environments.")
+            if env_name == "LEGAL_DOCUMENT_EFFECTIVE_DATE":
+                try:
+                    date.fromisoformat(value)
+                except ValueError as error:
+                    raise ValueError("LEGAL_DOCUMENT_EFFECTIVE_DATE must be YYYY-MM-DD.") from error
         return self
 
 

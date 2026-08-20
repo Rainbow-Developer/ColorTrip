@@ -23,7 +23,6 @@ def _onboarding_payload(**overrides: object) -> dict[str, object]:
         "birth_date": "2000-01-02",
         "terms_agreed": True,
         "privacy_agreed": True,
-        "marketing_agreed": False,
     }
     payload.update(overrides)
     return payload
@@ -61,9 +60,8 @@ async def test_onboarding_profile_atomically_normalizes_profile_and_records_cons
         )
 
     assert [(consent.consent_type, consent.version, consent.agreed) for consent in consents] == [
-        ("marketing", "marketing-v1", False),
-        ("privacy", "privacy-v1", True),
-        ("terms", "terms-v1", True),
+        ("privacy", "privacy-v2", True),
+        ("terms", "terms-v2", True),
     ]
     assert all(consent.decided_at is not None for consent in consents)
 
@@ -95,7 +93,7 @@ async def test_onboarding_profile_is_idempotent_for_retries_and_concurrent_reque
             .select_from(UserConsent)
             .where(UserConsent.user_id == UUID(login_data["user"]["id"]))
         )
-    assert consent_count == 3
+    assert consent_count == 2
 
 
 @pytest.mark.asyncio
@@ -143,7 +141,6 @@ async def test_identical_onboarding_retry_preserves_consent_decision_timestamps(
     [
         {"terms_agreed": 1},
         {"privacy_agreed": "true"},
-        {"marketing_agreed": 0},
     ],
 )
 async def test_onboarding_consent_flags_require_json_booleans(
@@ -213,6 +210,35 @@ async def test_invalid_onboarding_profile_saves_nothing(
 
 
 @pytest.mark.asyncio
+async def test_underage_onboarding_is_rejected_with_a_dedicated_error_code(
+    client: AsyncClient,
+) -> None:
+    login_data = await login(client)
+    response = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers={"Authorization": f"Bearer {login_data['access_token']}"},
+        json=_onboarding_payload(
+            birth_date=now_kst().date().replace(year=now_kst().year - 13).isoformat()
+        ),
+    )
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "UNDERAGE_SIGNUP_NOT_ALLOWED"
+
+
+@pytest.mark.asyncio
+async def test_onboarding_rejects_removed_marketing_consent_field(client: AsyncClient) -> None:
+    login_data = await login(client)
+    response = await client.put(
+        "/api/v1/users/me/onboarding-profile",
+        headers={"Authorization": f"Bearer {login_data['access_token']}"},
+        json={**_onboarding_payload(), "marketing_agreed": False},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_onboarding_step_uses_only_current_required_consent_versions(
     client: AsyncClient,
 ) -> None:
@@ -230,13 +256,17 @@ async def test_onboarding_step_uses_only_current_required_consent_versions(
                     version="terms-v0",
                     agreed=True,
                     decided_at=now_kst(),
+                    document_digest="0" * 64,
+                    source="explicit",
                 ),
                 UserConsent(
                     user_id=user_id,
                     consent_type="privacy",
-                    version="privacy-v1",
+                    version="privacy-v2",
                     agreed=True,
                     decided_at=now_kst(),
+                    document_digest="0" * 64,
+                    source="explicit",
                 ),
             ]
         )

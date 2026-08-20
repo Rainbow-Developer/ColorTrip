@@ -127,6 +127,25 @@ const questTypeIconColors = <String, ({Color background, Color foreground})>{
   'healing': (background: Color(0xFFFCE4EC), foreground: Color(0xFFD81B60)),
 };
 
+/// 퀘스트 유형 아이콘 이미지 — 퀘스트 목록의 카테고리 선택, 여행 DNA 결과 카드에서 공용으로 쓴다.
+const questTypeIconAssets = <String, String>{
+  'nature': 'assets/images/quest_type_nature.svg',
+  'food': 'assets/images/quest_type_food.svg',
+  'history': 'assets/images/quest_type_history.svg',
+  'activity': 'assets/images/quest_type_active.svg',
+  'healing': 'assets/images/quest_type_healing.svg',
+};
+
+/// 여행 DNA 카드(여행하기 화면) 왼쪽의 유형 아이콘 일러스트 — dna_data.dart 유형 id에
+/// 대응한다. 'healing' 유형만 파일명이 'relax'로 되어 있다.
+const dnaCardIconAssets = <String, String>{
+  'nature': 'assets/images/icon_nature.png',
+  'food': 'assets/images/icon_food.png',
+  'history': 'assets/images/icon_history.png',
+  'activity': 'assets/images/icon_activity.png',
+  'healing': 'assets/images/icon_relax.png',
+};
+
 /// 퀘스트/여행 목록 카드 고정 높이 — 값을 바꾸면 카드·좌측 썸네일(4:3) 크기가 같이 바뀐다.
 const double questCardHeight = 100;
 

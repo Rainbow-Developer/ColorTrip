@@ -201,7 +201,8 @@ void main() {
     // 이메일은 더 이상 수집하지 않으므로 입력 필드가 없어야 한다.
     expect(find.text('이메일'), findsNothing);
     expect(find.text('[필수] 이용약관 동의'), findsOneWidget);
-    expect(find.text('[선택] 마케팅 수신 동의'), findsOneWidget);
+    expect(find.text('[필수] 개인정보 수집·이용 동의'), findsOneWidget);
+    expect(find.text('[선택] 마케팅 수신 동의'), findsNothing);
   });
 
   testWidgets('signup uploads the picked profile image immediately', (
@@ -456,7 +457,7 @@ void main() {
       ),
     );
     await tester.tap(find.text('[필수] 이용약관 동의'));
-    await tester.tap(find.text('[필수] 개인정보 처리방침'));
+    await tester.tap(find.text('[필수] 개인정보 수집·이용 동의'));
     await tester.pump();
     await tester.ensureVisible(find.text('다음'));
     await tester.tap(find.text('다음'));
@@ -635,7 +636,7 @@ void main() {
     expect(find.text('생년월일 (선택)'), findsNothing);
 
     await tester.tap(find.text('[필수] 이용약관 동의'));
-    await tester.tap(find.text('[필수] 개인정보 처리방침'));
+    await tester.tap(find.text('[필수] 개인정보 수집·이용 동의'));
     await tester.pump();
     await tester.ensureVisible(find.text('다음'));
     await tester.tap(find.text('다음'));

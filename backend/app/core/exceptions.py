@@ -21,6 +21,11 @@ class ErrorCode(Enum):
     TOKEN_EXPIRED_ERROR = ("TOKEN_EXPIRED_ERROR", 401, "토큰이 만료되었습니다.")
     SOCIAL_AUTH_ERROR = ("SOCIAL_AUTH_ERROR", 401, "소셜 인증에 실패했습니다.")
     REQUIRED_CONSENT_ERROR = ("REQUIRED_CONSENT_ERROR", 400, "필수 동의가 필요합니다.")
+    UNDERAGE_SIGNUP_NOT_ALLOWED = (
+        "UNDERAGE_SIGNUP_NOT_ALLOWED",
+        403,
+        "현재 서비스는 만 14세 이상만 가입할 수 있어요.",
+    )
     ONBOARDING_REQUIRED = ("ONBOARDING_REQUIRED", 403, "온보딩 완료가 필요합니다.")
     CONFLICT_ERROR = ("CONFLICT_ERROR", 409, "이미 처리된 요청입니다.")
     VALIDATION_ERROR = ("VALIDATION_ERROR", 422, "요청 값이 올바르지 않습니다.")

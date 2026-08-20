@@ -62,7 +62,7 @@ class UserConsent(UUIDPKMixin, Base):
     __tablename__ = "user_consents"
     __table_args__ = (
         CheckConstraint(
-            "consent_type IN ('terms', 'privacy', 'marketing')",
+            "consent_type IN ('terms', 'privacy')",
             name="ck_user_consents_type",
         ),
         UniqueConstraint(
@@ -79,6 +79,8 @@ class UserConsent(UUIDPKMixin, Base):
     version: Mapped[str] = mapped_column(String(50), nullable=False)
     agreed: Mapped[bool] = mapped_column(Boolean, nullable=False)
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    document_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    source: Mapped[str] = mapped_column(String(30), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_kst)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=now_kst, onupdate=now_kst

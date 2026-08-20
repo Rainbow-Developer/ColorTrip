@@ -10,6 +10,12 @@ class ProfileValidationResult {
 /// Date-picker and form validation share the same supported birth-date range.
 DateTime minimumBirthDate(DateTime today) => DateTime(today.year - 120);
 
+DateTime maximumBirthDate(DateTime today) {
+  final targetYear = today.year - 14;
+  final lastDayOfMonth = DateTime(targetYear, today.month + 1, 0).day;
+  return DateTime(targetYear, today.month, today.day.clamp(1, lastDayOfMonth));
+}
+
 ProfileValidationResult validateOnboardingProfile({
   required String nickname,
   required String birthDate,
@@ -41,8 +47,8 @@ ProfileValidationResult validateOnboardingProfile({
   final todayOnly = DateTime(today.year, today.month, today.day);
   if (parsedBirthDate == null ||
       parsedBirthDate.isBefore(minimumBirthDate(todayOnly)) ||
-      parsedBirthDate.isAfter(todayOnly)) {
-    errors['birthDate'] = '유효한 생년월일을 입력해주세요.';
+      parsedBirthDate.isAfter(maximumBirthDate(todayOnly))) {
+    errors['birthDate'] = '만 14세 이상만 가입할 수 있어요.';
   }
 
   return ProfileValidationResult(
