@@ -135,6 +135,24 @@ MAP_CACHE_DIR=/app/map_cache
 UPLOAD_DIR=/app/uploads
 # 아직 브라우저에서 호출하는 웹 프론트가 없어 화이트리스트 비움. 프론트 도메인이 정해지면 채운다.
 CORS_ALLOWED_ORIGINS=
+# 외부 사용자에게 제공하지 않는 dev 회원가입·배포 검증용 임시 legal disclosure.
+# 공개 dev 또는 prod 배포 전에는 실제 운영자·수탁·보유 정보로 반드시 교체한다.
+LEGAL_OPERATOR_NAME=ColorTrip 개발 환경 테스트 운영자
+LEGAL_TERMS_VERSION=terms-v2-dev-test
+LEGAL_PRIVACY_VERSION=privacy-v2-dev-test
+LEGAL_DOCUMENT_EFFECTIVE_DATE=2026-08-20
+LEGAL_OPERATOR_EMAIL=dev-legal@example.invalid
+LEGAL_OPERATOR_ADDRESS=개발 환경 전용 (외부 서비스 아님)
+LEGAL_PRIVACY_OFFICER_NAME=개발 환경 개인정보 담당자
+LEGAL_PRIVACY_OFFICER_EMAIL=dev-privacy@example.invalid
+LEGAL_GCS_PROCESSOR_NAME=개발 환경 테스트용 GCS
+LEGAL_GCS_PROCESSING_COUNTRY=개발 환경 테스트용
+LEGAL_GCS_REGION=dev-test
+LEGAL_GEMINI_PROCESSOR_NAME=개발 환경 테스트용 Gemini
+LEGAL_GEMINI_PROCESSING_COUNTRY=개발 환경 테스트용
+LEGAL_GEMINI_RETENTION_PERIOD=개발 환경 검증 후 삭제
+LEGAL_SHARE_RETENTION_PERIOD=개발 환경 검증 종료 시 삭제
+LEGAL_AGGREGATE_RETENTION_PERIOD=개발 환경 검증 종료 시 삭제
 EOF
 chmod 600 .env
 
