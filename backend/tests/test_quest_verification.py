@@ -391,7 +391,7 @@ async def test_verify_completed_quest_allows_reverify(client: AsyncClient) -> No
     start_again = await client.post(
         f"/api/v1/quests/{seed['quiz_quest_id']}/start", headers=headers
     )
-    assert start_again.status_code == 200
+    assert start_again.status_code == 201
 
 
 async def test_verify_with_foreign_journey_rejected(client: AsyncClient) -> None:
