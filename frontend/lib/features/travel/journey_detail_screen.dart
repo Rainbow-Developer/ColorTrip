@@ -49,9 +49,13 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
             .map(questRepo.byId)
             .whereType<Quest>()
             .toList();
-        final done = quests
-            .where((quest) => progress.isCompleted(quest.id))
-            .length;
+        bool isCompletedInJourney(String questId) {
+          final entry = progress.timelineEntryFor(questId);
+          if (entry == null) return false;
+          return entry.completedAt.compareTo(journey.createdAt) >= 0;
+        }
+
+        final done = quests.where((quest) => isCompletedInJourney(quest.id)).length;
         final active = journey.status == 'in_progress';
         final tour = ref.watch(onboardingTourProvider);
 
@@ -131,27 +135,32 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
                     )
                   else
                     for (final (index, quest) in quests.indexed)
-                      Padding(
-                        key: index == 0 ? _firstQuestKey : null,
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _JourneyQuestTile(
-                          quest: quest,
-                          done: progress.isCompleted(quest.id),
-                          onTap: () {
-                            if (index == 0 && !tour.isDone && tour.step == 3) {
-                              ref
-                                  .read(onboardingTourProvider.notifier)
-                                  .advance();
-                            }
-                            if (!active || progress.isCompleted(quest.id)) {
-                              context.push('/quest/${quest.id}');
-                            } else {
-                              context.push(
-                                '/quest/${quest.id}/verify?journeyId=${journey.id}',
-                              );
-                            }
-                          },
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final doneInJourney = isCompletedInJourney(quest.id);
+                          return Padding(
+                            key: index == 0 ? _firstQuestKey : null,
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _JourneyQuestTile(
+                              quest: quest,
+                              done: doneInJourney,
+                              onTap: () {
+                                if (index == 0 && !tour.isDone && tour.step == 3) {
+                                  ref
+                                      .read(onboardingTourProvider.notifier)
+                                      .advance();
+                                }
+                                if (!active || doneInJourney) {
+                                  context.push('/quest/${quest.id}');
+                                } else {
+                                  context.push(
+                                    '/quest/${quest.id}/verify?journeyId=${journey.id}',
+                                  );
+                                }
+                              },
+                            ),
+                          );
+                        },
                       ),
                 ],
               ),

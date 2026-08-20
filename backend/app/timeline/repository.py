@@ -52,6 +52,10 @@ class TimelineRepository:
                 existing.deleted_at = None
                 await session.flush()
                 return existing, True
+            
+            # 동일한 이벤트를 다시 기록할 경우 발생 시간만 갱신 (리턴은 False로 유지해 지도 카운트 중복 증가 방지)
+            existing.occurred_at = obj_in.occurred_at
+            await session.flush()
             return existing, False
 
         db_obj = TimelineEvent(

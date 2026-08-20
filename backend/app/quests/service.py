@@ -139,8 +139,8 @@ async def verify_quest(
     progress = await repository.get_progress_including_deleted(session, user_id, quest_id)
     if progress is not None and progress.deleted_at is not None:
         _restore_progress(progress, journey_id)
-    if progress is not None and progress.status == ProgressStatus.COMPLETED.value:
-        raise AppException(ErrorCode.CONFLICT_ERROR, "이미 완료한 퀘스트입니다.")
+    # 이미 완료한 퀘스트를 다른 여행에서 다시 수행할 수 있도록 허용 (Conflict 제거)
+    # 기존 진행 데이터(progress)가 있다면 덮어쓰기 방식으로 처리됨.
 
     if quest.mission_type in {MissionType.PHOTO.value, MissionType.GPS_PHOTO.value}:
         await require_owned_photo(session, user_id, payload.photo_url)
