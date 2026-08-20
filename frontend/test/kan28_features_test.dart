@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:colortrip/core/constants.dart';
+import 'package:colortrip/core/widgets/chungbuk_map.dart';
 import 'package:colortrip/core/widgets/coach_mark.dart';
 import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/models/quest.dart';
@@ -194,6 +195,67 @@ void main() {
     expect(find.text(questById('dy4').title), findsWidgets);
     expect(find.text(questById('dy3').title), findsWidgets);
     expect(find.text(questById('dy2').title), findsWidgets);
+  });
+
+  testWidgets('지도 튜토리얼 중에는 뒤 화면이 스크롤되지 않는다', (tester) async {
+    tester.view.physicalSize = const Size(800, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final container = ProviderContainer(
+      overrides: [
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(step: 0, skipped: false),
+          ),
+        ),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_wrap(const HomeScreen(), container: container));
+    await tester.pumpAndSettle();
+
+    final scrollable = tester.state<ScrollableState>(find.byType(Scrollable));
+    final before = scrollable.position.pixels;
+
+    await tester.drag(find.byType(ChungbukMap), const Offset(0, -260));
+    await tester.pumpAndSettle();
+
+    expect(scrollable.position.pixels, before);
+
+    final mapRect = tester.getRect(find.byType(ChungbukMap));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(800));
+
+    await tester.tapAt(const Offset(4, 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
+    expect(container.read(onboardingTourProvider).step, 0);
+    expect(container.read(onboardingTourProvider).skipped, isFalse);
+    expect(scrollable.position.pixels, 0);
+    expect(find.textContaining('추천 여행지'), findsOneWidget);
+
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -160),
+    );
+    await tester.pumpAndSettle();
+
+    expect(scrollable.position.pixels, greaterThan(0));
+
+    await container.read(onboardingTourProvider.notifier).skipForever();
+    await tester.pumpAndSettle();
+    await container.read(onboardingTourProvider.notifier).restart();
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
   });
 
   testWidgets('지도에서 지역을 누른 개요 화면은 사용자 프로필 DNA를 우선 표시한다', (tester) async {
@@ -387,8 +449,14 @@ void main() {
 
     expect(find.text('여행 시작하기 (1)'), findsOneWidget);
     expect(find.text('여행 시작하기 (2)'), findsNothing);
+    expect(find.text('여행을 시작해보세요'), findsNothing);
 
-    await tester.tap(find.text('여행 시작하기 (1)'));
+    await tester.tap(find.text('도담삼봉에서 인생샷 남기기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행 시작하기 (2)'), findsOneWidget);
+
+    await tester.tap(find.text('여행 시작하기 (2)'));
     await tester.pumpAndSettle();
 
     expect(find.text('여행 정보를 입력해주세요'), findsOneWidget);
@@ -398,7 +466,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(onboardingTourProvider).step, 2);
 
-    await tester.tap(find.text('여행 시작하기 (1)'));
+    await tester.tap(find.text('여행 시작하기 (2)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('시작일 ~ 종료일 선택'));
     await tester.pumpAndSettle();

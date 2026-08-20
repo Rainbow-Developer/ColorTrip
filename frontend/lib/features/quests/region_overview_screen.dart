@@ -34,6 +34,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
   final _createJourneyButtonKey = GlobalKey();
   final _recommendationController = PageController(viewportFraction: 0.84);
   int _recommendedPage = 0;
+  bool _createJourneyCoachHidden = false;
 
   @override
   void dispose() {
@@ -307,12 +308,14 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
               ),
             ),
           ),
-          if (!tour.isDone && tour.step == 1)
+          if (!tour.isDone && tour.step == 1 && !_createJourneyCoachHidden)
             CoachMarkOverlay(
               targetKey: _createJourneyButtonKey,
               stepIndex: 1,
               title: '새 여행을 만들어보세요',
               body: '버튼을 누른 뒤 이번 여행에서 수행할 퀘스트를 여러 개 고를 수 있어요.',
+              onBackgroundTap: () =>
+                  setState(() => _createJourneyCoachHidden = true),
             ),
         ],
       ),

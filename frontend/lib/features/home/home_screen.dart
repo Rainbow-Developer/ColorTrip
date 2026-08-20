@@ -25,15 +25,50 @@ final _mapKey = GlobalKey();
 /// 공유 버튼은 지도 우상단에 붙여 무엇을 공유하는지 헷갈리지 않게 한다(2026-07-11 KAN-029).
 /// 온보딩 투어 1단계로 지도를 코치마크로 안내한다(KAN-040 피드백 — 텍스트 설명 대신 실제
 /// 화면에 화살표로 표시).
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final _scrollController = ScrollController();
+  bool _mapCoachHidden = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _hideMapCoach() {
+    setState(() => _mapCoachHidden = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<OnboardingTourState>(onboardingTourProvider, (previous, next) {
+      final restarted =
+          (previous?.isDone ?? true) && !next.isDone && next.step == 0;
+      if (restarted && _mapCoachHidden) {
+        setState(() => _mapCoachHidden = false);
+      }
+    });
+
     final progress = ref.watch(progressProvider);
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
     final tour = ref.watch(onboardingTourProvider);
+    final showMapCoach = !tour.isDone && tour.step == 0 && !_mapCoachHidden;
 
     return Scaffold(
       appBar: AppBar(
@@ -43,7 +78,11 @@ class HomeScreen extends ConsumerWidget {
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              controller: _scrollController,
+              physics: showMapCoach
+                  ? const NeverScrollableScrollPhysics()
+                  : null,
+              padding: EdgeInsets.fromLTRB(20, 20, 20, showMapCoach ? 360 : 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -137,7 +176,7 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            if (!tour.isDone && tour.step == 0)
+            if (showMapCoach)
               CoachMarkOverlay(
                 targetKey: _mapKey,
                 stepIndex: 0,
@@ -148,6 +187,8 @@ class HomeScreen extends ConsumerWidget {
                 // 0.0(완전히 붙임)은 화면 패딩이 사라져 지도가 앱바에 딱 붙어 보이므로,
                 // 약간의 여백이 남도록 0을 살짝 넘는 값을 쓴다.
                 scrollAlignment: 0.03,
+                forceBubbleBelow: true,
+                onBackgroundTap: _hideMapCoach,
               ),
           ],
         ),

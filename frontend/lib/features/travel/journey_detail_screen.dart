@@ -27,6 +27,7 @@ class JourneyDetailScreen extends ConsumerStatefulWidget {
 
 class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
   final _firstQuestKey = GlobalKey();
+  bool _firstQuestCoachHidden = false;
 
   @override
   Widget build(BuildContext context) {
@@ -175,12 +176,17 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
                     ),
                   ),
                 ),
-              if (!tour.isDone && tour.step == 3 && quests.isNotEmpty)
+              if (!tour.isDone &&
+                  tour.step == 3 &&
+                  quests.isNotEmpty &&
+                  !_firstQuestCoachHidden)
                 CoachMarkOverlay(
                   targetKey: _firstQuestKey,
                   stepIndex: 3,
                   title: '퀘스트를 인증해보세요',
                   body: '퀘스트를 누르면 인증 화면으로 이동해요. 인증을 마치면 진행도에 반영돼요.',
+                  onBackgroundTap: () =>
+                      setState(() => _firstQuestCoachHidden = true),
                 ),
             ],
           ),

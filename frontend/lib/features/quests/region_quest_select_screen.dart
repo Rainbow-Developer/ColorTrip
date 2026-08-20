@@ -49,6 +49,7 @@ class _RegionQuestSelectScreenState
   String _typeFilter = 'all';
   Set<String>? _selectedQuestIds;
   bool _saving = false;
+  bool _startTripCoachHidden = false;
 
   @override
   void dispose() {
@@ -279,7 +280,10 @@ class _RegionQuestSelectScreenState
               ),
             ],
           ),
-          if (!tour.isDone && tour.step == 2 && selectedCount > 0)
+          if (!tour.isDone &&
+              tour.step == 2 &&
+              selectedCount > 0 &&
+              !_startTripCoachHidden)
             CoachMarkOverlay(
               targetKey: _startTripButtonKey,
               stepIndex: 2,
@@ -287,6 +291,8 @@ class _RegionQuestSelectScreenState
               body:
                   '퀘스트를 고른 뒤 "여행 시작하기"를 누르면\n'
                   '나만의 여행이 시작돼요.',
+              onBackgroundTap: () =>
+                  setState(() => _startTripCoachHidden = true),
             ),
         ],
       ),

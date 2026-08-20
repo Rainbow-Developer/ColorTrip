@@ -1,10 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/onboarding_tour_notifier.dart';
 import '../constants.dart';
+
+const _bubbleAllowance = 320.0;
+const _spotlightMargin = 16.0;
 
 /// 실제 화면의 특정 위젯([targetKey])을 스포트라이트로 강조하고 화살표+말풍선으로 설명하는
 /// 온보딩 코치마크. 각 화면에서 `OnboardingTourState.step == stepIndex`일 때만 띄운다.
@@ -16,6 +20,8 @@ class CoachMarkOverlay extends ConsumerStatefulWidget {
     required this.title,
     required this.body,
     this.scrollAlignment = 0.5,
+    this.forceBubbleBelow = false,
+    this.onBackgroundTap,
   });
 
   final GlobalKey targetKey;
@@ -27,6 +33,13 @@ class CoachMarkOverlay extends ConsumerStatefulWidget {
   /// 타겟이 화면의 상당 부분을 차지해 중앙 정렬 시 말풍선 놓을 위·아래 공간이
   /// 모자라면(예: 홈 지도) 0.0(뷰포트 상단)으로 넘겨 아래쪽에 공간을 확보한다.
   final double scrollAlignment;
+
+  /// true이면 말풍선을 항상 타겟 아래에 둔다. 필요한 경우 타겟을 위쪽으로 더 스크롤해
+  /// 말풍선 공간을 만든다.
+  final bool forceBubbleBelow;
+
+  /// 하이라이트 바깥의 딤 영역을 탭했을 때 호출한다. 기본은 아무 동작 없이 배경 입력만 막는다.
+  final VoidCallback? onBackgroundTap;
 
   @override
   ConsumerState<CoachMarkOverlay> createState() => _CoachMarkOverlayState();
@@ -69,22 +82,64 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
       duration: const Duration(milliseconds: 200),
       alignment: widget.scrollAlignment,
     );
+    await WidgetsBinding.instance.endOfFrame;
     if (!mounted || !ctx.mounted) return;
+
+    var measured = _readTargetRect(ctx);
+    if (measured == null) return;
+
+    if (widget.forceBubbleBelow) {
+      final adjusted = await _makeRoomBelow(ctx, measured);
+      if (adjusted != null) measured = adjusted;
+    }
+
+    final nextRect = measured.rect;
+    final overlaySize = measured.overlaySize;
+    if (_targetRect == nextRect && _localSize == overlaySize) return;
+    setState(() {
+      _targetRect = nextRect;
+      _localSize = overlaySize;
+    });
+  }
+
+  ({Rect rect, Size overlaySize})? _readTargetRect(BuildContext ctx) {
     final box = ctx.findRenderObject() as RenderBox?;
     final overlayBox =
         _overlayKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null || overlayBox == null) return;
+    if (box == null || overlayBox == null) return null;
     // 타겟과 오버레이의 전역 좌표 차이를 사용해 오버레이 내부 좌표로 변환한다.
     // StatefulElement에서 임의의 첫 RenderObject를 찾으면 빌드 결과에 따라 기준점이
     // 달라질 수 있으므로, 화면 전체를 차지하는 [_overlayKey]를 고정 기준으로 사용한다.
     final topLeft =
         box.localToGlobal(Offset.zero) - overlayBox.localToGlobal(Offset.zero);
-    final nextRect = topLeft & box.size;
-    if (_targetRect == nextRect && _localSize == overlayBox.size) return;
-    setState(() {
-      _targetRect = nextRect;
-      _localSize = overlayBox.size;
-    });
+    return (rect: topLeft & box.size, overlaySize: overlayBox.size);
+  }
+
+  Future<({Rect rect, Size overlaySize})?> _makeRoomBelow(
+    BuildContext ctx,
+    ({Rect rect, Size overlaySize}) measured,
+  ) async {
+    final missing =
+        _bubbleAllowance - (measured.overlaySize.height - measured.rect.bottom);
+    if (missing <= 0) return measured;
+
+    final scrollable = Scrollable.maybeOf(ctx);
+    final position = scrollable?.position;
+    if (position == null) return measured;
+    final targetOffset = (position.pixels + missing + _spotlightMargin).clamp(
+      position.minScrollExtent,
+      position.maxScrollExtent,
+    );
+    if ((targetOffset - position.pixels).abs() < 0.5) return measured;
+
+    await position.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || !ctx.mounted) return null;
+    return _readTargetRect(ctx);
   }
 
   @override
@@ -97,20 +152,19 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     }
 
     final screenSize = _localSize ?? MediaQuery.sizeOf(context);
-    const bubbleAllowance = 260.0;
     const margin = 16.0;
 
     final spaceBelow = screenSize.height - rect.bottom;
     final spaceAbove = rect.top;
-    // 타겟(예: 지도)이 화면보다 커서 위·아래 어디에도 말풍선 놓을 공간이 부족하면
-    // 화면 중앙에 띄운다 — 화살표로 특정 방향을 가리키는 대신 스포트라이트만으로 강조.
     final _BubblePlacement placement;
-    if (spaceBelow >= bubbleAllowance) {
+    if (widget.forceBubbleBelow || spaceBelow >= _bubbleAllowance) {
       placement = _BubblePlacement.below;
-    } else if (spaceAbove >= bubbleAllowance) {
+    } else if (spaceAbove >= _bubbleAllowance) {
       placement = _BubblePlacement.above;
     } else {
-      placement = _BubblePlacement.center;
+      placement = spaceBelow >= spaceAbove
+          ? _BubblePlacement.below
+          : _BubblePlacement.above;
     }
 
     final bubble = _MessageCard(
@@ -137,7 +191,10 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
               ),
             ),
             Positioned.fill(
-              child: _SpotlightHitTestBlocker(passthroughRect: hole),
+              child: _SpotlightHitTestBlocker(
+                passthroughRect: hole,
+                onBackgroundTap: widget.onBackgroundTap,
+              ),
             ),
             switch (placement) {
               _BubblePlacement.below => Positioned(
@@ -172,13 +229,6 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
                   ],
                 ),
               ),
-              _BubblePlacement.center => Positioned(
-                left: margin,
-                right: margin,
-                top: margin,
-                bottom: margin,
-                child: Center(child: bubble),
-              ),
             },
           ],
         ),
@@ -187,16 +237,23 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   }
 }
 
-enum _BubblePlacement { below, above, center }
+enum _BubblePlacement { below, above }
 
 class _SpotlightHitTestBlocker extends LeafRenderObjectWidget {
-  const _SpotlightHitTestBlocker({required this.passthroughRect});
+  const _SpotlightHitTestBlocker({
+    required this.passthroughRect,
+    this.onBackgroundTap,
+  });
 
   final Rect passthroughRect;
+  final VoidCallback? onBackgroundTap;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    return _RenderSpotlightHitTestBlocker(passthroughRect);
+    return _RenderSpotlightHitTestBlocker(
+      passthroughRect,
+      onBackgroundTap: onBackgroundTap,
+    );
   }
 
   @override
@@ -205,18 +262,25 @@ class _SpotlightHitTestBlocker extends LeafRenderObjectWidget {
     covariant _RenderSpotlightHitTestBlocker renderObject,
   ) {
     renderObject.passthroughRect = passthroughRect;
+    renderObject.backgroundTapCallback = onBackgroundTap;
   }
 }
 
 class _RenderSpotlightHitTestBlocker extends RenderBox {
-  _RenderSpotlightHitTestBlocker(this._passthroughRect);
+  _RenderSpotlightHitTestBlocker(this._passthroughRect, {this.onBackgroundTap});
 
   Rect _passthroughRect;
+  VoidCallback? onBackgroundTap;
 
   set passthroughRect(Rect value) {
     if (_passthroughRect == value) return;
     _passthroughRect = value;
     markNeedsPaint();
+  }
+
+  set backgroundTapCallback(VoidCallback? value) {
+    if (onBackgroundTap == value) return;
+    onBackgroundTap = value;
   }
 
   @override
@@ -227,6 +291,13 @@ class _RenderSpotlightHitTestBlocker extends RenderBox {
 
   @override
   bool hitTestSelf(Offset position) => !_passthroughRect.contains(position);
+
+  @override
+  void handleEvent(PointerEvent event, covariant HitTestEntry entry) {
+    if (event is PointerUpEvent) {
+      onBackgroundTap?.call();
+    }
+  }
 }
 
 class _MessageCard extends ConsumerWidget {
@@ -243,6 +314,7 @@ class _MessageCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
+      key: const ValueKey('coach-mark-message-card'),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
