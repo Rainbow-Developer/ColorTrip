@@ -3,6 +3,8 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:colortrip/core/config/app_config.dart';
+import 'package:colortrip/core/network/dio_client.dart';
 import 'package:colortrip/data/repositories/domain_repository.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +21,7 @@ import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/features/home/home_screen.dart';
+import 'package:colortrip/features/profile/profile_screen.dart';
 import 'package:colortrip/features/quests/region_overview_screen.dart';
 import 'package:colortrip/features/quests/region_quest_select_screen.dart';
 import 'package:colortrip/features/travel/travel_list_screen.dart';
@@ -34,6 +37,11 @@ final _tourDoneOverride = onboardingTourProvider.overrideWith(
   () => OnboardingTourNotifier(
     const OnboardingTourState(step: kOnboardingTotalSteps, skipped: true),
   ),
+);
+
+final _testConfig = AppConfig.fromValues(
+  kakaoNativeAppKey: 'test-native-key',
+  apiBaseUrl: 'https://api.example.com/api/v1',
 );
 
 ScrollableState _firstPageScrollable(WidgetTester tester) {
@@ -323,6 +331,76 @@ void main() {
 
     expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
     expect(scrollable.position.pixels, 0);
+  });
+
+  testWidgets('마이에서 튜토리얼을 다시 켜면 홈 지도 코치마크가 정렬된다', (tester) async {
+    tester.view.physicalSize = const Size(800, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    const user = UserProfile(
+      id: 'user-id',
+      nickname: '컬러트립',
+      birthDate: null,
+      profileImage: null,
+      dna: 'nature',
+      socialProvider: 'kakao',
+      onboardingStep: OnboardingStep.complete,
+      isRestored: false,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        appConfigProvider.overrideWithValue(_testConfig),
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(
+              step: kOnboardingTotalSteps,
+              skipped: true,
+            ),
+          ),
+        ),
+        currentUserProvider.overrideWithValue(user),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final router = GoRouter(
+      initialLocation: '/my',
+      routes: [
+        GoRoute(path: '/my', builder: (_, _) => const ProfileScreen()),
+        GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          locale: const Locale('ko'),
+          supportedLocales: const [Locale('ko')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('이용 가이드 다시 보기'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+
+    final mapRect = tester.getRect(find.byType(ChungbukMap));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(800));
+    expect(_firstPageScrollable(tester).position.pixels, greaterThan(0));
   });
 
   testWidgets('코치마크는 부모 스크롤 한계에서도 말풍선 높이를 제한한다', (tester) async {

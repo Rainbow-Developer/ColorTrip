@@ -86,8 +86,8 @@ class ProfileScreen extends ConsumerWidget {
             onChanged: (value) async {
               final notifier = ref.read(onboardingTourProvider.notifier);
               if (value) {
-                context.go('/home');
                 await notifier.restart();
+                if (context.mounted) context.go('/home');
               } else {
                 notifier.skipForever();
               }
