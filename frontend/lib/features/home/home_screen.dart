@@ -109,7 +109,7 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                       TextButton(
-                        onPressed: () => context.push('/timeline'),
+                        onPressed: () => context.go('/timeline'),
                         child: const Text(
                           '더보기 ›',
                           style: TextStyle(color: AppColors.timelineDateText),

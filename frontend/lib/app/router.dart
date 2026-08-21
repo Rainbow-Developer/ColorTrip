@@ -51,11 +51,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DnaResultScreen(),
       ),
       GoRoute(
-        path: '/timeline',
-        builder: (context, state) =>
-            const DomainStateGate(child: TimelineScreen()),
-      ),
-      GoRoute(
         path: '/profile/edit',
         builder: (context, state) => const EditProfileScreen(),
       ),
@@ -145,6 +140,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
         branches: [
+          // 탭 순서: 홈 / 여행 / 타임라인 / 마이 (docs/specs/100-bottom-nav-redesign)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -156,8 +160,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/home',
-                builder: (context, state) => const HomeScreen(),
+                path: '/timeline',
+                builder: (context, state) => const TimelineScreen(),
               ),
             ],
           ),

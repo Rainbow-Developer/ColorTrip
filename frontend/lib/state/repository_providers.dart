@@ -4,7 +4,9 @@ import '../core/network/dio_client.dart';
 import '../data/location/location_gateway.dart';
 import '../data/media/photo_picker_gateway.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/models/festival.dart';
 import '../data/repositories/dna_repository.dart';
+import '../data/repositories/festival_repository.dart';
 import '../data/repositories/domain_repository.dart';
 import '../data/repositories/map_repository.dart';
 import '../data/repositories/place_repository.dart';
@@ -64,3 +66,15 @@ final shareRepositoryProvider = Provider<ShareRepository>(
 final placeRepositoryProvider = Provider<PlaceRepository>(
   (ref) => DioPlaceRepository(ref.watch(dioProvider)),
 );
+
+/// 지역 행사·축제(docs/specs/095-festival-info) — 백엔드 프록시 전에는 시연용 스텁.
+final festivalRepositoryProvider = Provider<FestivalRepository>(
+  (ref) => const StubFestivalRepository(),
+);
+
+/// 지역별 행사·축제 상태 — 화면을 벗어나면 버린다(autoDispose, 090과 같은 패턴).
+final regionFestivalsProvider = FutureProvider.autoDispose
+    .family<List<Festival>, String>(
+      (ref, regionId) =>
+          ref.watch(festivalRepositoryProvider).byRegion(regionId),
+    );

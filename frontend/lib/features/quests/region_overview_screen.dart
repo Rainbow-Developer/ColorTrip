@@ -10,6 +10,7 @@ import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../core/widgets/trip_card.dart';
 import '../../data/models/category_vocabulary.dart';
+import '../../data/models/festival.dart';
 import '../../data/models/quest.dart';
 import '../../data/repositories/domain_repository.dart';
 import '../../state/auth_controller.dart';
@@ -105,6 +106,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   borderRadius: BorderRadius.circular(14),
                   placeholderText: '${region.name} 이미지',
                 ),
+                FestivalSection(regionId: widget.regionId),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -392,6 +394,119 @@ class _RecommendedQuestTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 지역 행사·축제 섹션(docs/specs/095-festival-info) — 진행 중·개막 예정 행사를
+/// 가로 스크롤 카드로 보여준다. 로딩·실패·빈 결과는 섹션 자체를 그리지 않는다.
+class FestivalSection extends ConsumerWidget {
+  const FestivalSection({super.key, required this.regionId});
+
+  final String regionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final festivals =
+        ref.watch(regionFestivalsProvider(regionId)).asData?.value ??
+        const <Festival>[];
+    if (festivals.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Text(
+          '진행 중 행사·축제',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 168,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: festivals.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (_, index) =>
+                _FestivalCard(festival: festivals[index]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FestivalCard extends StatelessWidget {
+  const _FestivalCard({required this.festival});
+
+  final Festival festival;
+
+  String _period() {
+    String md(DateTime d) => '${d.month}.${d.day}';
+    return '${md(festival.startDate)}~${md(festival.endDate)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final ongoing = festival.isOngoing(today);
+    final badgeText = ongoing ? '진행 중' : 'D-${festival.daysUntilStart(today)}';
+
+    return SizedBox(
+      width: 200,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              AppNetworkImage(
+                url: festival.posterUrl,
+                width: 200,
+                height: 112,
+                borderRadius: BorderRadius.circular(12),
+                placeholderEmoji: '🎪',
+                placeholderEmojiSize: 30,
+              ),
+              Positioned(
+                top: 8,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: ongoing ? AppColors.primaryDark : Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            festival.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${_period()} · ${festival.placeName}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+          ),
+        ],
       ),
     );
   }

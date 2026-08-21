@@ -59,12 +59,6 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           ListTile(
-            leading: const Icon(Icons.timeline_outlined),
-            title: const Text('타임라인'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/timeline'),
-          ),
-          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('로그아웃'),
             onTap: () async {
