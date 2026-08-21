@@ -386,7 +386,12 @@ class _RenderSpotlightHitTestBlocker extends RenderBox {
     }
 
     if (event is PointerUpEvent) {
-      if (!_exceededTouchSlop) {
+      final start = _trackedStartPosition;
+      final isTap =
+          start != null &&
+          !_exceededTouchSlop &&
+          (event.localPosition - start).distance <= kTouchSlop;
+      if (isTap) {
         onBackgroundTap?.call();
       }
       _clearTrackedPointer();

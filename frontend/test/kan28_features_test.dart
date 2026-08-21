@@ -4,6 +4,7 @@ library;
 import 'dart:typed_data';
 
 import 'package:colortrip/data/repositories/domain_repository.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -247,6 +248,19 @@ void main() {
 
     expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
     expect(scrollable.position.pixels, before);
+
+    tester.binding.handlePointerEvent(
+      const PointerDownEvent(pointer: 7, position: Offset(4, 400)),
+    );
+    tester.binding.handlePointerEvent(
+      const PointerUpEvent(
+        pointer: 7,
+        position: Offset(4, 400 + kTouchSlop + 1),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
 
     await tester.tapAt(const Offset(4, 400));
     await tester.pumpAndSettle();
@@ -742,6 +756,36 @@ void main() {
     var targetTapCount = 0;
     late StateSetter rebuild;
 
+    final fixedCoachMarkStack = Stack(
+      children: [
+        Builder(
+          builder: (context) {
+            final insets = MediaQuery.viewInsetsOf(context);
+            return Positioned(
+              left: 100,
+              right: 100,
+              bottom: 80 + insets.bottom,
+              height: 50,
+              child: GestureDetector(
+                key: targetKey,
+                behavior: HitTestBehavior.opaque,
+                onTap: () => targetTapCount++,
+                child: const ColoredBox(color: AppColors.mapEmpty),
+              ),
+            );
+          },
+        ),
+        CoachMarkOverlay(
+          targetKey: targetKey,
+          stepIndex: 0,
+          title: '지도에서 지역을 눌러보세요',
+          body:
+              '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요. '
+              '텍스트 크기와 키보드 영역이 바뀌어도 위치가 맞아야 해요.',
+        ),
+      ],
+    );
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -762,37 +806,7 @@ void main() {
                     textScaler: TextScaler.linear(textScale),
                     viewInsets: EdgeInsets.only(bottom: bottomInset),
                   ),
-                  child: Builder(
-                    builder: (context) {
-                      final insets = MediaQuery.viewInsetsOf(context);
-                      return Stack(
-                        children: [
-                          Positioned(
-                            left: 100,
-                            right: 100,
-                            bottom: 80 + insets.bottom,
-                            height: 50,
-                            child: GestureDetector(
-                              key: targetKey,
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => targetTapCount++,
-                              child: const ColoredBox(
-                                color: AppColors.mapEmpty,
-                              ),
-                            ),
-                          ),
-                          CoachMarkOverlay(
-                            targetKey: targetKey,
-                            stepIndex: 0,
-                            title: '지도에서 지역을 눌러보세요',
-                            body:
-                                '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요. '
-                                '텍스트 크기와 키보드 영역이 바뀌어도 위치가 맞아야 해요.',
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                  child: fixedCoachMarkStack,
                 );
               },
             ),
