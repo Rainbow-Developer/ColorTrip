@@ -50,6 +50,7 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   final _overlayKey = GlobalKey();
   Rect? _targetRect;
   Size? _localSize;
+  Size? _lastViewportSize;
   bool _measureScheduled = false;
 
   @override
@@ -69,6 +70,9 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final viewportSize = MediaQuery.sizeOf(context);
+    if (_lastViewportSize == viewportSize) return;
+    _lastViewportSize = viewportSize;
     _scheduleMeasure();
   }
 
@@ -158,7 +162,9 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   double _messageCardHeight(Size overlaySize) {
     final textDirection = Directionality.of(context);
     final textScaler = MediaQuery.textScalerOf(context);
-    final maxTextWidth = (overlaySize.width - 64).clamp(0.0, double.infinity);
+    final maxTextWidth = (overlaySize.width - 64)
+        .clamp(0.0, double.infinity)
+        .toDouble();
 
     double textHeight(String text, TextStyle style) {
       final painter = TextPainter(

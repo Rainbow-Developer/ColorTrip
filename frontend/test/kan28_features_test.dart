@@ -673,6 +673,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
 
     final targetKey = GlobalKey();
+    var targetTapCount = 0;
 
     await tester.pumpWidget(
       ProviderScope(
@@ -692,7 +693,12 @@ void main() {
                   right: 100,
                   bottom: 120,
                   height: 50,
-                  child: ColoredBox(key: targetKey, color: AppColors.mapEmpty),
+                  child: GestureDetector(
+                    key: targetKey,
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => targetTapCount++,
+                    child: const ColoredBox(color: AppColors.mapEmpty),
+                  ),
                 ),
                 CoachMarkOverlay(
                   targetKey: targetKey,
@@ -717,6 +723,11 @@ void main() {
     );
     expect(targetRect.bottom, lessThan(500));
     expect(messageCardRect.bottom, lessThanOrEqualTo(500));
+
+    await tester.tapAt(targetRect.center);
+    await tester.pump();
+
+    expect(targetTapCount, 1);
   });
 
   test('기간 표기는 같은 해면 연도를 한 번만 쓴다', () {
