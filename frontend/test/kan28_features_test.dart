@@ -248,6 +248,7 @@ void main() {
     final messageCardRect = tester.getRect(
       find.byKey(const ValueKey('coach-mark-message-card')),
     );
+    final initialMapTop = mapRect.top;
     expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
     expect(messageCardRect.bottom, lessThanOrEqualTo(800));
 
@@ -293,6 +294,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+    final restartedMapRect = tester.getRect(find.byType(ChungbukMap));
+    final restartedMessageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(restartedMapRect.top, closeTo(initialMapTop, 1));
+    expect(
+      restartedMessageCardRect.top,
+      greaterThanOrEqualTo(restartedMapRect.bottom),
+    );
+    expect(restartedMessageCardRect.bottom, lessThanOrEqualTo(800));
   });
 
   testWidgets('작은 화면에서도 지도 코치마크 말풍선은 화면 안에 배치된다', (tester) async {

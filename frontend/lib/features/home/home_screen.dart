@@ -35,6 +35,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _scrollController = ScrollController();
   bool _mapCoachHidden = false;
+  bool _resettingMapCoach = false;
 
   @override
   void dispose() {
@@ -54,13 +55,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  void _resetMapCoachForRestart() {
+    setState(() {
+      _mapCoachHidden = false;
+      _resettingMapCoach = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+      setState(() => _resettingMapCoach = false);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<OnboardingTourState>(onboardingTourProvider, (previous, next) {
       final restarted =
           (previous?.isDone ?? true) && !next.isDone && next.step == 0;
-      if (restarted && _mapCoachHidden) {
-        setState(() => _mapCoachHidden = false);
+      if (restarted) {
+        _resetMapCoachForRestart();
       }
     });
 
@@ -68,7 +83,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
     final tour = ref.watch(onboardingTourProvider);
-    final showMapCoach = !tour.isDone && tour.step == 0 && !_mapCoachHidden;
+    final showMapCoach =
+        !tour.isDone &&
+        tour.step == 0 &&
+        !_mapCoachHidden &&
+        !_resettingMapCoach;
 
     return Scaffold(
       appBar: AppBar(
