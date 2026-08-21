@@ -13,11 +13,12 @@ class Quest {
     required this.place,
     required this.verify,
     required this.reward,
-    required this.desc,
     required this.conditions,
+    this.desc,
     this.quizQuestion,
     this.quizAnswer,
-    this.imageUrl,
+    this.tourContentId,
+    this.tourContentTypeId,
     this.lat,
     this.lng,
     this.verifyRadius,
@@ -30,14 +31,21 @@ class Quest {
   final String place;
   final String verify;
   final int reward;
-  final String desc;
+
+  /// 수제 퀘스트의 직접 쓴 설명. 생성 퀘스트는 null — 소개문을 TourAPI에서
+  /// 실시간 조회해 표시한다(docs/specs/090-realtime-tour-place-info).
+  final String? desc;
+
   final List<String> conditions;
   final String? quizQuestion;
   final bool? quizAnswer;
 
-  /// TourAPI 대표 이미지(firstimage) URL — 없으면 placeholder 표시
-  /// (docs/specs/045-quest-region-images).
-  final String? imageUrl;
+  /// TourAPI contentId — 이미지·소개문·운영정보 실시간 조회의 키
+  /// (docs/specs/090-realtime-tour-place-info). null이면 placeholder 표시.
+  final String? tourContentId;
+
+  /// TourAPI contentTypeId (12 관광지·14 문화시설·28 레포츠·39 음식점).
+  final String? tourContentTypeId;
 
   /// 퀘스트 장소 좌표 — 위치 인증의 온디바이스 거리 계산에만 사용한다
   /// (docs/specs/050-quest-verification, 좌표는 서버로 전송하지 않는다).

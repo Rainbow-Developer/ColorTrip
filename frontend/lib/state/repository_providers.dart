@@ -7,6 +7,7 @@ import '../data/repositories/auth_repository.dart';
 import '../data/repositories/dna_repository.dart';
 import '../data/repositories/domain_repository.dart';
 import '../data/repositories/map_repository.dart';
+import '../data/repositories/place_repository.dart';
 import '../data/repositories/quest_repository.dart';
 import '../data/repositories/region_repository.dart';
 import '../data/repositories/share_repository.dart';
@@ -57,4 +58,9 @@ final photoPickerGatewayProvider = Provider<PhotoPickerGateway>(
 
 final shareRepositoryProvider = Provider<ShareRepository>(
   (ref) => DioShareRepository(ref.watch(dioProvider)),
+);
+
+/// TourAPI 장소 정보 실시간 프록시(docs/specs/090-realtime-tour-place-info).
+final placeRepositoryProvider = Provider<PlaceRepository>(
+  (ref) => DioPlaceRepository(ref.watch(dioProvider)),
 );

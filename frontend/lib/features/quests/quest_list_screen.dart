@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/quest_image.dart';
 
 import '../../data/models/quest.dart';
 import '../../state/progress_notifier.dart';
@@ -226,8 +226,8 @@ class _QuestCard extends StatelessWidget {
                   // 그대로 보여준다([045-quest-region-images]).
                   child: AspectRatio(
                     aspectRatio: 4 / 3,
-                    child: AppNetworkImage(
-                      url: quest.imageUrl,
+                    child: QuestImage(
+                      quest: quest,
                       placeholderEmoji: typeStyle?.emoji ?? '📍',
                       placeholderEmojiSize: 32,
                     ),

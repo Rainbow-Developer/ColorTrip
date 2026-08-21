@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/quest_image.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../data/models/quest.dart';
@@ -55,7 +55,9 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
           return entry.completedAt.compareTo(journey.createdAt) >= 0;
         }
 
-        final done = quests.where((quest) => isCompletedInJourney(quest.id)).length;
+        final done = quests
+            .where((quest) => isCompletedInJourney(quest.id))
+            .length;
         final active = journey.status == 'in_progress';
         final tour = ref.watch(onboardingTourProvider);
 
@@ -145,7 +147,9 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
                               quest: quest,
                               done: doneInJourney,
                               onTap: () {
-                                if (index == 0 && !tour.isDone && tour.step == 3) {
+                                if (index == 0 &&
+                                    !tour.isDone &&
+                                    tour.step == 3) {
                                   ref
                                       .read(onboardingTourProvider.notifier)
                                       .advance();
@@ -241,8 +245,8 @@ class _JourneyQuestTile extends StatelessWidget {
             children: [
               AspectRatio(
                 aspectRatio: 4 / 3,
-                child: AppNetworkImage(
-                  url: quest.imageUrl,
+                child: QuestImage(
+                  quest: quest,
                   placeholderEmoji: typeStyle?.emoji ?? '📍',
                   placeholderEmojiSize: 30,
                 ),

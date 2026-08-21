@@ -2,8 +2,8 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 완료 |
-| 최종 업데이트 | 2026-08-19 |
+| 상태 | 완료 (퀘스트 이미지 정적 보강은 [090](../090-realtime-tour-place-info/)이 대체 — 지역 대표 로컬 asset·좌표 보강은 유효) |
+| 최종 업데이트 | 2026-08-21 |
 
 ## 구현 규모 / 단위 분할
 
@@ -58,3 +58,4 @@
 | 2026-08-19 | KAN-100: 보은군 지역 개요 대표 이미지를 제작 asset(`region_boeun_main.png`)으로 교체 |
 | 2026-08-19 | KAN-100: 제천시 지역 개요 대표 이미지를 제작 asset(`region_jecheon_main.png`)으로 교체 |
 | 2026-08-19 | KAN-100: 영동군 지역 개요 대표 이미지를 제작 asset(`region_yeongdong_main.png`)으로 교체 |
+| 2026-08-21 | 퀘스트 썸네일·소개문의 정적 저장 방식이 [090-realtime-tour-place-info](../090-realtime-tour-place-info/)의 실시간 조회로 대체됨(`imageUrl`·생성 desc 제거, `tourContentId` 백필). 지역 대표 로컬 asset과 좌표(lat/lng)·`AppNetworkImage`는 계속 유효 |

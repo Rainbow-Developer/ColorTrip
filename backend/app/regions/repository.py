@@ -19,6 +19,13 @@ async def list_regions(session: AsyncSession) -> Sequence[Region]:
     return result.scalars().all()
 
 
+async def get_region_by_slug(session: AsyncSession, slug: str) -> Region | None:
+    """slug로 지역 1건을 조회한다(삭제된 지역 제외, 없으면 None)."""
+    stmt = select(Region).where(Region.slug == slug, Region.deleted_at.is_(None))
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def list_unvisited_recommendations(
     session: AsyncSession,
     user_id: UUID,

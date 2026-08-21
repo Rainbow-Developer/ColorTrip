@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/quest_image.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/filter_chip_row.dart';
@@ -174,9 +174,7 @@ class _RegionQuestSelectScreenState
     ];
 
     final user = ref.watch(currentUserProvider);
-    final dnaType = toAppCategory(
-      user?.dna ?? progress.dnaType ?? 'nature',
-    );
+    final dnaType = toAppCategory(user?.dna ?? progress.dnaType ?? 'nature');
 
     final query = _searchController.text.trim();
     final quests = allRegionQuests.where((q) {
@@ -378,8 +376,8 @@ class _SelectableQuestCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  AppNetworkImage(
-                    url: quest.imageUrl,
+                  QuestImage(
+                    quest: quest,
                     width: 44,
                     height: 44,
                     borderRadius: BorderRadius.circular(8),
@@ -412,8 +410,13 @@ class _SelectableQuestCard extends StatelessWidget {
                               const SizedBox(width: 4),
                               _MiniBadge(
                                 label: '🧬 DNA',
-                                backgroundColor: (questTypeStyles[quest.type]?.foreground ?? AppColors.primaryDark).withValues(alpha: 0.12),
-                                textColor: questTypeStyles[quest.type]?.foreground ?? AppColors.primaryDark,
+                                backgroundColor:
+                                    (questTypeStyles[quest.type]?.foreground ??
+                                            AppColors.primaryDark)
+                                        .withValues(alpha: 0.12),
+                                textColor:
+                                    questTypeStyles[quest.type]?.foreground ??
+                                    AppColors.primaryDark,
                               ),
                             ],
                             if (badgeLabel != null) ...[
@@ -448,11 +451,7 @@ class _SelectableQuestCard extends StatelessWidget {
 }
 
 class _MiniBadge extends StatelessWidget {
-  const _MiniBadge({
-    required this.label,
-    this.backgroundColor,
-    this.textColor,
-  });
+  const _MiniBadge({required this.label, this.backgroundColor, this.textColor});
 
   final String label;
   final Color? backgroundColor;

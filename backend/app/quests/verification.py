@@ -24,9 +24,12 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
 
+import httpx
+
 from app.core.config import settings
 from app.core.enums import MissionType
 from app.core.exceptions import AppException, ErrorCode
+from app.integrations.tour_api.client import TourApiClient
 from app.integrations.vision.base import VisionVerdict
 from app.quests.models import Quest
 from app.uploads.storage import get_photo_storage, object_name_from_url
@@ -56,6 +59,7 @@ class QuestJudgeInput:
     title: str
     description: str | None
     mission_meta: dict[str, Any] | None
+    content_id: str | None
     lat: Decimal | None
     lng: Decimal | None
     verify_radius: int
@@ -75,6 +79,7 @@ def snapshot(quest: Quest) -> QuestJudgeInput:
         title=quest.title,
         description=quest.description,
         mission_meta=quest.mission_meta,
+        content_id=quest.content_id,
         lat=quest.lat,
         lng=quest.lng,
         verify_radius=quest.verify_radius,
@@ -153,12 +158,37 @@ async def _judge_photo(quest: QuestJudgeInput, photo_url: str | None) -> JudgeOu
         quest.title,
         "",  # 서버 퀘스트에는 장소명 컬럼이 없다 — 설명을 조건 맥락으로 넘긴다
         _conditions_of(quest),
+        place_overview=await _fetch_place_overview(quest.content_id),
     )
     return JudgeOutcome(
         verdict.passed,
         None if verdict.passed else verdict.reason,
         photo_verdict=verdict,
     )
+
+
+# 소개문은 보조 맥락이다 — 판정을 이 조회 때문에 오래 기다리게 하지 않는다.
+_OVERVIEW_TIMEOUT_SECONDS = 3.0
+
+
+async def _fetch_place_overview(content_id: str | None) -> str | None:
+    """TourAPI에서 장소 소개문을 실시간 조회한다(KAN-102).
+
+    content_id가 없거나(수제 퀘스트) 조회에 실패하면 None — 기존 프롬프트로 판정한다.
+    """
+    if not content_id:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=_OVERVIEW_TIMEOUT_SECONDS) as http_client:
+            item = await TourApiClient(http_client=http_client).fetch_detail_common(content_id)
+    except httpx.HTTPError as exc:
+        logger.warning(
+            "장소 소개문 조회 실패 — 소개문 없이 판정합니다 (contentId=%s): %s", content_id, exc
+        )
+        return None
+    if item is None:
+        return None
+    return str(item.get("overview") or "").strip() or None
 
 
 def _mime_type_for(object_name: str) -> str:

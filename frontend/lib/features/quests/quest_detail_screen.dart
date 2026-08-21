@@ -6,6 +6,9 @@ import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_network_image.dart';
 import '../../core/widgets/quest_type_badge.dart';
+import '../../data/models/place_detail.dart';
+import '../../data/models/quest.dart';
+import '../../state/place_providers.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
@@ -43,6 +46,9 @@ class QuestDetailScreen extends ConsumerWidget {
       completedEntry?.photoUrl,
     );
     final conditionEmoji = _conditionEmoji[quest.verify] ?? '📍';
+    // 상세 이미지는 장소 상세(detailCommon2)의 대표 이미지를 쓴다 — 지역 맵과 달리
+    // 유형 제한이 없고, 이 화면이 이미 상세를 조회하므로 추가 호출이 없다.
+    final placeDetail = _watchPlaceDetail(ref, quest);
 
     return Scaffold(
       appBar: AppBar(
@@ -70,7 +76,7 @@ class QuestDetailScreen extends ConsumerWidget {
                         errorBuilder: (_, _, _) => const _ImagePlaceholder(),
                       )
                     : AppNetworkImage(
-                        url: quest.imageUrl,
+                        url: placeDetail?.imageUrl,
                         placeholderText: '관광지 이미지',
                       ),
               ),
@@ -140,18 +146,69 @@ class QuestDetailScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              quest.desc,
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 13,
-                height: 1.6,
-              ),
-            ),
+            _PlaceInfoSection(quest: quest),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 장소 상세를 구독한다 — contentId 없는 퀘스트(수제)와 로딩·실패는 null.
+PlaceDetail? _watchPlaceDetail(WidgetRef ref, Quest quest) {
+  final contentId = quest.tourContentId;
+  final contentTypeId = quest.tourContentTypeId;
+  if (contentId == null || contentTypeId == null) return null;
+  return ref
+      .watch(
+        placeDetailProvider((
+          contentId: contentId,
+          contentTypeId: contentTypeId,
+        )),
+      )
+      .asData
+      ?.value;
+}
+
+/// 장소 소개·운영정보 — 수제 퀘스트는 직접 쓴 desc를, 생성 퀘스트는 TourAPI에서
+/// 실시간 조회한 소개문·운영시간·휴무를 보여준다(docs/specs/090-realtime-tour-place-info).
+/// 조회 실패·로딩 중·조회 대상 없음(contentId 없음)은 조용히 생략한다(placeholder 원칙).
+class _PlaceInfoSection extends ConsumerWidget {
+  const _PlaceInfoSection({required this.quest});
+
+  final Quest quest;
+
+  static const _descStyle = TextStyle(
+    color: AppColors.textMuted,
+    fontSize: 13,
+    height: 1.6,
+  );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detail = _watchPlaceDetail(ref, quest);
+
+    final description = quest.desc ?? detail?.overview;
+    final operation = detail?.operationInfo;
+    if (description == null && operation == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (operation != null) ...[
+          const SizedBox(height: 16),
+          if (operation.usetime case final usetime?)
+            Text('⏰ 운영시간: $usetime', style: _descStyle),
+          if (operation.restdate case final restdate?)
+            Text('📅 휴무: $restdate', style: _descStyle),
+        ],
+        if (description != null) ...[
+          const SizedBox(height: 16),
+          Text(description, style: _descStyle),
+        ],
+      ],
     );
   }
 }
