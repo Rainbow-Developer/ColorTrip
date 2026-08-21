@@ -26,15 +26,70 @@ final _mapKey = GlobalKey();
 /// 공유 버튼은 지도 우상단에 붙여 무엇을 공유하는지 헷갈리지 않게 한다(2026-07-11 KAN-029).
 /// 온보딩 투어 1단계로 지도를 코치마크로 안내한다(KAN-040 피드백 — 텍스트 설명 대신 실제
 /// 화면에 화살표로 표시).
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final _scrollController = ScrollController();
+  bool _mapCoachHidden = false;
+  bool _resettingMapCoach = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _hideMapCoach() {
+    setState(() => _mapCoachHidden = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _resetMapCoachForRestart() {
+    setState(() {
+      _mapCoachHidden = false;
+      _resettingMapCoach = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+      setState(() => _resettingMapCoach = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<OnboardingTourState>(onboardingTourProvider, (previous, next) {
+      final restarted =
+          next.isEnabled &&
+          next.step == 0 &&
+          ((previous?.isEnabled ?? false) != next.isEnabled ||
+              previous?.step != next.step);
+      if (restarted) {
+        _resetMapCoachForRestart();
+      }
+    });
+
     final progress = ref.watch(progressProvider);
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
     final tour = ref.watch(onboardingTourProvider);
+    final mapCoachActive = tour.isEnabled && !_mapCoachHidden;
+    final showMapCoach = mapCoachActive && !_resettingMapCoach;
+    final compactHeight = MediaQuery.sizeOf(context).height < 700;
 
     return Scaffold(
       appBar: AppBar(
@@ -44,7 +99,16 @@ class HomeScreen extends ConsumerWidget {
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              controller: _scrollController,
+              physics: mapCoachActive
+                  ? const NeverScrollableScrollPhysics()
+                  : null,
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                mapCoachActive ? 360 : 20,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -84,7 +148,7 @@ class HomeScreen extends ConsumerWidget {
                               region.id: progress.regionSaturation(region.id),
                           },
                           onRegionTap: (regionId) {
-                            if (!tour.isDone && tour.step == 0) {
+                            if (tour.isEnabled && tour.step == 0) {
                               ref
                                   .read(onboardingTourProvider.notifier)
                                   .advance();
@@ -138,17 +202,18 @@ class HomeScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            if (!tour.isDone && tour.step == 0)
+            if (showMapCoach)
               CoachMarkOverlay(
                 targetKey: _mapKey,
                 stepIndex: 0,
                 title: '지도에서 지역을 눌러보세요',
                 body: '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요.',
-                // 지도가 화면의 상당 부분을 차지해 중앙 정렬 시 말풍선이 지도(하이라이팅)와
-                // 겹치는 문제(KAN-071) — 뷰포트 상단 쪽으로 정렬해 아래쪽에 공간을 확보한다.
-                // 0.0(완전히 붙임)은 화면 패딩이 사라져 지도가 앱바에 딱 붙어 보이므로,
-                // 약간의 여백이 남도록 0을 살짝 넘는 값을 쓴다.
-                scrollAlignment: 0.03,
+                // 홈 지도는 말풍선을 아래에 두되, 부족한 공간을 채우려고 끝까지 끌어올리지는 않는다.
+                // 지도 상단이 앱바에 붙어 보이지 않도록 중간 정렬만 적용한다.
+                scrollAlignment: 0.45,
+                forceBubbleBelow: true,
+                makeRoomForBubble: compactHeight,
+                onBackgroundTap: _hideMapCoach,
               ),
           ],
         ),

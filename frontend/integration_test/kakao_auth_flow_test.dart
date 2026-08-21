@@ -126,7 +126,8 @@ class _DomainRepository implements DomainRepository {
   fetchUnvisitedRecommendedRegions() async => const [];
 
   @override
-  Future<List<String>> fetchRecommendedQuestKeys({String? category, 
+  Future<List<String>> fetchRecommendedQuestKeys({
+    String? category,
     required String regionKey,
     int size = 2,
   }) async => const [];

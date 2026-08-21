@@ -3,7 +3,10 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:colortrip/core/config/app_config.dart';
+import 'package:colortrip/core/network/dio_client.dart';
 import 'package:colortrip/data/repositories/domain_repository.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,14 +14,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:colortrip/app/app_shell.dart';
 import 'package:colortrip/core/constants.dart';
+import 'package:colortrip/core/widgets/chungbuk_map.dart';
 import 'package:colortrip/core/widgets/coach_mark.dart';
 import 'package:colortrip/data/models/auth_models.dart';
 import 'package:colortrip/data/models/quest.dart';
 import 'package:colortrip/data/static/quests_data.dart';
 import 'package:colortrip/features/home/home_screen.dart';
+import 'package:colortrip/features/profile/profile_screen.dart';
 import 'package:colortrip/features/quests/region_overview_screen.dart';
 import 'package:colortrip/features/quests/region_quest_select_screen.dart';
+import 'package:colortrip/features/travel/journey_detail_screen.dart';
 import 'package:colortrip/features/travel/travel_list_screen.dart';
 import 'package:colortrip/state/auth_controller.dart';
 import 'package:colortrip/state/onboarding_tour_notifier.dart';
@@ -33,6 +40,20 @@ final _tourDoneOverride = onboardingTourProvider.overrideWith(
     const OnboardingTourState(step: kOnboardingTotalSteps, skipped: true),
   ),
 );
+
+final _testConfig = AppConfig.fromValues(
+  kakaoNativeAppKey: 'test-native-key',
+  apiBaseUrl: 'https://api.example.com/api/v1',
+);
+
+ScrollableState _firstPageScrollable(WidgetTester tester) {
+  return tester.state<ScrollableState>(
+    find.descendant(
+      of: find.byType(SingleChildScrollView).first,
+      matching: find.byType(Scrollable),
+    ),
+  );
+}
 
 class _DomainRepository implements DomainRepository {
   DomainSnapshot snapshot = const DomainSnapshot(
@@ -63,7 +84,8 @@ class _DomainRepository implements DomainRepository {
   ];
 
   @override
-  Future<List<String>> fetchRecommendedQuestKeys({String? category, 
+  Future<List<String>> fetchRecommendedQuestKeys({
+    String? category,
     required String regionKey,
     int size = 3,
   }) async => const ['dy4', 'dy3', 'dy2'];
@@ -194,6 +216,360 @@ void main() {
     expect(find.text(questById('dy4').title), findsWidgets);
     expect(find.text(questById('dy3').title), findsWidgets);
     expect(find.text(questById('dy2').title), findsWidgets);
+  });
+
+  testWidgets('지도 튜토리얼 중에는 뒤 화면이 스크롤되지 않는다', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final container = ProviderContainer(
+      overrides: [
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(step: 0, skipped: false),
+          ),
+        ),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_wrap(const HomeScreen(), container: container));
+    await tester.pumpAndSettle();
+
+    final scrollable = _firstPageScrollable(tester);
+    final before = scrollable.position.pixels;
+
+    await tester.drag(find.byType(ChungbukMap), const Offset(0, -260));
+    await tester.pumpAndSettle();
+
+    expect(scrollable.position.pixels, before);
+
+    final mapRect = tester.getRect(find.byType(ChungbukMap));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(mapRect.top, greaterThan(80));
+    expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(800));
+
+    await tester.dragFrom(const Offset(4, 400), const Offset(0, -120));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+    expect(scrollable.position.pixels, before);
+
+    tester.binding.handlePointerEvent(
+      const PointerDownEvent(pointer: 7, position: Offset(4, 400)),
+    );
+    tester.binding.handlePointerEvent(
+      const PointerUpEvent(
+        pointer: 7,
+        position: Offset(4, 400 + kTouchSlop + 1),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+
+    await tester.tapAt(const Offset(4, 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
+    expect(container.read(onboardingTourProvider).step, 0);
+    expect(container.read(onboardingTourProvider).skipped, isFalse);
+    expect(scrollable.position.pixels, 0);
+    expect(find.textContaining('추천 여행지'), findsOneWidget);
+
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -160),
+    );
+    await tester.pumpAndSettle();
+
+    expect(scrollable.position.pixels, greaterThan(0));
+
+    await container.read(onboardingTourProvider.notifier).skipForever();
+    await tester.pumpAndSettle();
+    await container.read(onboardingTourProvider.notifier).restart();
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+    final restartedMapRect = tester.getRect(find.byType(ChungbukMap));
+    final restartedMessageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(restartedMapRect.top, greaterThan(80));
+    expect(
+      restartedMessageCardRect.top,
+      greaterThanOrEqualTo(restartedMapRect.bottom),
+    );
+    expect(restartedMessageCardRect.bottom, lessThanOrEqualTo(800));
+  });
+
+  testWidgets('작은 화면에서도 지도 코치마크 말풍선은 화면 안에 배치된다', (tester) async {
+    tester.view.physicalSize = const Size(400, 620);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final container = ProviderContainer(
+      overrides: [
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(step: 0, skipped: false),
+          ),
+        ),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_wrap(const HomeScreen(), container: container));
+    await tester.pumpAndSettle();
+
+    final scrollable = _firstPageScrollable(tester);
+    expect(scrollable.position.pixels, greaterThanOrEqualTo(0));
+
+    final mapRect = tester.getRect(find.byType(ChungbukMap));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(mapRect.top, greaterThan(40));
+    expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(620));
+
+    await tester.tapAt(const Offset(4, 310));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
+    expect(scrollable.position.pixels, 0);
+  });
+
+  testWidgets('마이에서 튜토리얼을 다시 켜면 홈 지도 코치마크가 정렬된다', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    const user = UserProfile(
+      id: 'user-id',
+      nickname: '컬러트립',
+      birthDate: null,
+      profileImage: null,
+      dna: 'nature',
+      socialProvider: 'kakao',
+      onboardingStep: OnboardingStep.complete,
+      isRestored: false,
+    );
+    final container = ProviderContainer(
+      overrides: [
+        appConfigProvider.overrideWithValue(_testConfig),
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(
+              step: kOnboardingTotalSteps,
+              skipped: true,
+            ),
+          ),
+        ),
+        currentUserProvider.overrideWithValue(user),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final router = GoRouter(
+      initialLocation: '/home',
+      routes: [
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) =>
+              AppShell(navigationShell: navigationShell),
+          branches: [
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/travel',
+                  builder: (_, _) => const TravelListScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/my', builder: (_, _) => const ProfileScreen()),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          locale: const Locale('ko'),
+          supportedLocales: const [Locale('ko')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    await tester.tap(find.text('이용 가이드 다시 보기'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+
+    final mapRect = tester.getRect(find.byType(ChungbukMap));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(mapRect.top, greaterThan(80));
+    expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(800));
+    expect(_firstPageScrollable(tester).position.pixels, greaterThan(0));
+  });
+
+  testWidgets('가이드가 켜져 있으면 완료 단계 이후에도 약속된 화면에서 다시 보인다', (tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final domainRepository = _DomainRepository()
+      ..snapshot = DomainSnapshot(
+        catalog: const DomainCatalog(
+          regionIdsByKey: {'danyang': 'region-uuid'},
+          regionKeysById: {'region-uuid': 'danyang'},
+          questIdsByKey: {'dy1': 'quest-uuid'},
+          questKeysById: {'quest-uuid': 'dy1'},
+        ),
+        journeys: [
+          DomainJourney(
+            id: 'journey-uuid',
+            regionKey: 'danyang',
+            questKeys: const ['dy1'],
+            title: '단양 여행',
+            startDate: DateTime(2026, 8, 21),
+            endDate: DateTime(2026, 8, 22),
+            status: 'in_progress',
+            createdAt: DateTime(2026, 8, 21),
+          ),
+        ],
+        completedQuestKeys: const {},
+        regionProgress: const {},
+        regionTripCount: const {},
+        timeline: const [],
+      );
+    final container = ProviderContainer(
+      overrides: [
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(
+              step: kOnboardingTotalSteps,
+              skipped: false,
+            ),
+          ),
+        ),
+        domainRepositoryProvider.overrideWithValue(domainRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_wrap(const HomeScreen(), container: container));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+
+    await tester.pumpWidget(
+      _wrap(
+        const JourneyDetailScreen(journeyId: 'journey-uuid'),
+        container: container,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('퀘스트를 인증해보세요'), findsOneWidget);
+  });
+
+  testWidgets('코치마크는 부모 스크롤 한계에서도 말풍선 높이를 제한한다', (tester) async {
+    tester.view.physicalSize = const Size(800, 360);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final targetKey = GlobalKey();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingTourProvider.overrideWith(
+            () => OnboardingTourNotifier(
+              const OnboardingTourState(step: 0, skipped: false),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                SingleChildScrollView(
+                  child: SizedBox(
+                    height: 320,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 170),
+                        SizedBox(
+                          key: targetKey,
+                          width: 300,
+                          height: 50,
+                          child: const ColoredBox(color: AppColors.mapEmpty),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                CoachMarkOverlay(
+                  targetKey: targetKey,
+                  stepIndex: 0,
+                  title: '지도에서 지역을 눌러보세요',
+                  body:
+                      '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요. '
+                      '작은 화면에서는 설명이 카드 안에서 스크롤돼야 해요.',
+                  forceBubbleBelow: true,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scrollable = _firstPageScrollable(tester);
+    expect(scrollable.position.maxScrollExtent, 0);
+
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(messageCardRect.bottom, lessThanOrEqualTo(360));
+    expect(messageCardRect.height, lessThan(140));
   });
 
   testWidgets('지도에서 지역을 누른 개요 화면은 사용자 프로필 DNA를 우선 표시한다', (tester) async {
@@ -387,8 +763,14 @@ void main() {
 
     expect(find.text('여행 시작하기 (1)'), findsOneWidget);
     expect(find.text('여행 시작하기 (2)'), findsNothing);
+    expect(find.text('여행을 시작해보세요'), findsNothing);
 
-    await tester.tap(find.text('여행 시작하기 (1)'));
+    await tester.tap(find.text('도담삼봉에서 인생샷 남기기'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('여행 시작하기 (2)'), findsOneWidget);
+
+    await tester.tap(find.text('여행 시작하기 (2)'));
     await tester.pumpAndSettle();
 
     expect(find.text('여행 정보를 입력해주세요'), findsOneWidget);
@@ -398,7 +780,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(container.read(onboardingTourProvider).step, 2);
 
-    await tester.tap(find.text('여행 시작하기 (1)'));
+    await tester.tap(find.text('여행 시작하기 (2)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('시작일 ~ 종료일 선택'));
     await tester.pumpAndSettle();
@@ -479,6 +861,165 @@ void main() {
     await tester.tap(find.text('움직이는 타겟'));
     await tester.pump();
     expect(tapCount, 1);
+  });
+
+  testWidgets('화면 크기가 바뀌면 코치마크가 타겟 좌표를 다시 측정한다', (tester) async {
+    tester.view.physicalSize = const Size(800, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final targetKey = GlobalKey();
+    var targetTapCount = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingTourProvider.overrideWith(
+            () => OnboardingTourNotifier(
+              const OnboardingTourState(step: 0, skipped: false),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned(
+                  left: 100,
+                  right: 100,
+                  bottom: 120,
+                  height: 50,
+                  child: GestureDetector(
+                    key: targetKey,
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => targetTapCount++,
+                    child: const ColoredBox(color: AppColors.mapEmpty),
+                  ),
+                ),
+                CoachMarkOverlay(
+                  targetKey: targetKey,
+                  stepIndex: 0,
+                  title: '지도에서 지역을 눌러보세요',
+                  body: '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요.',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    tester.view.physicalSize = const Size(800, 500);
+    await tester.pumpAndSettle();
+
+    final targetRect = tester.getRect(find.byKey(targetKey));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(targetRect.bottom, lessThan(500));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(500));
+
+    await tester.tapAt(targetRect.center);
+    await tester.pump();
+
+    expect(targetTapCount, 1);
+  });
+
+  testWidgets('텍스트 크기와 키보드 인셋이 바뀌면 코치마크를 다시 측정한다', (tester) async {
+    tester.view.physicalSize = const Size(800, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final targetKey = GlobalKey();
+    var textScale = 1.0;
+    var bottomInset = 0.0;
+    var targetTapCount = 0;
+    late StateSetter rebuild;
+
+    final fixedCoachMarkStack = Stack(
+      children: [
+        Builder(
+          builder: (context) {
+            final insets = MediaQuery.viewInsetsOf(context);
+            return Positioned(
+              left: 100,
+              right: 100,
+              bottom: 80 + insets.bottom,
+              height: 50,
+              child: GestureDetector(
+                key: targetKey,
+                behavior: HitTestBehavior.opaque,
+                onTap: () => targetTapCount++,
+                child: const ColoredBox(color: AppColors.mapEmpty),
+              ),
+            );
+          },
+        ),
+        CoachMarkOverlay(
+          targetKey: targetKey,
+          stepIndex: 0,
+          title: '지도에서 지역을 눌러보세요',
+          body:
+              '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요. '
+              '텍스트 크기와 키보드 영역이 바뀌어도 위치가 맞아야 해요.',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingTourProvider.overrideWith(
+            () => OnboardingTourNotifier(
+              const OnboardingTourState(step: 0, skipped: false),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                rebuild = setState;
+                final media = MediaQuery.of(context);
+                return MediaQuery(
+                  data: media.copyWith(
+                    textScaler: TextScaler.linear(textScale),
+                    viewInsets: EdgeInsets.only(bottom: bottomInset),
+                  ),
+                  child: fixedCoachMarkStack,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final initialCardHeight = tester
+        .getRect(find.byKey(const ValueKey('coach-mark-message-card')))
+        .height;
+
+    rebuild(() {
+      textScale = 1.7;
+      bottomInset = 180;
+    });
+    await tester.pumpAndSettle();
+
+    final targetRect = tester.getRect(find.byKey(targetKey));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(targetRect.top, lessThan(600));
+    expect(messageCardRect.height, greaterThan(initialCardHeight));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(800));
+
+    await tester.tapAt(targetRect.center);
+    await tester.pump();
+
+    expect(targetTapCount, 1);
   });
 
   test('기간 표기는 같은 해면 연도를 한 번만 쓴다', () {

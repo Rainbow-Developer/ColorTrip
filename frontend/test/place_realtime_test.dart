@@ -77,7 +77,9 @@ void main() {
       expect(find.byType(CachedNetworkImage), findsNothing);
     });
 
-    testWidgets('tourContentId 없는 수제 퀘스트는 조회 없이 placeholder를 그린다', (tester) async {
+    testWidgets('tourContentId 없는 수제 퀘스트는 조회 없이 placeholder를 그린다', (
+      tester,
+    ) async {
       const handmade = Quest(
         id: 'dy1',
         region: 'danyang',

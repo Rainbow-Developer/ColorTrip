@@ -510,6 +510,42 @@ void main() {
     },
   );
 
+  testWidgets(
+    'profile tour restart moves to home where the first coach mark lives',
+    (tester) async {
+      final container = await _container(
+        _Repository(_user(OnboardingStep.complete)),
+      );
+      addTearDown(container.dispose);
+
+      final router = GoRouter(
+        initialLocation: '/my',
+        routes: [
+          GoRoute(path: '/my', builder: (_, _) => const ProfileScreen()),
+          GoRoute(
+            path: '/home',
+            builder: (_, _) => const Scaffold(body: Text('홈 화면')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+
+      await tester.tap(find.text('이용 가이드 다시 보기'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('홈 화면'), findsOneWidget);
+      expect(container.read(onboardingTourProvider).step, 0);
+      expect(container.read(onboardingTourProvider).skipped, isFalse);
+    },
+  );
+
   testWidgets('edit profile prefills server fields without an email row', (
     tester,
   ) async {

@@ -27,9 +27,20 @@ class JourneyDetailScreen extends ConsumerStatefulWidget {
 
 class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
   final _firstQuestKey = GlobalKey();
+  bool _firstQuestCoachHidden = false;
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<OnboardingTourState>(onboardingTourProvider, (previous, next) {
+      final enteredThisStep =
+          next.isEnabled &&
+          ((previous?.isEnabled ?? false) != next.isEnabled ||
+              previous?.step != next.step);
+      if (enteredThisStep && _firstQuestCoachHidden) {
+        setState(() => _firstQuestCoachHidden = false);
+      }
+    });
+
     final snapshot = ref.watch(domainControllerProvider);
     return snapshot.when(
       loading: () =>
@@ -148,7 +159,7 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
                               done: doneInJourney,
                               onTap: () {
                                 if (index == 0 &&
-                                    !tour.isDone &&
+                                    tour.isEnabled &&
                                     tour.step == 3) {
                                   ref
                                       .read(onboardingTourProvider.notifier)
@@ -188,12 +199,16 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
                     ),
                   ),
                 ),
-              if (!tour.isDone && tour.step == 3 && quests.isNotEmpty)
+              if (tour.isEnabled &&
+                  quests.isNotEmpty &&
+                  !_firstQuestCoachHidden)
                 CoachMarkOverlay(
                   targetKey: _firstQuestKey,
                   stepIndex: 3,
                   title: '퀘스트를 인증해보세요',
                   body: '퀘스트를 누르면 인증 화면으로 이동해요. 인증을 마치면 진행도에 반영돼요.',
+                  onBackgroundTap: () =>
+                      setState(() => _firstQuestCoachHidden = true),
                 ),
             ],
           ),
