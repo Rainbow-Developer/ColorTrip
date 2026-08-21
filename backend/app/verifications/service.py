@@ -19,15 +19,20 @@ _QR_SIGNATURE_LENGTH = 16
 
 
 async def judge_photo(
-    image_bytes: bytes, mime_type: str, title: str, place: str, conditions: list[str]
+    image_bytes: bytes,
+    mime_type: str,
+    title: str,
+    place: str,
+    conditions: list[str],
+    place_overview: str | None = None,
 ) -> VisionVerdict:
-    """퀘스트 맥락(제목·장소·조건)으로 사진을 판정한다.
+    """퀘스트 맥락(제목·장소·조건·장소 소개)으로 사진을 판정한다.
 
     호출자는 `app/quests/verification.py` 하나이며, 업로드로 **이미 저장된** 사진을 읽어
     넘긴다(KAN-73 — 판정 전용 엔드포인트를 없애고 인증 경로에 통합했다). 판정 맥락은
-    서버가 가진 퀘스트 데이터로만 구성한다.
+    서버가 가진 퀘스트 데이터에 TourAPI 실시간 소개문을 더해 구성한다(KAN-102).
     """
-    prompt = build_photo_judgement_prompt(title, place, conditions)
+    prompt = build_photo_judgement_prompt(title, place, conditions, place_overview)
     judge = get_vision_judge()
     return await judge.judge(image_bytes, mime_type, prompt)
 

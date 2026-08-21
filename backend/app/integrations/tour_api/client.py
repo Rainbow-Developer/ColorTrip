@@ -131,3 +131,8 @@ class TourApiClient:
             "cat2": cat2,
         }
         return await self._get_items("categoryCode2", params)
+
+    async def fetch_detail_common(self, content_id: str) -> dict[str, Any] | None:
+        """detailCommon2 — 공통 상세(소개문·대표 이미지)의 첫 item을 반환한다(없으면 None)."""
+        items = await self._get_items("detailCommon2", {"contentId": content_id})
+        return items[0] if items else None
