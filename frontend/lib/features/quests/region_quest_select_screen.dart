@@ -123,13 +123,23 @@ class _RegionQuestSelectScreenState
   }
 
   void _advanceTourAfterSuccessfulSave(OnboardingTourState tour) {
-    if (!tour.isDone && tour.step == 2) {
+    if (tour.isEnabled && tour.step == 2) {
       ref.read(onboardingTourProvider.notifier).advance();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<OnboardingTourState>(onboardingTourProvider, (previous, next) {
+      final enteredThisStep =
+          next.isEnabled &&
+          ((previous?.isEnabled ?? false) != next.isEnabled ||
+              previous?.step != next.step);
+      if (enteredThisStep && _startTripCoachHidden) {
+        setState(() => _startTripCoachHidden = false);
+      }
+    });
+
     final region = ref.watch(regionRepositoryProvider).byId(widget.regionId);
     if (region == null) {
       return const Scaffold(body: Center(child: Text('지역을 찾을 수 없어요')));
@@ -280,10 +290,7 @@ class _RegionQuestSelectScreenState
               ),
             ],
           ),
-          if (!tour.isDone &&
-              tour.step == 2 &&
-              selectedCount > 0 &&
-              !_startTripCoachHidden)
+          if (tour.isEnabled && selectedCount > 0 && !_startTripCoachHidden)
             CoachMarkOverlay(
               targetKey: _startTripButtonKey,
               stepIndex: 2,

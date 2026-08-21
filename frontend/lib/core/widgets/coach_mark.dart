@@ -24,7 +24,9 @@ class CoachMarkOverlay extends ConsumerStatefulWidget {
     required this.title,
     required this.body,
     this.scrollAlignment = 0.5,
+    this.scrollToTarget = true,
     this.forceBubbleBelow = false,
+    this.makeRoomForBubble = true,
     this.onBackgroundTap,
   });
 
@@ -38,9 +40,15 @@ class CoachMarkOverlay extends ConsumerStatefulWidget {
   /// 모자라면(예: 홈 지도) 0.0(뷰포트 상단)으로 넘겨 아래쪽에 공간을 확보한다.
   final double scrollAlignment;
 
+  /// false이면 타겟을 자동 스크롤하지 않고 현재 화면 배치 기준으로만 코치마크를 그린다.
+  final bool scrollToTarget;
+
   /// true이면 말풍선을 항상 타겟 아래에 둔다. 필요한 경우 타겟을 위쪽으로 더 스크롤해
   /// 말풍선 공간을 만든다.
   final bool forceBubbleBelow;
+
+  /// [forceBubbleBelow]일 때 부족한 말풍선 공간만큼 추가 스크롤할지 여부.
+  final bool makeRoomForBubble;
 
   /// 하이라이트 바깥의 딤 영역을 탭했을 때 호출한다. 기본은 아무 동작 없이 배경 입력만 막는다.
   final VoidCallback? onBackgroundTap;
@@ -96,18 +104,22 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   Future<void> _measure() async {
     final ctx = widget.targetKey.currentContext;
     if (ctx == null) return;
-    await Scrollable.ensureVisible(
-      ctx,
-      duration: const Duration(milliseconds: 200),
-      alignment: widget.scrollAlignment,
-    );
-    await WidgetsBinding.instance.endOfFrame;
+    if (widget.scrollToTarget) {
+      await Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 200),
+        alignment: widget.scrollAlignment,
+      );
+      await WidgetsBinding.instance.endOfFrame;
+    }
     if (!mounted || !ctx.mounted) return;
 
     var measured = _readTargetRect(ctx);
     if (measured == null) return;
 
-    if (widget.forceBubbleBelow) {
+    if (widget.forceBubbleBelow &&
+        widget.scrollToTarget &&
+        widget.makeRoomForBubble) {
       final adjusted = await _makeRoomBelow(
         ctx,
         measured,

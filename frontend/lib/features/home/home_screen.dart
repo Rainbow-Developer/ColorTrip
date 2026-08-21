@@ -73,7 +73,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     ref.listen<OnboardingTourState>(onboardingTourProvider, (previous, next) {
       final restarted =
-          (previous?.isDone ?? true) && !next.isDone && next.step == 0;
+          next.isEnabled &&
+          next.step == 0 &&
+          ((previous?.isEnabled ?? false) != next.isEnabled ||
+              previous?.step != next.step);
       if (restarted) {
         _resetMapCoachForRestart();
       }
@@ -83,11 +86,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final progressPct = (progress.completedRegionCount / kRegions.length * 100)
         .round();
     final tour = ref.watch(onboardingTourProvider);
-    final showMapCoach =
-        !tour.isDone &&
-        tour.step == 0 &&
-        !_mapCoachHidden &&
-        !_resettingMapCoach;
+    final mapCoachActive = tour.isEnabled && !_mapCoachHidden;
+    final showMapCoach = mapCoachActive && !_resettingMapCoach;
+    final compactHeight = MediaQuery.sizeOf(context).height < 700;
 
     return Scaffold(
       appBar: AppBar(
@@ -98,10 +99,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             SingleChildScrollView(
               controller: _scrollController,
-              physics: showMapCoach
+              physics: mapCoachActive
                   ? const NeverScrollableScrollPhysics()
                   : null,
-              padding: EdgeInsets.fromLTRB(20, 20, 20, showMapCoach ? 360 : 20),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                mapCoachActive ? 360 : 20,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -141,7 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               region.id: progress.regionSaturation(region.id),
                           },
                           onRegionTap: (regionId) {
-                            if (!tour.isDone && tour.step == 0) {
+                            if (tour.isEnabled && tour.step == 0) {
                               ref
                                   .read(onboardingTourProvider.notifier)
                                   .advance();
@@ -201,12 +207,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 stepIndex: 0,
                 title: '지도에서 지역을 눌러보세요',
                 body: '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요.',
-                // 지도가 화면의 상당 부분을 차지해 중앙 정렬 시 말풍선이 지도(하이라이팅)와
-                // 겹치는 문제(KAN-071) — 뷰포트 상단 쪽으로 정렬해 아래쪽에 공간을 확보한다.
-                // 0.0(완전히 붙임)은 화면 패딩이 사라져 지도가 앱바에 딱 붙어 보이므로,
-                // 약간의 여백이 남도록 0을 살짝 넘는 값을 쓴다.
-                scrollAlignment: 0.03,
+                // 홈 지도는 말풍선을 아래에 두되, 부족한 공간을 채우려고 끝까지 끌어올리지는 않는다.
+                // 지도 상단이 앱바에 붙어 보이지 않도록 중간 정렬만 적용한다.
+                scrollAlignment: 0.45,
                 forceBubbleBelow: true,
+                makeRoomForBubble: compactHeight,
                 onBackgroundTap: _hideMapCoach,
               ),
           ],

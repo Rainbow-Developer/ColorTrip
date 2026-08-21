@@ -31,6 +31,16 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<OnboardingTourState>(onboardingTourProvider, (previous, next) {
+      final enteredThisStep =
+          next.isEnabled &&
+          ((previous?.isEnabled ?? false) != next.isEnabled ||
+              previous?.step != next.step);
+      if (enteredThisStep && _firstQuestCoachHidden) {
+        setState(() => _firstQuestCoachHidden = false);
+      }
+    });
+
     final snapshot = ref.watch(domainControllerProvider);
     return snapshot.when(
       loading: () =>
@@ -139,7 +149,9 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
                           quest: quest,
                           done: progress.isCompleted(quest.id),
                           onTap: () {
-                            if (index == 0 && !tour.isDone && tour.step == 3) {
+                            if (index == 0 &&
+                                tour.isEnabled &&
+                                tour.step == 3) {
                               ref
                                   .read(onboardingTourProvider.notifier)
                                   .advance();
@@ -176,8 +188,7 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
                     ),
                   ),
                 ),
-              if (!tour.isDone &&
-                  tour.step == 3 &&
+              if (tour.isEnabled &&
                   quests.isNotEmpty &&
                   !_firstQuestCoachHidden)
                 CoachMarkOverlay(

@@ -18,6 +18,10 @@ class OnboardingTourState {
   /// "다시 보지 않기"로 전체 투어를 영구 종료했는지 여부.
   final bool skipped;
 
+  /// 사용자가 가이드를 켜둔 상태인지 여부. 켜져 있으면 약속된 화면에 들어올 때마다
+  /// 해당 코치마크를 보여준다.
+  bool get isEnabled => !skipped;
+
   bool get isDone => skipped || step >= kOnboardingTotalSteps;
 }
 
