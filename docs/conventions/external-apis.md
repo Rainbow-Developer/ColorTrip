@@ -44,7 +44,7 @@
 
 하나의 data.go.kr 계정 인증키로 아래 **11건이 개발계정으로 승인**되어 있고, 그중 **실제로 호출하는 것은 국문 관광정보 서비스(`KorService2`) 1건뿐**이다. 나머지 10건은 나중에 쓸 여지를 두고 신청만 해둔 상태다.
 키는 로컬 `backend/.env`의 `TOUR_API_KEY`로 주입하고, 운영은 Secret Manager
-`colortrip-dev-tour-api-key`로 관리한다(현재 시크릿 미생성 — 생성 시 dev 서버 배포에 자동 반영,
+`colortrip-dev-tour-api-key`로 관리한다(2026-08-21 생성 확인 — dev 서버 배포에 자동 반영,
 [deploy/deploy.sh](../../deploy/deploy.sh) 참고).
 
 **호출량 확인**: 우리 코드에는 호출 횟수를 집계하는 곳이 없다(로그도 `serviceKey`를 마스킹한다). 실제 사용량은 data.go.kr → 마이페이지 → 오픈 API → 개발계정에서 해당 활용신청 건의 상세를 열어 확인한다.
