@@ -2,26 +2,26 @@
 
 | 항목 | 내용 |
 |------|------|
-| 상태 | 계획 |
+| 상태 | 진행 중 |
 | 최종 업데이트 | 2026-08-21 |
 
 ## 구현 규모 / 단위 분할
 
 - **규모 판단**: 단위로 나눠 구현 — 근거: backend(프록시 모듈·인증 보강)와 frontend(모델·화면 연동)가 API 계약으로 분리되고, 사이에 dart 백필이라는 데이터 준비 단계가 있다. 단위마다 독립적으로 테스트 가능.
 - **구현 단위**:
-  - [ ] 1) backend places 프록시 — `TourApiClient.fetch_detail_common` 추가, `app/places/` 모듈·엔드포인트 2개, 실패 시 null 필드 응답. 완료 기준: 백엔드 테스트 통과(키 없음·TourAPI 오류·정상 응답 케이스)
-  - [ ] 2) backend 인증 프롬프트 보강 — content_id 있는 퀘스트의 사진 판정 프롬프트에 소개문 포함, 실패 시 기존 프롬프트. 완료 기준: 판정 테스트 통과
-  - [ ] 3) dart 백필 — `tourContentId`·`tourContentTypeId` 삽입, TourAPI 유래 `imageUrl`·`desc` 제거(수제 desc·로컬 asset 불변). 완료 기준: 스크립트 재실행 가능 + flutter analyze 통과
-  - [ ] 4) frontend 연동 — Quest 모델·PlaceRepository·지역/상세 화면 로딩·placeholder. 완료 기준: 프론트 테스트 통과 + 앱 실행 확인
-  - [ ] 5) 문서 동기화 — external-apis 호출 지점 절·README·045 상태·specs 인덱스
+  - [x] 1) backend places 프록시 — `TourApiClient.fetch_detail_common` 추가, `app/places/` 모듈·엔드포인트 2개, 실패 시 null 필드 응답. 완료 기준: 백엔드 테스트 통과(키 없음·TourAPI 오류·정상 응답 케이스)
+  - [x] 2) backend 인증 프롬프트 보강 — content_id 있는 퀘스트의 사진 판정 프롬프트에 소개문 포함, 실패 시 기존 프롬프트. 완료 기준: 판정 테스트 통과
+  - [x] 3) dart 백필 — `tourContentId`·`tourContentTypeId` 삽입(211/220, 미매칭 9건은 '시내' 등 자유 퀘스트), TourAPI 유래 `imageUrl`·생성 `desc` 제거. 서버 quests.content_id도 같은 스냅숏으로 백필(alembic a1c2e3d4f5a6)
+  - [x] 4) frontend 연동 — Quest 모델·PlaceRepository·QuestImage 위젯(썸네일 7개 사용처)·상세 소개문/운영정보. flutter analyze 0건, 테스트 187 passed
+  - [x] 5) 문서 동기화 — external-apis 호출 지점 절·README·045 상태·specs 인덱스
 
 ## 구현된 항목
 
-- [ ] (없음)
+- [x] 구현 단위 1)~5) 전부 (backend 테스트 266건·frontend 테스트 187건 통과)
 
 ## 미구현 / 남은 항목
 
-- [ ] 위 구현 단위 1)~5) 전부
+- [ ] dev 서버 배포 후 실기기 검증(Secret Manager `colortrip-dev-tour-api-key` 생성 필요 — 미생성 시 서버 places 응답이 비어 placeholder 표시)
 
 ## 알려진 한계 / TODO
 
@@ -35,3 +35,4 @@
 | 날짜 | 내용 |
 |------|------|
 | 2026-08-21 | 최초 작성 |
+| 2026-08-21 | 구현 단위 1)~5) 완료 — places 프록시·인증 프롬프트 보강·contentId 백필(dart+DB)·FE 실시간 연동·문서 동기화 |

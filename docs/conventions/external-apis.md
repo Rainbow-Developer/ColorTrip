@@ -62,20 +62,21 @@
 ### KorService2 사용법 (사용 중)
 
 - **공통 파라미터**: `serviceKey`(인증키)·`MobileOS=ETC`·`MobileApp=ColorTrip`·`_type=json` — 호출하는 각 코드가 붙인다.
-- **호출 지점**: TourAPI를 실제로 부르는 코드는 아래 두 스크립트뿐이다. 둘 다 **개발자가 수동 실행하는 오프라인 스크립트**로, 결과를 프론트 정적 데이터(`frontend/lib/data/static/*.dart`)에 써 넣는다. **서버 런타임과 앱은 TourAPI를 호출하지 않는다** — 앱 사용자가 늘어도 호출량은 늘지 않는다.
+- **호출 지점**: 관광지 데이터(이미지·소개문·운영정보)는 서버가 요청 시점에 실시간 조회한다 — 공사 권고(로컬 저장·캐싱 지양) 준수, [090 스펙](../specs/090-realtime-tour-place-info/) 참고. **앱은 TourAPI를 직접 호출하지 않는다**(키는 서버만 든다 — VWorld와 같은 논리).
 
   | 엔드포인트 | 호출하는 곳 | 용도 |
   |------|------|------|
-  | `areaCode2?areaCode=33` | `generate_frontend_quests.py` · `enrich_frontend_quests.py` | 충북 시·군구 코드 목록 |
-  | `areaBasedList2?areaCode=33&sigunguCode={코드}&contentTypeId={유형}` | 같은 두 스크립트 (contentTypeId 12·14·28·39) | 지역 기반 관광정보 목록 — 퀘스트 후보 수집 |
-  | `detailCommon2?contentId={id}` | `generate_frontend_quests.py` | 공통 상세(소개문 `overview`) → 퀘스트 설명 |
-  | `searchKeyword2?keyword={장소명}` | `enrich_frontend_quests.py` | 키워드 검색 — 이미지(`firstimage`)·좌표(`mapx`/`mapy`) 보강 매칭 |
+  | `areaBasedList2?areaCode=33&sigunguCode={코드}&contentTypeId={유형}` | `backend/app/places/`(런타임, `GET /api/v1/places?region_slug=`) · 스크립트 2종 | 지역 관광지 목록 — 런타임은 썸네일 맵, 스크립트는 후보 수집·매칭 |
+  | `detailCommon2?contentId={id}` | `backend/app/places/`(런타임, `GET /api/v1/places/{content_id}`) · 사진 인증 프롬프트 보강(`app/quests/verification.py`) · `generate_frontend_quests.py` | 공통 상세 — 이미지·소개문(`overview`) |
+  | `detailIntro2?contentId={id}&contentTypeId={유형}` | `backend/app/places/`(런타임) | 운영시간·휴무 — 유형별 필드를 (usetime, restdate)로 정규화 |
+  | `areaCode2?areaCode=33` | `generate_frontend_quests.py` · `enrich_frontend_quests.py` · `backfill_tour_content_ids.py` | 충북 시·군구 코드 목록 |
+  | `searchKeyword2?keyword={장소명}` | `enrich_frontend_quests.py` · `backfill_tour_content_ids.py` | 키워드 검색 — 매칭 보충 |
 
-  1회 실행 호출량은 생성 스크립트 약 210건, 보강 스크립트 약 100~300건이다(재시도 제외). 같은 스크립트를 하루 3~4회 이상 재실행할 때만 일 한도(아래 '주의')에 걸린다.
-- **미연결 코드**: `backend/app/integrations/tour_api/`의 `client.py`(`areaBasedList2`·`detailIntro2`·`categoryCode2` 래퍼)와 `loader.py`(`load_quests_for_region`)는 **정의만 있고 호출하는 코드가 없다**(`app/`·`scripts/`·`tests/` 전체에 참조 없음). 따라서 `detailIntro2`·`categoryCode2`는 실제로 호출된 적이 없다. 서버 DB 적재를 되살릴지, 이 모듈을 걷어낼지는 미정.
+  런타임 호출량: 지역 화면 진입 1회 = `areaBasedList2` 4건, 상세 화면 1회 = `detailCommon2`+`detailIntro2` 2건, 사진 인증 1회 = `detailCommon2` 1건. 캐시하지 않으므로(공사 권고) 사용자 수에 비례한다 — 일 한도(아래 '주의') 초과 시 앱은 placeholder로 동작한다. 스크립트는 1회 실행당 약 100~300건.
+- **미연결 코드**: `backend/app/integrations/tour_api/loader.py`(`load_quests_for_region` — DB 적재)는 정의만 있고 호출하는 코드가 없다. 되살릴지 걷어낼지는 미정.
 - **파라미터 주의**
   - `searchKeyword2?keyword={장소명}` — **areaCode/sigunguCode를 주면 0건이 반환**되므로(법정동 코드 전환 영향) 파라미터 없이 호출하고 응답의 `addr1`/legacy 코드로 클라이언트에서 필터링한다
-  - `detailIntro2?contentId={id}&contentTypeId={유형}` — 운영시간·휴무 등 소개 정보(미사용)
+  - `detailIntro2` 응답의 운영정보 필드명은 유형별로 다르다(12 `usetime`/`restdate` · 14 `usetimeculture`/… · 28 `usetimeleports`/… · 39 `opentimefood`/`restdatefood`) — 정규화는 `backend/app/places/service.py`
 - **contentTypeId**: 12 관광지 · 14 문화시설 · 15 축제공연행사 · 25 여행코스 · 28 레포츠 · 32 숙박 · 38 쇼핑 · 39 음식점
 - **충북(areaCode=33) sigunguCode**: 괴산군 1 · 단양군 2 · 보은군 3 · 영동군 4 · 옥천군 5 · 음성군 6 ·
   제천시 7 · 진천군 8 · 청주시 10 · 충주시 11 · 증평군 12
