@@ -42,12 +42,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    mapping: dict[str, dict[str, str]] = json.loads(_MAPPING_PATH.read_text(encoding="utf-8"))
-    connection = op.get_bind()
-    connection.execute(
-        sa.text(
-            "UPDATE quests SET content_id = NULL, content_type_id = NULL "
-            "WHERE client_key = ANY(:keys)"
-        ),
-        {"keys": list(mapping.keys())},
-    )
+    """no-op — 스냅숏에는 백필 이전 값이 없어 어떤 행을 되돌릴지 구분할 수 없다.
+
+    upgrade는 content_id IS NULL인 행만 채우므로, 값을 지우면 마이그레이션 전부터
+    값이 있던 행까지 삭제된다. 재실행(upgrade)은 멱등이라 되돌림 없이 안전하다.
+    """

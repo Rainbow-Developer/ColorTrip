@@ -19,6 +19,12 @@ from app.regions.repository import get_region_by_slug
 
 logger = logging.getLogger(__name__)
 
+
+def _https(url: str) -> str:
+    """http URL을 https로 바꾼다 — release 빌드는 평문을 차단한다(TourAPI CDN은 https 지원)."""
+    return url.replace("http://", "https://", 1) if url.startswith("http://") else url
+
+
 # 서비스 지역이 충북뿐이므로 areaCode를 고정한다(regions.area_code는 sigunguCode).
 _CHUNGBUK_AREA_CODE = "33"
 
@@ -71,7 +77,7 @@ async def list_region_place_images(
             content_id = str(item.get("contentid") or "")
             image_url = str(item.get("firstimage") or "")
             if content_id and image_url:
-                images.setdefault(content_id, image_url)
+                images.setdefault(content_id, _https(image_url))
 
     return [PlaceImage(content_id=cid, image_url=url) for cid, url in images.items()]
 
@@ -93,7 +99,8 @@ async def get_place_detail(
             raise common
         logger.warning("TourAPI detailCommon2 실패 (contentId=%s): %s", content_id, common)
     elif common is not None:
-        detail.image_url = str(common.get("firstimage") or "") or None
+        first_image = str(common.get("firstimage") or "")
+        detail.image_url = _https(first_image) if first_image else None
         detail.overview = str(common.get("overview") or "").strip() or None
 
     if isinstance(intro, BaseException):

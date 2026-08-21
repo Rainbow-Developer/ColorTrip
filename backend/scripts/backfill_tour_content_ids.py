@@ -207,10 +207,7 @@ def strip_stored_tour_data(block: str, generated: bool) -> str:
 
 def insert_content_id(block: str, content_id: str, content_type_id: str) -> str:
     """place 필드 다음 줄에 tourContentId/tourContentTypeId를 삽입한다."""
-    lines = (
-        f"    tourContentId: '{content_id}',\n"
-        f"    tourContentTypeId: '{content_type_id}',\n"
-    )
+    lines = f"    tourContentId: '{content_id}',\n    tourContentTypeId: '{content_type_id}',\n"
     return re.sub(r"(^    place: .*\n)", rf"\g<1>{lines}", block, count=1, flags=re.M)
 
 

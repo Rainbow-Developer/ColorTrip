@@ -60,7 +60,6 @@ class QuestJudgeInput:
     description: str | None
     mission_meta: dict[str, Any] | None
     content_id: str | None
-    content_type_id: str | None
     lat: Decimal | None
     lng: Decimal | None
     verify_radius: int
@@ -81,7 +80,6 @@ def snapshot(quest: Quest) -> QuestJudgeInput:
         description=quest.description,
         mission_meta=quest.mission_meta,
         content_id=quest.content_id,
-        content_type_id=quest.content_type_id,
         lat=quest.lat,
         lng=quest.lng,
         verify_radius=quest.verify_radius,

@@ -72,7 +72,7 @@
   | `areaCode2?areaCode=33` | `generate_frontend_quests.py` · `enrich_frontend_quests.py` · `backfill_tour_content_ids.py` | 충북 시·군구 코드 목록 |
   | `searchKeyword2?keyword={장소명}` | `enrich_frontend_quests.py` · `backfill_tour_content_ids.py` | 키워드 검색 — 매칭 보충 |
 
-  런타임 호출량: 지역 화면 진입 1회 = `areaBasedList2` 4건, 상세 화면 1회 = `detailCommon2`+`detailIntro2` 2건, 사진 인증 1회 = `detailCommon2` 1건. 캐시하지 않으므로(공사 권고) 사용자 수에 비례한다 — 일 한도(아래 '주의') 초과 시 앱은 placeholder로 동작한다. 스크립트는 1회 실행당 약 100~300건.
+  런타임 호출량: 지역 화면·홈 추천 배너 진입 1회 = `areaBasedList2` 4건(썸네일 맵), 상세 화면 1회 = `detailCommon2`+`detailIntro2` 2건, 사진 인증 1회 = `detailCommon2` 1건. **TourAPI 응답(JSON)은 캐시하지 않으므로**(공사 권고) 사용자 수에 비례한다 — 일 한도(아래 '주의') 초과 시 앱은 placeholder로 동작한다. 단, 이미지 파일 자체는 단말의 `cached_network_image` 디스크 캐시를 쓴다 — 이미지는 CDN(`tong.visitkorea.or.kr`) 트래픽이라 API 일 한도와 무관하고, URL이 바뀌면 새로 받는다. 스크립트는 1회 실행당 약 100~300건.
 - **미연결 코드**: `backend/app/integrations/tour_api/loader.py`(`load_quests_for_region` — DB 적재)는 정의만 있고 호출하는 코드가 없다. 되살릴지 걷어낼지는 미정.
 - **파라미터 주의**
   - `searchKeyword2?keyword={장소명}` — **areaCode/sigunguCode를 주면 0건이 반환**되므로(법정동 코드 전환 영향) 파라미터 없이 호출하고 응답의 `addr1`/legacy 코드로 클라이언트에서 필터링한다

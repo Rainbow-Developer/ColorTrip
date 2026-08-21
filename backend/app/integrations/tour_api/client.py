@@ -42,7 +42,7 @@ def _extract_items(data: dict[str, Any]) -> list[dict[str, Any]]:
     if isinstance(item, dict):
         return [item]
     if isinstance(item, list):
-        return item
+        return [entry for entry in item if isinstance(entry, dict)]
     return []
 
 
@@ -86,7 +86,11 @@ class TourApiClient:
         }
         response = await self._client.get(f"{self._base_url}/{endpoint}", params=query)
         response.raise_for_status()
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError:  # TourAPI는 오류를 200 + 비JSON 본문으로 주기도 한다(external-apis.md)
+            logger.warning("TourAPI %s 응답이 JSON이 아닙니다 — 빈 결과로 처리합니다.", endpoint)
+            return []
         return _extract_items(data)
 
     async def fetch_area_based(

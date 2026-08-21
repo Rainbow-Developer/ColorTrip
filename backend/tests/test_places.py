@@ -177,9 +177,29 @@ async def test_migration_backfills_quest_content_ids(client: AsyncClient) -> Non
     from app.quests.models import Quest
 
     async with AsyncSessionLocal() as session:
-        quest = (
-            await session.execute(select(Quest).where(Quest.client_key == "dy6"))
-        ).scalar_one()
+        quest = (await session.execute(select(Quest).where(Quest.client_key == "dy6"))).scalar_one()
 
     assert quest.content_id == "1626649"
     assert quest.content_type_id == "12"
+
+
+async def test_tour_client_non_json_response_returns_empty(client: AsyncClient) -> None:
+    """TourAPI가 오류를 200 + 비JSON 본문으로 줄 때 500 없이 빈 결과로 처리한다."""
+    import httpx as _httpx
+
+    from app.core.config import settings as _settings
+    from app.integrations.tour_api.client import TourApiClient
+
+    def _handler(request: _httpx.Request) -> _httpx.Response:
+        return _httpx.Response(200, text="SERVICE ERROR")  # 비표준 텍스트 오류
+
+    transport = _httpx.MockTransport(_handler)
+    original_key = _settings.tour_api_key
+    _settings.tour_api_key = "test-key"
+    try:
+        async with _httpx.AsyncClient(transport=transport) as http_client:
+            tour = TourApiClient(http_client=http_client)
+            assert await tour.fetch_area_based("33") == []
+            assert await tour.fetch_detail_common("100") is None
+    finally:
+        _settings.tour_api_key = original_key

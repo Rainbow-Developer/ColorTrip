@@ -25,6 +25,8 @@
 
 ## 알려진 한계 / TODO
 
+* 백필이 `searchKeyword2` 폴백으로 매칭한 유형 38(쇼핑) 3건·15(행사) 1건은 지역 썸네일 맵(`areaBasedList2` 12·14·28·39)에 없어 **목록 썸네일이 placeholder**로 남고, 운영정보 필드 정규화(`_OPERATION_FIELDS`)에도 없어 운영정보가 null이다. 상세 화면 이미지는 `detailCommon2`의 대표 이미지를 쓰므로 표시된다.
+
 * 개발계정 일 1,000건 한도 — 사용자 증가 시 운영계정 전환 필요(초과 시 placeholder로 동작 유지).
 * 캐시 없음(권고 준수) — 같은 화면 재진입도 매번 호출한다.
 * `backend/app/integrations/tour_api/loader.py`는 여전히 미연결 — 제거·활용 여부는 별도 결정.

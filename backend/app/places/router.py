@@ -6,6 +6,7 @@
 
 from collections.abc import AsyncGenerator
 
+import httpx
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,10 +19,14 @@ from app.places.schemas import PlaceDetail, PlaceImage
 router = APIRouter(prefix="/places", tags=["places"])
 
 
+# 프록시 응답이 화면 로딩을 막지 않도록 짧게 잡는다(plan.md 리스크 — 공공 API 지연).
+_TIMEOUT_SECONDS = 5.0
+
+
 async def get_tour_api_client() -> AsyncGenerator[TourApiClient]:
     """요청 단위 TourAPI 클라이언트(테스트에서 오버라이드)."""
-    async with TourApiClient() as client:
-        yield client
+    async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as http_client:
+        yield TourApiClient(http_client=http_client)
 
 
 @router.get("")

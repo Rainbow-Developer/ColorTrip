@@ -1,5 +1,8 @@
 """사진 판정 프롬프트 빌더 테스트 — 장소 소개문(KAN-102) 포함 여부를 검증한다."""
 
+import pytest
+
+from app.core.config import settings
 from app.integrations.vision.prompt import _OVERVIEW_MAX_CHARS, build_photo_judgement_prompt
 from app.quests.verification import _fetch_place_overview
 
@@ -28,8 +31,11 @@ def test_prompt_truncates_long_overview() -> None:
     assert len(line) == len("장소 소개: ") + _OVERVIEW_MAX_CHARS
 
 
-async def test_fetch_place_overview_without_content_id_or_key_returns_none() -> None:
+async def test_fetch_place_overview_without_content_id_or_key_returns_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """수제 퀘스트(content_id 없음)와 키 미설정 환경에서 조회 없이 None을 반환한다."""
+    # 실행 환경에 TOUR_API_KEY가 있어도 실제 HTTP가 나가지 않도록 명시적으로 비운다.
+    monkeypatch.setattr(settings, "tour_api_key", "")
     assert await _fetch_place_overview(None) is None
-    # 테스트 환경은 TOUR_API_KEY가 비어 있어 HTTP 호출 없이 빈 결과 → None
     assert await _fetch_place_overview("3558506") is None
