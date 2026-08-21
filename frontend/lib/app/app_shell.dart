@@ -43,30 +43,24 @@ class AppShell extends ConsumerWidget {
               ),
             ],
           ),
-          // 선택 탭은 라벨 포함 고유 너비를 갖고, 미선택 탭들이 남은 폭을 나눈다
-          // — 4탭에서도 pill 라벨이 잘리지 않는다.
+          // 4탭이 균등 폭 슬롯을 갖는다 — 어느 탭을 선택해도 아이콘 위치가
+          // 흔들리지 않는다. pill 라벨이 슬롯보다 길면 FittedBox로 살짝 줄인다.
           child: Row(
             children: [
               for (var i = 0; i < _items.length; i++)
-                if (i == navigationShell.currentIndex)
-                  _NavItem(
-                    icon: _items[i].icon,
-                    label: _items[i].label,
-                    selected: true,
-                    onTap: () =>
-                        navigationShell.goBranch(i, initialLocation: true),
-                  )
-                else
-                  Expanded(
-                    child: Center(
-                      child: _NavItem(
-                        icon: _items[i].icon,
-                        label: _items[i].label,
-                        selected: false,
-                        onTap: () => navigationShell.goBranch(i),
+                Expanded(
+                  child: Center(
+                    child: _NavItem(
+                      icon: _items[i].icon,
+                      label: _items[i].label,
+                      selected: i == navigationShell.currentIndex,
+                      onTap: () => navigationShell.goBranch(
+                        i,
+                        initialLocation: i == navigationShell.currentIndex,
                       ),
                     ),
                   ),
+                ),
             ],
           ),
         ),
@@ -75,8 +69,8 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-/// 탭 1개 — 선택되면 라벨이 펼쳐지는 pill로 확장된다. 선택 탭이 더 넓게(flex)
-/// 자리를 차지해 4탭에서도 라벨이 잘리지 않는다.
+/// 탭 1개 — 선택되면 라벨이 펼쳐지는 pill로 확장된다. 균등 슬롯 안에서 그리며,
+/// pill이 슬롯보다 길면 FittedBox가 축소해 잘리지 않는다.
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,
@@ -94,19 +88,18 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSize(
-      duration: _duration,
-      curve: Curves.easeOut,
+    return FittedBox(
+      fit: BoxFit.scaleDown,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(24),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 2),
           child: AnimatedContainer(
             duration: _duration,
             curve: Curves.easeOut,
             height: 44,
-            padding: EdgeInsets.symmetric(horizontal: selected ? 14 : 10),
+            padding: EdgeInsets.symmetric(horizontal: selected ? 12 : 10),
             decoration: BoxDecoration(
               color: selected ? AppColors.primaryDark : Colors.transparent,
               borderRadius: BorderRadius.circular(24),

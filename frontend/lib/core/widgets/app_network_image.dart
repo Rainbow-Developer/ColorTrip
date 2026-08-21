@@ -45,24 +45,53 @@ class AppNetworkImage extends StatelessWidget {
   final String? placeholderText;
 
   Widget _buildPlaceholder() {
-    Widget? child;
+    // 지정된 이모지/텍스트가 없으면 "이미지 없음"을 뜻하는 풍경 아이콘을 쓴다
+    // (KAN-103 피드백 — 빈 회색 박스는 로딩 실패처럼 보인다).
+    final Widget child;
     if (placeholderEmoji != null) {
       child = Text(
         placeholderEmoji!,
         style: TextStyle(fontSize: placeholderEmojiSize),
       );
     } else if (placeholderText != null) {
-      child = Text(
-        placeholderText!,
-        style: const TextStyle(color: AppColors.formPlaceholder),
-        textAlign: TextAlign.center,
+      child = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.landscape_rounded,
+            size: placeholderEmojiSize + 8,
+            color: AppColors.formPlaceholder,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            placeholderText!,
+            style: const TextStyle(
+              color: AppColors.formPlaceholder,
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      );
+    } else {
+      child = Icon(
+        Icons.landscape_rounded,
+        size: placeholderEmojiSize + 8,
+        color: AppColors.formPlaceholder,
       );
     }
     return Container(
       width: width,
       height: height,
-      color: AppColors.imagePlaceholderBg,
-      alignment: child == null ? null : Alignment.center,
+      decoration: const BoxDecoration(
+        // 위에서 아래로 살짝 밝아지는 그라데이션 — 단색 회색보다 의도된 빈 상태로 보인다.
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.imagePlaceholderBg, AppColors.surfaceMuted],
+        ),
+      ),
+      alignment: Alignment.center,
       child: child,
     );
   }

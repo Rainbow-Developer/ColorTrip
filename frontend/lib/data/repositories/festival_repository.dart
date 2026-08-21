@@ -24,6 +24,9 @@ class StubFestivalRepository implements FestivalRepository {
         placeName: '온달관광지 일원',
         startDate: DateTime(2026, 10, 16),
         endDate: DateTime(2026, 10, 19),
+        lat: 37.0578,
+        lng: 128.4801,
+        description: '온달장군과 평강공주 설화를 테마로 한 단양 대표 축제. 거리 퍼레이드와 전통 공연이 열립니다.',
       ),
     ],
     'jecheon': [
@@ -33,6 +36,9 @@ class StubFestivalRepository implements FestivalRepository {
         placeName: '제천 시내 일원',
         startDate: DateTime(2026, 8, 13),
         endDate: DateTime(2026, 8, 31),
+        lat: 37.1326,
+        lng: 128.1910,
+        description: '음악과 영화가 만나는 국내 유일의 음악영화제. 의림지 야외 상영과 거리 공연이 함께합니다.',
       ),
     ],
     'cheongju': [
@@ -42,6 +48,9 @@ class StubFestivalRepository implements FestivalRepository {
         placeName: '문화제조창 일원',
         startDate: DateTime(2026, 9, 4),
         endDate: DateTime(2026, 11, 1),
+        lat: 36.6659,
+        lng: 127.4890,
+        description: '세계 최초·최대 규모의 공예 비엔날레. 옛 담배공장을 재생한 문화제조창에서 열립니다.',
       ),
     ],
   };

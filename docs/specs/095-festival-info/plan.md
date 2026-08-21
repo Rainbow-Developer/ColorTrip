@@ -16,7 +16,8 @@
 
 ## 목표 (Goals)
 
-* 지역(시·군) 화면에 진행 중 행사·축제 섹션(가로 스크롤 카드: 포스터·행사명·기간·D-day)을 표시한다.
+* 지역(시·군) 화면의 **DNA 카드 아래**에 행사·축제 섹션(가로 스크롤 카드: 포스터·행사명·기간·상태 배지)을 표시한다 — 진행 중이거나 60일 이내 개막 예정인 행사만. 배지는 진행 중이면 '진행 중', 예정이면 'D-n'.
+* 카드를 누르면 **행사 상세 바텀시트**가 뜬다 — 포스터·기간·장소·소개와, 행사 좌표에서 **가까운 추천 퀘스트 3개**(거리 표시, 누르면 퀘스트 상세로 이동).
 * 행사가 없으면 섹션 자체를 렌더링하지 않는다(빈 박스 없음).
 * 프론트를 먼저 완성해 APK로 시연한다 — 데이터 계층은 인터페이스 뒤에 두고 스텁으로 시작한다.
 
@@ -34,10 +35,11 @@
 
 ## 설계 개요 / 접근 방식
 
-* **모델** `Festival`: id·title·placeName·startDate·endDate·posterUrl.
-* **저장소** `FestivalRepository.byRegion(String regionId)` → `Future<List<Festival>>`. 첫 구현은 `StubFestivalRepository`(정적 샘플, 오늘 날짜 기준 진행 중만 반환).
+* **모델** `Festival`: id·title·placeName·startDate·endDate·posterUrl·lat/lng(가까운 퀘스트 계산용)·description(소개).
+* **저장소** `FestivalRepository.byRegion(String regionId)` → `Future<List<Festival>>`. 첫 구현은 `StubFestivalRepository`(정적 샘플, 오늘 기준 진행 중·60일 이내 개막 예정만 반환).
 * **상태** `regionFestivalsProvider` — `FutureProvider.autoDispose.family<List<Festival>, String>`(090의 place providers와 같은 패턴).
-* **화면** 지역 개요 화면(`region_overview_screen.dart`) 히어로 아래 `FestivalSection` 위젯: 가로 스크롤 카드(포스터 16:9·행사명·기간 `M.d~M.d`·D-day 배지). 로딩·실패·빈 결과 → 섹션 숨김.
+* **화면** 지역 개요 화면(`region_overview_screen.dart`) DNA 카드 아래 `FestivalSection` 위젯: 가로 스크롤 카드(포스터·행사명·기간 `M.d~M.d`·상태 배지). 로딩·실패·빈 결과 → 섹션 숨김.
+* **상세** 카드 탭 → `FestivalDetailSheet`(바텀시트): 새 라우트 없이 표시. 가까운 퀘스트는 같은 지역 퀘스트 중 좌표가 있는 것을 `distanceMeters`(기존 위치 유틸)로 정렬해 상위 3개.
 * **백엔드(후속)**: `GET /api/v1/festivals?region_slug=` 프록시(searchFestival2, `eventStartDate` 필수 파라미터) — 별도 작업 단계로 분리.
 
 ## 의사결정 (함께 논의 · 근거 필수)

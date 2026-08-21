@@ -9,6 +9,9 @@ class Festival {
     required this.startDate,
     required this.endDate,
     this.posterUrl,
+    this.lat,
+    this.lng,
+    this.description,
   });
 
   final String id;
@@ -17,6 +20,13 @@ class Festival {
   final DateTime startDate;
   final DateTime endDate;
   final String? posterUrl;
+
+  /// 행사장 좌표 — 가까운 추천 퀘스트 계산에 쓴다(없으면 추천 생략).
+  final double? lat;
+  final double? lng;
+
+  /// 행사 소개 한두 문장.
+  final String? description;
 
   /// [today] 기준 진행 중인지 (시작일 ≤ 오늘 ≤ 종료일).
   bool isOngoing(DateTime today) {

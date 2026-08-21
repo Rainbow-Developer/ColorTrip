@@ -34,7 +34,7 @@
 ## 설계 개요 / 접근 방식
 
 * `router.dart`: `/timeline` 단독 GoRoute 제거, `StatefulShellBranch(routes: [GoRoute(path: '/timeline', ...)])`를 홈·여행 다음에 추가. 기존 `DomainStateGate`는 셸이 감싸므로 중복 제거.
-* `app_shell.dart`: 탭 정의를 4개로 확장, 바를 `SafeArea` 안 떠 있는 라운드 컨테이너(양옆 마진·그림자·radius)로 교체. 선택 탭은 `AnimatedContainer`/`AnimatedSize` 기반 pill(아이콘+라벨), 미선택은 아이콘만.
+* `app_shell.dart`: 탭 정의를 4개로 확장, 바를 `SafeArea` 안 떠 있는 라운드 컨테이너(양옆 마진·그림자·radius)로 교체. **4탭이 균등 폭 슬롯을 갖고**(탭 전환 시 아이콘 위치가 흔들리지 않도록 고정), 선택 탭은 슬롯 안에서 pill(아이콘+라벨, 폭이 모자라면 축소)로 확장, 미선택은 아이콘만.
 * `profile_screen.dart`: "타임라인 보기" 진입 항목 제거.
 
 ## 의사결정 (함께 논의 · 근거 필수)

@@ -84,7 +84,13 @@ Widget _wrapScreen(Widget child, {QuestRepository? questRepository}) {
 }
 
 Finder _placeholderBox() => find.byWidgetPredicate(
-  (w) => w is ColoredBox && w.color == AppColors.imagePlaceholderBg,
+  (w) =>
+      w is Container &&
+      w.decoration is BoxDecoration &&
+      ((w.decoration! as BoxDecoration).gradient as LinearGradient?)
+              ?.colors
+              .first ==
+          AppColors.imagePlaceholderBg,
 );
 
 void main() {
@@ -147,7 +153,7 @@ void main() {
       );
     });
 
-    testWidgets('이모지·텍스트가 없으면 빈 회색 박스만 그린다', (tester) async {
+    testWidgets('이모지·텍스트가 없으면 풍경 아이콘 placeholder를 그린다', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(

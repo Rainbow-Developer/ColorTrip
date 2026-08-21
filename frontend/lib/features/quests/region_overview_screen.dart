@@ -11,6 +11,7 @@ import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../core/widgets/trip_card.dart';
 import '../../data/models/category_vocabulary.dart';
 import '../../data/models/festival.dart';
+import 'festival_detail_sheet.dart';
 import '../../data/models/quest.dart';
 import '../../data/repositories/domain_repository.dart';
 import '../../state/auth_controller.dart';
@@ -106,7 +107,6 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                   borderRadius: BorderRadius.circular(14),
                   placeholderText: '${region.name} 이미지',
                 ),
-                FestivalSection(regionId: widget.regionId),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -168,6 +168,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                     ],
                   ),
                 ),
+                FestivalSection(regionId: widget.regionId),
                 const SizedBox(height: 18),
                 const Text(
                   '추천 퀘스트',
@@ -429,7 +430,7 @@ class FestivalSection extends ConsumerWidget {
             itemCount: festivals.length,
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (_, index) =>
-                _FestivalCard(festival: festivals[index]),
+                _FestivalCard(festival: festivals[index], regionId: regionId),
           ),
         ),
       ],
@@ -438,9 +439,10 @@ class FestivalSection extends ConsumerWidget {
 }
 
 class _FestivalCard extends StatelessWidget {
-  const _FestivalCard({required this.festival});
+  const _FestivalCard({required this.festival, required this.regionId});
 
   final Festival festival;
+  final String regionId;
 
   String _period() {
     String md(DateTime d) => '${d.month}.${d.day}';
@@ -455,58 +457,66 @@ class _FestivalCard extends StatelessWidget {
 
     return SizedBox(
       width: 200,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              AppNetworkImage(
-                url: festival.posterUrl,
-                width: 200,
-                height: 112,
-                borderRadius: BorderRadius.circular(12),
-                placeholderEmoji: '🎪',
-                placeholderEmojiSize: 30,
-              ),
-              Positioned(
-                top: 8,
-                left: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: ongoing ? AppColors.primaryDark : Colors.black54,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    badgeText,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => showFestivalDetailSheet(
+          context,
+          festival: festival,
+          regionId: regionId,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                AppNetworkImage(
+                  url: festival.posterUrl,
+                  width: 200,
+                  height: 112,
+                  borderRadius: BorderRadius.circular(12),
+                  placeholderEmoji: '🎪',
+                  placeholderEmojiSize: 30,
+                ),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: ongoing ? AppColors.primaryDark : Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            festival.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '${_period()} · ${festival.placeName}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              festival.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${_period()} · ${festival.placeName}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+            ),
+          ],
+        ),
       ),
     );
   }
