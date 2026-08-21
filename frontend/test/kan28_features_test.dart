@@ -730,6 +730,101 @@ void main() {
     expect(targetTapCount, 1);
   });
 
+  testWidgets('텍스트 크기와 키보드 인셋이 바뀌면 코치마크를 다시 측정한다', (tester) async {
+    tester.view.physicalSize = const Size(800, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final targetKey = GlobalKey();
+    var textScale = 1.0;
+    var bottomInset = 0.0;
+    var targetTapCount = 0;
+    late StateSetter rebuild;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingTourProvider.overrideWith(
+            () => OnboardingTourNotifier(
+              const OnboardingTourState(step: 0, skipped: false),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                rebuild = setState;
+                final media = MediaQuery.of(context);
+                return MediaQuery(
+                  data: media.copyWith(
+                    textScaler: TextScaler.linear(textScale),
+                    viewInsets: EdgeInsets.only(bottom: bottomInset),
+                  ),
+                  child: Builder(
+                    builder: (context) {
+                      final insets = MediaQuery.viewInsetsOf(context);
+                      return Stack(
+                        children: [
+                          Positioned(
+                            left: 100,
+                            right: 100,
+                            bottom: 80 + insets.bottom,
+                            height: 50,
+                            child: GestureDetector(
+                              key: targetKey,
+                              behavior: HitTestBehavior.opaque,
+                              onTap: () => targetTapCount++,
+                              child: const ColoredBox(
+                                color: AppColors.mapEmpty,
+                              ),
+                            ),
+                          ),
+                          CoachMarkOverlay(
+                            targetKey: targetKey,
+                            stepIndex: 0,
+                            title: '지도에서 지역을 눌러보세요',
+                            body:
+                                '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요. '
+                                '텍스트 크기와 키보드 영역이 바뀌어도 위치가 맞아야 해요.',
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final initialCardHeight = tester
+        .getRect(find.byKey(const ValueKey('coach-mark-message-card')))
+        .height;
+
+    rebuild(() {
+      textScale = 1.7;
+      bottomInset = 180;
+    });
+    await tester.pumpAndSettle();
+
+    final targetRect = tester.getRect(find.byKey(targetKey));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(targetRect.top, lessThan(600));
+    expect(messageCardRect.height, greaterThan(initialCardHeight));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(800));
+
+    await tester.tapAt(targetRect.center);
+    await tester.pump();
+
+    expect(targetTapCount, 1);
+  });
+
   test('기간 표기는 같은 해면 연도를 한 번만 쓴다', () {
     expect(
       TripInfo.formatPeriod(DateTime(2026, 7, 20), DateTime(2026, 7, 22)),

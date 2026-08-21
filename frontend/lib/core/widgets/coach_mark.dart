@@ -11,6 +11,9 @@ import '../constants.dart';
 const _spotlightMargin = 16.0;
 const _bubbleArrowSize = 26.0;
 
+double _requiredBubbleSpace(double messageCardHeight) =>
+    messageCardHeight + _bubbleArrowSize + _spotlightMargin * 2;
+
 /// 실제 화면의 특정 위젯([targetKey])을 스포트라이트로 강조하고 화살표+말풍선으로 설명하는
 /// 온보딩 코치마크. 각 화면에서 `OnboardingTourState.step == stepIndex`일 때만 띄운다.
 class CoachMarkOverlay extends ConsumerStatefulWidget {
@@ -50,7 +53,8 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   final _overlayKey = GlobalKey();
   Rect? _targetRect;
   Size? _localSize;
-  Size? _lastViewportSize;
+  ({Size size, TextScaler textScaler, EdgeInsets viewInsets})?
+  _lastLayoutDependencies;
   bool _measureScheduled = false;
 
   @override
@@ -70,9 +74,13 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final viewportSize = MediaQuery.sizeOf(context);
-    if (_lastViewportSize == viewportSize) return;
-    _lastViewportSize = viewportSize;
+    final dependencies = (
+      size: MediaQuery.sizeOf(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      viewInsets: MediaQuery.viewInsetsOf(context),
+    );
+    if (_lastLayoutDependencies == dependencies) return;
+    _lastLayoutDependencies = dependencies;
     _scheduleMeasure();
   }
 
@@ -135,16 +143,15 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     ({Rect rect, Size overlaySize}) measured,
     double messageCardHeight,
   ) async {
-    final bubbleAllowance =
-        messageCardHeight + _bubbleArrowSize + _spotlightMargin;
+    final requiredSpace = _requiredBubbleSpace(messageCardHeight);
     final missing =
-        bubbleAllowance - (measured.overlaySize.height - measured.rect.bottom);
+        requiredSpace - (measured.overlaySize.height - measured.rect.bottom);
     if (missing <= 0) return measured;
 
     final scrollable = Scrollable.maybeOf(ctx);
     final position = scrollable?.position;
     if (position == null) return measured;
-    final targetOffset = (position.pixels + missing + _spotlightMargin)
+    final targetOffset = (position.pixels + missing)
         .clamp(position.minScrollExtent, position.maxScrollExtent)
         .toDouble();
     if ((targetOffset - position.pixels).abs() < 0.5) return measured;
@@ -202,15 +209,14 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     final screenSize = _localSize ?? MediaQuery.sizeOf(context);
     const margin = 16.0;
     final messageCardHeight = _messageCardHeight(screenSize);
-    final bubbleAllowance =
-        messageCardHeight + _bubbleArrowSize + _spotlightMargin;
+    final requiredSpace = _requiredBubbleSpace(messageCardHeight);
 
     final spaceBelow = screenSize.height - rect.bottom;
     final spaceAbove = rect.top;
     final _BubblePlacement placement;
-    if (widget.forceBubbleBelow || spaceBelow >= bubbleAllowance) {
+    if (widget.forceBubbleBelow || spaceBelow >= requiredSpace) {
       placement = _BubblePlacement.below;
-    } else if (spaceAbove >= bubbleAllowance) {
+    } else if (spaceAbove >= requiredSpace) {
       placement = _BubblePlacement.above;
     } else {
       placement = spaceBelow >= spaceAbove
@@ -219,7 +225,7 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     }
 
     double cardMaxHeight(double availableHeight) {
-      return (availableHeight - _bubbleArrowSize)
+      return (availableHeight - _bubbleArrowSize - _spotlightMargin * 2)
           .clamp(0.0, messageCardHeight)
           .toDouble();
     }
@@ -228,13 +234,13 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
       stepIndex: widget.stepIndex,
       title: widget.title,
       body: widget.body,
-      maxHeight: cardMaxHeight(screenSize.height - rect.bottom - margin * 2),
+      maxHeight: cardMaxHeight(screenSize.height - rect.bottom),
     );
     final bubbleAbove = _MessageCard(
       stepIndex: widget.stepIndex,
       title: widget.title,
       body: widget.body,
-      maxHeight: cardMaxHeight(rect.top - margin * 2),
+      maxHeight: cardMaxHeight(rect.top),
     );
 
     final hole = rect.inflate(8);
