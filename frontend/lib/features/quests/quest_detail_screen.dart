@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/quest_image.dart';
 import '../../core/widgets/quest_type_badge.dart';
+import '../../data/models/quest.dart';
+import '../../state/place_providers.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
 
@@ -69,10 +71,7 @@ class QuestDetailScreen extends ConsumerWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => const _ImagePlaceholder(),
                       )
-                    : AppNetworkImage(
-                        url: quest.imageUrl,
-                        placeholderText: '관광지 이미지',
-                      ),
+                    : QuestImage(quest: quest, placeholderText: '관광지 이미지'),
               ),
             ),
             const SizedBox(height: 14),
@@ -140,18 +139,65 @@ class QuestDetailScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              quest.desc,
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 13,
-                height: 1.6,
-              ),
-            ),
+            _PlaceInfoSection(quest: quest),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 장소 소개·운영정보 — 수제 퀘스트는 직접 쓴 desc를, 생성 퀘스트는 TourAPI에서
+/// 실시간 조회한 소개문·운영시간·휴무를 보여준다(docs/specs/090-realtime-tour-place-info).
+/// 조회 실패·로딩 중·조회 대상 없음(contentId 없음)은 조용히 생략한다(placeholder 원칙).
+class _PlaceInfoSection extends ConsumerWidget {
+  const _PlaceInfoSection({required this.quest});
+
+  final Quest quest;
+
+  static const _descStyle = TextStyle(
+    color: AppColors.textMuted,
+    fontSize: 13,
+    height: 1.6,
+  );
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final contentId = quest.tourContentId;
+    final contentTypeId = quest.tourContentTypeId;
+    final detail = contentId == null || contentTypeId == null
+        ? null
+        : ref
+              .watch(
+                placeDetailProvider((
+                  contentId: contentId,
+                  contentTypeId: contentTypeId,
+                )),
+              )
+              .asData
+              ?.value;
+
+    final description = quest.desc ?? detail?.overview;
+    final operation = detail?.operationInfo;
+    if (description == null && operation == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (operation != null) ...[
+          const SizedBox(height: 16),
+          if (operation.usetime case final usetime?)
+            Text('⏰ 운영시간: $usetime', style: _descStyle),
+          if (operation.restdate case final restdate?)
+            Text('📅 휴무: $restdate', style: _descStyle),
+        ],
+        if (description != null) ...[
+          const SizedBox(height: 16),
+          Text(description, style: _descStyle),
+        ],
+      ],
     );
   }
 }

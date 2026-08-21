@@ -22,7 +22,13 @@ final recommendedQuestKeysProvider = FutureProvider.autoDispose
       final progress = ref.watch(progressProvider);
       final user = ref.watch(currentUserProvider);
       var dnaType = toAppCategory(user?.dna ?? progress.dnaType ?? 'nature');
-      const validCategories = ['nature', 'food', 'history', 'activity', 'healing'];
+      const validCategories = [
+        'nature',
+        'food',
+        'history',
+        'activity',
+        'healing',
+      ];
       if (!validCategories.contains(dnaType)) {
         dnaType = 'nature';
       }
