@@ -11,7 +11,7 @@
 | 지도 / 지역 데이터 | 프론트엔드는 그림(이미지) 방식, 백엔드는 Naver API | |
 | 행사·축제 데이터 | TourAPI 행사정보 | |
 | 사진 인증 검증 | **Gemini 비전 판정**(제공자 교체 가능 인터페이스, 키 없으면 스텁 판정) | KAN-58에서 룰 기반 → AI 판정으로 변경. [050 스펙](../specs/050-quest-verification/) |
-| 퀘스트·지역 이미지 | TourAPI `firstimage` CDN URL 핫링크 | [045 스펙](../specs/045-quest-region-images/) |
+| 퀘스트·지역 이미지 | 퀘스트 썸네일은 TourAPI `firstimage` CDN URL 핫링크, 지역 대표(히어로) 이미지는 로컬 asset | [045 스펙](../specs/045-quest-region-images/) |
 | 여행 DNA 추천 | 룰 기반으로 시작 | |
 | API 키 / 쿼터 관리 | 환경변수 + GCP Secret Manager | |
 
@@ -42,30 +42,41 @@
 
 ## TourAPI 활용신청 현황 (공공데이터포털, 2026-07-17 승인 · 2028-07-17 만료)
 
-하나의 data.go.kr 계정 인증키로 아래 서비스가 모두 승인되어 있다.
+하나의 data.go.kr 계정 인증키로 아래 **11건이 개발계정으로 승인**되어 있고, 그중 **실제로 호출하는 것은 국문 관광정보 서비스(`KorService2`) 1건뿐**이다. 나머지 10건은 나중에 쓸 여지를 두고 신청만 해둔 상태다.
 키는 로컬 `backend/.env`의 `TOUR_API_KEY`로 주입하고, 운영은 Secret Manager
 `colortrip-dev-tour-api-key`로 관리한다(현재 시크릿 미생성 — 생성 시 dev 서버 배포에 자동 반영,
 [deploy/deploy.sh](../../deploy/deploy.sh) 참고).
 
+**호출량 확인**: 우리 코드에는 호출 횟수를 집계하는 곳이 없다(로그도 `serviceKey`를 마스킹한다). 실제 사용량은 data.go.kr → 마이페이지 → 오픈 API → 개발계정에서 해당 활용신청 건의 상세를 열어 확인한다.
+
 | 서비스(활용신청 명) | Base URL (`apis.data.go.kr/B551011/…`) | 상태 |
 |------|------|------|
-| 국문 관광정보 서비스_GW | `KorService2` | **사용 중** — 프론트 퀘스트 데이터 생성 `backend/scripts/generate_frontend_quests.py` · 이미지/좌표 보강 `backend/scripts/enrich_frontend_quests.py` · DB 적재 로더 `backend/app/integrations/tour_api/` |
+| 국문 관광정보 서비스_GW | `KorService2` | **사용 중**(유일) — 아래 [KorService2 사용법](#korservice2-사용법-사용-중) 참고 |
 | 영문/일문/중문간체/중문번체/독어 관광정보서비스_GW | `EngService2` / `JpnService2` / `ChsService2` / `ChtService2` / `GerService2` | 미사용 (다국어 대응 시) |
 | 관광사진 정보_GW | `PhotoGalleryService1` (`gallerySearchList1` 등) | 미사용 (퀘스트 썸네일 후보) |
 | 기초지자체 중심 관광지 정보 | `LocgoHubTarService1` (`areaBasedList1`, `baseYm`·`areaCd`·`signguCd` 필수) | 미사용 (지역 대표 관광지 선정 후보) |
 | 관광지별 연관 관광지 정보 | `TarRlteTarService1` (`areaBasedList1`) | 미사용 (연관 퀘스트 추천 후보) |
 | 지역별 관광 다양성 | data.go.kr 활용가이드 참고 | 미사용 |
+| 관광공모전(사진) 수상작 정보 | data.go.kr 활용가이드 참고 | 미사용 (지역 대표 이미지 후보 — 수상작은 저작자 표시 조건을 먼저 확인할 것) |
 
 ### KorService2 사용법 (사용 중)
 
-- **공통 파라미터**: `serviceKey`(인증키)·`MobileOS=ETC`·`MobileApp=ColorTrip`·`_type=json` —
-  백엔드 클라이언트 `backend/app/integrations/tour_api/client.py`가 자동으로 붙인다.
-- **주요 엔드포인트**
-  - `areaCode2?areaCode=33` — 충북 시·군구 코드 목록
-  - `areaBasedList2?areaCode=33&sigunguCode={코드}&contentTypeId={유형}` — 지역 기반 관광정보 목록
-  - `searchKeyword2?keyword={장소명}` — 키워드 검색(이미지/좌표 보강 매칭용). **areaCode/sigunguCode를 주면 0건이 반환**되므로(법정동 코드 전환 영향) 파라미터 없이 호출하고 응답의 `addr1`/legacy 코드로 클라이언트에서 필터링한다
-  - `detailCommon2?contentId={id}` — 공통 상세(소개문 `overview` 포함)
-  - `detailIntro2?contentId={id}&contentTypeId={유형}` — 운영시간·휴무 등 소개 정보
+- **공통 파라미터**: `serviceKey`(인증키)·`MobileOS=ETC`·`MobileApp=ColorTrip`·`_type=json` — 호출하는 각 코드가 붙인다.
+- **호출 지점**: 관광지 데이터(이미지·소개문·운영정보)는 서버가 요청 시점에 실시간 조회한다 — 공사 권고(로컬 저장·캐싱 지양) 준수, [090 스펙](../specs/090-realtime-tour-place-info/) 참고. **앱은 TourAPI를 직접 호출하지 않는다**(키는 서버만 든다 — VWorld와 같은 논리).
+
+  | 엔드포인트 | 호출하는 곳 | 용도 |
+  |------|------|------|
+  | `areaBasedList2?areaCode=33&sigunguCode={코드}&contentTypeId={유형}` | `backend/app/places/`(런타임, `GET /api/v1/places?region_slug=`) · 스크립트 2종 | 지역 관광지 목록 — 런타임은 썸네일 맵, 스크립트는 후보 수집·매칭 |
+  | `detailCommon2?contentId={id}` | `backend/app/places/`(런타임, `GET /api/v1/places/{content_id}`) · 사진 인증 프롬프트 보강(`app/quests/verification.py`) · `generate_frontend_quests.py` | 공통 상세 — 이미지·소개문(`overview`) |
+  | `detailIntro2?contentId={id}&contentTypeId={유형}` | `backend/app/places/`(런타임) | 운영시간·휴무 — 유형별 필드를 (usetime, restdate)로 정규화 |
+  | `areaCode2?areaCode=33` | `generate_frontend_quests.py` · `enrich_frontend_quests.py` · `backfill_tour_content_ids.py` | 충북 시·군구 코드 목록 |
+  | `searchKeyword2?keyword={장소명}` | `enrich_frontend_quests.py` · `backfill_tour_content_ids.py` | 키워드 검색 — 매칭 보충 |
+
+  런타임 호출량: 지역 화면·홈 추천 배너 진입 1회 = `areaBasedList2` 4건(썸네일 맵), 상세 화면 1회 = `detailCommon2`+`detailIntro2` 2건, 사진 인증 1회 = `detailCommon2` 1건. **TourAPI 응답(JSON)은 캐시하지 않으므로**(공사 권고) 사용자 수에 비례한다 — 일 한도(아래 '주의') 초과 시 앱은 placeholder로 동작한다. 단, 이미지 파일 자체는 단말의 `cached_network_image` 디스크 캐시를 쓴다 — 이미지는 CDN(`tong.visitkorea.or.kr`) 트래픽이라 API 일 한도와 무관하고, URL이 바뀌면 새로 받는다. 스크립트는 1회 실행당 약 100~300건.
+- **미연결 코드**: `backend/app/integrations/tour_api/loader.py`(`load_quests_for_region` — DB 적재)는 정의만 있고 호출하는 코드가 없다. 되살릴지 걷어낼지는 미정.
+- **파라미터 주의**
+  - `searchKeyword2?keyword={장소명}` — **areaCode/sigunguCode를 주면 0건이 반환**되므로(법정동 코드 전환 영향) 파라미터 없이 호출하고 응답의 `addr1`/legacy 코드로 클라이언트에서 필터링한다
+  - `detailIntro2` 응답의 운영정보 필드명은 유형별로 다르다(12 `usetime`/`restdate` · 14 `usetimeculture`/… · 28 `usetimeleports`/… · 39 `opentimefood`/`restdatefood`) — 정규화는 `backend/app/places/service.py`
 - **contentTypeId**: 12 관광지 · 14 문화시설 · 15 축제공연행사 · 25 여행코스 · 28 레포츠 · 32 숙박 · 38 쇼핑 · 39 음식점
 - **충북(areaCode=33) sigunguCode**: 괴산군 1 · 단양군 2 · 보은군 3 · 영동군 4 · 옥천군 5 · 음성군 6 ·
   제천시 7 · 진천군 8 · 청주시 10 · 충주시 11 · 증평군 12

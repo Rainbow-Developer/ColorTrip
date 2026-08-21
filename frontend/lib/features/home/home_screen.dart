@@ -1,9 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
+import '../../core/widgets/quest_image.dart';
+import '../../data/models/quest.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/map_legend.dart';
@@ -317,15 +318,13 @@ class _BannerContent {
 /// 배너의 퀘스트 요약 1건(표시 전용) — BE 퀘스트 id는 FE 정적 id와 체계가 달라 담지
 /// 않는다(탭 이동은 지역 단위, [040-home-region-recommendation] 리스크 참고).
 class _QuestSummary {
-  const _QuestSummary({
-    required this.title,
-    required this.type,
-    this.thumbnailUrl,
-  });
+  const _QuestSummary({required this.title, required this.type, this.source});
 
   final String title;
   final String type;
-  final String? thumbnailUrl;
+
+  /// 썸네일 해석용 원본 퀘스트 — [QuestImage]가 tourContentId로 실시간 조회한다.
+  final Quest? source;
 }
 
 /// 추천 여행지 배너 — 서버 추천(`GET /regions/unvisited`)의 첫 후보 지역과, 그 지역의
@@ -399,7 +398,7 @@ class _RecommendedRegionBanner extends ConsumerWidget {
                     _QuestSummary(
                       title: quest.title,
                       type: quest.type,
-                      thumbnailUrl: quest.imageUrl,
+                      source: quest,
                     ),
               ],
             );
@@ -490,31 +489,18 @@ class _QuestSummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final thumbnailUrl = quest.thumbnailUrl;
+    final source = quest.source;
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Row(
         children: [
-          if (thumbnailUrl != null && thumbnailUrl.isNotEmpty) ...[
-            ClipRRect(
+          // 로딩·실패 시 QuestImage가 같은 placeholder 색 박스를 그린다.
+          if (source?.tourContentId != null) ...[
+            QuestImage(
+              quest: source!,
+              width: 24,
+              height: 24,
               borderRadius: BorderRadius.circular(6),
-              child: CachedNetworkImage(
-                imageUrl: thumbnailUrl,
-                width: 24,
-                height: 24,
-                fit: BoxFit.cover,
-                // 로드 전·실패 시 관광지 이미지와 같은 placeholder 색 박스를 쓴다.
-                placeholder: (_, _) => Container(
-                  width: 24,
-                  height: 24,
-                  color: AppColors.imagePlaceholderBg,
-                ),
-                errorWidget: (_, _, _) => Container(
-                  width: 24,
-                  height: 24,
-                  color: AppColors.imagePlaceholderBg,
-                ),
-              ),
             ),
             const SizedBox(width: 8),
           ],

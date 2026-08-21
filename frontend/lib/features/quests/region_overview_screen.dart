@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/quest_image.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../core/widgets/trip_card.dart';
@@ -357,8 +358,8 @@ class _RecommendedQuestTile extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 4 / 3,
-              child: AppNetworkImage(
-                url: quest.imageUrl,
+              child: QuestImage(
+                quest: quest,
                 placeholderEmoji: typeStyle?.emoji ?? '📍',
                 placeholderEmojiSize: 30,
               ),

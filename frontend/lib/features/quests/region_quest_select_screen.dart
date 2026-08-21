@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/quest_image.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/filter_chip_row.dart';
@@ -16,6 +16,8 @@ import '../../state/onboarding_tour_notifier.dart';
 import '../../state/domain_controller.dart';
 import '../../state/progress_notifier.dart';
 import '../../state/repository_providers.dart';
+import '../../data/models/category_vocabulary.dart';
+import '../../state/auth_controller.dart';
 
 /// 퀘스트 선택 — 지역 퀘스트를 여러 개 골라 "여행 시작하기"로 여행을 시작한다.
 /// 여기서 고른 퀘스트는 그 자리에서 수행하는 게 아니라, 여행 탭의 "진행중인 여행"에 담기고
@@ -182,12 +184,24 @@ class _RegionQuestSelectScreenState
         ),
     ];
 
+    final user = ref.watch(currentUserProvider);
+    final dnaType = toAppCategory(user?.dna ?? progress.dnaType ?? 'nature');
+
     final query = _searchController.text.trim();
     final quests = allRegionQuests.where((q) {
       final matchesType = _typeFilter == 'all' || q.type == _typeFilter;
       final matchesQuery = query.isEmpty || q.title.contains(query);
       return matchesType && matchesQuery;
     }).toList();
+
+    // DNA 매칭되는 퀘스트를 리스트 최상단으로 정렬
+    quests.sort((a, b) {
+      final aMatched = a.type == dnaType;
+      final bMatched = b.type == dnaType;
+      if (aMatched && !bMatched) return -1;
+      if (!aMatched && bMatched) return 1;
+      return 0;
+    });
 
     final selectedCount = _selectedQuestIds!.length;
     final tour = ref.watch(onboardingTourProvider);
@@ -251,10 +265,12 @@ class _RegionQuestSelectScreenState
                     final inOtherJourney = questsInOtherJourneys.contains(
                       quest.id,
                     );
+                    final isDnaMatched = quest.type == dnaType;
                     return _SelectableQuestCard(
                       quest: quest,
                       selected: _selectedQuestIds!.contains(quest.id),
                       completed: completed,
+                      isDnaMatched: isDnaMatched,
                       badgeLabel: completed
                           ? '완료됨'
                           : (inOtherJourney ? '진행중' : null),
@@ -312,6 +328,7 @@ class _SelectableQuestCard extends StatelessWidget {
     required this.quest,
     required this.selected,
     required this.completed,
+    required this.isDnaMatched,
     this.badgeLabel,
     required this.onToggle,
     required this.onViewDetail,
@@ -320,6 +337,7 @@ class _SelectableQuestCard extends StatelessWidget {
   final Quest quest;
   final bool selected;
   final bool completed;
+  final bool isDnaMatched;
   final String? badgeLabel;
   final VoidCallback onToggle;
   final VoidCallback onViewDetail;
@@ -371,8 +389,8 @@ class _SelectableQuestCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  AppNetworkImage(
-                    url: quest.imageUrl,
+                  QuestImage(
+                    quest: quest,
                     width: 44,
                     height: 44,
                     borderRadius: BorderRadius.circular(8),
@@ -401,6 +419,19 @@ class _SelectableQuestCard extends StatelessWidget {
                                   questTypeStyles[quest.type]?.label ??
                                   quest.type,
                             ),
+                            if (isDnaMatched) ...[
+                              const SizedBox(width: 4),
+                              _MiniBadge(
+                                label: '🧬 DNA',
+                                backgroundColor:
+                                    (questTypeStyles[quest.type]?.foreground ??
+                                            AppColors.primaryDark)
+                                        .withValues(alpha: 0.12),
+                                textColor:
+                                    questTypeStyles[quest.type]?.foreground ??
+                                    AppColors.primaryDark,
+                              ),
+                            ],
                             if (badgeLabel != null) ...[
                               const SizedBox(width: 4),
                               _MiniBadge(label: badgeLabel!),
@@ -433,21 +464,26 @@ class _SelectableQuestCard extends StatelessWidget {
 }
 
 class _MiniBadge extends StatelessWidget {
-  const _MiniBadge({required this.label});
+  const _MiniBadge({required this.label, this.backgroundColor, this.textColor});
 
   final String label;
+  final Color? backgroundColor;
+  final Color? textColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.tripMutedBadgeBg,
+        color: backgroundColor ?? AppColors.tripMutedBadgeBg,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 10, color: AppColors.tripMutedBadgeFg),
+        style: TextStyle(
+          fontSize: 10,
+          color: textColor ?? AppColors.tripMutedBadgeFg,
+        ),
       ),
     );
   }

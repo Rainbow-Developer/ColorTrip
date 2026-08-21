@@ -122,6 +122,7 @@ abstract class DomainRepository {
 
   Future<List<String>> fetchRecommendedQuestKeys({
     required String regionKey,
+    String? category,
     int size = kRecommendedQuestSize,
   });
 
@@ -224,16 +225,22 @@ class DioDomainRepository implements DomainRepository {
   @override
   Future<List<String>> fetchRecommendedQuestKeys({
     required String regionKey,
+    String? category,
     int size = kRecommendedQuestSize,
   }) async {
     final catalog = await _loadCatalog();
+    final queryParameters = <String, dynamic>{
+      'region_id': catalog.regionId(regionKey),
+      'page': 1,
+      'size': size,
+    };
+    if (category != null) {
+      queryParameters['category'] = category;
+    }
+
     final response = await _dio.get(
       '/quests/recommended',
-      queryParameters: {
-        'region_id': catalog.regionId(regionKey),
-        'page': 1,
-        'size': size,
-      },
+      queryParameters: queryParameters,
     );
     final items = (_data(response)['items'] as List)
         .cast<Map<String, dynamic>>();

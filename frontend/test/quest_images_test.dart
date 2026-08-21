@@ -1,8 +1,8 @@
 /// 퀘스트·지역 이미지(docs/specs/045-quest-region-images) — [AppNetworkImage]의
 /// placeholder 폴백과 퀘스트 목록의 이미지 없는 경로를 검증한다.
 ///
-/// 네트워크 이미지는 테스트에서 실제로 로드하지 않는다 — 정적 데이터는 별도 스크립트가
-/// imageUrl을 채우므로, 목록 테스트는 imageUrl을 비운 복제 저장소로 url 없는 경로만 본다.
+/// 네트워크 이미지는 테스트에서 실제로 로드하지 않는다 — 썸네일 URL은 이제 TourAPI
+/// 실시간 조회([090] QuestImage)로 오므로, 목록 테스트는 조회 없는 placeholder 경로만 본다.
 library;
 
 import 'package:cached_network_image/cached_network_image.dart';

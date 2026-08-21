@@ -35,6 +35,7 @@ class _Repository implements DomainRepository {
 
   @override
   Future<List<String>> fetchRecommendedQuestKeys({
+    String? category,
     required String regionKey,
     int size = 2,
   }) async => const [];

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/quest_image.dart';
 import '../../core/widgets/coach_mark.dart';
 import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../data/models/quest.dart';
@@ -60,8 +60,14 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
             .map(questRepo.byId)
             .whereType<Quest>()
             .toList();
+        bool isCompletedInJourney(String questId) {
+          final entry = progress.timelineEntryFor(questId);
+          if (entry == null) return false;
+          return entry.completedAt.compareTo(journey.createdAt) >= 0;
+        }
+
         final done = quests
-            .where((quest) => progress.isCompleted(quest.id))
+            .where((quest) => isCompletedInJourney(quest.id))
             .length;
         final active = journey.status == 'in_progress';
         final tour = ref.watch(onboardingTourProvider);
@@ -142,29 +148,34 @@ class _JourneyDetailScreenState extends ConsumerState<JourneyDetailScreen> {
                     )
                   else
                     for (final (index, quest) in quests.indexed)
-                      Padding(
-                        key: index == 0 ? _firstQuestKey : null,
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _JourneyQuestTile(
-                          quest: quest,
-                          done: progress.isCompleted(quest.id),
-                          onTap: () {
-                            if (index == 0 &&
-                                tour.isEnabled &&
-                                tour.step == 3) {
-                              ref
-                                  .read(onboardingTourProvider.notifier)
-                                  .advance();
-                            }
-                            if (!active || progress.isCompleted(quest.id)) {
-                              context.push('/quest/${quest.id}');
-                            } else {
-                              context.push(
-                                '/quest/${quest.id}/verify?journeyId=${journey.id}',
-                              );
-                            }
-                          },
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final doneInJourney = isCompletedInJourney(quest.id);
+                          return Padding(
+                            key: index == 0 ? _firstQuestKey : null,
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _JourneyQuestTile(
+                              quest: quest,
+                              done: doneInJourney,
+                              onTap: () {
+                                if (index == 0 &&
+                                    tour.isEnabled &&
+                                    tour.step == 3) {
+                                  ref
+                                      .read(onboardingTourProvider.notifier)
+                                      .advance();
+                                }
+                                if (!active || doneInJourney) {
+                                  context.push('/quest/${quest.id}');
+                                } else {
+                                  context.push(
+                                    '/quest/${quest.id}/verify?journeyId=${journey.id}',
+                                  );
+                                }
+                              },
+                            ),
+                          );
+                        },
                       ),
                 ],
               ),
@@ -249,8 +260,8 @@ class _JourneyQuestTile extends StatelessWidget {
             children: [
               AspectRatio(
                 aspectRatio: 4 / 3,
-                child: AppNetworkImage(
-                  url: quest.imageUrl,
+                child: QuestImage(
+                  quest: quest,
                   placeholderEmoji: typeStyle?.emoji ?? '📍',
                   placeholderEmojiSize: 30,
                 ),

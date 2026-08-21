@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/widgets/app_back_button.dart';
-import '../../core/widgets/app_network_image.dart';
+import '../../core/widgets/quest_image.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
 import '../../data/models/region.dart';
@@ -742,8 +742,8 @@ class _TimelineRow extends StatelessWidget {
         ? null
         : Uri.parse(apiBaseUrl).resolve(photoUrl).toString();
     // 인증에 실제로 쓴 사진(로컬 → 서버) → 없으면 퀘스트 관련 사진(TourAPI) → placeholder.
-    final fallbackImage = AppNetworkImage(
-      url: quest.imageUrl,
+    final fallbackImage = QuestImage(
+      quest: quest,
       placeholderEmoji: typeStyle?.emoji ?? '📍',
       placeholderEmojiSize: 22,
     );

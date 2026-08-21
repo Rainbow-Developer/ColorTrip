@@ -44,3 +44,7 @@ docs/specs/
 | [070-municipal-open-api](070-municipal-open-api/) | 지자체 제공 오픈 API(지역 관광 통계, 서비스키 인증) |
 | [075-privacy-policy-page](075-privacy-policy-page/) | Google Play 등록용 개인정보처리방침 공개 페이지 |
 | [080-profile-image](080-profile-image/) | 프로필 이미지 등록·교체·제거(회원가입 선택 항목) |
+| [080-timeline-journey-grouping](080-timeline-journey-grouping/) | 타임라인의 완료 퀘스트를 여행 단위로 그룹핑 |
+| [085-journey-management](085-journey-management/) | 여행 이름·일정 수정과 삭제 |
+| [085-legal-consent-compliance](085-legal-consent-compliance/) | 회원가입 법적 동의·개인정보 처리 정합화 |
+| [090-realtime-tour-place-info](090-realtime-tour-place-info/) | 관광지 정보(이미지·소개문·운영정보) TourAPI 실시간 조회 전환 |
