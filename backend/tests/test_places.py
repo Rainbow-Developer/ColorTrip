@@ -167,3 +167,19 @@ async def test_place_detail_tour_api_failure_returns_null_fields(client: AsyncCl
         "overview": None,
         "operation_info": None,
     }
+
+
+async def test_migration_backfills_quest_content_ids(client: AsyncClient) -> None:
+    """KAN-102 마이그레이션이 client_key 기준으로 quests.content_id를 채운다."""
+    from sqlalchemy import select
+
+    from app.core.database import AsyncSessionLocal
+    from app.quests.models import Quest
+
+    async with AsyncSessionLocal() as session:
+        quest = (
+            await session.execute(select(Quest).where(Quest.client_key == "dy6"))
+        ).scalar_one()
+
+    assert quest.content_id == "1626649"
+    assert quest.content_type_id == "12"
