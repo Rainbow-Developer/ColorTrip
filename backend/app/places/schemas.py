@@ -28,3 +28,16 @@ class PlaceDetail(BaseModel):
     image_url: str | None = None
     overview: str | None = None
     operation_info: OperationInfo | None = None
+
+
+class FestivalRead(BaseModel):
+    """지역 행사·축제 1건 — searchFestival2 응답을 앱 모델에 맞게 정규화한 값."""
+
+    id: str
+    title: str
+    place_name: str
+    start_date: str  # YYYY-MM-DD
+    end_date: str  # YYYY-MM-DD
+    poster_url: str | None = None
+    lat: float | None = None
+    lng: float | None = None

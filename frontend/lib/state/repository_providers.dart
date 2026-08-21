@@ -67,9 +67,9 @@ final placeRepositoryProvider = Provider<PlaceRepository>(
   (ref) => DioPlaceRepository(ref.watch(dioProvider)),
 );
 
-/// 지역 행사·축제(docs/specs/095-festival-info) — 백엔드 프록시 전에는 시연용 스텁.
+/// 지역 행사·축제 실시간 프록시(docs/specs/095-festival-info).
 final festivalRepositoryProvider = Provider<FestivalRepository>(
-  (ref) => const StubFestivalRepository(),
+  (ref) => DioFestivalRepository(ref.watch(dioProvider)),
 );
 
 /// 지역별 행사·축제 상태 — 화면을 벗어나면 버린다(autoDispose, 090과 같은 패턴).

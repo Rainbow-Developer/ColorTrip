@@ -8,13 +8,14 @@
 
 import asyncio
 import logging
+from datetime import date, datetime, timedelta
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppException, ErrorCode
 from app.integrations.tour_api.client import TourApiClient
-from app.places.schemas import OperationInfo, PlaceDetail, PlaceImage
+from app.places.schemas import FestivalRead, OperationInfo, PlaceDetail, PlaceImage
 from app.regions.repository import get_region_by_slug
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,12 @@ def _https(url: str) -> str:
 
 # 서비스 지역이 충북뿐이므로 areaCode를 고정한다(regions.area_code는 sigunguCode).
 _CHUNGBUK_AREA_CODE = "33"
+
+# searchFestival2는 법정동 시도코드를 쓴다(충북=43 — areaCode=33은 0건, 실호출 검증).
+_CHUNGBUK_LDONG_CODE = "43"
+
+# 개막 예정으로 보여줄 기간 — 프론트 spec(095)의 60일 창과 동일.
+_UPCOMING_WINDOW_DAYS = 60
 
 # 퀘스트 후보 수집과 동일한 유형(관광지·문화시설·레포츠·음식점) — external-apis.md
 _CONTENT_TYPE_IDS = ("12", "14", "28", "39")
@@ -116,3 +123,65 @@ async def get_place_detail(
                 detail.operation_info = OperationInfo(usetime=usetime, restdate=restdate)
 
     return detail
+
+
+def _parse_yyyymmdd(value: object) -> date | None:
+    try:
+        return datetime.strptime(str(value), "%Y%m%d").date()
+    except ValueError:
+        return None
+
+
+async def list_region_festivals(
+    session: AsyncSession, region_slug: str, client: TourApiClient
+) -> list[FestivalRead]:
+    """지역의 행사·축제(진행 중 + 60일 이내 개막 예정)를 실시간 조회한다.
+
+    searchFestival2는 legacy 시군구 코드가 비어 와서 지역 필터가 불가능하다 —
+    충북 전체(법정동 43)를 받아 addr1의 지역명(예: "단양군")으로 거른다.
+    TourAPI 실패 시 빈 목록을 반환한다(앱은 섹션을 숨긴다).
+    """
+    region = await get_region_by_slug(session, region_slug)
+    if region is None:
+        raise AppException(ErrorCode.NOT_FOUND_ERROR, f"존재하지 않는 지역: {region_slug}")
+
+    today = date.today()
+    try:
+        items = await client.fetch_festivals(_CHUNGBUK_LDONG_CODE, today.strftime("%Y%m%d"))
+    except httpx.HTTPError as exc:
+        logger.warning("TourAPI searchFestival2 실패 (slug=%s): %s", region_slug, exc)
+        return []
+
+    festivals: list[FestivalRead] = []
+    upcoming_limit = today + timedelta(days=_UPCOMING_WINDOW_DAYS)
+    for item in items:
+        if region.name not in str(item.get("addr1") or ""):
+            continue
+        start = _parse_yyyymmdd(item.get("eventstartdate"))
+        end = _parse_yyyymmdd(item.get("eventenddate"))
+        content_id = str(item.get("contentid") or "")
+        title = str(item.get("title") or "").strip()
+        if not (start and end and content_id and title) or start > upcoming_limit:
+            continue
+        poster = str(item.get("firstimage") or "")
+        festivals.append(
+            FestivalRead(
+                id=content_id,
+                title=title,
+                place_name=str(item.get("addr1") or "").strip(),
+                start_date=start.isoformat(),
+                end_date=end.isoformat(),
+                poster_url=_https(poster) if poster else None,
+                lat=_to_float(item.get("mapy")),
+                lng=_to_float(item.get("mapx")),
+            )
+        )
+    festivals.sort(key=lambda f: f.start_date)
+    return festivals
+
+
+def _to_float(value: object) -> float | None:
+    try:
+        return float(str(value))
+    except ValueError:
+        return None

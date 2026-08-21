@@ -88,42 +88,48 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: AnimatedContainer(
-            duration: _duration,
-            curve: Curves.easeOut,
-            height: 44,
-            padding: EdgeInsets.symmetric(horizontal: selected ? 12 : 10),
-            decoration: BoxDecoration(
-              color: selected ? AppColors.primaryDark : Colors.transparent,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 22,
-                  color: selected ? Colors.white : AppColors.textMuted,
-                ),
-                if (selected) ...[
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
+    // 미선택 탭은 아이콘만 보이므로 스크린 리더용 라벨을 명시한다.
+    return Semantics(
+      label: label,
+      selected: selected,
+      button: true,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: AnimatedContainer(
+              duration: _duration,
+              curve: Curves.easeOut,
+              height: 44,
+              padding: EdgeInsets.symmetric(horizontal: selected ? 12 : 10),
+              decoration: BoxDecoration(
+                color: selected ? AppColors.primaryDark : Colors.transparent,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 22,
+                    color: selected ? Colors.white : AppColors.textMuted,
                   ),
+                  if (selected) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

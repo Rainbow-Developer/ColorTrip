@@ -14,9 +14,12 @@ from app.core.database import get_session
 from app.core.response import Envelope, success
 from app.integrations.tour_api.client import TourApiClient
 from app.places import service
-from app.places.schemas import PlaceDetail, PlaceImage
+from app.places.schemas import FestivalRead, PlaceDetail, PlaceImage
 
 router = APIRouter(prefix="/places", tags=["places"])
+
+# 행사·축제도 TourAPI 프록시 책임이라 같은 모듈에 둔다(docs/specs/095-festival-info).
+festivals_router = APIRouter(prefix="/festivals", tags=["festivals"])
 
 
 # 프록시 응답이 화면 로딩을 막지 않도록 짧게 잡는다(plan.md 리스크 — 공공 API 지연).
@@ -46,4 +49,14 @@ async def get_place(
     client: TourApiClient = Depends(get_tour_api_client),
 ) -> Envelope[PlaceDetail]:
     data = await service.get_place_detail(content_id, content_type_id, client)
+    return success(data)
+
+
+@festivals_router.get("")
+async def list_festivals(
+    region_slug: str = Query(min_length=1),
+    session: AsyncSession = Depends(get_session),
+    client: TourApiClient = Depends(get_tour_api_client),
+) -> Envelope[list[FestivalRead]]:
+    data = await service.list_region_festivals(session, region_slug, client)
     return success(data)

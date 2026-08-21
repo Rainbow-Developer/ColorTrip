@@ -21,7 +21,7 @@
 
 ## 미구현 / 남은 항목
 
-- [ ] dev 서버 배포 후 실기기 검증(Secret Manager `colortrip-dev-tour-api-key` 생성 필요 — 미생성 시 서버 places 응답이 비어 placeholder 표시)
+- (없음 — dev 배포·실기기 검증 완료, Secret Manager `colortrip-dev-tour-api-key` 생성·값 일치 확인. 변경 이력 참고)
 
 ## 알려진 한계 / TODO
 

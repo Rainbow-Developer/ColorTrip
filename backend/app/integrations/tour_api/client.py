@@ -140,3 +140,20 @@ class TourApiClient:
         """detailCommon2 — 공통 상세(소개문·대표 이미지)의 첫 item을 반환한다(없으면 None)."""
         items = await self._get_items("detailCommon2", {"contentId": content_id})
         return items[0] if items else None
+
+    async def fetch_festivals(
+        self, ldong_regn_cd: str, event_start_date: str, rows: int = 100
+    ) -> list[dict[str, Any]]:
+        """searchFestival2 — 행사·축제 목록(items.item)을 반환한다.
+
+        areaCode 파라미터는 0건을 반환하므로(법정동 코드 전환 영향) 법정동
+        시도코드(lDongRegnCd)를 쓴다. eventStartDate는 종료일 기준 필터라
+        진행 중 행사도 포함된다(2026-08-21 실호출 검증 — external-apis.md).
+        """
+        params: dict[str, Any] = {
+            "lDongRegnCd": ldong_regn_cd,
+            "eventStartDate": event_start_date,
+            "numOfRows": rows,
+            "pageNo": 1,
+        }
+        return await self._get_items("searchFestival2", params)

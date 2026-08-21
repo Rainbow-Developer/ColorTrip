@@ -14,6 +14,17 @@ class Festival {
     this.description,
   });
 
+  factory Festival.fromJson(Map<String, dynamic> json) => Festival(
+    id: json['id'] as String,
+    title: json['title'] as String,
+    placeName: json['place_name'] as String,
+    startDate: DateTime.parse(json['start_date'] as String),
+    endDate: DateTime.parse(json['end_date'] as String),
+    posterUrl: json['poster_url'] as String?,
+    lat: (json['lat'] as num?)?.toDouble(),
+    lng: (json['lng'] as num?)?.toDouble(),
+  );
+
   final String id;
   final String title;
   final String placeName;

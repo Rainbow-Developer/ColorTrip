@@ -101,30 +101,21 @@ void main() {
       expect(festival.daysUntilStart(DateTime(2026, 10, 17)), 0);
     });
 
-    test('스텁은 지난 행사와 60일 밖 행사를 거른다', () async {
-      final now = DateTime.now();
-      final repo = _FakeFestivalRepository(const []);
-      // 스텁 필터 규칙 자체는 StubFestivalRepository가 갖는다 — 규칙만 검증.
-      expect(repo, isA<FestivalRepository>());
-      final past = Festival(
-        id: 'p',
-        title: 'past',
-        placeName: 'p',
-        startDate: now.subtract(const Duration(days: 10)),
-        endDate: now.subtract(const Duration(days: 5)),
-      );
-      final far = Festival(
-        id: 'far',
-        title: 'far',
-        placeName: 'p',
-        startDate: now.add(const Duration(days: 90)),
-        endDate: now.add(const Duration(days: 95)),
-      );
-      expect(past.isOngoing(now), isFalse);
-      expect(
-        far.daysUntilStart(now) > FestivalRepository.upcomingWindowDays,
-        isTrue,
-      );
+    test('Festival.fromJson은 백엔드 응답을 파싱한다', () {
+      final festival = Festival.fromJson(const {
+        'id': '1',
+        'title': '단양 온달문화축제',
+        'place_name': '충청북도 단양군 영춘면',
+        'start_date': '2026-10-16',
+        'end_date': '2026-10-19',
+        'poster_url': 'https://tong.example/poster.jpg',
+        'lat': 37.0578,
+        'lng': 128.4801,
+      });
+      expect(festival.title, '단양 온달문화축제');
+      expect(festival.startDate, DateTime(2026, 10, 16));
+      expect(festival.posterUrl, 'https://tong.example/poster.jpg');
+      expect(festival.lat, 37.0578);
     });
   });
 }
