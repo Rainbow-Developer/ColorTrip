@@ -231,7 +231,7 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 | **위치 인증** | 에뮬레이터: 우측 툴바 **⋯(Extended Controls) → Location**에 퀘스트 좌표 입력 후 *Set location*. 좌표는 [quests_data.dart](../frontend/lib/data/static/quests_data.dart)의 `lat`/`lng`. 실기기: 실제로 그 장소에 있어야 통과(반경 500m) |
 | **사진 AI 인증** | 에뮬레이터: `adb push <사진> /sdcard/Pictures/` 후 미디어 스캔(`adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Pictures/<파일>`) → 앱에서 갤러리 선택. `GEMINI_API_KEY`가 없으면 **APP_ENV=local/test에서만** 스텁 판정(항상 통과 + "AI 미설정" 사유)이 뜹니다. dev·운영에서는 거부됩니다(fail-closed) |
 | **QR 인증** | `cd backend && uv run python scripts/generate_quest_qr.py` 로 QR PNG 생성 → 모니터에 띄우고 **실기기**로 스캔. 에뮬레이터 가상 카메라로는 인식할 수 없습니다 |
-| **지도 채색** | 한 지역의 선택 퀘스트를 **전부** 완료해 여행을 완주하면 그 지역이 칠해집니다(5회 완주 시 최대 채도 — 1회마다 한 단계씩 진해집니다). 퀘스트를 몇 개 완료해도 여행을 완주하지 않으면 칠해지지 않습니다 |
+| **지도 채색** | 한 지역 여행에서 퀘스트를 **1개 이상** 완료하면 그 지역이 칠해집니다(5회 집계 시 최대 채도 — 1회마다 한 단계씩 진해집니다). 여행 상태의 진행중/지난 분류는 종료일 다음날 00:00 KST부터 지난 여행으로 전환됩니다 |
 
 ---
 
@@ -256,7 +256,7 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 
 2026-07-31 Android 15 에뮬레이터 + 로컬 백엔드에서 다음을 실제 조작으로 확인했습니다.
 
-- 지도 채색이 **완료 여행 수** 기준으로 동작 (여행 완주 지역만 채색, 퀘스트만 여러 개 완료한 지역은 미채색)
+- 지도 채색이 **퀘스트를 1개 이상 완료한 여행 수** 기준으로 동작
 - 홈 DNA 추천 배너 + 퀘스트 요약 3개(TourAPI 썸네일 포함)
 - 퀘스트·지역 이미지 표시, 미매칭 항목의 placeholder 폴백
 - 사진 AI 인증(판정 결과 실값 표시) · 위치 인증(반경 밖 거리 안내 → 도착 시 통과) · QR 화면·권한·스캐너

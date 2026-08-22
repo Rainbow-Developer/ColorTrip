@@ -16,7 +16,7 @@
   - [x] 4) 진행·인증 API — POST `/quests/{id}/start`·`/verify`, GET `/users/me/progress` (VRF-01~04). gps_photo(하버사인 반경)·quiz(정규화 비교) 판정, 완료 시 여정 자동 완료.
   - [x] 5) 사진 업로드 — POST `/uploads/photo` + 스토리지 추상화(`GCS_UPLOAD_BUCKET` 설정 시 GCS, 미설정 시 로컬 디스크) (VRF-03).
   - [~] 6) 검증·문서 — pytest 40건·ruff·pyright 통과, README 갱신 완료. **Notion(테이블·API 명세) 역동기화 남음**.
-  - [x] 7) (KAN-73) 완료 판정 개정 — 판정 규칙은 순수 함수 `_is_completed`(전부 완료 OR 기간 경과 + 완료 퀘스트 ≥ 1)에 두고, `apply_status`가 그 결과를 `journey.status`·`completed_at`에 반영하며 변경 여부를 반환한다(commit은 호출자). 여정 목록·상세 조회 시 `sync_journey_statuses`로 재계산하고 값이 바뀔 때만 commit 한다. 마이그레이션·신규 API 없음(수동 완료 버튼은 보류 — plan 의사결정 9). 테스트 3건 추가(`tests/test_journey_flow.py`).
+  - [x] 7) (KAN-104) 완료 판정 개정 — 판정 규칙은 순수 함수 `_is_completed`(종료일 다음날 00:00 KST부터 완료)에 두고, `apply_status`가 그 결과를 `journey.status`·`completed_at`에 반영하며 변경 여부를 반환한다(commit은 호출자). 여정 목록·상세 조회 시 `sync_journey_statuses`로 재계산하고 값이 바뀔 때만 commit 한다. 마이그레이션·신규 API 없음(수동 완료 버튼은 보류 — plan 의사결정 9).
 
 ## 구현된 항목
 
@@ -59,5 +59,6 @@
 | 2026-07-16 | `journeys`에 여행 기간 `start_date`·`end_date`(DATE, NULL 허용) 추가 — 여행 생성 시 이름(title)과 함께 날짜를 받도록 POST /journeys 요청·응답 스키마 확장, `end_date < start_date`면 422(VALIDATION_ERROR). 마이그레이션 `c9d4e7a2b8f3`, 테스트 추가 |
 | 2026-07-28 | 실제 Flutter 미연동 상태와 KAN-55의 040 서버 영속화 후속 범위를 명시 |
 | 2026-07-28 | KAN-55에서 stable key·멱등 생성·선택 일괄 변경·`quest_client_keys` 목록 복원·사진/GPS/퀴즈 Flutter 연동 완료. 실제 계정 재시작 복원 E2E는 진행 중 |
-| 2026-08-13 | KAN-73 — 여정 완료 판정 개정(전부 완료 OR 기간 경과 + 완료 퀘스트 1개 이상) 구현·검증 완료. 판정은 `journeys/service.py`의 `apply_status`가 SOT이고, 시간 경과는 여정 목록·상세 조회 시 `sync_journey_statuses`가 반영한다(스케줄러 없음). 의사결정 6 조건 확장, 8 추가, 9(사용자 완료 버튼·API)는 보류. FE `tripStatusOf`도 같은 규칙을 쓴다 |
+| 2026-08-13 | KAN-73 — 당시 여정 완료 판정(전부 완료 OR 기간 경과 + 완료 퀘스트 1개 이상)을 구현·검증했다. 이후 KAN-104에서 날짜 기반 완료로 재개정했다. 시간 경과는 여정 목록·상세 조회 시 `sync_journey_statuses`가 반영한다(스케줄러 없음). 의사결정 8 추가, 9(사용자 완료 버튼·API)는 보류 |
+| 2026-08-22 | KAN-104 — 여정 완료 판정을 날짜 기반으로 단순화했다. 모든 퀘스트를 완료해도 종료일 당일까지는 `in_progress`, 종료일 다음날부터 `completed`다. 여정 생성·수정 시 지난 기간과 날짜 범위 중복을 서버에서 거부하고, FE 날짜 선택기는 과거 날짜 선택을 제한한다 |
 | 2026-08-03 | KAN-59: REC-02 `GET /regions/unvisited` 신설 — 인증 사용자의 `users.dna` 기본 적용, 여정 미생성 지역을 매칭/전체 미완료 퀘스트 수와 함께 페이지네이션 조회(대상 퀘스트는 처음부터 `Quest.client_key IS NOT NULL`로 제한). 기존 REC-01 `GET /quests/recommended`에도 동일한 `client_key IS NOT NULL` 필터를 추가해, 안정 키가 없어 Flutter가 표시할 수 없는 퀘스트가 추천 결과와 `total`에 섞이지 않게 했다. 비-null 안정 키가 Flutter 정적 카탈로그에 항상 존재한다는 불변식은 `tests/test_domain_catalog_contract.py`가 강제한다 ([065-quest-recommendation-api](../065-quest-recommendation-api/)) |

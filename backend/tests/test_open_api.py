@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import re
+from datetime import timedelta
 
 import pytest
 from httpx import AsyncClient
 
+from app.core.base import now_kst
 from app.core.database import AsyncSessionLocal
 from app.core.security import generate_open_api_key, hash_open_api_key
 from app.open_api.models import OpenApiKey
@@ -29,6 +31,12 @@ _JOURNEY_COMPLETION_KEYS = {"started", "completed", "completion_rate", "avg_days
 _SHARE_STATS_KEYS = {"total_shares", "by_style"}
 
 
+def _period(start_offset_days: int = 0, duration_days: int = 2) -> dict[str, str]:
+    start = now_kst().date() + timedelta(days=start_offset_days)
+    end = start + timedelta(days=duration_days)
+    return {"start_date": start.isoformat(), "end_date": end.isoformat()}
+
+
 async def _issue_key(name: str = "테스트 지자체") -> str:
     key = generate_open_api_key()
     async with AsyncSessionLocal() as session:
@@ -45,7 +53,11 @@ async def test_region_stats_reflects_completed_quest_and_share(client: AsyncClie
 
     created = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(0, 2),
+        },
         headers=headers,
     )
     assert created.status_code == 201
@@ -92,9 +104,8 @@ async def test_region_stats_reflects_completed_quest_and_share(client: AsyncClie
     assert data["popular_spots"][0]["completed_count"] == 1
     assert data["dna_distribution"] == {"nature": 1.0}
     assert data["journey_completion"]["started"] == 1
-    assert data["journey_completion"]["completed"] == 1
-    assert data["journey_completion"]["completion_rate"] == 1.0
-    # 이번 여정은 start_date 없이 생성해 평균 완주 소요일수 계산 대상에서 빠진다.
+    assert data["journey_completion"]["completed"] == 0
+    assert data["journey_completion"]["completion_rate"] == 0.0
     assert data["journey_completion"]["avg_days_to_complete"] is None
     assert data["verification_method_breakdown"] == {"gps_photo": 1.0}
     assert data["share_stats"] == {"total_shares": 1, "by_style": {"MAP": 1}}
@@ -109,7 +120,11 @@ async def test_region_stats_does_not_leak_other_region_data(client: AsyncClient)
 
     await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(0, 2),
+        },
         headers=headers,
     )
     await client.post(
@@ -127,6 +142,7 @@ async def test_region_stats_does_not_leak_other_region_data(client: AsyncClient)
         json={
             "region_id": seed["other_region_id"],
             "quest_ids": [seed["other_region_quest_id"]],
+            **_period(10, 2),
         },
         headers=headers,
     )
@@ -150,8 +166,8 @@ async def test_region_stats_does_not_leak_other_region_data(client: AsyncClient)
     assert [spot["quest_id"] for spot in data["popular_spots"]] == [seed["gps_quest_id"]]
     assert data["journey_completion"] == {
         "started": 1,
-        "completed": 1,
-        "completion_rate": 1.0,
+        "completed": 0,
+        "completion_rate": 0.0,
         "avg_days_to_complete": None,
     }
     assert data["verification_method_breakdown"] == {"gps_photo": 1.0}

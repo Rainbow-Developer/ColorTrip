@@ -1,13 +1,24 @@
 """여정 생성·관리 플로우 테스트 (docs/specs/010-journey/ JRN-01·02)."""
 
 import asyncio
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from uuid import uuid4
 
 from httpx import AsyncClient
 
-from app.core.base import now_kst
+from app.core.base import KST, now_kst
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
+
+
+def _period(start_offset_days: int = 0, duration_days: int = 2) -> dict[str, str]:
+    start = now_kst().date() + timedelta(days=start_offset_days)
+    end = start + timedelta(days=duration_days)
+    return {"start_date": start.isoformat(), "end_date": end.isoformat()}
+
+
+def _period_dates(start_offset_days: int = 0, duration_days: int = 2) -> tuple[str, str]:
+    period = _period(start_offset_days, duration_days)
+    return period["start_date"], period["end_date"]
 
 
 async def test_create_and_get_journey(client: AsyncClient) -> None:
@@ -20,16 +31,15 @@ async def test_create_and_get_journey(client: AsyncClient) -> None:
             "region_id": seed["region_id"],
             "quest_ids": [seed["gps_quest_id"], seed["quiz_quest_id"]],
             "title": "단양 역사 여행",
-            "start_date": "2026-07-20",
-            "end_date": "2026-07-22",
+            **_period(),
         },
         headers=headers,
     )
     assert response.status_code == 201
     data = response.json()["data"]
     assert data["title"] == "단양 역사 여행"
-    assert data["start_date"] == "2026-07-20"
-    assert data["end_date"] == "2026-07-22"
+    assert data["start_date"] == _period()["start_date"]
+    assert data["end_date"] == _period()["end_date"]
     assert data["status"] == "in_progress"
     assert data["progress"] == {"completed": 0, "total": 2}
     assert [q["quest_id"] for q in data["quests"]] == [
@@ -67,7 +77,7 @@ async def _create_journey_with_period(
     """오늘(KST) 기준 상대 기간으로 퀘스트 2개짜리 여정을 만든다 (완료 판정 테스트용)."""
     today = now_kst().date()
     end = today + timedelta(days=end_offset_days)
-    start = min(today - timedelta(days=1), end)
+    start = today
     response = await client.post(
         "/api/v1/journeys",
         json={
@@ -82,24 +92,23 @@ async def _create_journey_with_period(
     return response.json()["data"]
 
 
-async def test_journey_completes_when_period_passed_with_one_completed_quest(
-    client: AsyncClient,
+async def test_journey_completes_after_end_date_even_without_completed_quest(
+    client: AsyncClient, monkeypatch
 ) -> None:
-    """여행 기간이 지났고 완료 퀘스트가 1개 이상이면 completed로 전이한다 (KAN-73)."""
+    """종료일 다음날 00:00 KST부터 completed로 전이한다 (KAN-104)."""
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
-    journey = await _create_journey_with_period(client, headers, seed, end_offset_days=-2)
+    today = now_kst().date()
+    journey = await _create_journey_with_period(client, headers, seed, end_offset_days=0)
 
-    verify = await client.post(
-        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
-        json={"answer": "O"},
-        headers=headers,
+    monkeypatch.setattr(
+        "app.journeys.service.now_kst",
+        lambda: datetime.combine(today + timedelta(days=1), time.min, tzinfo=KST),
     )
-    assert verify.json()["data"]["verified"] is True
 
     detail = await client.get(f"/api/v1/journeys/{journey['id']}", headers=headers)
     data = detail.json()["data"]
-    assert data["progress"] == {"completed": 1, "total": 2}
+    assert data["progress"] == {"completed": 0, "total": 2}
     assert data["status"] == "completed"
     assert data["completed_at"] is not None
 
@@ -108,17 +117,28 @@ async def test_journey_completes_when_period_passed_with_one_completed_quest(
     assert listed.json()["data"]["items"][0]["status"] == "completed"
 
 
-async def test_journey_stays_in_progress_when_period_passed_without_completion(
+async def test_journey_stays_in_progress_on_end_date_even_when_all_quests_completed(
     client: AsyncClient,
 ) -> None:
-    """기간이 지났어도 완료 퀘스트가 0개면 in_progress를 유지한다 (KAN-73)."""
+    """종료일 당일까지는 모든 퀘스트를 완료해도 in_progress다."""
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
-    journey = await _create_journey_with_period(client, headers, seed, end_offset_days=-2)
+    journey = await _create_journey_with_period(client, headers, seed, end_offset_days=0)
+
+    await client.post(
+        f"/api/v1/quests/{seed['quiz_quest_id']}/verify",
+        json={"answer": "O"},
+        headers=headers,
+    )
+    await client.post(
+        f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
+        json={},
+        headers=headers,
+    )
 
     detail = await client.get(f"/api/v1/journeys/{journey['id']}", headers=headers)
     data = detail.json()["data"]
-    assert data["progress"] == {"completed": 0, "total": 2}
+    assert data["progress"] == {"completed": 2, "total": 2}
     assert data["status"] == "in_progress"
     assert data["completed_at"] is None
 
@@ -126,7 +146,7 @@ async def test_journey_stays_in_progress_when_period_passed_without_completion(
 async def test_journey_stays_in_progress_during_period_with_partial_completion(
     client: AsyncClient,
 ) -> None:
-    """기간이 남아 있으면 부분 완료는 in_progress다 — 전부 완료해야 완료된다 (KAN-73)."""
+    """기간이 남아 있으면 완료 수와 무관하게 in_progress다."""
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
     journey = await _create_journey_with_period(client, headers, seed, end_offset_days=7)
@@ -140,14 +160,13 @@ async def test_journey_stays_in_progress_during_period_with_partial_completion(
     detail = await client.get(f"/api/v1/journeys/{journey['id']}", headers=headers)
     assert detail.json()["data"]["status"] == "in_progress"
 
-    # 남은 퀘스트까지 인증하면 기간과 무관하게 완료된다.
     await client.post(
         f"/api/v1/quests/{seed['gps_only_quest_id']}/verify",
         json={},  # gps 미션은 좌표를 보내지 않는다 (KAN-77)
         headers=headers,
     )
     completed = await client.get(f"/api/v1/journeys/{journey['id']}", headers=headers)
-    assert completed.json()["data"]["status"] == "completed"
+    assert completed.json()["data"]["status"] == "in_progress"
 
 
 async def test_create_journey_is_idempotent_per_client_request(
@@ -161,6 +180,7 @@ async def test_create_journey_is_idempotent_per_client_request(
         "region_id": seed["region_id"],
         "quest_ids": [seed["gps_quest_id"]],
         "title": "재시도 안전 여행",
+        **_period(),
     }
 
     first = await client.post("/api/v1/journeys", json=payload, headers=headers)
@@ -182,6 +202,7 @@ async def test_concurrent_create_journey_requests_converge_to_one_journey(
         "client_request_id": str(uuid4()),
         "region_id": seed["region_id"],
         "quest_ids": [seed["gps_quest_id"]],
+        **_period(),
     }
 
     results = await asyncio.gather(
@@ -196,7 +217,7 @@ async def test_concurrent_create_journey_requests_converge_to_one_journey(
     assert len({response.json()["data"]["id"] for response in responses}) == 1
 
 
-async def test_create_journey_with_already_completed_quest_is_completed(
+async def test_create_journey_with_already_completed_quest_stays_in_progress(
     client: AsyncClient,
 ) -> None:
     seed = await seed_quest_fixture()
@@ -214,20 +235,24 @@ async def test_create_journey_with_already_completed_quest_is_completed(
     )
     assert verify.json()["data"]["verified"] is True
 
-    # 이미 완료한 퀘스트만으로 여정을 만들면 생성 즉시 completed여야 한다.
+    # 이미 완료한 퀘스트만으로 여정을 만들어도 종료일 전에는 in_progress다.
     response = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(),
+        },
         headers=headers,
     )
     assert response.status_code == 201
     data = response.json()["data"]
-    assert data["status"] == "completed"
-    assert data["completed_at"] is not None
+    assert data["status"] == "in_progress"
+    assert data["completed_at"] is None
     assert data["progress"] == {"completed": 1, "total": 1}
 
 
-async def test_create_journey_without_dates_keeps_them_null(client: AsyncClient) -> None:
+async def test_create_journey_requires_dates(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
 
@@ -236,10 +261,7 @@ async def test_create_journey_without_dates_keeps_them_null(client: AsyncClient)
         json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
         headers=headers,
     )
-    assert response.status_code == 201
-    data = response.json()["data"]
-    assert data["start_date"] is None
-    assert data["end_date"] is None
+    assert response.status_code == 422
 
 
 async def test_create_journey_rejects_reversed_dates(client: AsyncClient) -> None:
@@ -251,8 +273,8 @@ async def test_create_journey_rejects_reversed_dates(client: AsyncClient) -> Non
         json={
             "region_id": seed["region_id"],
             "quest_ids": [seed["gps_quest_id"]],
-            "start_date": "2026-07-22",
-            "end_date": "2026-07-20",
+            "start_date": _period(3, 0)["start_date"],
+            "end_date": _period(1, 0)["end_date"],
         },
         headers=headers,
     )
@@ -260,17 +282,66 @@ async def test_create_journey_rejects_reversed_dates(client: AsyncClient) -> Non
     assert response.json()["code"] == "VALIDATION_ERROR"
 
 
+async def test_create_journey_rejects_past_period(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+    yesterday = now_kst().date() - timedelta(days=1)
+
+    response = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            "start_date": (yesterday - timedelta(days=1)).isoformat(),
+            "end_date": yesterday.isoformat(),
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+async def test_create_journey_rejects_overlapping_period(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    created = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(0, 2),
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201
+
+    overlapped = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["quiz_quest_id"]],
+            **_period(2, 2),
+        },
+        headers=headers,
+    )
+
+    assert overlapped.status_code == 422
+    assert overlapped.json()["code"] == "VALIDATION_ERROR"
+
+
 async def test_update_journey_changes_title_and_dates(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
+    start_date, end_date = _period_dates(10, 2)
     created = await client.post(
         "/api/v1/journeys",
         json={
             "region_id": seed["region_id"],
             "quest_ids": [seed["gps_quest_id"]],
             "title": "처음 여행",
-            "start_date": "2026-07-20",
-            "end_date": "2026-07-22",
+            **_period(0, 2),
         },
         headers=headers,
     )
@@ -280,8 +351,8 @@ async def test_update_journey_changes_title_and_dates(client: AsyncClient) -> No
         f"/api/v1/journeys/{journey_id}",
         json={
             "title": "수정한 여행",
-            "start_date": "2026-08-01",
-            "end_date": "2026-08-03",
+            "start_date": start_date,
+            "end_date": end_date,
         },
         headers=headers,
     )
@@ -289,8 +360,8 @@ async def test_update_journey_changes_title_and_dates(client: AsyncClient) -> No
     assert updated.status_code == 200
     data = updated.json()["data"]
     assert data["title"] == "수정한 여행"
-    assert data["start_date"] == "2026-08-01"
-    assert data["end_date"] == "2026-08-03"
+    assert data["start_date"] == start_date
+    assert data["end_date"] == end_date
 
 
 async def test_update_journey_rejects_reversed_dates(client: AsyncClient) -> None:
@@ -298,14 +369,56 @@ async def test_update_journey_rejects_reversed_dates(client: AsyncClient) -> Non
     headers = await auth_headers(client)
     created = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(0, 2),
+        },
         headers=headers,
     )
     journey_id = created.json()["data"]["id"]
 
     response = await client.patch(
         f"/api/v1/journeys/{journey_id}",
-        json={"start_date": "2026-08-03", "end_date": "2026-08-01"},
+        json={
+            "start_date": _period(6, 0)["start_date"],
+            "end_date": _period(4, 0)["end_date"],
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+async def test_update_journey_rejects_overlapping_period(client: AsyncClient) -> None:
+    seed = await seed_quest_fixture()
+    headers = await auth_headers(client)
+
+    first = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(0, 2),
+        },
+        headers=headers,
+    )
+    assert first.status_code == 201
+    second = await client.post(
+        "/api/v1/journeys",
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["quiz_quest_id"]],
+            **_period(10, 2),
+        },
+        headers=headers,
+    )
+    assert second.status_code == 201
+
+    response = await client.patch(
+        f"/api/v1/journeys/{second.json()['data']['id']}",
+        json=_period(1, 2),
         headers=headers,
     )
 
@@ -318,7 +431,11 @@ async def test_delete_journey_soft_deletes_linked_records(client: AsyncClient) -
     headers = await auth_headers(client)
     created = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["quiz_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["quiz_quest_id"]],
+            **_period(0, 2),
+        },
         headers=headers,
     )
     journey_id = created.json()["data"]["id"]
@@ -348,7 +465,11 @@ async def test_delete_journey_soft_deletes_linked_records(client: AsyncClient) -
 
     recreated = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["quiz_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["quiz_quest_id"]],
+            **_period(0, 2),
+        },
         headers=headers,
     )
     new_journey_id = recreated.json()["data"]["id"]
@@ -373,6 +494,7 @@ async def test_delete_journey_keeps_shared_quest_progress_for_other_journey(
             "region_id": seed["region_id"],
             "quest_ids": [seed["quiz_quest_id"]],
             "title": "첫 번째 여행",
+            **_period(0, 2),
         },
         headers=headers,
     )
@@ -382,6 +504,7 @@ async def test_delete_journey_keeps_shared_quest_progress_for_other_journey(
             "region_id": seed["region_id"],
             "quest_ids": [seed["quiz_quest_id"]],
             "title": "두 번째 여행",
+            **_period(10, 2),
         },
         headers=headers,
     )
@@ -404,7 +527,7 @@ async def test_delete_journey_keeps_shared_quest_progress_for_other_journey(
 
     remaining = await client.get(f"/api/v1/journeys/{second_id}", headers=headers)
     assert remaining.status_code == 200
-    assert remaining.json()["data"]["status"] == "completed"
+    assert remaining.json()["data"]["status"] == "in_progress"
     assert remaining.json()["data"]["progress"] == {"completed": 1, "total": 1}
     timeline = await client.get("/api/v1/users/me/timeline", headers=headers)
     assert len(timeline.json()["data"]) == 2
@@ -419,13 +542,14 @@ async def test_verify_shared_quest_requires_explicit_journey(client: AsyncClient
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
 
-    for title in ["첫 번째 여행", "두 번째 여행"]:
+    for index, title in enumerate(["첫 번째 여행", "두 번째 여행"]):
         created = await client.post(
             "/api/v1/journeys",
             json={
                 "region_id": seed["region_id"],
                 "quest_ids": [seed["quiz_quest_id"]],
                 "title": title,
+                **_period(index * 10, 2),
             },
             headers=headers,
         )
@@ -449,6 +573,7 @@ async def test_create_journey_rejects_cross_region_quest(client: AsyncClient) ->
         json={
             "region_id": seed["region_id"],
             "quest_ids": [seed["gps_quest_id"], seed["other_region_quest_id"]],
+            **_period(),
         },
         headers=headers,
     )
@@ -465,6 +590,7 @@ async def test_create_journey_rejects_unknown_quest(client: AsyncClient) -> None
         json={
             "region_id": seed["region_id"],
             "quest_ids": ["01900000-0000-7000-8000-000000000000"],
+            **_period(),
         },
         headers=headers,
     )
@@ -477,7 +603,11 @@ async def test_add_and_remove_journey_quest(client: AsyncClient) -> None:
 
     created = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(),
+        },
         headers=headers,
     )
     journey_id = created.json()["data"]["id"]
@@ -542,6 +672,7 @@ async def test_replace_journey_quests_applies_the_final_order_atomically(
         json={
             "region_id": seed["region_id"],
             "quest_ids": [seed["gps_quest_id"], seed["quiz_quest_id"]],
+            **_period(),
         },
         headers=headers,
     )
@@ -574,7 +705,11 @@ async def test_journey_is_private_to_owner(client: AsyncClient) -> None:
 
     created = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(),
+        },
         headers=owner_headers,
     )
     journey_id = created.json()["data"]["id"]

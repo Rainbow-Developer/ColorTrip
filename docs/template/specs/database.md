@@ -114,7 +114,7 @@ CREATE INDEX idx_quests_region_category ON quests (region_id, category);
 
 ## 5. journeys — 여정
 - 사용자가 한 지역에서 수행할 퀘스트 묶음을 저장하는 테이블
-- status는 애플리케이션에서 `in_progress`로 시작하며, 담긴 퀘스트를 모두 완료하면 `completed`로 전환
+- status는 애플리케이션에서 `in_progress`로 시작하며, 여행 종료일 다음날 00:00 KST부터 `completed`로 전환
 - user_id, status 인덱스로 진행 중/완료 여정 목록을 조회
 
 ```sql

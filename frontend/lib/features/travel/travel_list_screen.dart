@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
+import '../../core/network/api_error_message.dart';
 import '../../core/widgets/trip_card.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/trip_info_sheet.dart';
@@ -11,8 +12,7 @@ import '../../data/repositories/domain_repository.dart';
 import '../../data/static/regions_data.dart';
 import '../../state/domain_controller.dart';
 
-/// 여행 목록 — 진행 중인 여행(여행 시작함, 선택한 퀘스트 중 미완료 있음) / 지난 여행(선택한 퀘스트 전부 완료)
-/// ([Figma] 여행 목록 화면, 2026-07-09 "여행 시작하기" 도입으로 지역 진행도 기준에서 변경).
+/// 여행 목록 — 진행중/진행 예정/지난 여행을 날짜와 서버 status 기준으로 나눈다.
 /// "여행" = 지역 하나에서 "여행 시작하기"로 담은 퀘스트 묶음으로 매핑한다.
 class TravelListScreen extends ConsumerStatefulWidget {
   const TravelListScreen({super.key});
@@ -23,6 +23,8 @@ class TravelListScreen extends ConsumerStatefulWidget {
 
 class _TravelListScreenState extends ConsumerState<TravelListScreen> {
   String? _activeOperation;
+  bool _upcomingExpanded = false;
+  bool _pastExpanded = false;
 
   bool get _isOperating => _activeOperation != null;
 
@@ -31,14 +33,34 @@ class _TravelListScreenState extends ConsumerState<TravelListScreen> {
     final journeys =
         ref.watch(domainControllerProvider).value?.journeys ??
         const <DomainJourney>[];
+    final today = _dateOnly(DateTime.now());
     final inProgress = journeys
-        .where((journey) => journey.status != 'completed')
+        .where(
+          (journey) =>
+              _travelListSectionOf(journey, today) ==
+              _TravelListSection.inProgress,
+        )
         .toList();
-    final past = journeys
-        .where((journey) => journey.status == 'completed')
-        .toList();
+    final upcoming =
+        journeys
+            .where(
+              (journey) =>
+                  _travelListSectionOf(journey, today) ==
+                  _TravelListSection.upcoming,
+            )
+            .toList()
+          ..sort(_compareByStartDateAscending);
+    final past =
+        journeys
+            .where(
+              (journey) =>
+                  _travelListSectionOf(journey, today) ==
+                  _TravelListSection.past,
+            )
+            .toList()
+          ..sort(_compareByEndDateDescending);
 
-    final content = (inProgress.isEmpty && past.isEmpty)
+    final content = (inProgress.isEmpty && upcoming.isEmpty && past.isEmpty)
         ? const Center(
             child: Text(
               '아직 시작한 여행이 없어요.\n홈 지도에서 지역을 골라 퀘스트를 시작해보세요.',
@@ -55,10 +77,29 @@ class _TravelListScreenState extends ConsumerState<TravelListScreen> {
                   _journeyCard(journey, isActive: true),
                 const SizedBox(height: 12),
               ],
+              if (upcoming.isNotEmpty) ...[
+                _CollapsibleSectionHeader(
+                  label: '진행 예정인 여행',
+                  count: upcoming.length,
+                  expanded: _upcomingExpanded,
+                  onTap: () =>
+                      setState(() => _upcomingExpanded = !_upcomingExpanded),
+                ),
+                if (_upcomingExpanded)
+                  for (final journey in upcoming)
+                    _journeyCard(journey, isActive: true),
+                const SizedBox(height: 12),
+              ],
               if (past.isNotEmpty) ...[
-                const _SectionHeader('지난 여행'),
-                for (final journey in past)
-                  _journeyCard(journey, isActive: false),
+                _CollapsibleSectionHeader(
+                  label: '지난 여행',
+                  count: past.length,
+                  expanded: _pastExpanded,
+                  onTap: () => setState(() => _pastExpanded = !_pastExpanded),
+                ),
+                if (_pastExpanded)
+                  for (final journey in past)
+                    _journeyCard(journey, isActive: false),
               ],
             ],
           );
@@ -133,9 +174,12 @@ class _TravelListScreenState extends ConsumerState<TravelListScreen> {
             endDate: info.endDate,
           );
       if (mounted) showAppToast(context, '여행 정보를 수정했어요.');
-    } on Object {
+    } on Object catch (error) {
       if (mounted) {
-        showAppToast(context, '여행 정보를 수정하지 못했어요. 다시 시도해주세요.');
+        showAppToast(
+          context,
+          apiErrorMessage(error, '여행 정보를 수정하지 못했어요. 다시 시도해주세요.'),
+        );
       }
     } finally {
       if (mounted) setState(() => _activeOperation = null);
@@ -180,6 +224,39 @@ class _TravelListScreenState extends ConsumerState<TravelListScreen> {
   }
 }
 
+enum _TravelListSection { inProgress, upcoming, past }
+
+_TravelListSection _travelListSectionOf(DomainJourney journey, DateTime today) {
+  if (journey.status == 'completed') return _TravelListSection.past;
+  final startDate = journey.startDate;
+  if (startDate != null && _dateOnly(startDate).isAfter(today)) {
+    return _TravelListSection.upcoming;
+  }
+  return _TravelListSection.inProgress;
+}
+
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+int _compareByStartDateAscending(DomainJourney a, DomainJourney b) {
+  final startCompare = _compareNullableDateAscending(a.startDate, b.startDate);
+  if (startCompare != 0) return startCompare;
+  return b.createdAt.compareTo(a.createdAt);
+}
+
+int _compareByEndDateDescending(DomainJourney a, DomainJourney b) {
+  final endCompare = _compareNullableDateAscending(b.endDate, a.endDate);
+  if (endCompare != 0) return endCompare;
+  return b.createdAt.compareTo(a.createdAt);
+}
+
+int _compareNullableDateAscending(DateTime? a, DateTime? b) {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  return _dateOnly(a).compareTo(_dateOnly(b));
+}
+
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader(this.label);
 
@@ -195,6 +272,62 @@ class _SectionHeader extends StatelessWidget {
           fontSize: 15,
           fontWeight: FontWeight.w700,
           color: Color(0xFF222222),
+        ),
+      ),
+    );
+  }
+}
+
+class _CollapsibleSectionHeader extends StatelessWidget {
+  const _CollapsibleSectionHeader({
+    required this.label,
+    required this.count,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8, top: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF222222),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: AppColors.textMuted,
+            ),
+          ],
         ),
       ),
     );
