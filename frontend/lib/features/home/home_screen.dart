@@ -35,13 +35,37 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _scrollController = ScrollController();
+  GoRouter? _router;
+  String? _lastRoutePath;
   bool _mapCoachHidden = false;
   bool _resettingMapCoach = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final router = GoRouter.of(context);
+    if (_router == router) return;
+    _router?.routeInformationProvider.removeListener(_handleRouteChange);
+    _router = router;
+    router.routeInformationProvider.addListener(_handleRouteChange);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleRouteChange());
+  }
+
+  @override
   void dispose() {
+    _router?.routeInformationProvider.removeListener(_handleRouteChange);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _handleRouteChange() {
+    final path = _router?.routeInformationProvider.value.uri.path;
+    final enteredHome = path == '/home' && _lastRoutePath != '/home';
+    _lastRoutePath = path;
+    if (!mounted || !enteredHome) return;
+    if (ref.read(onboardingTourProvider).isEnabled) {
+      _resetMapCoachForRestart();
+    }
   }
 
   void _hideMapCoach() {
@@ -70,6 +94,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
+  Future<void> _openRegion(String regionId, OnboardingTourState tour) async {
+    if (tour.isEnabled && tour.step == 0) {
+      await ref.read(onboardingTourProvider.notifier).advance();
+    }
+    if (!mounted) return;
+    await context.push('/region/$regionId');
+    if (!mounted || !ref.read(onboardingTourProvider).isEnabled) return;
+    _resetMapCoachForRestart();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<OnboardingTourState>(onboardingTourProvider, (previous, next) {
@@ -88,8 +122,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         .round();
     final tour = ref.watch(onboardingTourProvider);
     final mapCoachActive = tour.isEnabled && !_mapCoachHidden;
-    final showMapCoach = mapCoachActive && !_resettingMapCoach;
-    final compactHeight = MediaQuery.sizeOf(context).height < 700;
+    final recommendationLayoutSettled = _isRecommendationLayoutSettled();
+    final showMapCoach =
+        mapCoachActive && !_resettingMapCoach && recommendationLayoutSettled;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final mapCoachScrollAlignment = screenHeight >= 850 ? 0.65 : 0.45;
 
     return Scaffold(
       appBar: AppBar(
@@ -147,14 +184,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             for (final region in kRegions)
                               region.id: progress.regionSaturation(region.id),
                           },
-                          onRegionTap: (regionId) {
-                            if (tour.isEnabled && tour.step == 0) {
-                              ref
-                                  .read(onboardingTourProvider.notifier)
-                                  .advance();
-                            }
-                            context.push('/region/$regionId');
-                          },
+                          onRegionTap: (regionId) =>
+                              _openRegion(regionId, tour),
                         ),
                       ),
                     ],
@@ -210,14 +241,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 body: '가고 싶은 지역을 누르면 추천 퀘스트를 볼 수 있어요.',
                 // 홈 지도는 말풍선을 아래에 두되, 부족한 공간을 채우려고 끝까지 끌어올리지는 않는다.
                 // 지도 상단이 앱바에 붙어 보이지 않도록 중간 정렬만 적용한다.
-                scrollAlignment: 0.45,
+                scrollAlignment: mapCoachScrollAlignment,
                 forceBubbleBelow: true,
-                makeRoomForBubble: compactHeight,
+                makeRoomForBubble: true,
                 onBackgroundTap: _hideMapCoach,
               ),
           ],
         ),
       ),
+    );
+  }
+
+  bool _isRecommendationLayoutSettled() {
+    final recommendations = ref.watch(unvisitedRecommendedRegionsProvider);
+    return recommendations.when(
+      loading: () => false,
+      error: (_, _) => true,
+      data: (items) {
+        if (items.isEmpty) return true;
+        final regionRepo = ref.watch(regionRepositoryProvider);
+        final resolved = [
+          for (final item in items)
+            if (regionRepo.byId(item.regionKey) != null) item,
+        ].firstOrNull;
+        if (resolved == null) return true;
+        final quests = ref.watch(
+          recommendedQuestKeysProvider(resolved.regionKey),
+        );
+        return !quests.isLoading;
+      },
     );
   }
 }

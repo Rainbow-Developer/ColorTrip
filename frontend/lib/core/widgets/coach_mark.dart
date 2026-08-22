@@ -10,6 +10,8 @@ import '../constants.dart';
 
 const _spotlightMargin = 16.0;
 const _bubbleArrowSize = 26.0;
+const _settlingMeasurePassCount = 4;
+const _settlingMeasureInterval = Duration(milliseconds: 120);
 
 double _requiredBubbleSpace(double messageCardHeight) =>
     messageCardHeight + _bubbleArrowSize + _spotlightMargin * 2;
@@ -64,11 +66,13 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
   ({Size size, TextScaler textScaler, EdgeInsets viewInsets})?
   _lastLayoutDependencies;
   bool _measureScheduled = false;
+  int _settlingMeasurePassesRemaining = 0;
+  Timer? _settlingMeasureTimer;
 
   @override
   void initState() {
     super.initState();
-    _scheduleMeasure();
+    _scheduleMeasure(settle: true);
   }
 
   @override
@@ -76,7 +80,7 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     super.didUpdateWidget(oldWidget);
     // 추천 퀘스트처럼 비동기 데이터가 도착하면 부모 레이아웃 높이와 하단 CTA 위치가
     // 달라질 수 있다. 부모가 다시 빌드될 때 실제 타겟 위치를 다음 프레임에서 갱신한다.
-    _scheduleMeasure();
+    _scheduleMeasure(settle: true);
   }
 
   @override
@@ -89,15 +93,34 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
     );
     if (_lastLayoutDependencies == dependencies) return;
     _lastLayoutDependencies = dependencies;
-    _scheduleMeasure();
+    _scheduleMeasure(settle: true);
   }
 
-  void _scheduleMeasure() {
+  @override
+  void dispose() {
+    _settlingMeasureTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleMeasure({bool settle = false}) {
+    if (settle) {
+      _settlingMeasurePassesRemaining = _settlingMeasurePassCount;
+    }
     if (_measureScheduled) return;
     _measureScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _measureScheduled = false;
-      if (mounted) unawaited(_measure());
+      if (!mounted) return;
+      unawaited(_measure().whenComplete(_scheduleSettlingMeasure));
+    });
+  }
+
+  void _scheduleSettlingMeasure() {
+    _settlingMeasureTimer?.cancel();
+    if (!mounted || _settlingMeasurePassesRemaining <= 0) return;
+    _settlingMeasurePassesRemaining -= 1;
+    _settlingMeasureTimer = Timer(_settlingMeasureInterval, () {
+      if (mounted) _scheduleMeasure();
     });
   }
 
