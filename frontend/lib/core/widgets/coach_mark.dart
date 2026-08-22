@@ -151,6 +151,7 @@ class _CoachMarkOverlayState extends ConsumerState<CoachMarkOverlay> {
       if (adjusted != null) measured = adjusted;
     }
 
+    if (!mounted) return;
     final nextRect = measured.rect;
     final overlaySize = measured.overlaySize;
     if (_targetRect == nextRect && _localSize == overlaySize) return;
