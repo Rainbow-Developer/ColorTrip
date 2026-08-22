@@ -1,6 +1,7 @@
 /// KAN-28 기능 검증 — 홈 추천 배너 · 여행 시작 이름/날짜 입력 시트 · 여행 목록 표시.
 library;
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:colortrip/core/config/app_config.dart';
@@ -53,6 +54,43 @@ ScrollableState _firstPageScrollable(WidgetTester tester) {
       matching: find.byType(Scrollable),
     ),
   );
+}
+
+class _DelayedHeightBox extends StatefulWidget {
+  const _DelayedHeightBox({
+    required this.initialHeight,
+    required this.expandedHeight,
+    required this.delay,
+  });
+
+  final double initialHeight;
+  final double expandedHeight;
+  final Duration delay;
+
+  @override
+  State<_DelayedHeightBox> createState() => _DelayedHeightBoxState();
+}
+
+class _DelayedHeightBoxState extends State<_DelayedHeightBox> {
+  Timer? _timer;
+  late double _height = widget.initialHeight;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(widget.delay, () {
+      if (mounted) setState(() => _height = widget.expandedHeight);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(height: _height);
 }
 
 class _DomainRepository implements DomainRepository {
@@ -152,6 +190,22 @@ class _DomainRepository implements DomainRepository {
     String? answer,
     String? qrPayload,
   }) => throw UnimplementedError();
+}
+
+class _DelayedRecommendationRepository extends _DomainRepository {
+  final unvisitedCompleter = Completer<List<DomainRecommendedRegion>>();
+  final questsCompleter = Completer<List<String>>();
+
+  @override
+  Future<List<DomainRecommendedRegion>> fetchUnvisitedRecommendedRegions() =>
+      unvisitedCompleter.future;
+
+  @override
+  Future<List<String>> fetchRecommendedQuestKeys({
+    String? category,
+    required String regionKey,
+    int size = 3,
+  }) => questsCompleter.future;
 }
 
 Widget _wrap(
@@ -348,6 +402,177 @@ void main() {
     expect(scrollable.position.pixels, 0);
   });
 
+  testWidgets('큰 화면의 지도 코치마크는 홈 상단 레이아웃을 유지한다', (tester) async {
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final container = ProviderContainer(
+      overrides: [
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(step: 0, skipped: false),
+          ),
+        ),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_wrap(const HomeScreen(), container: container));
+    await tester.pumpAndSettle();
+
+    final scrollable = _firstPageScrollable(tester);
+    expect(scrollable.position.pixels, greaterThanOrEqualTo(0));
+    expect(find.textContaining('추천 여행지'), findsOneWidget);
+
+    final mapRect = tester.getRect(find.byType(ChungbukMap));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(mapRect.top, greaterThan(300));
+    expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(900));
+  });
+
+  testWidgets('홈 시작 지도 코치마크는 추천 배너 레이아웃이 준비된 뒤 표시된다', (tester) async {
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final repository = _DelayedRecommendationRepository();
+    final container = ProviderContainer(
+      overrides: [
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(step: 0, skipped: false),
+          ),
+        ),
+        domainRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_wrap(const HomeScreen(), container: container));
+    await tester.pump();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
+
+    repository.unvisitedCompleter.complete(const [
+      DomainRecommendedRegion(
+        regionKey: 'danyang',
+        matchingQuestCount: 3,
+        availableQuestCount: 20,
+      ),
+    ]);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
+
+    repository.questsCompleter.complete(const ['dy4', 'dy3', 'dy2']);
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+    final mapRect = tester.getRect(find.byType(ChungbukMap));
+    final messageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(mapRect.top, greaterThan(300));
+    expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
+    expect(messageCardRect.bottom, lessThanOrEqualTo(900));
+  });
+
+  testWidgets('지도에서 지역을 눌렀다가 뒤로 오면 홈 지도 코치마크가 다시 보인다', (tester) async {
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final container = ProviderContainer(
+      overrides: [
+        onboardingTourProvider.overrideWith(
+          () => OnboardingTourNotifier(
+            const OnboardingTourState(step: 0, skipped: false),
+          ),
+        ),
+        domainRepositoryProvider.overrideWithValue(_DomainRepository()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final router = GoRouter(
+      initialLocation: '/home',
+      routes: [
+        GoRoute(
+          path: '/region/:id',
+          builder: (_, state) => Scaffold(
+            appBar: AppBar(),
+            body: Text('지역 화면 ${state.pathParameters['id']}'),
+          ),
+        ),
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) =>
+              AppShell(navigationShell: navigationShell),
+          branches: [
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '/travel',
+                  builder: (_, _) => const TravelListScreen(),
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(path: '/my', builder: (_, _) => const ProfileScreen()),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          locale: const Locale('ko'),
+          supportedLocales: const [Locale('ko')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+
+    final mapRect = tester.getRect(find.byType(ChungbukMap));
+    final danyangTap = mapRect.topLeft.translate(
+      (400 - 10) / 480 * mapRect.width,
+      (100 - 10) / 460 * mapRect.height,
+    );
+    await tester.tapAt(danyangTap);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('지역 화면'), findsOneWidget);
+
+    router.pop();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+  });
+
   testWidgets('마이에서 튜토리얼을 다시 켜면 홈 지도 코치마크가 정렬된다', (tester) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1.0;
@@ -444,6 +669,19 @@ void main() {
     expect(messageCardRect.top, greaterThanOrEqualTo(mapRect.bottom));
     expect(messageCardRect.bottom, lessThanOrEqualTo(800));
     expect(_firstPageScrollable(tester).position.pixels, greaterThan(0));
+
+    await tester.tapAt(const Offset(4, 400));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
+    expect(_firstPageScrollable(tester).position.pixels, 0);
+
+    await tester.tap(find.text('마이'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('홈'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
   });
 
   testWidgets('가이드가 켜져 있으면 완료 단계 이후에도 약속된 화면에서 다시 보인다', (tester) async {
@@ -859,6 +1097,71 @@ void main() {
     expect(tapCount, 0);
 
     await tester.tap(find.text('움직이는 타겟'));
+    await tester.pump();
+    expect(tapCount, 1);
+  });
+
+  testWidgets('부모 재빌드 없이 위쪽 레이아웃이 커져도 코치마크가 타겟을 다시 측정한다', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({});
+
+    final targetKey = GlobalKey();
+    var tapCount = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          onboardingTourProvider.overrideWith(
+            () => OnboardingTourNotifier(
+              const OnboardingTourState(step: 0, skipped: false),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Column(
+                  children: [
+                    const _DelayedHeightBox(
+                      initialHeight: 80,
+                      expandedHeight: 420,
+                      delay: Duration(milliseconds: 80),
+                    ),
+                    ElevatedButton(
+                      key: targetKey,
+                      onPressed: () => tapCount++,
+                      child: const Text('비동기 타겟'),
+                    ),
+                  ],
+                ),
+                CoachMarkOverlay(
+                  targetKey: targetKey,
+                  stepIndex: 0,
+                  title: '지도에서 지역을 눌러보세요',
+                  body: '위쪽 배너가 늦게 커져도 새 위치를 사용합니다.',
+                  scrollToTarget: false,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pumpAndSettle();
+
+    final targetRect = tester.getRect(find.byKey(targetKey));
+    expect(targetRect.top, greaterThan(400));
+
+    await tester.tapAt(const Offset(120, 100));
+    await tester.pump();
+    expect(tapCount, 0);
+
+    await tester.tapAt(targetRect.center);
     await tester.pump();
     expect(tapCount, 1);
   });
