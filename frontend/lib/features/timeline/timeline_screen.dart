@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants.dart';
 import '../../core/network/dio_client.dart';
-import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/quest_image.dart';
 import '../../core/widgets/chungbuk_map.dart';
 import '../../core/widgets/quest_type_badge.dart' show MiniBadge;
@@ -212,10 +211,10 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
         .toList();
 
     return Scaffold(
+      // 하단 탭으로만 진입하므로 뒤로가기 버튼이 없다(100-bottom-nav-redesign).
       appBar: AppBar(
-        leading: const AppBackButton(),
+        automaticallyImplyLeading: false,
         title: const Text('여행 타임라인'),
-        titleSpacing: 0,
       ),
       body: Column(
         children: [

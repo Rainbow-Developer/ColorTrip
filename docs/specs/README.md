@@ -48,3 +48,5 @@ docs/specs/
 | [085-journey-management](085-journey-management/) | 여행 이름·일정 수정과 삭제 |
 | [085-legal-consent-compliance](085-legal-consent-compliance/) | 회원가입 법적 동의·개인정보 처리 정합화 |
 | [090-realtime-tour-place-info](090-realtime-tour-place-info/) | 관광지 정보(이미지·소개문·운영정보) TourAPI 실시간 조회 전환 |
+| [095-festival-info](095-festival-info/) | 지역 화면의 진행 중 행사·축제 섹션 |
+| [100-bottom-nav-redesign](100-bottom-nav-redesign/) | 하단 4탭 개편(타임라인 승격 + pill 디자인) |

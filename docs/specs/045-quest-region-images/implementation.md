@@ -59,3 +59,4 @@
 | 2026-08-19 | KAN-100: 제천시 지역 개요 대표 이미지를 제작 asset(`region_jecheon_main.png`)으로 교체 |
 | 2026-08-19 | KAN-100: 영동군 지역 개요 대표 이미지를 제작 asset(`region_yeongdong_main.png`)으로 교체 |
 | 2026-08-21 | 퀘스트 썸네일·소개문의 정적 저장 방식이 [090-realtime-tour-place-info](../090-realtime-tour-place-info/)의 실시간 조회로 대체됨(`imageUrl`·생성 desc 제거, `tourContentId` 백필). 지역 대표 로컬 asset과 좌표(lat/lng)·`AppNetworkImage`는 계속 유효 |
+| 2026-08-21 | `AppNetworkImage` placeholder를 회색 단색 박스에서 연한 그라데이션 배경으로 교체(KAN-103 피드백). `placeholderEmoji` 경로는 기존 동작 유지, `placeholderText` 경로는 풍경 아이콘 + 텍스트 세로 배치로 변경, 둘 다 없으면 풍경 아이콘만 표시 |
