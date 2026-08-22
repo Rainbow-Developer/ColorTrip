@@ -571,6 +571,15 @@ void main() {
 
     expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
+    final returnedMapRect = tester.getRect(find.byType(ChungbukMap));
+    final returnedMessageCardRect = tester.getRect(
+      find.byKey(const ValueKey('coach-mark-message-card')),
+    );
+    expect(
+      returnedMessageCardRect.top,
+      greaterThanOrEqualTo(returnedMapRect.bottom),
+    );
+    expect(returnedMessageCardRect.bottom, lessThanOrEqualTo(900));
   });
 
   testWidgets('마이에서 튜토리얼을 다시 켜면 홈 지도 코치마크가 정렬된다', (tester) async {
