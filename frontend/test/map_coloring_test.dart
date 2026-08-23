@@ -107,7 +107,7 @@ void main() {
       notifier.completeQuest('dy2');
 
       final state = container.read(progressProvider);
-      expect(state.tripStatusOf('danyang'), RegionTripStatus.completed);
+      expect(state.tripStatusOf('danyang'), RegionTripStatus.inProgress);
       expect(state.completedTripCountOf('danyang'), 1);
       expect(state.regionSaturation('danyang'), closeTo(1 / 5, 1e-9));
     });

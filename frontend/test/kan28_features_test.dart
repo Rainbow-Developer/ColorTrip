@@ -26,7 +26,6 @@ import 'package:colortrip/features/home/home_screen.dart';
 import 'package:colortrip/features/profile/profile_screen.dart';
 import 'package:colortrip/features/quests/region_overview_screen.dart';
 import 'package:colortrip/features/quests/region_quest_select_screen.dart';
-import 'package:colortrip/features/timeline/timeline_screen.dart';
 import 'package:colortrip/features/travel/journey_detail_screen.dart';
 import 'package:colortrip/features/travel/travel_list_screen.dart';
 import 'package:colortrip/state/auth_controller.dart';
