@@ -285,6 +285,7 @@ class _RegionOverviewScreenState extends ConsumerState<RegionOverviewScreen> {
                 else
                   for (final journey in journeys)
                     TripCard(
+                      key: ValueKey(journey.id),
                       journey: journey,
                       region: region,
                       isActive: true,
