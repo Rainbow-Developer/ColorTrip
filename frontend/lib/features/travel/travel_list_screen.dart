@@ -96,6 +96,7 @@ class _TravelListScreenState extends ConsumerState<TravelListScreen> {
       );
     }
     return TripCard(
+      key: ValueKey(journey.id),
       journey: journey,
       region: region,
       isActive: isActive,
