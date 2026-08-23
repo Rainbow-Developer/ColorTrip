@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants.dart';
+import '../../core/network/api_error_message.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/quest_image.dart';
 import '../../core/widgets/app_toast.dart';
@@ -115,9 +116,12 @@ class _RegionQuestSelectScreenState
           );
       _advanceTourAfterSuccessfulSave(tour);
       if (mounted) context.go('/travel');
-    } on Object {
+    } on Object catch (error) {
       if (mounted) {
-        showAppToast(context, '여행을 저장하지 못했어요. 네트워크를 확인해주세요.');
+        showAppToast(
+          context,
+          apiErrorMessage(error, '여행을 저장하지 못했어요. 다시 시도해주세요.'),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);

@@ -1,10 +1,11 @@
 """지도 진행 API 테스트 (GET /api/v1/users/me/map)."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from httpx import AsyncClient
 
+from app.core.base import now_kst
 from tests.helpers import (
     DODAM_LAT,
     DODAM_LNG,
@@ -13,6 +14,12 @@ from tests.helpers import (
     login,
     seed_quest_fixture,
 )
+
+
+def _period(start_offset_days: int = 0, duration_days: int = 2) -> dict[str, str]:
+    start = now_kst().date() + timedelta(days=start_offset_days)
+    end = start + timedelta(days=duration_days)
+    return {"start_date": start.isoformat(), "end_date": end.isoformat()}
 
 
 async def _seed_map_fixture(user_id: UUID) -> dict[str, str]:
@@ -110,7 +117,11 @@ async def test_my_map_counts_completed_journeys(client: AsyncClient) -> None:
     # 여정 생성 직후(진행 중)에는 완료 여정 수에 반영되지 않는다.
     created = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(0, 2),
+        },
         headers=headers,
     )
     assert created.status_code == 201
@@ -118,7 +129,7 @@ async def test_my_map_counts_completed_journeys(client: AsyncClient) -> None:
     before = await _get_map_by_region(client, headers)
     assert before[seed["region_id"]]["completed_journey_count"] == 0
 
-    # 퀘스트 인증 → 여정이 completed로 전이 (test_journey_flow.py 패턴).
+    # 퀘스트 인증 → 지도 채색 집계에 반영된다.
     verify = await client.post(
         f"/api/v1/quests/{seed['gps_quest_id']}/verify",
         json={"lat": str(DODAM_LAT), "lng": str(DODAM_LNG), "photo_url": "/uploads/photos/x.jpg"},
@@ -134,7 +145,11 @@ async def test_my_map_counts_completed_journeys(client: AsyncClient) -> None:
     # 완료 기록이 다른 여정에 중복 집계되지는 않는다.
     second = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(10, 2),
+        },
         headers=headers,
     )
     assert second.status_code == 201
@@ -157,7 +172,11 @@ async def test_my_map_preserves_legacy_null_journey_progress_count(
     headers = await auth_headers(client)
     created = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(0, 2),
+        },
         headers=headers,
     )
     assert created.status_code == 201
@@ -182,7 +201,11 @@ async def test_my_map_preserves_legacy_null_journey_progress_count(
 
     second = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(10, 2),
+        },
         headers=headers,
     )
     assert second.status_code == 201
@@ -209,6 +232,7 @@ async def test_my_map_counts_journey_with_single_completed_quest(client: AsyncCl
                 seed["gps_only_quest_id"],
                 seed["food_quest_id"],
             ],
+            **_period(0, 2),
         },
         headers=headers,
     )
@@ -246,6 +270,7 @@ async def test_my_map_counts_one_per_journey_even_with_many_completed_quests(
         json={
             "region_id": seed["region_id"],
             "quest_ids": [seed["quiz_quest_id"], seed["gps_quest_id"]],
+            **_period(0, 2),
         },
         headers=headers,
     )
@@ -272,7 +297,11 @@ async def test_my_map_journey_count_is_private_to_owner(client: AsyncClient) -> 
 
     await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            **_period(0, 2),
+        },
         headers=owner_headers,
     )
     await client.post(

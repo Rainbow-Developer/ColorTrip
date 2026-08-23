@@ -4,12 +4,14 @@ QR 미션 분기(MissionType.QR)는 docs/specs/050-quest-verification/에서 추
 """
 
 import asyncio
+from datetime import timedelta
 from uuid import UUID
 
 import pytest
 from httpx import AsyncClient
 
 from app.auth.models import User
+from app.core.base import now_kst
 from app.core.database import AsyncSessionLocal
 from app.integrations.vision.base import VisionVerdict
 from app.quests.dna import get_user_primary_category
@@ -21,9 +23,15 @@ from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 async def _create_journey(
     client: AsyncClient, headers: dict[str, str], region_id: str, quest_ids: list[str]
 ) -> str:
+    today = now_kst().date()
     response = await client.post(
         "/api/v1/journeys",
-        json={"region_id": region_id, "quest_ids": quest_ids},
+        json={
+            "region_id": region_id,
+            "quest_ids": quest_ids,
+            "start_date": today.isoformat(),
+            "end_date": (today + timedelta(days=2)).isoformat(),
+        },
         headers=headers,
     )
     assert response.status_code == 201
@@ -43,7 +51,7 @@ async def test_start_quest_is_idempotent(client: AsyncClient) -> None:
     assert second.json()["data"]["id"] == first.json()["data"]["id"]
 
 
-async def test_gps_verify_completes_quest_and_journey(client: AsyncClient) -> None:
+async def test_gps_verify_completes_quest_but_journey_stays_active(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
     journey_id = await _create_journey(client, headers, seed["region_id"], [seed["gps_quest_id"]])
@@ -64,11 +72,11 @@ async def test_gps_verify_completes_quest_and_journey(client: AsyncClient) -> No
     assert data["progress"]["status"] == "completed"
     assert data["progress"]["completed_at"] is not None
 
-    # 여정의 모든 퀘스트가 완료됐으므로 여정도 자동 완료된다.
+    # 여정은 퀘스트 완료 수와 무관하게 종료일 다음날부터 완료된다.
     journey = await client.get(f"/api/v1/journeys/{journey_id}", headers=headers)
     journey_data = journey.json()["data"]
-    assert journey_data["status"] == "completed"
-    assert journey_data["completed_at"] is not None
+    assert journey_data["status"] == "in_progress"
+    assert journey_data["completed_at"] is None
     assert journey_data["progress"] == {"completed": 1, "total": 1}
 
     # 내 진행 목록에서도 완료로 보인다.

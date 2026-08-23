@@ -1,8 +1,8 @@
 """journeys — 비즈니스 로직 계층.
 
 여정 상태 규칙(docs/specs/010-journey/description.md#여정-완료-판정):
-퀘스트를 전부 완료하거나, 여행 기간이 지났고(end_date < 오늘 KST) 완료 퀘스트가 1개 이상이면
-completed. 그 밖에는 in_progress로 되돌린다. "기간이 지났다"는 이벤트 없이 성립하므로
+여행 종료일 다음날 00:00 KST부터(end_date < 오늘 KST) completed. 그 전에는
+퀘스트 완료 수와 무관하게 in_progress로 되돌린다. "기간이 지났다"는 이벤트 없이 성립하므로
 여정 조회 시점에도 재계산한다(`sync_journey_statuses`).
 """
 
@@ -62,6 +62,8 @@ async def create_journey(
             ErrorCode.VALIDATION_ERROR, "여정 지역에 속하지 않는 퀘스트는 담을 수 없습니다."
         )
 
+    await _validate_journey_period(session, user_id, start_date, end_date)
+
     journey = Journey(
         user_id=user_id,
         region_id=region_id,
@@ -86,7 +88,6 @@ async def create_journey(
             )
             .values(journey_id=journey.id)
         )
-        # 담은 퀘스트를 이미 완료한 사용자라면 생성 즉시 완료 상태가 되어야 한다.
         await recalculate_status(session, journey)
         await session.commit()
     except IntegrityError:
@@ -158,9 +159,14 @@ async def update_journey(
 
     next_start = updates.get("start_date", journey.start_date)
     next_end = updates.get("end_date", journey.end_date)
-    if next_start and next_end and next_end < next_start:
-        raise AppException(
-            ErrorCode.VALIDATION_ERROR, "end_date는 start_date보다 빠를 수 없습니다."
+
+    if "start_date" in updates or "end_date" in updates:
+        await _validate_journey_period(
+            session,
+            user_id,
+            next_start,
+            next_end,
+            exclude_journey_id=journey_id,
         )
 
     if "title" in updates:
@@ -432,16 +438,41 @@ async def replace_quests(
     return await _journey_detail(session, user_id, journey_id)
 
 
-def _is_completed(journey: Journey, completed: int, total: int) -> bool:
+async def _validate_journey_period(
+    session: AsyncSession,
+    user_id: UUID,
+    start_date: date | None,
+    end_date: date | None,
+    *,
+    exclude_journey_id: UUID | None = None,
+) -> None:
+    if start_date is None or end_date is None:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "여행 시작일과 종료일은 필수입니다.")
+    if end_date < start_date:
+        raise AppException(
+            ErrorCode.VALIDATION_ERROR, "end_date는 start_date보다 빠를 수 없습니다."
+        )
+    if end_date < now_kst().date():
+        raise AppException(ErrorCode.VALIDATION_ERROR, "이미 지난 여행 기간은 등록할 수 없습니다.")
+
+    overlapping = await repository.find_overlapping_journey(
+        session,
+        user_id,
+        start_date,
+        end_date,
+        exclude_journey_id=exclude_journey_id,
+    )
+    if overlapping is not None:
+        raise AppException(ErrorCode.VALIDATION_ERROR, "이미 해당 기간에 등록된 여행이 있습니다.")
+
+
+def _is_completed(journey: Journey, _completed: int, _total: int) -> bool:
     """완료 판정 — docs/specs/010-journey/description.md#여정-완료-판정.
 
-    기간이 없는(end_date 미입력) 여정은 기간 조건을 적용하지 않아 전부 완료해야 완료된다.
+    종료일 23:59:59 KST까지는 진행중이며, 종료일 다음날부터 완료된다.
+    기간이 없는 레거시 여정은 완료로 판정하지 않는다.
     """
-    if total == 0:
-        return False
-    if completed == total:
-        return True
-    if completed < 1 or journey.end_date is None:
+    if journey.end_date is None:
         return False
     return journey.end_date < now_kst().date()
 

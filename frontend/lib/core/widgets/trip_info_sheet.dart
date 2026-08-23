@@ -39,6 +39,11 @@ class _TripInfoSheetState extends State<TripInfoSheet> {
     FocusManager.instance.primaryFocus?.unfocus();
     await Future.delayed(const Duration(milliseconds: 100));
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final initialStart = _range?.start;
+    final firstDate = initialStart != null && initialStart.isBefore(today)
+        ? DateTime(initialStart.year, initialStart.month, initialStart.day)
+        : today;
     List<DateTime?> tempRange = _range != null
         ? [_range!.start, _range!.end]
         : [];
@@ -82,7 +87,7 @@ class _TripInfoSheetState extends State<TripInfoSheet> {
                     CalendarDatePicker2(
                       config: CalendarDatePicker2Config(
                         calendarType: CalendarDatePicker2Type.range,
-                        firstDate: DateTime(now.year - 2, now.month, now.day),
+                        firstDate: firstDate,
                         lastDate: DateTime(now.year + 2, now.month, now.day),
                         selectedDayHighlightColor: AppColors.primaryDark,
                       ),

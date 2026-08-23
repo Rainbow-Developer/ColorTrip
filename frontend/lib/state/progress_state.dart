@@ -70,7 +70,7 @@ enum RegionTripStatus {
   /// 여행 시작함, 선택한 퀘스트 중 미완료가 남아있음.
   inProgress,
 
-  /// 여행 시작함, 선택한 퀘스트를 전부 완료함.
+  /// 여행 종료일 다음날 00:00 이후 완료됨.
   completed,
 }
 
@@ -185,16 +185,14 @@ class ProgressState {
   /// 지역의 여행 이름·기간(여행 시작 전이면 null).
   TripInfo? tripInfoOf(String regionId) => tripInfo[regionId];
 
-  /// 지역 여행의 진행 상태 — 서버 `Journey.status` 판정 규칙과 같은 기준을 쓴다
-  /// (전부 완료, 또는 여행 기간이 지났고 완료 퀘스트가 1개 이상 →
-  /// [RegionTripStatus.completed]). 규칙의 단일 출처는
-  /// [docs/specs/010-journey/description.md]의 "여정 완료 판정"이다(KAN-73).
+  /// 지역 여행의 진행 상태 — 서버 `Journey.status` 판정 규칙과 같은 기준을 쓴다.
+  /// 종료일 다음날 00:00 이후에만 [RegionTripStatus.completed]가 되며, 규칙의 단일
+  /// 출처는 [docs/specs/010-journey/description.md]의 "여정 완료 판정"이다(KAN-104).
   RegionTripStatus tripStatusOf(String regionId, {DateTime? now}) {
     final trip = tripQuestsOf(regionId);
     if (trip.isEmpty) return RegionTripStatus.notStarted;
-    if (trip.every(isCompleted)) return RegionTripStatus.completed;
     final endDate = tripInfoOf(regionId)?.endDate;
-    if (endDate != null && trip.any(isCompleted)) {
+    if (endDate != null) {
       final today = now ?? DateTime.now();
       final endOfTrip = DateTime(endDate.year, endDate.month, endDate.day);
       final startOfToday = DateTime(today.year, today.month, today.day);

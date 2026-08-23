@@ -14,8 +14,8 @@ class JourneyCreateRequest(BaseModel):
     region_id: UUID
     quest_ids: list[UUID] = Field(min_length=1)
     title: str | None = Field(default=None, max_length=100)
-    start_date: date | None = None
-    end_date: date | None = None
+    start_date: date
+    end_date: date
 
     @model_validator(mode="after")
     def _validate_date_order(self) -> Self:

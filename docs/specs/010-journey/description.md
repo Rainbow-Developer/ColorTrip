@@ -5,8 +5,8 @@
 **여정(Journey)** 은 사용자가 한 지역(충북 시·군)을 여행하며 수행할 퀘스트 묶음이다.
 사용자는 지도에서 지역을 고르고, 본인 **여행 DNA**(카테고리 5종)에 맞게 추천된 퀘스트 중에서
 원하는 것을 골라 여정을 만든다. 여정 안에서 퀘스트를 관리(추가·제거)하고, 각 퀘스트를
-방식별(GPS+사진 / 퀴즈)로 **인증**하면 완료 처리된다. 여정은 퀘스트를 전부 완료하거나, 여행 기간이
-지난 뒤 1개 이상 완료하면 완료된다(아래 [여정 완료 판정](#여정-완료-판정)).
+방식별(GPS+사진 / 퀴즈)로 **인증**하면 완료 처리된다. 여정은 여행 종료일 23:59:59 KST까지
+진행중이고, 종료일 다음날 00:00 KST부터 완료된다(아래 [여정 완료 판정](#여정-완료-판정)).
 
 퀘스트 마스터 데이터(지역·카테고리·미션)는 [000-quest](../000-quest/)가, 사용자·토큰은
 [005-auth-member](../005-auth-member/)가 제공한다. 완료 기록(`quest_progress`)은 지도 색칠(MAP)·
@@ -28,6 +28,9 @@ flowchart LR
   `category` 쿼리로 명시하면 사용자 DNA보다 우선하며, DNA가 없으면
   `?category=` 쿼리 파라미터를 대신 사용한다.
 - 여정 생성 시 `quest_ids`는 모두 해당 `region_id` 소속이어야 한다(교차 지역 불가).
+- 여행 시작일·종료일은 필수이며, 종료일이 시작일보다 빠르거나 이미 지난 기간은 생성할 수 없다.
+- 같은 사용자의 삭제되지 않은 여정과 날짜 범위가 겹치면 생성·수정을 거부한다. 범위는 양 끝을 포함해
+  `[start_date, end_date]`로 비교한다.
 
 **퀘스트 인증 → 완료**
 
@@ -57,15 +60,14 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A{"완료 퀘스트 == 전체?"} -->|"예"| C["completed"]
-    A -->|"아니오"| B{"end_date < 오늘(KST) AND 완료 퀘스트 ≥ 1?"}
-    B -->|"예"| C
-    B -->|"아니오"| D["in_progress (completed_at = NULL)"]
+    A{"end_date < 오늘(KST)?"} -->|"예"| C["completed"]
+    A -->|"아니오"| D["in_progress (completed_at = NULL)"]
 ```
 
-- 퀘스트가 0개인 여정은 `in_progress`다(전체 완료로 보지 않는다).
-- `end_date`가 없는 여정(기간 미입력)은 기간 경과 조건을 적용하지 않는다 — 전부 완료해야 `completed`가 된다.
-- 완료 조건이 깨지면(완료한 여정에 퀘스트를 새로 담는 등) `in_progress`로 되돌리고 `completed_at`을 비운다.
+- 퀘스트 완료 수는 여정 완료 판정에 영향을 주지 않는다. 모든 퀘스트를 완료해도 종료일 당일까지는
+  `in_progress`다.
+- `end_date`가 없는 레거시 여정은 완료로 판정하지 않는다.
+- 완료 조건이 깨지면(예: 종료일을 오늘 이후로 수정) `in_progress`로 되돌리고 `completed_at`을 비운다.
 - 사용자가 직접 여행을 끝내는 완료 버튼·API는 이번 범위에서 만들지 않는다(plan 의사결정 9 — 보류).
 - 여정 완료는 지도 채색과 **독립**이다 — 채색은 "완료 퀘스트가 1개 이상인 여행 수"로 집계한다([055-journey-map-coloring](../055-journey-map-coloring/)).
 
@@ -80,8 +82,8 @@ flowchart TD
 | user_id | UUID | N | FK→users | | 소유 사용자 |
 | region_id | UUID | N | FK→regions | | 여정 지역(1개) |
 | title | VARCHAR(100) | Y | | | 여정 이름(미입력 시 지역명 기반) |
-| start_date | DATE | Y | | | 여행 시작일(생성 시 입력) |
-| end_date | DATE | Y | | | 여행 종료일(start_date ≤ end_date 검증) |
+| start_date | DATE | Y | | | 여행 시작일(생성 시 필수 입력, 레거시 NULL 가능) |
+| end_date | DATE | Y | | | 여행 종료일(생성 시 필수 입력, start_date ≤ end_date·지난 기간·중복 기간 검증) |
 | status | VARCHAR(20) | N | | 'in_progress' | in_progress / completed (판정 규칙에서 파생·저장) |
 | completed_at | TIMESTAMP | Y | | | 완료 시각 |
 

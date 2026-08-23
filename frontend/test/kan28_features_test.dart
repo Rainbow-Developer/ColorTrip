@@ -532,7 +532,10 @@ void main() {
             ),
             StatefulShellBranch(
               routes: [
-                GoRoute(path: '/timeline', builder: (_, _) => const Scaffold(body: Text('Timeline'))),
+                GoRoute(
+                  path: '/timeline',
+                  builder: (_, _) => const Scaffold(body: Text('Timeline')),
+                ),
               ],
             ),
             StatefulShellBranch(
@@ -642,7 +645,10 @@ void main() {
             ),
             StatefulShellBranch(
               routes: [
-                GoRoute(path: '/timeline', builder: (_, _) => const Scaffold(body: Text('Timeline'))),
+                GoRoute(
+                  path: '/timeline',
+                  builder: (_, _) => const Scaffold(body: Text('Timeline')),
+                ),
               ],
             ),
             StatefulShellBranch(
@@ -670,7 +676,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(HomeScreen), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.person_rounded));
+    await tester.tap(find.bySemanticsLabel('마이'));
     await tester.pumpAndSettle();
 
     expect(find.byType(ProfileScreen), findsOneWidget);
@@ -695,9 +701,9 @@ void main() {
     expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
     expect(_firstPageScrollable(tester).position.pixels, 0);
 
-    await tester.tap(find.byIcon(Icons.person_rounded));
+    await tester.tap(find.bySemanticsLabel('마이'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.home_rounded));
+    await tester.tap(find.bySemanticsLabel('홈'));
     await tester.pumpAndSettle();
 
     expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
@@ -967,6 +973,118 @@ void main() {
     expect(find.text('단양 힐링 여행'), findsOneWidget);
     expect(find.text(info.periodLabel), findsOneWidget);
     expect(find.text('진행중인 여행'), findsOneWidget);
+  });
+
+  testWidgets('여행 목록은 진행중/예정/지난 여행을 나누고 예정과 지난 여행을 접는다', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final today = DateTime.now();
+    final domainRepository = _DomainRepository()
+      ..snapshot = DomainSnapshot(
+        catalog: const DomainCatalog(
+          regionIdsByKey: {'danyang': 'region-uuid'},
+          regionKeysById: {'region-uuid': 'danyang'},
+          questIdsByKey: {'dy1': 'quest-uuid'},
+          questKeysById: {'quest-uuid': 'dy1'},
+        ),
+        journeys: [
+          DomainJourney(
+            id: 'active-journey',
+            regionKey: 'danyang',
+            questKeys: const ['dy1'],
+            title: '진행중 단양 여행',
+            startDate: today.subtract(const Duration(days: 1)),
+            endDate: today.add(const Duration(days: 1)),
+            status: 'in_progress',
+            createdAt: today,
+          ),
+          DomainJourney(
+            id: 'upcoming-journey',
+            regionKey: 'danyang',
+            questKeys: const ['dy1'],
+            title: '먼 예정 단양 여행',
+            startDate: today.add(const Duration(days: 3)),
+            endDate: today.add(const Duration(days: 5)),
+            status: 'in_progress',
+            createdAt: today,
+          ),
+          DomainJourney(
+            id: 'near-upcoming-journey',
+            regionKey: 'danyang',
+            questKeys: const ['dy1'],
+            title: '가까운 예정 단양 여행',
+            startDate: today.add(const Duration(days: 1)),
+            endDate: today.add(const Duration(days: 2)),
+            status: 'in_progress',
+            createdAt: today.subtract(const Duration(days: 1)),
+          ),
+          DomainJourney(
+            id: 'past-journey',
+            regionKey: 'danyang',
+            questKeys: const ['dy1'],
+            title: '오래된 지난 단양 여행',
+            startDate: today.subtract(const Duration(days: 5)),
+            endDate: today.subtract(const Duration(days: 3)),
+            status: 'completed',
+            createdAt: today,
+          ),
+          DomainJourney(
+            id: 'recent-past-journey',
+            regionKey: 'danyang',
+            questKeys: const ['dy1'],
+            title: '최근 지난 단양 여행',
+            startDate: today.subtract(const Duration(days: 3)),
+            endDate: today.subtract(const Duration(days: 1)),
+            status: 'completed',
+            createdAt: today.subtract(const Duration(days: 1)),
+          ),
+        ],
+        completedQuestKeys: const {},
+        regionProgress: const {},
+        regionTripCount: const {},
+        timeline: const [],
+      );
+    final container = ProviderContainer(
+      overrides: [
+        _tourDoneOverride,
+        domainRepositoryProvider.overrideWithValue(domainRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      _wrap(const TravelListScreen(), container: container),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('진행중인 여행'), findsOneWidget);
+    expect(find.text('진행 예정인 여행'), findsOneWidget);
+    expect(find.text('지난 여행'), findsOneWidget);
+    expect(find.text('진행중 단양 여행'), findsOneWidget);
+    expect(find.text('가까운 예정 단양 여행'), findsNothing);
+    expect(find.text('먼 예정 단양 여행'), findsNothing);
+    expect(find.text('최근 지난 단양 여행'), findsNothing);
+    expect(find.text('오래된 지난 단양 여행'), findsNothing);
+
+    await tester.tap(find.text('진행 예정인 여행'));
+    await tester.pumpAndSettle();
+    expect(find.text('가까운 예정 단양 여행'), findsOneWidget);
+    expect(find.text('먼 예정 단양 여행'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('가까운 예정 단양 여행')).dy,
+      lessThan(tester.getTopLeft(find.text('먼 예정 단양 여행')).dy),
+    );
+
+    await tester.tap(find.text('지난 여행'));
+    await tester.pumpAndSettle();
+    expect(find.text('최근 지난 단양 여행'), findsOneWidget);
+    expect(find.text('오래된 지난 단양 여행'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('최근 지난 단양 여행')).dy,
+      lessThan(tester.getTopLeft(find.text('오래된 지난 단양 여행')).dy),
+    );
   });
 
   testWidgets('튜토리얼 코치마크는 배경을 막고 하이라이트된 버튼만 통과시킨다', (tester) async {

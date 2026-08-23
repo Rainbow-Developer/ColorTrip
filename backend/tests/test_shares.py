@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 from httpx import AsyncClient
 
+from app.core.base import now_kst
 from app.core.config import settings
 from tests.helpers import DODAM_LAT, DODAM_LNG, auth_headers, seed_quest_fixture
 
@@ -147,9 +150,15 @@ async def _create_share_and_get_landing(
 async def _create_journey_for_gps_quest(
     client: AsyncClient, headers: dict[str, str], seed: dict[str, str]
 ) -> None:
+    today = now_kst().date()
     response = await client.post(
         "/api/v1/journeys",
-        json={"region_id": seed["region_id"], "quest_ids": [seed["gps_quest_id"]]},
+        json={
+            "region_id": seed["region_id"],
+            "quest_ids": [seed["gps_quest_id"]],
+            "start_date": today.isoformat(),
+            "end_date": (today + timedelta(days=2)).isoformat(),
+        },
         headers=headers,
     )
     assert response.status_code == 201

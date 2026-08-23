@@ -2,8 +2,8 @@
 
 테이블 설계: docs/specs/010-journey/description.md (Notion 역동기화 대상)
 - 여정은 지역 1개에 속하고, 퀘스트를 journey_quests로 담는다.
-- status는 완료 판정 규칙에서 파생·저장된다: 퀘스트 전부 완료, 또는 기간 경과(end_date <
-  오늘 KST) + 완료 퀘스트 1개 이상 (description.md#여정-완료-판정).
+- status는 완료 판정 규칙에서 파생·저장된다: 종료일 다음날 00:00 KST부터(end_date <
+  오늘 KST) completed (description.md#여정-완료-판정).
 """
 
 import uuid
