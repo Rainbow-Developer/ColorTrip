@@ -519,6 +519,11 @@ void main() {
           branches: [
             StatefulShellBranch(
               routes: [
+                GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
                 GoRoute(
                   path: '/travel',
                   builder: (_, _) => const TravelListScreen(),
@@ -527,7 +532,7 @@ void main() {
             ),
             StatefulShellBranch(
               routes: [
-                GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+                GoRoute(path: '/timeline', builder: (_, _) => const Scaffold(body: Text('Timeline'))),
               ],
             ),
             StatefulShellBranch(
@@ -624,6 +629,11 @@ void main() {
           branches: [
             StatefulShellBranch(
               routes: [
+                GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
                 GoRoute(
                   path: '/travel',
                   builder: (_, _) => const TravelListScreen(),
@@ -632,7 +642,7 @@ void main() {
             ),
             StatefulShellBranch(
               routes: [
-                GoRoute(path: '/home', builder: (_, _) => const HomeScreen()),
+                GoRoute(path: '/timeline', builder: (_, _) => const Scaffold(body: Text('Timeline'))),
               ],
             ),
             StatefulShellBranch(
@@ -660,7 +670,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(HomeScreen), findsOneWidget);
-    await tester.tap(find.text('마이'));
+    await tester.tap(find.byIcon(Icons.person_rounded));
     await tester.pumpAndSettle();
 
     expect(find.byType(ProfileScreen), findsOneWidget);
@@ -685,9 +695,9 @@ void main() {
     expect(find.text('지도에서 지역을 눌러보세요'), findsNothing);
     expect(_firstPageScrollable(tester).position.pixels, 0);
 
-    await tester.tap(find.text('마이'));
+    await tester.tap(find.byIcon(Icons.person_rounded));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('홈'));
+    await tester.tap(find.byIcon(Icons.home_rounded));
     await tester.pumpAndSettle();
 
     expect(find.text('지도에서 지역을 눌러보세요'), findsOneWidget);
