@@ -971,7 +971,15 @@ void main() {
     expect(state.tripQuestsOf('danyang'), {'dy1'});
 
     expect(find.text('단양 힐링 여행'), findsOneWidget);
-    expect(find.text(info.periodLabel), findsOneWidget);
+    // 여행 목록 카드(TripCard)는 기간에 요일을 덧붙여 보여준다(core/widgets/trip_card.dart).
+    const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
+    String md(DateTime d) =>
+        '${d.month.toString().padLeft(2, '0')}.'
+        '${d.day.toString().padLeft(2, '0')} '
+        '(${weekdays[d.weekday - 1]})';
+    final expectedPeriod =
+        '${info.startDate.year}.${md(info.startDate)} ~ ${md(info.endDate)}';
+    expect(find.text(expectedPeriod), findsOneWidget);
     expect(find.text('진행중인 여행'), findsOneWidget);
   });
 
