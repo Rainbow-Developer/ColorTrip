@@ -13,6 +13,9 @@ class AppColors {
   static const textMuted = Color(0xFF9A9A90);
   static const textBody = Color(0xFF4A4A44);
   static const border = Color(0xFFE6E6DF);
+  // 여행 카드(trip_card.dart)의 "···" 팝업 메뉴 테두리 — 카드 테두리(border)보다
+  // 한 톤 진하게 해 흰 배경 위에서도 경계가 또렷이 보이도록 한다.
+  static const tripCardMenuBorder = Color(0xFFCFCFC4);
   static const surfaceMuted = Color(0xFFF5F5F0);
   static const background = Color(0xFFFAFAFA);
   static const danger = Color(0xFFE24B4A);
