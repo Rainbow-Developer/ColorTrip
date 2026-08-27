@@ -302,7 +302,7 @@ async def test_create_journey_rejects_past_period(client: AsyncClient) -> None:
     assert response.json()["code"] == "VALIDATION_ERROR"
 
 
-async def test_create_journey_rejects_overlapping_period(client: AsyncClient) -> None:
+async def test_create_journey_allows_overlapping_period(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
 
@@ -327,8 +327,7 @@ async def test_create_journey_rejects_overlapping_period(client: AsyncClient) ->
         headers=headers,
     )
 
-    assert overlapped.status_code == 422
-    assert overlapped.json()["code"] == "VALIDATION_ERROR"
+    assert overlapped.status_code == 201
 
 
 async def test_update_journey_changes_title_and_dates(client: AsyncClient) -> None:
@@ -391,7 +390,7 @@ async def test_update_journey_rejects_reversed_dates(client: AsyncClient) -> Non
     assert response.json()["code"] == "VALIDATION_ERROR"
 
 
-async def test_update_journey_rejects_overlapping_period(client: AsyncClient) -> None:
+async def test_update_journey_allows_overlapping_period(client: AsyncClient) -> None:
     seed = await seed_quest_fixture()
     headers = await auth_headers(client)
 
@@ -422,8 +421,10 @@ async def test_update_journey_rejects_overlapping_period(client: AsyncClient) ->
         headers=headers,
     )
 
-    assert response.status_code == 422
-    assert response.json()["code"] == "VALIDATION_ERROR"
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["start_date"] == _period(1, 2)["start_date"]
+    assert data["end_date"] == _period(1, 2)["end_date"]
 
 
 async def test_delete_journey_soft_deletes_linked_records(client: AsyncClient) -> None:

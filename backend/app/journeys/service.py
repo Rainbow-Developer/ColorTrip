@@ -62,7 +62,7 @@ async def create_journey(
             ErrorCode.VALIDATION_ERROR, "여정 지역에 속하지 않는 퀘스트는 담을 수 없습니다."
         )
 
-    await _validate_journey_period(session, user_id, start_date, end_date)
+    _validate_journey_period(start_date, end_date)
 
     journey = Journey(
         user_id=user_id,
@@ -161,13 +161,7 @@ async def update_journey(
     next_end = updates.get("end_date", journey.end_date)
 
     if "start_date" in updates or "end_date" in updates:
-        await _validate_journey_period(
-            session,
-            user_id,
-            next_start,
-            next_end,
-            exclude_journey_id=journey_id,
-        )
+        _validate_journey_period(next_start, next_end)
 
     if "title" in updates:
         journey.title = updates["title"]
@@ -438,13 +432,9 @@ async def replace_quests(
     return await _journey_detail(session, user_id, journey_id)
 
 
-async def _validate_journey_period(
-    session: AsyncSession,
-    user_id: UUID,
+def _validate_journey_period(
     start_date: date | None,
     end_date: date | None,
-    *,
-    exclude_journey_id: UUID | None = None,
 ) -> None:
     if start_date is None or end_date is None:
         raise AppException(ErrorCode.VALIDATION_ERROR, "여행 시작일과 종료일은 필수입니다.")
@@ -454,16 +444,6 @@ async def _validate_journey_period(
         )
     if end_date < now_kst().date():
         raise AppException(ErrorCode.VALIDATION_ERROR, "이미 지난 여행 기간은 등록할 수 없습니다.")
-
-    overlapping = await repository.find_overlapping_journey(
-        session,
-        user_id,
-        start_date,
-        end_date,
-        exclude_journey_id=exclude_journey_id,
-    )
-    if overlapping is not None:
-        raise AppException(ErrorCode.VALIDATION_ERROR, "이미 해당 기간에 등록된 여행이 있습니다.")
 
 
 def _is_completed(journey: Journey, _completed: int, _total: int) -> bool:
