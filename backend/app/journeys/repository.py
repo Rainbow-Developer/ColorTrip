@@ -1,7 +1,6 @@
 """journeys — 데이터 접근 계층 (SQLAlchemy 2.0 async)."""
 
 from collections.abc import Sequence
-from datetime import date
 from uuid import UUID
 
 from sqlalchemy import ColumnElement, and_, func, or_, select
@@ -80,29 +79,6 @@ async def list_journeys(
     count_stmt = select(func.count()).select_from(Journey).where(*filters)
     total = await session.scalar(count_stmt) or 0
     return items, total
-
-
-async def find_overlapping_journey(
-    session: AsyncSession,
-    user_id: UUID,
-    start_date: date,
-    end_date: date,
-    *,
-    exclude_journey_id: UUID | None = None,
-) -> Journey | None:
-    """같은 사용자의 삭제되지 않은 여정 중 기간이 겹치는 1건을 찾는다."""
-    filters: list[ColumnElement[bool]] = [
-        Journey.user_id == user_id,
-        Journey.deleted_at.is_(None),
-        Journey.start_date.is_not(None),
-        Journey.end_date.is_not(None),
-        Journey.start_date <= end_date,
-        Journey.end_date >= start_date,
-    ]
-    if exclude_journey_id is not None:
-        filters.append(Journey.id != exclude_journey_id)
-    stmt = select(Journey).where(*filters).limit(1)
-    return await session.scalar(stmt)
 
 
 async def list_journey_quests(session: AsyncSession, journey_id: UUID) -> Sequence[JourneyQuest]:
