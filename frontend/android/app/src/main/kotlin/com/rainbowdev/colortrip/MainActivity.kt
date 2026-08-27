@@ -1,4 +1,4 @@
-package io.vmonster.colortrip
+package com.rainbowdev.colortrip
 
 import io.flutter.embedding.android.FlutterActivity
 

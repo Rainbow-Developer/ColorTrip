@@ -69,7 +69,7 @@ REST API 키나 Admin 키를 넣으면 로그인 화면에서 `KOE101 (Admin Set
 Kakao Developers의 [앱] → [플랫폼 키]에서 네이티브 앱 키를 복사하고, [Android 플랫폼]
 설정에 다음 값을 등록합니다.
 
-- 패키지명: `io.vmonster.colortrip`
+- 패키지명: `com.rainbowdev.colortrip` (KAN-109에서 `io.vmonster.colortrip`에서 변경 — 이전 패키지가 설치돼 있으면 별개 앱으로 나란히 설치된다)
 - 키 해시: APK에 서명한 keystore의 SHA-1 해시(Base64)
 - Kakao Login: 사용 설정
 
@@ -240,12 +240,12 @@ docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUN
 | 증상 | 원인 · 해결 |
 |------|------------|
 | 앱이 **설정 오류 화면**으로 뜸 | `KAKAO_NATIVE_APP_KEY` 또는 `API_BASE_URL` `--dart-define` 누락 → [인증은 카카오 로그인입니다](#인증은-카카오-로그인입니다) |
-| Kakao 로그인에서 **`KOE101 (Admin Settings Issue)`** | `KAKAO_NATIVE_APP_KEY`에 REST API 키/Admin 키를 넣었거나 키에 오타가 있음 → Kakao Developers의 **네이티브 앱 키**로 다시 빌드. 이후에도 실패하면 Android 패키지명 `io.vmonster.colortrip`, 키 해시, Kakao Login 사용 설정을 확인 |
+| Kakao 로그인에서 **`KOE101 (Admin Settings Issue)`** | `KAKAO_NATIVE_APP_KEY`에 REST API 키/Admin 키를 넣었거나 키에 오타가 있음 → Kakao Developers의 **네이티브 앱 키**로 다시 빌드. 이후에도 실패하면 Android 패키지명 `com.rainbowdev.colortrip`, 키 해시, Kakao Login 사용 설정을 확인 |
 | Kakao 로그인에서 **`KOE009` / `invalid android_key_hash`** | APK 서명에 사용한 keystore의 키 해시가 Kakao Developers에 등록되지 않음 → 현재 debug/release 서명 키의 해시를 등록하고 APK를 다시 설치 |
 | 릴리스 빌드가 `KAKAO_NATIVE_APP_KEY is required` 로 실패 | Gradle이 릴리스 빌드에서 키를 강제합니다 → `--dart-define`으로 전달 |
 | **릴리스** APK에서 모든 네트워크 요청 실패 | 평문 HTTP 주소로 빌드함. 릴리스는 cleartext 차단 → HTTPS 주소로 빌드하거나 debug 빌드 사용 |
 | 보호 API가 모두 **401** | 카카오 로그인을 하지 않았거나 세션 만료 → 앱에서 다시 로그인 |
-| `INSTALL_FAILED_UPDATE_INCOMPATIBLE: signatures do not match` | 다른 키로 서명된 APK가 이미 설치됨 → `adb uninstall io.vmonster.colortrip` 후 재설치 |
+| `INSTALL_FAILED_UPDATE_INCOMPATIBLE: signatures do not match` | 다른 키로 서명된 APK가 이미 설치됨 → `adb uninstall com.rainbowdev.colortrip` 후 재설치 |
 | 컨테이너에서 `Error: Undefined name 'Matrix4'` | pub 캐시가 사라져 `.dart_tool`이 옛 경로를 가리킴 → 명령 앞에 `flutter pub get &&` 붙이기. 상세는 [frontend/README](../frontend/README.md#캐시-볼륨--pub-get을-매번-붙이는-이유) |
 | 실기기에서 서버 연결 실패 | 로컬 백엔드를 쓰는 중이면 방화벽·Wi-Fi 확인. 팀 dev 서버(HTTPS)로 빌드하면 이 문제가 없습니다 → [3-0번](#3-0-팀-dev-서버로-빌드-권장) |
 | 컨테이너 권한 오류 | `-u 0:0`과 `GIT_CONFIG_*` 환경변수를 붙여 실행 |

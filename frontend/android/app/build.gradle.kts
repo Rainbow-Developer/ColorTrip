@@ -49,7 +49,7 @@ fun requiredKeystoreProperty(name: String): String =
         ?: throw GradleException("key.properties is missing '$name'.")
 
 android {
-    namespace = "io.vmonster.colortrip"
+    namespace = "com.rainbowdev.colortrip"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -59,8 +59,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "io.vmonster.colortrip"
+        // 스토어 식별자(KAN-109에서 io.vmonster → com.rainbowdev 로 변경). 바꾸면
+        // 스토어에서는 다른 앱이 되고, Kakao Developers의 Android 플랫폼 패키지명도
+        // 함께 갱신해야 한다(docs/conventions/auth-security.md).
+        applicationId = "com.rainbowdev.colortrip"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 29
