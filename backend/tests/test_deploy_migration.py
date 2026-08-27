@@ -125,6 +125,39 @@ def test_deploy_compose_persists_uploaded_photos() -> None:
     assert "api-uploads:/app/uploads" in compose
 
 
+@requires_posix_shell
+def test_public_dev_writes_actual_legal_disclosure_without_home_address(tmp_path: Path) -> None:
+    """공개 dev의 생성 .env에는 실제 운영 고지만 있고 개발용 placeholder는 없어야 한다."""
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    _write_secret_stubs(fake_bin)
+
+    result = _run_deploy(tmp_path, fake_bin)
+
+    # 가짜 migration에서 중단되지만 그 전에 실제 배포와 같은 .env가 생성된다.
+    assert result.returncode == 42
+    generated_env = (tmp_path / ".env").read_text(encoding="utf-8")
+    assert "LEGAL_OPERATOR_NAME=전주호 (무지개발자)" in generated_env
+    assert "LEGAL_DOCUMENT_EFFECTIVE_DATE=2026-08-27" in generated_env
+    assert "LEGAL_OPERATOR_EMAIL=rainbow.dev00@gmail.com" in generated_env
+    assert "LEGAL_OPERATOR_ADDRESS=서울특별시 광진구" in generated_env
+    assert "LEGAL_PRIVACY_OFFICER_NAME=전주호" in generated_env
+    assert "LEGAL_PRIVACY_OFFICER_EMAIL=rainbow.dev00@gmail.com" in generated_env
+    assert "LEGAL_GCS_PROCESSOR_NAME=Google Cloud Korea LLC" in generated_env
+    assert "LEGAL_GCS_PROCESSING_COUNTRY=대한민국" in generated_env
+    assert "asia-northeast3 (Compute Engine Docker 영속 볼륨)" in generated_env
+    assert "LEGAL_GEMINI_PROCESSOR_NAME=Google Cloud Korea LLC" in generated_env
+    assert (
+        "LEGAL_GEMINI_PROCESSING_COUNTRY=Google 또는 그 대리인이 시설을 운영하는 국가"
+        in generated_env
+    )
+    assert "유료 Gemini API 정책에 따라 정책 위반 탐지 목적으로 제한된 기간" in generated_env
+    assert "이용자의 삭제 요청 또는 서비스 종료 시까지" in generated_env
+    assert "개인 식별정보 제거 후 통계 목적 달성 또는 서비스 종료 시까지" in generated_env
+    assert "개발 환경 테스트" not in generated_env
+    assert "example.invalid" not in generated_env
+
+
 def _write_secret_stubs(fake_bin: Path, *, missing: str = "", failing: str = "") -> None:
     """Secret Manager 응답을 흉내 내는 curl 스텁 — 상태 코드를 본문 뒤에 붙여 돌려준다."""
     (fake_bin / "curl").write_text(
