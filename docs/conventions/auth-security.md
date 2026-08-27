@@ -27,7 +27,7 @@
 
 Flutter/Android Kakao SDK 초기화에는 **네이티브 앱 키**를 사용한다. REST API 키와 Admin 키는
 각각 REST API 호출과 Admin API 호출에만 사용하며, `KAKAO_NATIVE_APP_KEY`에 전달하지 않는다.
-Android 플랫폼에는 앱 패키지명 `io.vmonster.colortrip`과 현재 APK 서명 키의 해시를 등록한다.
+Android 플랫폼에는 앱 패키지명 `com.rainbowdev.colortrip`(KAN-109에서 변경)과 현재 APK 서명 키의 해시를 등록한다.
 키 종류를 잘못 사용하면 `KOE101`이 발생하고, 등록하지 않은 서명 키로 실행하면
 `KOE009 (invalid android_key_hash)`가 발생한다. 실행 절차와 해시 확인 명령은
 [앱 실행 가이드](../app-run-guide.md#kakao-앱-키와-android-플랫폼-설정)를 따른다.
