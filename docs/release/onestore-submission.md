@@ -14,10 +14,12 @@
 ## 2. 빌드 (AAB 또는 APK 모두 가능)
 
 ```bash
-docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=<native-app-key> --dart-define=API_BASE_URL=https://colortrip.p-e.kr/api/v1"
+docker compose -f frontend/docker-compose.yml run --rm -u 0:0 -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=* frontend bash -c "flutter pub get && flutter build apk --release --dart-define=KAKAO_NATIVE_APP_KEY=YOUR_NATIVE_APP_KEY --dart-define=API_BASE_URL=https://colortrip.p-e.kr/api/v1"
 ```
 
-- `--dart-define` 2개 필수(없으면 Gradle이 throw). 값은 `backend/.env`.
+- `YOUR_NATIVE_APP_KEY`는 실제 Kakao 네이티브 앱 키로 바꿔서 실행한다(값은 `backend/.env`).
+- `--dart-define` 2개 필수 — `KAKAO_NATIVE_APP_KEY`가 없으면 release Gradle 빌드가 실패하고,
+  `API_BASE_URL`이 없으면 빌드는 되지만 앱 실행 시 설정 오류 화면(ConfigErrorApp)이 뜬다.
 - API는 반드시 HTTPS — 릴리스 빌드는 평문 HTTP 차단([065-dev-https](../specs/065-dev-https/)).
 - `key.properties` 없으면 debug 키 폴백 + 경고 → 스토어 업로드 불가.
 
