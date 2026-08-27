@@ -288,8 +288,11 @@ class _RegionQuestSelectScreenState
                   },
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              SafeArea(
+                // edge-to-edge(targetSdk 36)에서 하단 고정 버튼이 시스템
+                // 내비게이션 바에 가리지 않게 안전 영역을 확보한다.
+                top: false,
+                minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: ElevatedButton(
                   key: _startTripButtonKey,
                   // 새 여행이면 이름·기간 입력 시트(KAN-28), 이미 시작한 여행이면

@@ -39,6 +39,9 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
 
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
+      // 셸 브랜치 내비게이터에 띄우면 떠 있는 하단탭이 시트를 덮고 탭도 눌리므로
+      // 루트 내비게이터에 띄운다(100-bottom-nav-redesign).
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -306,7 +309,11 @@ class _RegionGroupedView extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
+      // 명시 padding은 스크롤뷰의 자동 하단 인셋을 없앤다 — 떠 있는 하단탭
+      // (extendBody) 높이가 담긴 MediaQuery 하단 패딩을 직접 더해준다.
+      padding: EdgeInsets.only(
+        bottom: 16 + MediaQuery.paddingOf(context).bottom,
+      ),
       children: [
         _MonthSummaryCard(
           monthLabel: monthLabel,

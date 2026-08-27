@@ -69,7 +69,15 @@ class _TravelListScreenState extends ConsumerState<TravelListScreen> {
             ),
           )
         : ListView(
-            padding: const EdgeInsets.all(16),
+            // 명시 padding은 스크롤뷰의 자동 하단 인셋을 없앤다 — 떠 있는 하단탭
+            // (extendBody) 높이가 담긴 MediaQuery 하단 패딩을 직접 더해 마지막
+            // 카드가 탭바에 깔리지 않게 한다.
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.paddingOf(context).bottom,
+            ),
             children: [
               if (inProgress.isNotEmpty) ...[
                 const _SectionHeader('진행중인 여행'),

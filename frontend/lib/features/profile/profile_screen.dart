@@ -26,7 +26,14 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('마이')),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        // 명시 padding은 스크롤뷰의 자동 하단 인셋을 없앤다 — 떠 있는 하단탭
+        // (extendBody) 높이가 담긴 MediaQuery 하단 패딩을 직접 더해준다.
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.paddingOf(context).bottom,
+        ),
         children: [
           Row(
             children: [

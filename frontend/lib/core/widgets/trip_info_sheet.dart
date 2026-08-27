@@ -51,6 +51,8 @@ class _TripInfoSheetState extends State<TripInfoSheet> {
     if (!mounted) return;
     final picked = await showModalBottomSheet<DateTimeRange>(
       context: context,
+      // 셸 탭 화면에서 열려도 떠 있는 하단탭 위에 그려지도록 루트 내비게이터에 띄운다.
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
@@ -152,81 +154,89 @@ class _TripInfoSheetState extends State<TripInfoSheet> {
     final range = _range;
     final canSubmit = _nameController.text.trim().isNotEmpty && range != null;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              widget.title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '여행 이름',
-              style: TextStyle(fontSize: 12, color: AppColors.formLabel),
-            ),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _nameController,
-              maxLength: 30,
-              onChanged: (_) => setState(() {}),
-              decoration: _fieldDecoration(
-                hintText: '예) 단양 여행',
-              ).copyWith(counterText: ''),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              '여행 날짜',
-              style: TextStyle(fontSize: 12, color: AppColors.formLabel),
-            ),
-            const SizedBox(height: 6),
-            InkWell(
-              onTap: _pickRange,
-              borderRadius: BorderRadius.circular(10),
-              child: InputDecorator(
-                decoration: _fieldDecoration(
-                  suffixIcon: const Icon(
-                    Icons.calendar_today_outlined,
-                    size: 18,
-                    color: AppColors.textMuted,
-                  ),
+    return SafeArea(
+      // 시트는 화면 맨 아래까지 내려오므로 제출 버튼이 시스템 내비게이션 바에
+      // 가리지 않게 하단 안전 영역을 확보한다(targetSdk 36 edge-to-edge).
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                widget.title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                 ),
-                child: Text(
-                  range == null
-                      ? '시작일 ~ 종료일 선택'
-                      : TripInfo.formatPeriod(range.start, range.end),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: range == null
-                        ? AppColors.formPlaceholder
-                        : AppColors.textStrong,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '여행 이름',
+                style: TextStyle(fontSize: 12, color: AppColors.formLabel),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _nameController,
+                maxLength: 30,
+                onChanged: (_) => setState(() {}),
+                decoration: _fieldDecoration(
+                  hintText: '예) 단양 여행',
+                ).copyWith(counterText: ''),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '여행 날짜',
+                style: TextStyle(fontSize: 12, color: AppColors.formLabel),
+              ),
+              const SizedBox(height: 6),
+              InkWell(
+                onTap: _pickRange,
+                borderRadius: BorderRadius.circular(10),
+                child: InputDecorator(
+                  decoration: _fieldDecoration(
+                    suffixIcon: const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 18,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  child: Text(
+                    range == null
+                        ? '시작일 ~ 종료일 선택'
+                        : TripInfo.formatPeriod(range.start, range.end),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: range == null
+                          ? AppColors.formPlaceholder
+                          : AppColors.textStrong,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: canSubmit
-                  ? () => Navigator.pop(
-                      context,
-                      TripInfo(
-                        name: _nameController.text.trim(),
-                        startDate: range.start,
-                        endDate: range.end,
-                      ),
-                    )
-                  : null,
-              child: Text(widget.submitLabel),
-            ),
-          ],
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: canSubmit
+                    ? () => Navigator.pop(
+                        context,
+                        TripInfo(
+                          name: _nameController.text.trim(),
+                          startDate: range.start,
+                          endDate: range.end,
+                        ),
+                      )
+                    : null,
+                child: Text(widget.submitLabel),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -242,6 +252,9 @@ Future<TripInfo?> showTripInfoSheet({
 }) {
   return showModalBottomSheet<TripInfo>(
     context: context,
+    // 여행 탭(셸 안)에서 열면 기본값(false)으로는 브랜치 내비게이터에 떠서
+    // 떠 있는 하단탭이 저장 버튼을 가린다(100-bottom-nav-redesign) — 루트에 띄운다.
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
