@@ -77,6 +77,9 @@ class TripCard extends ConsumerWidget {
                       height: 28,
                       child: PopupMenuButton<_TripCardAction>(
                         tooltip: '여행 관리',
+                        // 여행 탭(셸 안) 목록 맨 아래 카드에서 열면 메뉴가 떠 있는
+                        // 하단탭 뒤로 깔려 눌리지 않으므로 루트 내비게이터에 띄운다.
+                        useRootNavigator: true,
                         padding: EdgeInsets.zero,
                         color: Colors.white,
                         elevation: 4,
@@ -171,7 +174,10 @@ class TripCard extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 10),
-              Divider(height: 1, color: AppColors.border.withValues(alpha: 0.5)),
+              Divider(
+                height: 1,
+                color: AppColors.border.withValues(alpha: 0.5),
+              ),
               if (isActive) ...[
                 const SizedBox(height: 10),
                 Row(
@@ -217,7 +223,6 @@ class TripCard extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 enum _TripCardAction { edit, delete }
