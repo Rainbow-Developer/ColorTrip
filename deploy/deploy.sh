@@ -135,24 +135,25 @@ MAP_CACHE_DIR=/app/map_cache
 UPLOAD_DIR=/app/uploads
 # 아직 브라우저에서 호출하는 웹 프론트가 없어 화이트리스트 비움. 프론트 도메인이 정해지면 채운다.
 CORS_ALLOWED_ORIGINS=
-# 외부 사용자에게 제공하지 않는 dev 회원가입·배포 검증용 임시 legal disclosure.
-# 공개 dev 또는 prod 배포 전에는 실제 운영자·수탁·보유 정보로 반드시 교체한다.
-LEGAL_OPERATOR_NAME=ColorTrip 개발 환경 테스트 운영자
-LEGAL_TERMS_VERSION=terms-v2-dev-test
-LEGAL_PRIVACY_VERSION=privacy-v2-dev-test
-LEGAL_DOCUMENT_EFFECTIVE_DATE=2026-08-20
-LEGAL_OPERATOR_EMAIL=dev-legal@example.invalid
-LEGAL_OPERATOR_ADDRESS=개발 환경 전용 (외부 서비스 아님)
-LEGAL_PRIVACY_OFFICER_NAME=개발 환경 개인정보 담당자
-LEGAL_PRIVACY_OFFICER_EMAIL=dev-privacy@example.invalid
-LEGAL_GCS_PROCESSOR_NAME=개발 환경 테스트용 GCS
-LEGAL_GCS_PROCESSING_COUNTRY=개발 환경 테스트용
-LEGAL_GCS_REGION=dev-test
-LEGAL_GEMINI_PROCESSOR_NAME=개발 환경 테스트용 Gemini
-LEGAL_GEMINI_PROCESSING_COUNTRY=개발 환경 테스트용
-LEGAL_GEMINI_RETENTION_PERIOD=개발 환경 검증 후 삭제
-LEGAL_SHARE_RETENTION_PERIOD=개발 환경 검증 종료 시 삭제
-LEGAL_AGGREGATE_RETENTION_PERIOD=개발 환경 검증 종료 시 삭제
+# 공개 초기 운영 환경의 실제 legal disclosure. 사진은 GCS 버킷이 아니라 서울 리전
+# Compute Engine의 api-uploads Docker 영속 볼륨에 저장한다. LEGAL_GCS_*는 기존 설정 키
+# 이름을 유지하지만 공개 문서에는 아래 실제 저장 수탁자·국가·리전 값만 표시된다.
+LEGAL_OPERATOR_NAME=전주호 (무지개발자)
+LEGAL_TERMS_VERSION=terms-v2
+LEGAL_PRIVACY_VERSION=privacy-v2
+LEGAL_DOCUMENT_EFFECTIVE_DATE=2026-08-27
+LEGAL_OPERATOR_EMAIL=rainbow.dev00@gmail.com
+LEGAL_OPERATOR_ADDRESS=서울특별시 광진구
+LEGAL_PRIVACY_OFFICER_NAME=전주호
+LEGAL_PRIVACY_OFFICER_EMAIL=rainbow.dev00@gmail.com
+LEGAL_GCS_PROCESSOR_NAME=Google Cloud Korea LLC
+LEGAL_GCS_PROCESSING_COUNTRY=대한민국
+LEGAL_GCS_REGION=asia-northeast3 (Compute Engine Docker 영속 볼륨)
+LEGAL_GEMINI_PROCESSOR_NAME=Google Cloud Korea LLC
+LEGAL_GEMINI_PROCESSING_COUNTRY=Google 또는 그 대리인이 시설을 운영하는 국가
+LEGAL_GEMINI_RETENTION_PERIOD=유료 Gemini API 정책에 따라 정책 위반 탐지 목적으로 제한된 기간
+LEGAL_SHARE_RETENTION_PERIOD=이용자의 삭제 요청 또는 서비스 종료 시까지
+LEGAL_AGGREGATE_RETENTION_PERIOD=개인 식별정보 제거 후 통계 목적 달성 또는 서비스 종료 시까지
 # 기존 dev 계정이 모두 출시 전 테스트 계정임을 확인한 내부 환경에서만 v2 동의
 # migration을 진행한다. 이력은 prelaunch_migration으로 남고 marketing 동의 행은 삭제된다.
 PRELAUNCH_CONSENT_MIGRATION_CONFIRMED=true
