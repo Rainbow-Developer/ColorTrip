@@ -30,10 +30,10 @@ gcloud auth application-default login      # ADC (Terraform·Cloud SQL Proxy 용
 
 | 리소스 | 값 | 비고 |
 |--------|------|------|
-| Compute Engine 인스턴스 | `colortrip-dev-app` | Ubuntu + Docker, `e2-small` |
+| Compute Engine 인스턴스 | `colortrip-dev-app` | Ubuntu + Docker, `e2-micro` |
 | 인스턴스 외부 IP(고정) | `34.64.226.70` | 80·443만 공개(SSH는 IAP 전용) |
 | API 주소 (HTTPS) | `https://colortrip.p-e.kr` | 검증: `curl https://colortrip.p-e.kr/health`. 고정 IP `34.64.226.70`에 연결된 dev API 도메인 — [065-dev-https](specs/065-dev-https/) |
-| Cloud SQL 인스턴스 | `colortrip-dev-db` | PostgreSQL 16, `db-g1-small` |
+| Cloud SQL 인스턴스 | `colortrip-dev-db` | PostgreSQL 16, `db-f1-micro` |
 | Cloud SQL 연결 이름 | `colortrip:asia-northeast3:colortrip-dev-db` | Auth Proxy 용 |
 | DB 이름 / 유저 | `colortrip` / `colortrip` | 비밀번호는 Secret Manager |
 | Artifact Registry | `asia-northeast3-docker.pkg.dev/colortrip/colortrip-dev` | Docker 이미지 저장소 |

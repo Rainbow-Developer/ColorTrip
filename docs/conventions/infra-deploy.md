@@ -13,8 +13,8 @@
 | GCP 프로젝트 | 단일 프로젝트 `colortrip` | 리소스는 환경 접두사(`colortrip-<env>-*`)로 구분 |
 | 리전 | `asia-northeast3` (서울) | |
 | 환경 분리 | dev / prod (2환경) | **현재 dev부터 구축**, prod는 이후 `infra/envs/prod/` 추가로 확장 |
-| GCP 컴퓨팅(운영) | 단일 Compute Engine 인스턴스 | Ubuntu 22.04 + Docker. Cloud SQL Proxy·백엔드 API 구동. Flutter 모바일 앱은 별도 빌드·배포. 기본 `e2-small` |
-| 운영 DB | Cloud SQL (PostgreSQL 16) | 기본 `db-g1-small`, 단일 존(dev) |
+| GCP 컴퓨팅(운영) | 단일 Compute Engine 인스턴스 | Ubuntu 22.04 + Docker. Cloud SQL Proxy·백엔드 API 구동. Flutter 모바일 앱은 별도 빌드·배포. dev는 `e2-micro`(메모리 1GB) |
+| 운영 DB | Cloud SQL (PostgreSQL 16) | dev는 `db-f1-micro`, 단일 존. 최대 접속 25개라 uvicorn 워커·커넥션 풀을 늘릴 때 확인 |
 | DB 접속 방식 | Cloud SQL Auth Proxy | 서비스 계정 IAM 인증. 공인 IP에 authorized networks를 두지 않음(직접 접속 차단). 로컬은 [`infra/scripts/db-proxy.sh`](../../infra/scripts/db-proxy.sh) |
 | 시크릿 관리 | GCP Secret Manager | DB 비밀번호 등. SOT는 [auth-security](./auth-security.md) |
 | 컨테이너 레지스트리 | Artifact Registry | `asia-northeast3-docker.pkg.dev/colortrip/colortrip-<env>` |
