@@ -9,7 +9,7 @@ variable "region" {
 }
 
 variable "tier" {
-  description = "머신 티어(예: db-g1-small)"
+  description = "머신 티어(예: db-f1-micro)"
   type        = string
 }
 

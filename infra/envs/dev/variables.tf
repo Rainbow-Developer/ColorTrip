@@ -30,7 +30,7 @@ variable "subnet_cidr" {
 variable "instance_machine_type" {
   description = "Compute Engine 머신 타입"
   type        = string
-  default     = "e2-small"
+  default     = "e2-micro"
 }
 
 variable "instance_disk_gb" {
@@ -43,7 +43,7 @@ variable "instance_disk_gb" {
 variable "db_tier" {
   description = "Cloud SQL 머신 티어"
   type        = string
-  default     = "db-g1-small"
+  default     = "db-f1-micro"
 }
 
 variable "db_disk_gb" {
